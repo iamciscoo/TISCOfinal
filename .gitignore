@@ -1,0 +1,28 @@
+# Node / Next.js
+node_modules/
+.next/
+.next-static/
+.turbo/
+.vercel/
+coverage/
+dist/
+build/
+.eslintcache
+.pnpm-store/
+.DS_Store
+*.log
+logs/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Editor / tooling
+.vscode/
+.idea/
+.cursor/
+
+# Env files (keep examples tracked)
+.env
+.env.*
+-lc cd
