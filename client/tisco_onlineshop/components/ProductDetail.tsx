@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/store'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { 
   Star, 
@@ -18,10 +17,15 @@ import {
   Plus,
   Truck,
   Shield,
-  RotateCcw
+  RotateCcw,
+  ZoomIn
 } from 'lucide-react'
+import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
+import { getImageUrl } from '@/lib/shared-utils'
+import { getProductsByCategory } from '@/lib/database'
+import { ProductCard } from '@/components/shared/ProductCard'
 
 interface ProductDetailProps {
   product: Product
@@ -32,20 +36,45 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   
   const { addItem, openCart } = useCartStore()
 
-  // Sample additional images (in real app, these would come from database)
-  const productImages = [
-    product.image_url || '/products/placeholder.png',
-    '/products/1g.png', // Sample additional images
-    '/products/2g.png',
-    '/products/3b.png'
-  ]
+  // Load related products by category
+  useEffect(() => {
+    let isMounted = true
+    const load = async () => {
+      try {
+        if (!product.category_id) {
+          if (isMounted) setRelatedProducts([])
+          return
+        }
+        const data = await getProductsByCategory(String(product.category_id))
+        if (!isMounted) return
+        const filtered = (data || []).filter(p => String(p.id) !== String(product.id))
+        setRelatedProducts(filtered.slice(0, 4))
+      } catch (e) {
+        console.error('Failed to load related products', e)
+      }
+    }
+    load()
+    return () => { isMounted = false }
+  }, [product.category_id, product.id])
 
-  const rating = 4.5 // Sample rating
-  const reviewCount = 127 // Sample review count
-  const originalPrice = product.price * 1.2 // Sample original price for discount display
+  // Use real product images from database, fallback to main image and placeholder
+  const productImages = product.product_images && product.product_images.length > 0
+    ? product.product_images
+        .sort((a, b) => {
+          if (a.is_main && !b.is_main) return -1
+          if (!a.is_main && b.is_main) return 1
+          return (a.sort_order || 0) - (b.sort_order || 0)
+        })
+        .map(img => img.url)
+    : [getImageUrl(product) || '/circular.svg']
+
+  const rating = product.rating || 4.5
+  const reviewCount = product.reviews_count || 127
 
   const handleQuantityChange = (change: number) => {
     setQuantity(Math.max(1, Math.min(product.stock_quantity || 999, quantity + change)))
@@ -59,7 +88,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
         id: product.id.toString(),
         name: product.name,
         price: product.price,
-        image_url: product.image_url || '/products/default.png'
+        image_url: getImageUrl(product) || '/circular.svg'
       }, quantity)
       
       // Open cart sidebar to show the added item
@@ -98,9 +127,39 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
         <div className="space-y-4">
           {/* Main Image */}
           <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div className="text-gray-400 text-lg">Product Image</div>
-            </div>
+            {productImages[selectedImageIndex] ? (
+              <Image
+                src={productImages[selectedImageIndex]}
+                alt={`${product.name} - Image ${selectedImageIndex + 1}`}
+                fill
+                className="object-cover transition-opacity duration-300"
+                onLoadingComplete={() => setImageLoading(false)}
+                onLoadStart={() => setImageLoading(true)}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority={selectedImageIndex === 0}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <div className="text-gray-400 text-lg">No Image</div>
+              </div>
+            )}
+            
+            {/* Loading overlay */}
+            {imageLoading && (
+              <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+            
+            {/* Zoom Button */}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="absolute top-4 left-4 w-8 h-8 p-0 opacity-80 hover:opacity-100"
+              title="Zoom image"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
             
             {/* Image Navigation */}
             {productImages.length > 1 && (
@@ -130,10 +189,18 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             <Button
               variant="secondary"
               size="sm"
-              className="absolute top-4 right-4 w-8 h-8 p-0"
+              className="absolute top-4 right-4 w-8 h-8 p-0 opacity-80 hover:opacity-100"
+              title="Share product"
             >
               <Share2 className="h-4 w-4" />
             </Button>
+            
+            {/* Image counter */}
+            {productImages.length > 1 && (
+              <div className="absolute bottom-4 right-4 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-sm">
+                {selectedImageIndex + 1} / {productImages.length}
+              </div>
+            )}
           </div>
 
           {/* Thumbnail Images */}
@@ -142,13 +209,25 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
               {productImages.map((image, index) => (
                 <div
                   key={index}
-                  className={`aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-colors ${
-                    selectedImageIndex === index ? 'border-blue-600' : 'border-transparent'
+                  className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 ${
+                    selectedImageIndex === index ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'
                   }`}
                   onClick={() => setSelectedImageIndex(index)}
                 >
-                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-md flex items-center justify-center">
-                    <div className="text-gray-400 text-xs">{index + 1}</div>
+                  <Image
+                    src={image}
+                    alt={`${product.name} thumbnail ${index + 1}`}
+                    fill
+                    className="object-cover rounded-md"
+                    sizes="(max-width: 768px) 25vw, 12vw"
+                  />
+                  {/* Index indicator */}
+                  <div className={`absolute top-1 right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-medium ${
+                    selectedImageIndex === index 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-800 text-white opacity-60'
+                  }`}>
+                    {index + 1}
                   </div>
                 </div>
               ))}
@@ -191,12 +270,6 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
               <span className="text-4xl font-bold text-gray-900">
                 <PriceDisplay price={product.price} />
               </span>
-              <span className="text-xl text-gray-500 line-through">
-                <PriceDisplay price={originalPrice} />
-              </span>
-              <Badge variant="destructive" className="text-sm">
-                17% OFF
-              </Badge>
             </div>
             <p className="text-sm text-green-600 font-medium">
               Free shipping on orders over <PriceDisplay price={50} />
@@ -434,36 +507,13 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-8">Related Products</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Sample Related Products */}
-            {[
-              { id: '2', name: 'Wireless Headphones', price: 299.99, image: '/products/2g.png' },
-              { id: '3', name: 'Designer T-Shirt', price: 49.99, image: '/products/3b.png' },
-              { id: '4', name: 'Running Shoes', price: 129.99, image: '/products/4p.png' },
-              { id: '5', name: 'Coffee Maker', price: 179.99, image: '/products/5bl.png' }
-            ].map((relatedProduct) => (
-              <Card key={relatedProduct.id} className="group hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <Link href={`/products/${relatedProduct.id}`}>
-                    <div className="aspect-square bg-gray-100 rounded-md mb-3 overflow-hidden">
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                        <div className="text-gray-400 text-sm">Product</div>
-                      </div>
-                    </div>
-                    <h4 className="font-medium text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {relatedProduct.name}
-                    </h4>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-gray-900">
-                        ${relatedProduct.price}
-                      </span>
-                      <Button size="sm" variant="outline">
-                        <ShoppingCart className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+            {relatedProducts.length > 0 ? (
+              relatedProducts.map((rp) => (
+                <ProductCard key={String(rp.id)} product={rp} />
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-500">No related products found.</div>
+            )}
           </div>
         </div>
       </div>

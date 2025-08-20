@@ -3,8 +3,6 @@
 import { useRouter } from 'next/navigation'
 import {
   Home,
-  Inbox,
-  Calendar,
   Search,
   Settings,
   User2,
@@ -12,11 +10,12 @@ import {
   Plus,
   Shirt,
   User,
-  ShoppingBasket,
   FolderOpen,
   Package,
   CreditCard,
   LogOut,
+  ShoppingCart,
+  Star,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,7 +27,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 
@@ -54,16 +52,6 @@ const items = [
     icon: Home,
   },
   {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
     title: "Search",
     url: "#",
     icon: Search,
@@ -86,18 +74,7 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="py-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/">
-                <Package className="w-5 h-5" />
-                <span>TISCO Admin</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+      <SidebarHeader />
       <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
@@ -112,16 +89,13 @@ const AppSidebar = () => {
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
-                  {item.title === "Inbox" && (
-                    <SidebarMenuBadge>24</SidebarMenuBadge>
-                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Products & Categories</SidebarGroupLabel>
+          <SidebarGroupLabel>Catalog</SidebarGroupLabel>
           <SidebarGroupAction>
             <Plus /> <span className="sr-only">Add Product</span>
           </SidebarGroupAction>
@@ -145,17 +119,10 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
-                        <Link href="#">
-                          <Plus />
-                          Add Product
-                        </Link>
-                      </SidebarMenuButton>
-                    </SheetTrigger>
-                    <AddProduct />
-                  </Sheet>
+                  <Link href="/products/new">
+                    <Plus />
+                    Add Product
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -177,9 +144,9 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Users</SidebarGroupLabel>
+          <SidebarGroupLabel>Customers</SidebarGroupLabel>
           <SidebarGroupAction>
-            <Plus /> <span className="sr-only">Add User</span>
+            <Plus /> <span className="sr-only">Add Customer</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -187,7 +154,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild>
                   <Link href="/users">
                     <User />
-                    See All Users
+                    All Customers
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -198,7 +165,7 @@ const AppSidebar = () => {
                       <SidebarMenuButton asChild>
                         <Link href="#">
                           <Plus />
-                          Add User
+                          Add Customer
                         </Link>
                       </SidebarMenuButton>
                     </SheetTrigger>
@@ -234,6 +201,14 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
+                  <Link href="/carts">
+                    <ShoppingCart />
+                    Cart Management
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
                   <Sheet>
                     <SheetTrigger asChild>
                       <SidebarMenuButton asChild>
@@ -245,6 +220,21 @@ const AppSidebar = () => {
                     </SheetTrigger>
                     <AddOrder />
                   </Sheet>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Content & Reviews</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/reviews">
+                    <Star />
+                    Reviews
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

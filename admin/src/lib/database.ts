@@ -18,9 +18,12 @@ export async function getProducts(limit?: number): Promise<Product[]> {
     .from('products')
     .select(`
       *,
-      category:categories(*)
+      category:categories(*),
+      product_images(*)
     `)
     .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true, foreignTable: 'product_images' })
+    .order('created_at', { ascending: true, foreignTable: 'product_images' })
 
   if (limit) {
     query.limit(limit)
@@ -32,13 +35,16 @@ export async function getProducts(limit?: number): Promise<Product[]> {
   return data || []
 }
 
-export async function getProductById(id: number): Promise<Product | null> {
+export async function getProductById(id: string | number): Promise<Product | null> {
   const { data, error } = await supabase
     .from('products')
     .select(`
       *,
-      category:categories(*)
+      category:categories(*),
+      product_images(*)
     `)
+    .order('sort_order', { ascending: true, foreignTable: 'product_images' })
+    .order('created_at', { ascending: true, foreignTable: 'product_images' })
     .eq('id', id)
     .single()
 
@@ -57,7 +63,7 @@ export async function createProduct(productData: Omit<Product, 'id' | 'created_a
   return data
 }
 
-export async function updateProduct(id: number, productData: Partial<Product>): Promise<Product> {
+export async function updateProduct(id: string | number, productData: Partial<Product>): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .update({ ...productData, updated_at: new Date().toISOString() })
@@ -69,7 +75,7 @@ export async function updateProduct(id: number, productData: Partial<Product>): 
   return data
 }
 
-export async function deleteProduct(id: number): Promise<void> {
+export async function deleteProduct(id: string | number): Promise<void> {
   const { error } = await supabase
     .from('products')
     .delete()
@@ -100,7 +106,7 @@ export async function createCategory(categoryData: Omit<Category, 'id' | 'create
   return data
 }
 
-export async function updateCategory(id: number, categoryData: Partial<Category>): Promise<Category> {
+export async function updateCategory(id: string | number, categoryData: Partial<Category>): Promise<Category> {
   const { data, error } = await supabase
     .from('categories')
     .update({ ...categoryData, updated_at: new Date().toISOString() })
@@ -112,7 +118,7 @@ export async function updateCategory(id: number, categoryData: Partial<Category>
   return data
 }
 
-export async function deleteCategory(id: number): Promise<void> {
+export async function deleteCategory(id: string | number): Promise<void> {
   const { error } = await supabase
     .from('categories')
     .delete()
@@ -167,7 +173,6 @@ export async function getOrders(limit?: number): Promise<Order[]> {
     .from('orders')
     .select(`
       *,
-      user:users(*),
       order_items:order_items(
         *,
         product:products(*)
@@ -185,12 +190,11 @@ export async function getOrders(limit?: number): Promise<Order[]> {
   return data || []
 }
 
-export async function getOrderById(id: number): Promise<Order | null> {
+export async function getOrderById(id: string | number): Promise<Order | null> {
   const { data, error } = await supabase
     .from('orders')
     .select(`
       *,
-      user:users(*),
       order_items:order_items(
         *,
         product:products(*)
@@ -203,7 +207,7 @@ export async function getOrderById(id: number): Promise<Order | null> {
   return data
 }
 
-export async function updateOrderStatus(id: number, status: Order['status']): Promise<Order> {
+export async function updateOrderStatus(id: string | number, status: Order['status']): Promise<Order> {
   const { data, error } = await supabase
     .from('orders')
     .update({ 
@@ -239,7 +243,7 @@ export async function getReviews(limit?: number): Promise<Review[]> {
   return data || []
 }
 
-export async function updateReviewStatus(id: number, isApproved: boolean): Promise<Review> {
+export async function updateReviewStatus(id: string | number, isApproved: boolean): Promise<Review> {
   const { data, error } = await supabase
     .from('reviews')
     .update({ 
@@ -299,7 +303,10 @@ export async function getAdminStats(): Promise<AdminStats> {
       supabase.from('products').select('*').lt('stock_quantity', 10)
     ])
 
-    const totalRevenue = revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0
+    const totalRevenue = (revenueData || []).reduce((sum: number, order: { total_amount: number | string }) =>
+      sum + Number(order.total_amount ?? 0),
+      0
+    )
 
     return {
       totalProducts: totalProducts || 0,
@@ -323,23 +330,37 @@ export async function getAdminStats(): Promise<AdminStats> {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  try {
-    const [stats, recentOrders, topProducts, recentUsers] = await Promise.all([
-      getAdminStats(),
-      getOrders(5),
-      getProducts(5),
-      getUsers(5)
-    ])
+  const emptyStats: AdminStats = {
+    totalProducts: 0,
+    totalOrders: 0,
+    totalUsers: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+    lowStockProducts: 0,
+  }
 
-    return {
-      stats,
-      recentOrders,
-      topProducts,
-      recentUsers
-    }
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error)
-    throw error
+  const [statsRes, ordersRes, productsRes, usersRes] = await Promise.allSettled([
+    getAdminStats(),
+    getOrders(5),
+    getProducts(5),
+    getUsers(5),
+  ])
+
+  if (ordersRes.status === 'rejected') {
+    console.error('Error fetching recent orders:', ordersRes.reason)
+  }
+  if (productsRes.status === 'rejected') {
+    console.error('Error fetching top products:', productsRes.reason)
+  }
+  if (usersRes.status === 'rejected') {
+    console.error('Error fetching recent users:', usersRes.reason)
+  }
+
+  return {
+    stats: statsRes.status === 'fulfilled' ? statsRes.value : emptyStats,
+    recentOrders: ordersRes.status === 'fulfilled' ? ordersRes.value : [],
+    topProducts: productsRes.status === 'fulfilled' ? productsRes.value : [],
+    recentUsers: usersRes.status === 'fulfilled' ? usersRes.value : [],
   }
 }
 

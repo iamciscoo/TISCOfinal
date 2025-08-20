@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/hooks/use-toast'
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -28,7 +28,8 @@ type CheckoutStep = 'shipping' | 'payment' | 'review'
 export default function CheckoutPage() {
   const router = useRouter()
   const { user } = useUser()
-  const { items, getTotalItems, getTotalPrice, clearCart } = useCartStore()
+  const { items, clearCart, getTotalPrice } = useCartStore()
+  const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -96,17 +97,82 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
-    setIsProcessing(true)
-    
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to place your order.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate required fields
+    if (!shippingData.firstName || !shippingData.lastName || !shippingData.address || !shippingData.city) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required shipping information.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.nameOnCard) {
+      toast({
+        title: "Missing Information", 
+        description: "Please fill in all required payment information.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      // Simulate order processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      setIsProcessing(true)
       
-      // Clear cart and redirect to success
+      // Prepare order data
+      const shipping_address = `${shippingData.firstName} ${shippingData.lastName}\n${shippingData.address}\n${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}\n${shippingData.country}`
+      
+      const orderData = {
+        items: items.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shipping_address,
+        payment_method: `**** **** **** ${paymentData.cardNumber.slice(-4)}`,
+        currency: 'USD',
+        notes: `Payment: ${paymentData.nameOnCard}`
+      }
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to place order')
+      }
+      
+      toast({
+        title: "Order Placed!",
+        description: `Order #${result.order.id.slice(0, 8)} has been placed successfully.`,
+      })
+      
+      // Clear cart and redirect
       clearCart()
-      router.push('/checkout/success')
-    } catch (error) {
-      console.error('Order failed:', error)
+      router.push('/account/orders')
+      
+    } catch (error: unknown) {
+      console.error('Error placing order:', error)
+      toast({
+        title: "Order Failed",
+        description: (error as Error).message || "There was an error placing your order. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsProcessing(false)
     }
@@ -211,6 +277,7 @@ export default function CheckoutPage() {
                         id="firstName"
                         value={shippingData.firstName}
                         onChange={(e) => setShippingData(prev => ({ ...prev, firstName: e.target.value }))}
+                        autoComplete="given-name"
                         required
                       />
                     </div>
@@ -220,6 +287,7 @@ export default function CheckoutPage() {
                         id="lastName"
                         value={shippingData.lastName}
                         onChange={(e) => setShippingData(prev => ({ ...prev, lastName: e.target.value }))}
+                        autoComplete="family-name"
                         required
                       />
                     </div>
@@ -233,6 +301,7 @@ export default function CheckoutPage() {
                         type="email"
                         value={shippingData.email}
                         onChange={(e) => setShippingData(prev => ({ ...prev, email: e.target.value }))}
+                        autoComplete="email"
                         required
                       />
                     </div>
@@ -243,6 +312,7 @@ export default function CheckoutPage() {
                         type="tel"
                         value={shippingData.phone}
                         onChange={(e) => setShippingData(prev => ({ ...prev, phone: e.target.value }))}
+                        autoComplete="tel"
                       />
                     </div>
                   </div>
@@ -253,6 +323,7 @@ export default function CheckoutPage() {
                       id="address"
                       value={shippingData.address}
                       onChange={(e) => setShippingData(prev => ({ ...prev, address: e.target.value }))}
+                      autoComplete="street-address"
                       required
                     />
                   </div>
@@ -264,6 +335,7 @@ export default function CheckoutPage() {
                         id="city"
                         value={shippingData.city}
                         onChange={(e) => setShippingData(prev => ({ ...prev, city: e.target.value }))}
+                        autoComplete="address-level2"
                         required
                       />
                     </div>
@@ -273,6 +345,7 @@ export default function CheckoutPage() {
                         id="state"
                         value={shippingData.state}
                         onChange={(e) => setShippingData(prev => ({ ...prev, state: e.target.value }))}
+                        autoComplete="address-level1"
                         required
                       />
                     </div>
@@ -282,6 +355,7 @@ export default function CheckoutPage() {
                         id="zipCode"
                         value={shippingData.zipCode}
                         onChange={(e) => setShippingData(prev => ({ ...prev, zipCode: e.target.value }))}
+                        autoComplete="postal-code"
                         required
                       />
                     </div>
@@ -340,6 +414,7 @@ export default function CheckoutPage() {
                       placeholder="1234 5678 9012 3456"
                       value={paymentData.cardNumber}
                       onChange={(e) => setPaymentData(prev => ({ ...prev, cardNumber: e.target.value }))}
+                      autoComplete="cc-number"
                       required
                     />
                   </div>
@@ -352,6 +427,7 @@ export default function CheckoutPage() {
                         placeholder="MM/YY"
                         value={paymentData.expiryDate}
                         onChange={(e) => setPaymentData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                        autoComplete="cc-exp"
                         required
                       />
                     </div>
@@ -362,6 +438,7 @@ export default function CheckoutPage() {
                         placeholder="123"
                         value={paymentData.cvv}
                         onChange={(e) => setPaymentData(prev => ({ ...prev, cvv: e.target.value }))}
+                        autoComplete="cc-csc"
                         required
                       />
                     </div>
@@ -373,6 +450,7 @@ export default function CheckoutPage() {
                       id="nameOnCard"
                       value={paymentData.nameOnCard}
                       onChange={(e) => setPaymentData(prev => ({ ...prev, nameOnCard: e.target.value }))}
+                      autoComplete="cc-name"
                       required
                     />
                   </div>

@@ -14,15 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+import type { Category } from "@/lib/types";
 
-export type Category = {
-  id: string;
-  name: string;
-  description: string;
-  productCount: number;
-  isActive: boolean;
-  createdAt: string;
-};
 
 export const columns: ColumnDef<Category>[] = [
   {
@@ -141,8 +135,28 @@ export const columns: ColumnDef<Category>[] = [
             <DropdownMenuItem>
               <Link href={`/categories/${category.id}`}>View details</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Edit category</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem>
+              <Link href={`/categories/${category.id}/edit`}>Edit category</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={async () => {
+                const confirmed = window.confirm(`Delete category ${category.name}? This cannot be undone.`);
+                if (!confirmed) return;
+                try {
+                  const res = await fetch(`/api/categories/${category.id}`, { method: "DELETE" });
+                  if (!res.ok) {
+                    const json = await res.json().catch(() => ({}));
+                    throw new Error(json?.error || "Failed to delete category");
+                  }
+                  toast({ title: "Deleted", description: "Category deleted successfully" });
+                  window.location.reload();
+                } catch (e) {
+                  console.error("Delete category failed", e);
+                  toast({ title: "Error", description: "Failed to delete category", variant: "destructive" });
+                }
+              }}
+            >
               Delete category
             </DropdownMenuItem>
           </DropdownMenuContent>

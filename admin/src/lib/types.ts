@@ -1,6 +1,6 @@
 // Database types for admin panel - matches client-side types
 export interface Category {
-  id: number
+  id: string | number
   name: string
   description: string
   created_at: string
@@ -8,12 +8,12 @@ export interface Category {
 }
 
 export interface Product {
-  id: number
+  id: string | number
   name: string
   description: string
   price: number
   image_url?: string
-  category_id: number
+  category_id: string | number
   stock_quantity?: number
   is_featured: boolean
   is_active: boolean
@@ -28,6 +28,17 @@ export interface Product {
   updated_at: string
   // Relations
   category?: Category
+  product_images?: ProductImage[]
+}
+
+export interface ProductImage {
+  id: string
+  product_id: string
+  url: string
+  path?: string
+  is_main: boolean
+  sort_order: number
+  created_at: string
 }
 
 export interface User {
@@ -46,7 +57,7 @@ export interface User {
 }
 
 export interface Address {
-  id: number
+  id: string | number
   user_id: string
   type: 'shipping' | 'billing'
   first_name: string
@@ -65,18 +76,20 @@ export interface Address {
 }
 
 export interface Order {
-  id: number
+  id: string | number
   user_id: string
-  order_number: string
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  order_number?: string
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   total_amount: number
   shipping_amount: number
   tax_amount: number
   currency: string
   payment_method?: string
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
-  shipping_address: Address
-  billing_address?: Address
+  // Note: In the current DB schema, shipping_address is a TEXT column.
+  // It may be stored as a raw string, or (in future) reference an Address object.
+  shipping_address: string | Address
+  billing_address?: string | Address
   tracking_number?: string
   notes?: string
   created_at: string
@@ -87,9 +100,9 @@ export interface Order {
 }
 
 export interface OrderItem {
-  id: number
-  order_id: number
-  product_id: number
+  id: string | number
+  order_id: string | number
+  product_id: string | number
   quantity: number
   unit_price: number
   total_price: number
@@ -99,8 +112,8 @@ export interface OrderItem {
 }
 
 export interface Review {
-  id: number
-  product_id: number
+  id: string | number
+  product_id: string | number
   user_id: string
   rating: number
   comment?: string
@@ -114,7 +127,7 @@ export interface Review {
 }
 
 export interface Service {
-  id: number
+  id: string | number
   name: string
   description: string
   price: number
@@ -128,8 +141,8 @@ export interface Service {
 }
 
 export interface ServiceBooking {
-  id: number
-  service_id: number
+  id: string | number
+  service_id: string | number
   user_id: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   scheduled_date: string

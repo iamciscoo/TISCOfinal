@@ -60,6 +60,7 @@ export const ServicesPreview = () => {
                     src={service.image}
                     alt={service.title}
                     fill
+                    sizes="(min-width: 1024px) 33vw, 100vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />

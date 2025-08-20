@@ -173,6 +173,7 @@ export default function ContactPage() {
                           value={formData.name}
                           onChange={handleInputChange}
                           placeholder="Your full name"
+                          autoComplete="name"
                           required
                         />
                       </div>
@@ -186,6 +187,7 @@ export default function ContactPage() {
                           value={formData.email}
                           onChange={handleInputChange}
                           placeholder="your.email@example.com"
+                          autoComplete="email"
                           required
                         />
                       </div>

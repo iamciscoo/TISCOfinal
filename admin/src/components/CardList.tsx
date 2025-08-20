@@ -136,6 +136,7 @@ const CardList = ({ title }: { title: string }) => {
                     src={Object.values(item.images)[0] || ""}
                     alt={item.name}
                     fill
+                    sizes="48px"
                     className="object-cover"
                   />
                 </div>
@@ -157,6 +158,7 @@ const CardList = ({ title }: { title: string }) => {
                     src={item.image}
                     alt={item.title}
                     fill
+                    sizes="48px"
                     className="object-cover"
                   />
                 </div>

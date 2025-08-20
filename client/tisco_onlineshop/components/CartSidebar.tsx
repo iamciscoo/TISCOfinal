@@ -1,21 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import React from 'react'
+import { Plus, Minus, ShoppingCart, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Separator } from '@/components/ui/separator'
-import { 
-  ShoppingCart, 
-  X, 
-  Plus, 
-  Minus, 
-  Trash2,
-  ShoppingBag,
-  ArrowRight
-} from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import Link from 'next/link'
+import Image from 'next/image'
 import { useCartStore } from '@/lib/store'
+import { PriceDisplay } from '@/components/PriceDisplay'
 
 export const CartSidebar = () => {
   const { 
@@ -68,9 +60,20 @@ export const CartSidebar = () => {
                   <div key={item.id} className="flex gap-4">
                     {/* Product Image */}
                     <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                        <div className="text-gray-400 text-xs">IMG</div>
-                      </div>
+                      {item.image_url ? (
+                        <Image
+                          src={item.image_url}
+                          alt={item.name}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-cover"
+                          sizes="80px"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <div className="text-gray-400 text-xs">IMG</div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Product Details */}
@@ -79,7 +82,7 @@ export const CartSidebar = () => {
                         {item.name}
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
-                        ${item.price.toFixed(2)} each
+                        <PriceDisplay price={item.price} /> each
                       </p>
 
                       {/* Quantity Controls */}
@@ -117,7 +120,7 @@ export const CartSidebar = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <p className="text-sm font-medium text-gray-900">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        <PriceDisplay price={item.price * item.quantity} />
                       </p>
                     </div>
                   </div>
@@ -146,7 +149,7 @@ export const CartSidebar = () => {
               {/* Subtotal */}
               <div className="flex justify-between text-base font-medium text-gray-900">
                 <p>Subtotal ({totalItems} items)</p>
-                <p>${totalPrice.toFixed(2)}</p>
+                <p><PriceDisplay price={totalPrice} /></p>
               </div>
 
               {/* Tax Info */}

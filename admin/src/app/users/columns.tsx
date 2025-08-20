@@ -15,20 +15,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+import type { UserColumn as User } from "@/lib/ui-types";
 
-export type User = {
-  id: string;
-  avatar: string;
-  fullName: string;
-  email: string;
-  status: "active" | "inactive";
-  // Database fields
-  phone?: string;
-  date_of_birth?: string;
-  is_admin?: boolean;
-  last_login?: string;
-  created_at?: string;
-};
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -60,6 +49,7 @@ export const columns: ColumnDef<User>[] = [
             src={user.avatar}
             alt={user.fullName}
             fill
+            sizes="36px"
             className="rounded-full object-cover"
           />
         </div>
@@ -126,6 +116,28 @@ export const columns: ColumnDef<User>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <Link href={`/users/${user.id}`}>View customer</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={async () => {
+                const confirmed = window.confirm(`Delete user ${user.fullName}? This cannot be undone.`);
+                if (!confirmed) return;
+                try {
+                  const res = await fetch(`/api/users/${user.id}` , { method: "DELETE" });
+                  if (!res.ok) {
+                    const json = await res.json().catch(() => ({}));
+                    throw new Error(json?.error || "Failed to delete user");
+                  }
+                  toast({ title: "Deleted", description: "User deleted successfully" });
+                  window.location.reload();
+                } catch (e) {
+                  console.error("Delete user failed", e);
+                  toast({ title: "Error", description: "Failed to delete user", variant: "destructive" });
+                }
+              }}
+            >
+              Delete user
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

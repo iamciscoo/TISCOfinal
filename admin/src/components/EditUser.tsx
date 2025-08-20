@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "./ui/button";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   fullName: z
@@ -39,24 +40,58 @@ const formSchema = z.object({
   city: z.string().min(2),
 });
 
-const EditUser = () => {
+type EditUserProps = {
+  userId: string;
+  defaultValues?: Partial<z.infer<typeof formSchema>>;
+};
+
+const EditUser = ({ userId, defaultValues }: EditUserProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "John Doe",
-      email: "john.doe@gmail.com",
-      phone: "+1 234 5678",
-      address: "123 Main St",
-      city: "New York",
+      fullName: defaultValues?.fullName ?? "John Doe",
+      email: defaultValues?.email ?? "john.doe@gmail.com",
+      phone: defaultValues?.phone ?? "+1 234 5678",
+      address: defaultValues?.address ?? "123 Main St",
+      city: defaultValues?.city ?? "New York",
     },
   });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const parts = values.fullName.trim().split(/\s+/);
+    const first_name = parts.shift() || "";
+    const last_name = parts.length ? parts.join(" ") : null;
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          phone: values.phone,
+          first_name,
+          last_name,
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || "Failed to update user");
+      }
+      toast({ title: "User updated", description: "Changes saved successfully" });
+      window.location.reload();
+    } catch (e) {
+      console.error("Update user failed", e);
+      toast({ title: "Error", description: "Failed to update user", variant: "destructive" });
+    }
+  }
   return (
     <SheetContent>
       <SheetHeader>
         <SheetTitle className="mb-4">Edit User</SheetTitle>
         <SheetDescription asChild>
           <Form {...form}>
-            <form className="space-y-8">
+            <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
                 control={form.control}
                 name="fullName"
@@ -64,7 +99,7 @@ const EditUser = () => {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} autoComplete="name" />
                     </FormControl>
                     <FormDescription>
                       Enter user full name.
@@ -80,7 +115,7 @@ const EditUser = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input type="email" autoComplete="email" {...field} />
                     </FormControl>
                     <FormDescription>
                       Only admin can see your email.
@@ -96,7 +131,7 @@ const EditUser = () => {
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input type="tel" autoComplete="tel" {...field} />
                     </FormControl>
                     <FormDescription>
                       Only admin can see your phone number (optional)
@@ -112,7 +147,7 @@ const EditUser = () => {
                   <FormItem>
                     <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input autoComplete="street-address" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter user address (optional)
@@ -128,7 +163,7 @@ const EditUser = () => {
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input autoComplete="address-level2" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter user city (optional)
@@ -137,7 +172,9 @@ const EditUser = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit">Submit</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving..." : "Save changes"}
+              </Button>
             </form>
           </Form>
         </SheetDescription>

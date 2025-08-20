@@ -8,25 +8,34 @@ const getData = async (): Promise<Order[]> => {
     
     // Transform database orders to match the admin UI format
     return orders.map(order => ({
-      id: order.order_number,
+      id: String(order.id),
       customerId: order.user_id,
       customerName: order.user ? `${order.user.first_name || ''} ${order.user.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User',
       customerEmail: order.user?.email || 'No email',
-      total: order.total_amount,
+      total: Number((order as any).total_amount ?? 0),
       status: order.status,
       paymentStatus: order.payment_status,
       items: order.order_items?.length || 0,
-      shippingAddress: order.shipping_address ? 
-        `${order.shipping_address.address_line_1}, ${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}` :
-        'No shipping address',
+      shippingAddress:
+        order.shipping_address
+          ? (typeof order.shipping_address === 'string'
+              ? order.shipping_address
+              : [
+                  order.shipping_address?.address_line_1,
+                  order.shipping_address?.city,
+                  `${order.shipping_address?.state ?? ''} ${order.shipping_address?.postal_code ?? ''}`.trim()
+                ]
+                .filter(Boolean)
+                .join(', ') || 'No shipping address')
+          : 'No shipping address',
       createdAt: order.created_at,
       updatedAt: order.updated_at,
       // Additional database fields
-      currency: order.currency,
-      shipping_amount: order.shipping_amount,
-      tax_amount: order.tax_amount,
-      tracking_number: order.tracking_number,
-      notes: order.notes
+      currency: (order as any).currency,
+      shipping_amount: Number((order as any).shipping_amount ?? 0),
+      tax_amount: Number((order as any).tax_amount ?? 0),
+      tracking_number: (order as any).tracking_number,
+      notes: (order as any).notes
     }));
   } catch (error) {
     console.error('Error fetching orders:', error);

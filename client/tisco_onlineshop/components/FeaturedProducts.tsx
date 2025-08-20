@@ -1,86 +1,33 @@
+'use client'
 import Link from 'next/link'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Star, ShoppingCart, Heart } from 'lucide-react'
-
-// Sample featured products data
-const featuredProducts = [
-  {
-    id: '1',
-    name: 'Smartphone Pro Max',
-    price: 999.99,
-    originalPrice: 1199.99,
-    rating: 4.8,
-    reviews: 324,
-    image: '/products/1g.png',
-    category: 'Electronics',
-    isNew: true,
-    discount: 17
-  },
-  {
-    id: '2',
-    name: 'Wireless Headphones',
-    price: 299.99,
-    originalPrice: null,
-    rating: 4.6,
-    reviews: 156,
-    image: '/products/2g.png',
-    category: 'Electronics',
-    isNew: false,
-    discount: 0
-  },
-  {
-    id: '3',
-    name: 'Designer T-Shirt',
-    price: 49.99,
-    originalPrice: 69.99,
-    rating: 4.4,
-    reviews: 89,
-    image: '/products/3b.png',
-    category: 'Clothing',
-    isNew: false,
-    discount: 29
-  },
-  {
-    id: '4',
-    name: 'Running Shoes',
-    price: 129.99,
-    originalPrice: null,
-    rating: 4.9,
-    reviews: 267,
-    image: '/products/4p.png',
-    category: 'Sports',
-    isNew: true,
-    discount: 0
-  },
-  {
-    id: '5',
-    name: 'Coffee Maker',
-    price: 179.99,
-    originalPrice: 219.99,
-    rating: 4.5,
-    reviews: 143,
-    image: '/products/5bl.png',
-    category: 'Home & Garden',
-    isNew: false,
-    discount: 18
-  },
-  {
-    id: '6',
-    name: 'Gaming Laptop',
-    price: 1299.99,
-    originalPrice: 1499.99,
-    rating: 4.7,
-    reviews: 98,
-    image: '/products/6g.png',
-    category: 'Electronics',
-    isNew: true,
-    discount: 13
-  }
-]
+import { Star, ShoppingCart } from 'lucide-react'
+import { useCartStore } from '@/lib/store'
+import { getProducts } from '@/lib/database'
+import type { Product } from '@/lib/types'
+import { PriceDisplay } from '@/components/PriceDisplay'
+import { getImageUrl } from '@/lib/shared-utils'
 
 export const FeaturedProducts = () => {
+  const { addItem, openCart } = useCartStore()
+  const [products, setProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    ;(async () => {
+      try {
+        const data = await getProducts(6)
+        if (isMounted) setProducts(data || [])
+      } catch (e) {
+        console.error('Failed to load featured products', e)
+      }
+    })()
+    return () => { isMounted = false }
+  }, [])
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,53 +43,34 @@ export const FeaturedProducts = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {featuredProducts.map((product) => (
-            <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden">
+          {products.map((product) => (
+            <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden relative">
+              <Link href={`/products/${String(product.id)}`} className="absolute inset-0 z-10" aria-label={product.name}>
+                <span aria-hidden="true" className="absolute inset-0" />
+              </Link>
               <div className="relative">
                 {/* Product Image */}
-                <div className="aspect-square bg-gray-100 overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                    <div className="text-gray-400 text-sm">Product Image</div>
-                  </div>
+                <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                  <Image
+                    src={getImageUrl(product)}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
 
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  {product.isNew && (
-                    <Badge className="bg-green-500 hover:bg-green-600">NEW</Badge>
-                  )}
-                  {product.discount > 0 && (
-                    <Badge variant="destructive">-{product.discount}%</Badge>
-                  )}
-                </div>
+                {/* Badges intentionally removed */}
 
-                {/* Wishlist Button */}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute top-3 right-3 w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                >
-                  <Heart className="h-4 w-4" />
-                </Button>
-
-                {/* Quick Add to Cart */}
-                <div className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button className="w-full" size="sm">
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Quick Add
-                  </Button>
-                </div>
+                {/* Quick Add hover overlay removed for cleaner layout */}
               </div>
 
               <CardContent className="p-6">
                 {/* Category */}
-                <div className="text-sm text-gray-500 mb-2">{product.category}</div>
+                <div className="text-sm text-gray-500 mb-2">{product.categories?.name || 'Product'}</div>
 
                 {/* Product Name */}
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                  <Link href={`/products/${product.id}`}>
-                    {product.name}
-                  </Link>
+                  <span>{product.name}</span>
                 </h3>
 
                 {/* Rating */}
@@ -152,36 +80,47 @@ export const FeaturedProducts = () => {
                       <Star
                         key={i}
                         className={`h-4 w-4 ${
-                          i < Math.floor(product.rating)
+                          i < Math.floor((product.rating ?? 4.5))
                             ? 'text-yellow-400 fill-current'
                             : 'text-gray-300'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-sm text-gray-600">
-                    {product.rating} ({product.reviews} reviews)
-                  </span>
+                  {typeof product.rating === 'number' && (
+                    <span className="text-sm text-gray-600">{product.rating.toFixed(1)}</span>
+                  )}
                 </div>
 
                 {/* Price */}
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl font-bold text-gray-900">
-                    ${product.price}
-                  </span>
-                  {product.originalPrice && (
-                    <span className="text-lg text-gray-500 line-through">
-                      ${product.originalPrice}
-                    </span>
-                  )}
+                  <PriceDisplay price={product.price} className="text-2xl font-bold text-gray-900" />
                 </div>
 
-                {/* Add to Cart Button */}
-                <Button asChild className="w-full">
-                  <Link href={`/products/${product.id}`}>
-                    View Details
-                  </Link>
-                </Button>
+                {/* Actions */}
+                <div className="space-y-2">
+                  <Button
+                    className="w-full relative z-20"
+                    size="sm"
+                    onClick={() => {
+                      addItem({
+                        id: String(product.id),
+                        name: product.name,
+                        price: product.price,
+                        image_url: getImageUrl(product)
+                      }, 1)
+                      openCart()
+                    }}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Quick Add
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="w-full relative z-20">
+                    <Link href={`/products/${String(product.id)}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

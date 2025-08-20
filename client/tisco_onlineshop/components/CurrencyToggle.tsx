@@ -69,8 +69,8 @@ export const CurrencyToggle = () => {
                 <span className="font-medium">${(sampleAmount / exchangeRate).toFixed(2)}</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 text-center">
-              Last updated: {lastUpdated}
+            <p className="text-xs text-gray-500 text-center" suppressHydrationWarning>
+              Last updated: {lastUpdated || '—'}
             </p>
           </div>
 

@@ -20,8 +20,11 @@ import { Button } from "@/components/ui/button";
 import EditUser from "@/components/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
+import { getUserById } from "@/lib/database";
 
-const SingleUserPage = () => {
+const SingleUserPage = async ({ params }: { params: { id: string } }) => {
+  const user = await getUserById(params.id).catch(() => null);
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
   return (
     <div className="">
       <Breadcrumb>
@@ -35,7 +38,7 @@ const SingleUserPage = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>John Doe</BreadcrumbPage>
+            <BreadcrumbPage>{fullName}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -110,10 +113,12 @@ const SingleUserPage = () => {
           <div className="bg-primary-foreground p-4 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <Avatar className="size-12">
-                <AvatarImage src="https://avatars.githubusercontent.com/u/1486366" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarImage src={user?.avatar_url || undefined} />
+                <AvatarFallback>
+                  {(fullName || "U").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
-              <h1 className="text-xl font-semibold">John Doe</h1>
+              <h1 className="text-xl font-semibold">{fullName}</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel
@@ -130,7 +135,16 @@ const SingleUserPage = () => {
                 <SheetTrigger asChild>
                   <Button>Edit User</Button>
                 </SheetTrigger>
-                <EditUser />
+                {user && (
+                  <EditUser
+                    userId={String(user.id)}
+                    defaultValues={{
+                      fullName,
+                      email: user.email,
+                      phone: user.phone ?? "+1 234 5678",
+                    }}
+                  />
+                )}
               </Sheet>
             </div>
             <div className="space-y-4 mt-4">
@@ -142,27 +156,27 @@ const SingleUserPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Full name:</span>
-                <span>John Doe</span>
+                <span>{fullName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Email:</span>
-                <span>john.doe@gmail.com</span>
+                <span>{user?.email || "-"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Phone:</span>
-                <span>+1 234 5678</span>
+                <span>{user?.phone || "-"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Address:</span>
-                <span>123 Main St</span>
+                <span>-</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">City:</span>
-                <span>New York</span>
+                <span>-</span>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
-              Joined on 2025.01.01
+              Joined on {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
             </p>
           </div>
         </div>

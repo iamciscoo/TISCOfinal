@@ -44,7 +44,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies[0]) // Default to TZS
   const [exchangeRate, setExchangeRate] = useState(MOCK_EXCHANGE_RATE)
   const [isLoading, setIsLoading] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString())
+  const [lastUpdated, setLastUpdated] = useState<string>("")
 
   // Load saved currency from localStorage on mount
   useEffect(() => {
@@ -57,6 +57,11 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     }
+  }, [])
+
+  // Initialize lastUpdated after mount to avoid SSR/client time mismatch
+  useEffect(() => {
+    setLastUpdated(new Date().toLocaleTimeString())
   }, [])
 
   // Save currency to localStorage when it changes

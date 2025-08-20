@@ -24,6 +24,7 @@ export const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { getTotalItems, openCart } = useCartStore()
@@ -51,6 +52,11 @@ export const Navbar = () => {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Mark as mounted to avoid hydration mismatches for persisted cart count
+  useEffect(() => {
+    setMounted(true)
   }, [])
 
   const handleSearch = (query: string) => {
@@ -91,7 +97,9 @@ export const Navbar = () => {
           <div className="hidden md:flex flex-1 max-w-lg mx-8">
             <div ref={searchRef} className="relative w-full">
               <Input
-                type="text"
+                type="search"
+                autoComplete="off"
+                enterKeyHint="search"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -163,7 +171,7 @@ export const Navbar = () => {
             {/* Cart */}
             <Button variant="ghost" size="sm" className="relative" onClick={openCart}>
               <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
+              {mounted && cartCount > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
                   {cartCount}
                 </Badge>
@@ -189,7 +197,9 @@ export const Navbar = () => {
               {/* Mobile Search */}
               <div className="relative mb-3">
                 <Input
-                  type="text"
+                  type="search"
+                  autoComplete="off"
+                  enterKeyHint="search"
                   placeholder="Search products..."
                   className="pl-10 pr-4 py-2 w-full"
                 />

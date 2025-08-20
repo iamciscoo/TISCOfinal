@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/select'
 import { 
   Search, 
-  Filter, 
   Grid3X3, 
   List, 
   Star, 
@@ -55,7 +54,7 @@ const deals: Deal[] = [
     originalPrice: 299.99,
     salePrice: 199.99,
     discount: 33,
-    image_url: '/products/headphones.jpg',
+    image_url: '/circular.svg',
     category: 'Electronics',
     rating: 4.8,
     reviews: 1234,
@@ -71,7 +70,7 @@ const deals: Deal[] = [
     originalPrice: 249.99,
     salePrice: 179.99,
     discount: 28,
-    image_url: '/products/smartwatch.jpg',
+    image_url: '/circular.svg',
     category: 'Electronics',
     rating: 4.6,
     reviews: 892,
@@ -87,7 +86,7 @@ const deals: Deal[] = [
     originalPrice: 159.99,
     salePrice: 89.99,
     discount: 44,
-    image_url: '/products/running-shoes.jpg',
+    image_url: '/circular.svg',
     category: 'Sports',
     rating: 4.7,
     reviews: 567,
@@ -103,7 +102,7 @@ const deals: Deal[] = [
     originalPrice: 129.99,
     salePrice: 79.99,
     discount: 38,
-    image_url: '/products/bedding.jpg',
+    image_url: '/circular.svg',
     category: 'Home',
     rating: 4.5,
     reviews: 345,
@@ -119,7 +118,7 @@ const deals: Deal[] = [
     originalPrice: 199.99,
     salePrice: 119.99,
     discount: 40,
-    image_url: '/products/knife-set.jpg',
+    image_url: '/circular.svg',
     category: 'Kitchen',
     rating: 4.9,
     reviews: 678,
@@ -135,7 +134,7 @@ const deals: Deal[] = [
     originalPrice: 79.99,
     salePrice: 49.99,
     discount: 38,
-    image_url: '/products/speaker.jpg',
+    image_url: '/circular.svg',
     category: 'Electronics',
     rating: 4.4,
     reviews: 423,
@@ -156,7 +155,6 @@ export default function DealsPage() {
   const { addItem } = useCartStore()
   
   const categories = Array.from(new Set(deals.map(deal => deal.category)))
-  const featuredDeals = deals.filter(deal => deal.isFeatured)
   const flashDeals = deals.filter(deal => deal.isFlashDeal)
 
   // Filter and sort deals

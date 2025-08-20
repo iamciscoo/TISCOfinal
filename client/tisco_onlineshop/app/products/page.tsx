@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { 
   Select,
@@ -18,18 +17,15 @@ import {
   Filter, 
   Grid3X3, 
   List, 
-  Star, 
-  ShoppingCart,
-  Heart,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/database'
-import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { Product, Category } from '@/lib/types'
+import { ProductCard } from '@/components/shared/ProductCard'
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -42,8 +38,6 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
-  
-  const { addItem } = useCartStore()
   const productsPerPage = 12
 
   // Fetch data
@@ -59,17 +53,8 @@ export default function ProductsPage() {
         setFilteredProducts(productsData || [])
       } catch (error) {
         console.error('Error fetching data:', error)
-        // Use fallback data
-        const fallbackProducts: Product[] = [
-          { id: '1', name: 'Smartphone Pro Max', price: 999.99, description: 'Latest flagship smartphone', image_url: '/products/1g.png', category_id: 'electronics', stock_quantity: 50, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-          { id: '2', name: 'Wireless Headphones', price: 299.99, description: 'Premium noise-canceling headphones', image_url: '/products/2g.png', category_id: 'electronics', stock_quantity: 100, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-          { id: '3', name: 'Designer T-Shirt', price: 49.99, description: 'Premium cotton t-shirt', image_url: '/products/3b.png', category_id: 'clothing', stock_quantity: 200, categories: { id: 'clothing', name: 'Clothing', slug: 'clothing' } },
-          { id: '4', name: 'Running Shoes', price: 129.99, description: 'Professional running shoes', image_url: '/products/4p.png', category_id: 'sports', stock_quantity: 75, categories: { id: 'sports', name: 'Sports', slug: 'sports' } },
-          { id: '5', name: 'Coffee Maker', price: 179.99, description: 'Automatic coffee maker', image_url: '/products/5bl.png', category_id: 'home', stock_quantity: 30, categories: { id: 'home', name: 'Home & Garden', slug: 'home' } },
-          { id: '6', name: 'Gaming Laptop', price: 1299.99, description: 'High-performance gaming laptop', image_url: '/products/6g.png', category_id: 'electronics', stock_quantity: 25, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-        ]
-        setProducts(fallbackProducts)
-        setFilteredProducts(fallbackProducts)
+        setProducts([])
+        setFilteredProducts([])
       } finally {
         setLoading(false)
       }
@@ -86,13 +71,16 @@ export default function ProductsPage() {
     if (searchTerm) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
     // Category filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category_id === selectedCategory)
+      filtered = filtered.filter(product =>
+        String(product.category_id) === selectedCategory ||
+        String(product.categories?.id ?? '') === selectedCategory
+      )
     }
 
     // Price filter
@@ -121,14 +109,7 @@ export default function ProductsPage() {
     setCurrentPage(1)
   }, [products, searchTerm, selectedCategory, sortBy, priceRange])
 
-  const handleAddToCart = (product: Product) => {
-    addItem({
-      id: product.id.toString(),
-      name: product.name,
-      price: product.price,
-      image_url: product.image_url || '/products/default.png'
-    })
-  }
+  // Add to cart handled inside ProductCard
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
@@ -304,81 +285,7 @@ export default function ProductsPage() {
                   : 'space-y-4'
                 }>
                   {displayedProducts.map((product) => (
-                    <Card key={product.id} className="group hover:shadow-lg transition-shadow">
-                      <CardContent className={viewMode === 'grid' ? 'p-4' : 'p-4 flex gap-4'}>
-                        {/* Product Image */}
-                        <div className={viewMode === 'grid' 
-                          ? 'aspect-square bg-gray-100 rounded-md mb-4 overflow-hidden' 
-                          : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0'
-                        }>
-                          <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                            <div className="text-gray-400 text-sm">IMG</div>
-                          </div>
-                        </div>
-
-                        <div className={viewMode === 'grid' ? '' : 'flex-1'}>
-                          {/* Product Info */}
-                          <div className="mb-3">
-                            <div className="text-xs text-blue-600 font-medium mb-1">
-                              {product.categories?.name || 'Product'}
-                            </div>
-                            <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                              <Link href={`/products/${product.id}`}>
-                                {product.name}
-                              </Link>
-                            </h3>
-                            {viewMode === 'list' && (
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {product.description}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Rating */}
-                          <div className="flex items-center gap-1 mb-3">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className="h-4 w-4 text-yellow-400 fill-current"
-                              />
-                            ))}
-                            <span className="text-xs text-gray-600 ml-1">(4.5)</span>
-                          </div>
-
-                          {/* Price & Actions */}
-                          <div className={`flex items-center ${viewMode === 'grid' ? 'justify-between' : 'gap-4'}`}>
-                            <div>
-                              <span className="text-lg font-bold text-gray-900">
-                                ${product.price.toFixed(2)}
-                              </span>
-                              {(product.stock_quantity || 0) > 0 ? (
-                                <div className="text-xs text-green-600">In Stock</div>
-                              ) : (
-                                <div className="text-xs text-red-600">Out of Stock</div>
-                              )}
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="p-2"
-                              >
-                                <Heart className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleAddToCart(product)}
-                                disabled={product.stock_quantity === 0}
-                              >
-                                <ShoppingCart className="h-4 w-4 mr-1" />
-                                {viewMode === 'list' ? 'Add to Cart' : ''}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ProductCard key={product.id} product={product} variant={viewMode} />
                   ))}
                 </div>
 

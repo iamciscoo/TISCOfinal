@@ -64,8 +64,13 @@ export const convertPrice = (
 }
 
 // Image utilities
-export const getImageUrl = (product: { image_url?: string; image?: string }, fallback: string = '/products/default.png'): string => {
-  return product.image_url || product.image || fallback
+export const getImageUrl = (
+  product: { image_url?: string; image?: string; product_images?: { url?: string; is_main?: boolean; sort_order?: number }[] }, 
+  fallback: string = '/circular.svg'
+): string => {
+  const imgs = (product as any)?.product_images as any[] | undefined
+  const mainFromList = imgs?.find(img => img?.is_main)?.url || imgs?.[0]?.url
+  return mainFromList || product.image_url || (product as any).image || fallback
 }
 
 export const getCategoryName = (product: { categories?: { name: string }; category?: string }, fallback: string = 'Uncategorized'): string => {

@@ -14,6 +14,8 @@ export interface Product {
     name: string
     slug: string
   }
+  // Optional gallery images pulled from Supabase
+  product_images?: ProductImage[]
   stock_quantity?: number
   rating?: number
   reviews_count?: number
@@ -24,6 +26,12 @@ export interface Product {
   slug?: string
   created_at?: string
   updated_at?: string
+}
+
+export interface ProductImage {
+  url?: string
+  is_main?: boolean
+  sort_order?: number
 }
 
 export interface Category {

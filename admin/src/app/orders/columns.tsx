@@ -9,31 +9,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+import type { OrderColumn as Order } from "@/lib/ui-types";
 
-export type Order = {
-  id: string;
-  customerId: string;
-  customerName: string;
-  customerEmail: string;
-  total: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
-  items: number;
-  shippingAddress: string;
-  createdAt: string;
-  updatedAt: string;
-  // Database fields
-  currency?: string;
-  shipping_amount?: number;
-  tax_amount?: number;
-  tracking_number?: string;
-  notes?: string;
-};
 
 export const columns: ColumnDef<Order>[] = [
   {
@@ -124,6 +111,7 @@ export const columns: ColumnDef<Order>[] = [
       const status = row.getValue("status") as string;
       const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
         pending: "outline",
+        confirmed: "secondary",
         processing: "secondary",
         shipped: "default",
         delivered: "default",
@@ -201,10 +189,96 @@ export const columns: ColumnDef<Order>[] = [
             <DropdownMenuItem>
               <Link href={`/users/${order.customerId}`}>View customer</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Update status</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          status: 'processing',
+                          reason: 'Status updated by admin'
+                        })
+                      })
+                      if (response.ok) {
+                        toast({ title: "Order updated successfully" })
+                        window.location.reload()
+                      } else {
+                        toast({ title: "Failed to update order", variant: "destructive" })
+                      }
+                    }}
+                  >
+                    Mark as processing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          status: 'shipped',
+                          reason: 'Status updated by admin'
+                        })
+                      })
+                      if (response.ok) {
+                        toast({ title: "Order updated successfully" })
+                        window.location.reload()
+                      } else {
+                        toast({ title: "Failed to update order", variant: "destructive" })
+                      }
+                    }}
+                  >
+                    Mark as shipped
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          status: 'delivered',
+                          reason: 'Status updated by admin'
+                        })
+                      })
+                      if (response.ok) {
+                        toast({ title: "Order updated successfully" })
+                        window.location.reload()
+                      } else {
+                        toast({ title: "Failed to update order", variant: "destructive" })
+                      }
+                    }}
+                  >
+                    Mark as delivered
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
             <DropdownMenuItem>Send tracking info</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={async () => {
+                const confirmed = window.confirm(`Cancel order ${order.id}?`);
+                if (!confirmed) return;
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    status: 'cancelled',
+                    reason: 'Cancelled by admin'
+                  })
+                })
+                if (response.ok) {
+                  toast({ title: "Order cancelled successfully" })
+                  window.location.reload()
+                } else {
+                  toast({ title: "Failed to cancel order", variant: "destructive" })
+                }
+              }}
+            >
               Cancel order
             </DropdownMenuItem>
           </DropdownMenuContent>

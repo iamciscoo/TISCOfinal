@@ -232,6 +232,7 @@ export default function ServicesPage() {
                           type="email" 
                           placeholder="your.email@example.com"
                           className="pl-10"
+                          autoComplete="email"
                           required
                         />
                       </div>
@@ -249,6 +250,7 @@ export default function ServicesPage() {
                           type="tel" 
                           placeholder="(555) 123-4567"
                           className="pl-10"
+                          autoComplete="tel"
                           required
                         />
                       </div>
@@ -264,6 +266,7 @@ export default function ServicesPage() {
                         <Input 
                           id="preferredDate" 
                           type="date" 
+                          autoComplete="off"
                           className="pl-10"
                           required
                         />
@@ -300,6 +303,7 @@ export default function ServicesPage() {
                         id="name" 
                         type="text" 
                         placeholder="John Doe"
+                        autoComplete="name"
                         required
                       />
                     </div>

@@ -59,12 +59,12 @@ function SearchResults() {
       
       // Sample products that match search
       const allProducts: Product[] = [
-        { id: '1', name: 'Smartphone Pro Max', price: 999.99, description: 'Latest flagship smartphone with advanced features', image_url: '/products/1g.png', category_id: 'electronics', stock_quantity: 50, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-        { id: '2', name: 'Wireless Headphones', price: 299.99, description: 'Premium noise-canceling wireless headphones', image_url: '/products/2g.png', category_id: 'electronics', stock_quantity: 100, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-        { id: '3', name: 'Designer T-Shirt', price: 49.99, description: 'Premium cotton t-shirt with modern design', image_url: '/products/3b.png', category_id: 'clothing', stock_quantity: 200, categories: { id: 'clothing', name: 'Clothing', slug: 'clothing' } },
-        { id: '4', name: 'Running Shoes', price: 129.99, description: 'Professional running shoes for athletes', image_url: '/products/4p.png', category_id: 'sports', stock_quantity: 75, categories: { id: 'sports', name: 'Sports', slug: 'sports' } },
-        { id: '5', name: 'Coffee Maker', price: 179.99, description: 'Automatic coffee maker with programmable settings', image_url: '/products/5bl.png', category_id: 'home', stock_quantity: 30, categories: { id: 'home', name: 'Home & Garden', slug: 'home' } },
-        { id: '6', name: 'Gaming Laptop', price: 1299.99, description: 'High-performance gaming laptop', image_url: '/products/6g.png', category_id: 'electronics', stock_quantity: 25, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
+        { id: '1', name: 'Smartphone Pro Max', price: 999.99, description: 'Latest flagship smartphone with advanced features', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 50, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
+        { id: '2', name: 'Wireless Headphones', price: 299.99, description: 'Premium noise-canceling wireless headphones', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 100, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
+        { id: '3', name: 'Designer T-Shirt', price: 49.99, description: 'Premium cotton t-shirt with modern design', image_url: '/circular.svg', category_id: 'clothing', stock_quantity: 200, categories: { id: 'clothing', name: 'Clothing', slug: 'clothing' } },
+        { id: '4', name: 'Running Shoes', price: 129.99, description: 'Professional running shoes for athletes', image_url: '/circular.svg', category_id: 'sports', stock_quantity: 75, categories: { id: 'sports', name: 'Sports', slug: 'sports' } },
+        { id: '5', name: 'Coffee Maker', price: 179.99, description: 'Automatic coffee maker with programmable settings', image_url: '/circular.svg', category_id: 'home', stock_quantity: 30, categories: { id: 'home', name: 'Home & Garden', slug: 'home' } },
+        { id: '6', name: 'Gaming Laptop', price: 1299.99, description: 'High-performance gaming laptop', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 25, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
       ]
       
       // Filter products based on search query
@@ -136,7 +136,7 @@ function SearchResults() {
       id: product.id.toString(),
       name: product.name,
       price: product.price,
-      image_url: product.image_url || '/products/default.png'
+      image_url: product.image_url || '/circular.svg'
     })
   }
 

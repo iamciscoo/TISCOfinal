@@ -69,9 +69,9 @@ export default function AccountDashboard() {
   ]
 
   const wishlistItems = [
-    { id: '1', name: 'Gaming Laptop', price: 1299.99, image: '/products/6g.png' },
-    { id: '2', name: 'Wireless Headphones', price: 299.99, image: '/products/2g.png' },
-    { id: '3', name: 'Smart Watch', price: 399.99, image: '/products/1g.png' }
+    { id: '1', name: 'Gaming Laptop', price: 1299.99, image: '/circular.svg' },
+    { id: '2', name: 'Wireless Headphones', price: 299.99, image: '/circular.svg' },
+    { id: '3', name: 'Smart Watch', price: 399.99, image: '/circular.svg' }
   ]
 
 

@@ -116,6 +116,7 @@ export const Footer = () => {
                 type="email"
                 placeholder="Enter your email"
                 className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+                autoComplete="email"
               />
               <Button className="w-full">Subscribe</Button>
             </div>

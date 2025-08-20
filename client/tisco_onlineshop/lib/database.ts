@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Product, Category, CartItem, Order, Address, User } from './types'
+import type { Address, User } from './types'
 
 // Product Functions
 export async function getProducts(limit: number = 20) {
@@ -7,12 +7,19 @@ export async function getProducts(limit: number = 20) {
     .from('products')
     .select(`
       *,
+      product_images (
+        url,
+        is_main,
+        sort_order
+      ),
       categories (
         id,
         name
       )
     `)
     .limit(limit)
+    .order('is_main', { foreignTable: 'product_images', ascending: false })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
   
   if (error) throw error
   return data
@@ -23,12 +30,19 @@ export async function getProductById(id: string) {
     .from('products')
     .select(`
       *,
+      product_images (
+        url,
+        is_main,
+        sort_order
+      ),
       categories (
         id,
         name
       )
     `)
     .eq('id', id)
+    .order('is_main', { foreignTable: 'product_images', ascending: false })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
     .single()
   
   if (error) throw error
@@ -40,12 +54,19 @@ export async function getProductsByCategory(categoryId: string) {
     .from('products')
     .select(`
       *,
+      product_images (
+        url,
+        is_main,
+        sort_order
+      ),
       categories (
         id,
         name
       )
     `)
     .eq('category_id', categoryId)
+    .order('is_main', { foreignTable: 'product_images', ascending: false })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
   
   if (error) throw error
   return data

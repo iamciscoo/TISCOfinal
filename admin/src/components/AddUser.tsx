@@ -19,45 +19,82 @@ import {
   FormMessage,
 } from "./ui/form";
 import { Input } from "./ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "./ui/button";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  fullName: z
+  full_name: z
     .string()
     .min(2, { message: "Full name must be at least 2 characters!" })
     .max(50),
   email: z.string().email({ message: "Invalid email address!" }),
-  phone: z.string().min(10).max(15),
-  address: z.string().min(2),
-  city: z.string().min(2),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
 });
 
 const AddUser = () => {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      full_name: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+    },
   });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: values.full_name,
+          email: values.email,
+          phone: values.phone,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Failed to create user");
+
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+      form.reset();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <SheetContent>
       <SheetHeader>
         <SheetTitle className="mb-4">Add User</SheetTitle>
         <SheetDescription asChild>
           <Form {...form}>
-            <form className="space-y-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
                 control={form.control}
-                name="fullName"
+                name="full_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input autoComplete="name" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter user full name.
@@ -73,7 +110,7 @@ const AddUser = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input type="email" autoComplete="email" {...field} />
                     </FormControl>
                     <FormDescription>
                       Only admin can see your email.
@@ -87,12 +124,12 @@ const AddUser = () => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Phone (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input type="tel" autoComplete="tel" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Only admin can see your phone number (optional)
+                      Enter phone number (optional)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -103,9 +140,9 @@ const AddUser = () => {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input autoComplete="street-address" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter user address (optional)
@@ -119,9 +156,9 @@ const AddUser = () => {
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>City (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input autoComplete="address-level2" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter user city (optional)
@@ -130,7 +167,9 @@ const AddUser = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit">Submit</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Creating..." : "Add User"}
+              </Button>
             </form>
           </Form>
         </SheetDescription>

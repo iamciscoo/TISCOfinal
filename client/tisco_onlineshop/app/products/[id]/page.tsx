@@ -1,6 +1,10 @@
 import { notFound } from 'next/navigation'
 import { getProductById } from '@/lib/database'
+import { getImageUrl } from '@/lib/shared-utils'
 import { ProductDetail } from '@/components/ProductDetail'
+import { Navbar } from '@/components/Navbar'
+import { Footer } from '@/components/Footer'
+import { CartSidebar } from '@/components/CartSidebar'
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
@@ -8,6 +12,11 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params
+  const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
+  if (!UUID_REGEX.test(id)) {
+    // Guard against invalid IDs like numeric strings to prevent failed Supabase queries
+    notFound()
+  }
   
   try {
     const product = await getProductById(id)
@@ -18,7 +27,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
     return (
       <div className="min-h-screen bg-gray-50">
+        <Navbar />
         <ProductDetail product={product} />
+        <Footer />
+        <CartSidebar />
       </div>
     )
   } catch (error) {
@@ -30,6 +42,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params
+  const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
+  if (!UUID_REGEX.test(id)) {
+    return {
+      title: 'Product - TISCO Market',
+      description: 'Quality products at TISCO Market'
+    }
+  }
   
   try {
     const product = await getProductById(id)
@@ -47,10 +66,13 @@ export async function generateMetadata({ params }: ProductPageProps) {
       openGraph: {
         title: product.name,
         description: product.description,
-        images: product.image_url ? [product.image_url] : [],
+        images: (() => {
+          const img = getImageUrl(product)
+          return img ? [img] : []
+        })(),
       }
     }
-  } catch (error) {
+  } catch {
     return {
       title: 'Product - TISCO Market',
       description: 'Quality products at TISCO Market'

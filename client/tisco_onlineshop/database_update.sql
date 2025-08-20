@@ -210,3 +210,41 @@ CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services
 
 CREATE TRIGGER update_service_bookings_updated_at BEFORE UPDATE ON service_bookings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Step 14: Create Product Images table for multi-image support
+CREATE TABLE IF NOT EXISTS product_images (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  path TEXT,
+  is_main BOOLEAN DEFAULT FALSE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS idx_product_images_product_id ON product_images(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_images_sort ON product_images(product_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_product_images_is_main ON product_images(product_id, is_main);
+
+-- RLS and policies
+ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
+-- Public read (for storefront)
+CREATE POLICY IF NOT EXISTS "Allow public read on product_images" ON product_images FOR SELECT USING (true);
+
+-- Optional: ensure at most one main image per product via trigger (enforced in API too)
+-- This trigger resets other images' is_main when one is set to true
+CREATE OR REPLACE FUNCTION enforce_single_main_image()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_main THEN
+    UPDATE product_images SET is_main = FALSE WHERE product_id = NEW.product_id AND id <> NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_single_main_image ON product_images;
+CREATE TRIGGER trg_single_main_image
+AFTER INSERT OR UPDATE OF is_main ON product_images
+FOR EACH ROW EXECUTE FUNCTION enforce_single_main_image();

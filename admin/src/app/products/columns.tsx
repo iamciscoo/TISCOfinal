@@ -15,28 +15,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+import type { ProductColumn } from "@/lib/ui-types";
+export type Product = ProductColumn;
 
-export type Product = {
-  id: string | number;
-  price: number;
-  name: string;
-  shortDescription: string;
-  description: string;
-  sizes: string[];
-  colors: string[];
-  images: Record<string, string>;
-  // Database fields
-  stock_quantity?: number;
-  is_featured?: boolean;
-  is_active?: boolean;
-  rating?: number;
-  reviews_count?: number;
-  category?: {
-    id: number;
-    name: string;
-    description: string;
-  };
-};
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -68,6 +50,7 @@ export const columns: ColumnDef<Product>[] = [
             src={product.images[product.colors[0]]}
             alt={product.name}
             fill
+            sizes="36px"
             className="rounded-full object-cover"
           />
         </div>
@@ -162,9 +145,27 @@ export const columns: ColumnDef<Product>[] = [
               <Link href={`/products/${product.id}`}>View product</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              Edit product
+              <Link href={`/products/${product.id}/edit`}>Edit product</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={async () => {
+                const confirmed = window.confirm(`Delete product ${product.name}? This cannot be undone.`);
+                if (!confirmed) return;
+                try {
+                  const res = await fetch(`/api/products/${product.id}` , { method: "DELETE" });
+                  if (!res.ok) {
+                    const json = await res.json().catch(() => ({}));
+                    throw new Error(json?.error || "Failed to delete product");
+                  }
+                  toast({ title: "Deleted", description: "Product deleted successfully" });
+                  window.location.reload();
+                } catch (e) {
+                  console.error("Delete product failed", e);
+                  toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
+                }
+              }}
+            >
               Delete product
             </DropdownMenuItem>
           </DropdownMenuContent>

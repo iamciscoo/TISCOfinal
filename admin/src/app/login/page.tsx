@@ -72,6 +72,7 @@ export default function LoginPage() {
                     id="access-key"
                     name="access-key"
                     type="password"
+                    autoComplete="current-password"
                     required
                     className="pl-10"
                     placeholder="Enter admin access key"

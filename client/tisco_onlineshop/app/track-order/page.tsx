@@ -173,6 +173,7 @@ export default function TrackOrderPage() {
                     value={orderNumber}
                     onChange={(e) => setOrderNumber(e.target.value)}
                     placeholder="TISCO-2024-001234"
+                    autoComplete="off"
                     required
                   />
                 </div>
@@ -185,6 +186,7 @@ export default function TrackOrderPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="your.email@example.com"
+                    autoComplete="email"
                     required
                   />
                 </div>
