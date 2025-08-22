@@ -39,8 +39,8 @@ export default function EditCategoryPage() {
           if (!response.ok) {
             throw new Error("Failed to fetch category");
           }
-          const data: Category = await response.json();
-          form.reset(data);
+          const json = await response.json();
+          form.reset(json.data as Category);
         } catch (error) {
           console.error(error);
           toast({ title: "Error", description: "Could not fetch category data.", variant: "destructive" });
@@ -60,7 +60,13 @@ export default function EditCategoryPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update category");
+        let message = "Failed to update category";
+        try {
+          const json = await response.json();
+          if (json?.error) message = json.error as string;
+        } catch {}
+        toast({ title: "Error", description: message, variant: "destructive" });
+        return;
       }
 
       toast({ title: "Category updated successfully" });

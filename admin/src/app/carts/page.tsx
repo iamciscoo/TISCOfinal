@@ -133,7 +133,8 @@ export default function CartsManagement() {
 
   const cartColumns: ColumnDef<Cart>[] = [
     {
-      accessorKey: 'user.email',
+      id: 'userEmail',
+      accessorFn: (row) => row.user?.email ?? '',
       header: 'Customer',
       cell: ({ row }) => (
         <div>
@@ -330,7 +331,7 @@ export default function CartsManagement() {
             <DataTable 
               columns={cartColumns} 
               data={carts}
-              searchKey="user.email"
+              searchKey="userEmail"
             />
           )}
         </CardContent>

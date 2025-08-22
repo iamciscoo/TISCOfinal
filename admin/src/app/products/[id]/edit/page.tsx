@@ -21,8 +21,21 @@ const formSchema = z.object({
   price: z.coerce.number().min(0.01, { message: "Price must be greater than 0" }),
   category_id: z.string().min(1, { message: "Category is required!" }),
   stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
-  is_featured: z.boolean().default(false),
+  is_featured: z.boolean().optional(),
+  is_deal: z.boolean().optional(),
+  original_price: z.coerce.number().optional(),
+  deal_price: z.coerce.number().optional(),
+}).refine((data) => {
+  if (data.is_deal) {
+    return data.original_price && data.deal_price && data.original_price > data.deal_price;
+  }
+  return true;
+}, {
+  message: "When marked as deal, original price must be greater than deal price",
+  path: ["deal_price"],
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 const EditProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,7 +47,7 @@ const EditProductPage = () => {
   const params = useParams();
   const id = params.id as string;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -43,25 +56,11 @@ const EditProductPage = () => {
       category_id: "",
       stock_quantity: 0,
       is_featured: false,
+      is_deal: false,
+      original_price: 0,
+      deal_price: 0,
     },
   });
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch("/api/categories");
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Failed to load categories");
-        setCategories(json.data || []);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load categories",
-          variant: "destructive",
-        });
-      }
-    };
 
   // Gallery helpers
   const reloadProduct = async () => {
@@ -143,6 +142,23 @@ const EditProductPage = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("/api/categories");
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || "Failed to load categories");
+        setCategories(json.data || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load categories",
+          variant: "destructive",
+        });
+      }
+    };
+
     const fetchProduct = async () => {
       try {
         const res = await fetch(`/api/products/${id}`);
@@ -151,12 +167,15 @@ const EditProductPage = () => {
         setProduct(json.data);
         setImages(json.data?.product_images || []);
         form.reset({
-          name: json.data.name,
-          description: json.data.description,
-          price: json.data.price,
-          category_id: json.data.category_id,
-          stock_quantity: json.data.stock_quantity,
-          is_featured: json.data.is_featured,
+          name: json.data.name || "",
+          description: json.data.description || "",
+          price: json.data.price || 0,
+          category_id: json.data.category_id || "",
+          stock_quantity: json.data.stock_quantity || 0,
+          is_featured: json.data.is_featured || false,
+          is_deal: json.data.is_deal || false,
+          original_price: json.data.original_price || 0,
+          deal_price: json.data.deal_price || 0,
         });
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -172,7 +191,7 @@ const EditProductPage = () => {
     if (id) fetchProduct();
   }, [id, toast, form]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormData) => {
     setLoading(true);
     try {
       const productData = values;
@@ -220,28 +239,85 @@ const EditProductPage = () => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {images.map((img, index) => (
-                <div key={img.id} className="border rounded-md p-2 space-y-2">
-                  <div className="relative w-full h-28">
-                    <Image src={img.url} alt={`Image ${index + 1}`} fill sizes="200px" className="rounded-md object-cover" />
-                  </div>
-                  <div className="text-xs flex items-center justify-between">
-                    <span className={img.is_main ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
-                      {img.is_main ? 'Main' : 'Gallery'}
-                    </span>
-                    <span>Order: {img.sort_order ?? 0}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    {!img.is_main && (
-                      <Button type="button" variant="secondary" onClick={() => handleSetMain(img.id)}>Set main</Button>
+                <div key={img.id} className="border rounded-lg p-3 space-y-3 bg-white shadow-sm">
+                  <div className="relative w-full h-32 bg-gray-50 rounded-md overflow-hidden">
+                    <Image 
+                      src={img.url} 
+                      alt={`Product image ${index + 1}`} 
+                      fill 
+                      sizes="200px" 
+                      className="object-cover transition-transform hover:scale-105" 
+                    />
+                    {img.is_main && (
+                      <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        Main
+                      </div>
                     )}
-                    <Button type="button" variant="outline" onClick={() => handleMove(img.id, 'up')}>Up</Button>
-                    <Button type="button" variant="outline" onClick={() => handleMove(img.id, 'down')}>Down</Button>
-                    <Button type="button" variant="destructive" onClick={() => handleDelete(img.id)}>Delete</Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-xs flex items-center justify-between text-gray-600">
+                      <span className={img.is_main ? 'text-green-600 font-medium' : ''}>
+                        {img.is_main ? 'Main Image' : `Gallery #${img.sort_order ?? index + 1}`}
+                      </span>
+                      <span className="text-gray-400">
+                        {new Date(img.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1">
+                      {!img.is_main && (
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => handleSetMain(img.id)}
+                          className="text-xs"
+                        >
+                          Set Main
+                        </Button>
+                      )}
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleMove(img.id, 'up')}
+                        className="text-xs"
+                        disabled={index === 0}
+                      >
+                        ↑
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleMove(img.id, 'down')}
+                        className="text-xs"
+                        disabled={index === images.length - 1}
+                      >
+                        ↓
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDelete(img.id)}
+                        className="text-xs"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
               {images.length === 0 && (
-                <div className="text-sm text-muted-foreground">No images yet. Upload some above.</div>
+                <div className="col-span-full text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                  <div className="space-y-2">
+                    <div className="text-4xl">📸</div>
+                    <div className="text-sm font-medium">No images uploaded yet</div>
+                    <div className="text-xs">Upload images using the file input above</div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -344,6 +420,56 @@ const EditProductPage = () => {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="is_deal"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Deal Product</FormLabel>
+                  <FormDescription>Mark this product as a deal with special pricing.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+          {form.watch('is_deal') && (
+            <>
+              <FormField
+                control={form.control}
+                name="original_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Original Price</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormDescription>Enter the original price before discount.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="deal_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deal Price</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormDescription>Enter the discounted deal price.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
           <Button type="submit" disabled={loading}>
             {loading ? "Updating..." : "Update Product"}
           </Button>

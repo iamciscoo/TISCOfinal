@@ -3,13 +3,23 @@
 
 -- Step 1: Update Products Table with missing fields
 ALTER TABLE products 
-ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
-ADD COLUMN IF NOT EXISTS reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
+ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) CHECK (rating >= 0 AND rating <= 5),
+ADD COLUMN IF NOT EXISTS reviews_count INTEGER CHECK (reviews_count >= 0),
 ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS is_on_sale BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS sale_price DECIMAL(10,2) CHECK (sale_price >= 0),
+ADD COLUMN IF NOT EXISTS is_deal BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS deal_price DECIMAL(10,2) CHECK (deal_price >= 0),
+ADD COLUMN IF NOT EXISTS original_price DECIMAL(10,2) CHECK (original_price >= 0),
 ADD COLUMN IF NOT EXISTS tags TEXT[], 
 ADD COLUMN IF NOT EXISTS slug VARCHAR(200) UNIQUE;
+
+-- Ensure rating and reviews_count have no defaults and are nullable
+ALTER TABLE products 
+  ALTER COLUMN rating DROP DEFAULT,
+  ALTER COLUMN rating DROP NOT NULL,
+  ALTER COLUMN reviews_count DROP DEFAULT,
+  ALTER COLUMN reviews_count DROP NOT NULL;
 
 -- Generate slugs for existing products
 UPDATE products 
@@ -75,21 +85,26 @@ CREATE TABLE IF NOT EXISTS reviews (
   UNIQUE(product_id, user_id)
 );
 
+-- Ensure moderation support
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE;
+
 -- Step 6: Create Services table
 CREATE TABLE IF NOT EXISTS services (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title VARCHAR(200) NOT NULL,
   description TEXT,
   features TEXT[],
-  price_range VARCHAR(50),
   duration VARCHAR(50),
-  requirements TEXT[],
   image TEXT,
   gallery TEXT[],
-  is_popular BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ 
+-- Step 6b: Drop deprecated service columns (safe to rerun)
+ALTER TABLE services DROP COLUMN IF EXISTS price_range;
+ALTER TABLE services DROP COLUMN IF EXISTS requirements;
+ALTER TABLE services DROP COLUMN IF EXISTS is_popular;
 
 -- Step 7: Create Service Bookings table
 CREATE TABLE IF NOT EXISTS service_bookings (
@@ -119,6 +134,7 @@ CREATE TABLE IF NOT EXISTS service_bookings (
 CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products(is_featured);
 CREATE INDEX IF NOT EXISTS idx_products_on_sale ON products(is_on_sale);
+CREATE INDEX IF NOT EXISTS idx_products_is_deal ON products(is_deal);
 CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON reviews(product_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
@@ -134,62 +150,151 @@ ALTER TABLE service_bookings ENABLE ROW LEVEL SECURITY;
 
 -- Step 11: Create RLS Policies
 -- Users policies
-CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid()::text = id);
-CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid()::text = id);
-CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid()::text = id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'users' AND policyname = 'Users can view own profile'
+  ) THEN
+    CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid()::text = id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'users' AND policyname = 'Users can update own profile'
+  ) THEN
+    CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid()::text = id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'users' AND policyname = 'Users can insert own profile'
+  ) THEN
+    CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid()::text = id);
+  END IF;
+END $$;
 
 -- Addresses policies
-CREATE POLICY "Users can view own addresses" ON addresses FOR SELECT USING (auth.uid()::text = user_id);
-CREATE POLICY "Users can insert own addresses" ON addresses FOR INSERT WITH CHECK (auth.uid()::text = user_id);
-CREATE POLICY "Users can update own addresses" ON addresses FOR UPDATE USING (auth.uid()::text = user_id);
-CREATE POLICY "Users can delete own addresses" ON addresses FOR DELETE USING (auth.uid()::text = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'addresses' AND policyname = 'Users can view own addresses'
+  ) THEN
+    CREATE POLICY "Users can view own addresses" ON addresses FOR SELECT USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'addresses' AND policyname = 'Users can insert own addresses'
+  ) THEN
+    CREATE POLICY "Users can insert own addresses" ON addresses FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'addresses' AND policyname = 'Users can update own addresses'
+  ) THEN
+    CREATE POLICY "Users can update own addresses" ON addresses FOR UPDATE USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'addresses' AND policyname = 'Users can delete own addresses'
+  ) THEN
+    CREATE POLICY "Users can delete own addresses" ON addresses FOR DELETE USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
 
 -- Reviews policies
-CREATE POLICY "Anyone can read reviews" ON reviews FOR SELECT USING (true);
-CREATE POLICY "Users can insert own reviews" ON reviews FOR INSERT WITH CHECK (auth.uid()::text = user_id);
-CREATE POLICY "Users can update own reviews" ON reviews FOR UPDATE USING (auth.uid()::text = user_id);
-CREATE POLICY "Users can delete own reviews" ON reviews FOR DELETE USING (auth.uid()::text = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'reviews' AND policyname = 'Anyone can read reviews'
+  ) THEN
+    CREATE POLICY "Anyone can read reviews" ON reviews FOR SELECT USING (true);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'reviews' AND policyname = 'Users can insert own reviews'
+  ) THEN
+    CREATE POLICY "Users can insert own reviews" ON reviews FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'reviews' AND policyname = 'Users can update own reviews'
+  ) THEN
+    CREATE POLICY "Users can update own reviews" ON reviews FOR UPDATE USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'reviews' AND policyname = 'Users can delete own reviews'
+  ) THEN
+    CREATE POLICY "Users can delete own reviews" ON reviews FOR DELETE USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
 
 -- Services policies (public read)
-CREATE POLICY "Allow public read on services" ON services FOR SELECT USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'services' AND policyname = 'Allow public read on services'
+  ) THEN
+    CREATE POLICY "Allow public read on services" ON services FOR SELECT USING (true);
+  END IF;
+END $$;
 
 -- Service bookings policies
-CREATE POLICY "Users can view own bookings" ON service_bookings FOR SELECT USING (auth.uid()::text = user_id);
-CREATE POLICY "Users can insert own bookings" ON service_bookings FOR INSERT WITH CHECK (auth.uid()::text = user_id);
-CREATE POLICY "Users can update own bookings" ON service_bookings FOR UPDATE USING (auth.uid()::text = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'service_bookings' AND policyname = 'Users can view own bookings'
+  ) THEN
+    CREATE POLICY "Users can view own bookings" ON service_bookings FOR SELECT USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'service_bookings' AND policyname = 'Users can insert own bookings'
+  ) THEN
+    CREATE POLICY "Users can insert own bookings" ON service_bookings FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'service_bookings' AND policyname = 'Users can update own bookings'
+  ) THEN
+    CREATE POLICY "Users can update own bookings" ON service_bookings FOR UPDATE USING (auth.uid()::text = user_id);
+  END IF;
+END $$;
 
 -- Step 12: Insert Sample Data
--- Update existing products with ratings and features
-UPDATE products SET 
-  rating = ROUND((RANDOM() * 2 + 3)::numeric, 1), -- Random rating between 3.0-5.0
-  reviews_count = FLOOR(RANDOM() * 100) + 10,
-  is_featured = (RANDOM() > 0.7),
-  is_on_sale = (RANDOM() > 0.8),
-  sale_price = CASE WHEN (RANDOM() > 0.8) THEN ROUND((price * (0.7 + RANDOM() * 0.2))::numeric, 2) ELSE NULL END,
-  tags = CASE 
-    WHEN name ILIKE '%phone%' THEN ARRAY['electronics', 'mobile', 'smartphone']
-    WHEN name ILIKE '%headphone%' THEN ARRAY['electronics', 'audio', 'wireless']
-    WHEN name ILIKE '%shirt%' THEN ARRAY['clothing', 'fashion', 'casual']
-    WHEN name ILIKE '%shoe%' THEN ARRAY['sports', 'footwear', 'running']
-    WHEN name ILIKE '%coffee%' THEN ARRAY['home', 'kitchen', 'appliance']
-    WHEN name ILIKE '%laptop%' THEN ARRAY['electronics', 'computer', 'gaming']
-    WHEN name ILIKE '%jacket%' THEN ARRAY['clothing', 'outerwear', 'winter']
-    WHEN name ILIKE '%basketball%' THEN ARRAY['sports', 'outdoor', 'recreation']
-    ELSE ARRAY['general']
-  END
-WHERE rating IS NULL OR rating = 0;
+-- Removed random seeding of product ratings and reviews_count to avoid fabricated data.
+-- If you need to seed product merchandising fields (e.g., is_featured, is_on_sale),
+-- do so explicitly without touching rating or reviews_count.
 
 -- Insert sample services
-INSERT INTO services (title, description, features, price_range, duration, image, is_popular) VALUES
+INSERT INTO services (title, description, features, duration, image, gallery) VALUES
 ('PC Building Service', 'Professional custom PC building and setup service', 
  ARRAY['Hardware selection consultation', 'Professional assembly', 'OS installation and setup', 'Performance testing and optimization', 'Cable management', '1-year build warranty'], 
- '$100-300', '2-4 hours', '/services/pcbuild.jpeg', true),
+ '2-4 hours', '/services/pcbuild.jpeg', ARRAY['/services/pcbuild.jpeg','/services/gaming-pc-build.jpeg']),
 ('Software Installation & Setup', 'Complete software setup and configuration service', 
  ARRAY['Operating system setup', 'Essential software installation', 'Driver updates', 'Security software setup', 'System optimization', 'User training'], 
- '$50-150', '1-3 hours', '/services/software.jpeg', false),
+ '1-3 hours', '/services/software.jpeg', ARRAY['/services/software.jpeg']),
 ('Workstation Setup Service', 'Complete workstation setup and organization', 
  ARRAY['Ergonomic workspace design', 'Professional cable management', 'Monitor calibration', 'Lighting optimization', 'Desk organization', 'Productivity tools setup'], 
- '$75-200', '2-3 hours', '/services/desksetup.jpeg', true)
+ '2-3 hours', '/services/desksetup.jpeg', ARRAY['/services/desksetup.jpeg'])
 ON CONFLICT DO NOTHING;
 
 -- Step 13: Create triggers for updated_at timestamps
@@ -202,12 +307,15 @@ END;
 $$ language 'plpgsql';
 
 -- Apply triggers to tables with updated_at
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_services_updated_at ON services;
 CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_service_bookings_updated_at ON service_bookings;
 CREATE TRIGGER update_service_bookings_updated_at BEFORE UPDATE ON service_bookings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -230,7 +338,17 @@ CREATE INDEX IF NOT EXISTS idx_product_images_is_main ON product_images(product_
 -- RLS and policies
 ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
 -- Public read (for storefront)
-CREATE POLICY IF NOT EXISTS "Allow public read on product_images" ON product_images FOR SELECT USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'product_images'
+      AND policyname = 'Allow public read on product_images'
+  ) THEN
+    CREATE POLICY "Allow public read on product_images" ON product_images FOR SELECT USING (true);
+  END IF;
+END $$;
 
 -- Optional: ensure at most one main image per product via trigger (enforced in API too)
 -- This trigger resets other images' is_main when one is set to true

@@ -140,6 +140,21 @@ ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending'
 CHECK (payment_status IN ('pending', 'paid', 'failed', 'cancelled')),
 ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE;
 
+-- Create cart_conversions table (stub) for analytics
+CREATE TABLE IF NOT EXISTS cart_conversions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  conversion_date TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  guest_items_count INTEGER DEFAULT 0,
+  items_added INTEGER DEFAULT 0,
+  items_updated INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS cart_conversions_user_id_idx ON cart_conversions(user_id);
+CREATE INDEX IF NOT EXISTS cart_conversions_conversion_date_idx ON cart_conversions(conversion_date);
+
 -- Create function for cart abandonment analytics
 CREATE OR REPLACE FUNCTION get_cart_abandonment_analytics(
   start_date TIMESTAMP WITH TIME ZONE,
@@ -155,11 +170,11 @@ BEGIN
   RETURN QUERY
   WITH cart_stats AS (
     SELECT 
-      COUNT(DISTINCT user_id) FILTER (WHERE created_at >= start_date AND created_at <= end_date) as total_cart_users,
-      COUNT(DISTINCT user_id) FILTER (WHERE created_at >= start_date AND created_at <= end_date AND updated_at < (now() - INTERVAL '24 hours')) as abandoned_cart_users,
+      COUNT(DISTINCT ci.user_id) FILTER (WHERE ci.created_at >= start_date AND ci.created_at <= end_date) as total_cart_users,
+      COUNT(DISTINCT ci.user_id) FILTER (WHERE ci.created_at >= start_date AND ci.created_at <= end_date AND ci.created_at < (now() - INTERVAL '24 hours')) as abandoned_cart_users,
       COUNT(DISTINCT cc.user_id) FILTER (WHERE cc.conversion_date >= start_date AND cc.conversion_date <= end_date) as converted_users
     FROM cart_items ci
-    LEFT JOIN cart_conversions cc ON ci.user_id = cc.user_id::text
+    LEFT JOIN cart_conversions cc ON ci.user_id = cc.user_id
   )
   SELECT 
     CASE WHEN total_cart_users > 0 

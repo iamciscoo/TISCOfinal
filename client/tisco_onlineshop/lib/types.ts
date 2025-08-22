@@ -17,9 +17,13 @@ export interface Product {
   // Optional gallery images pulled from Supabase
   product_images?: ProductImage[]
   stock_quantity?: number
-  rating?: number
-  reviews_count?: number
+  rating?: number | null
+  reviews_count?: number | null
   is_featured?: boolean
+  // Deal pricing fields
+  is_deal?: boolean
+  original_price?: number
+  deal_price?: number
   is_on_sale?: boolean
   sale_price?: number
   tags?: string[]
@@ -227,12 +231,9 @@ export interface Service {
   description: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   features: string[]
-  popular?: boolean
   image: string
   gallery: string[]
-  price_range?: string
   duration?: string
-  requirements?: string[]
 }
 
 export interface ServiceBooking {

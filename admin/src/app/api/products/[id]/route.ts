@@ -25,8 +25,9 @@ export async function GET(_req: Request, { params }: Params) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -37,7 +38,7 @@ export async function PATCH(req: Request, { params }: Params) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => ({} as Record<string, any>));
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
 
     const allowedFields = [
       "name",
@@ -46,13 +47,16 @@ export async function PATCH(req: Request, { params }: Params) {
       "category_id",
       "stock_quantity",
       "is_featured",
+      "is_deal",
+      "original_price",
+      "deal_price",
       "is_active",
       "image_url",
     ] as const;
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
-      if (key in body) updates[key] = body[key as keyof typeof body];
+      if (key in body) updates[key] = (body as Record<string, unknown>)[key];
     }
 
     if (Object.keys(updates).length === 0) {
@@ -73,8 +77,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -91,8 +96,9 @@ export async function DELETE(_req: Request, { params }: Params) {
       .eq("id", id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(null, { status: 204 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+    return new Response(null, { status: 204 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

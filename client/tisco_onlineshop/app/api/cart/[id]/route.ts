@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -51,7 +51,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       .from('cart_items')
       .update({
         quantity,
-        unit_price: cartItem.products.price,
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)

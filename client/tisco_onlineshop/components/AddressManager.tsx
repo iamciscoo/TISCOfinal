@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { toast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { Plus, Edit, Trash2 } from 'lucide-react'
 
 interface Address {
@@ -30,6 +30,7 @@ interface Address {
 }
 
 export default function AddressManager() {
+  const { toast } = useToast()
   const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<string | null>(null)
@@ -273,7 +274,7 @@ export default function AddressManager() {
                   <Checkbox
                     id="is_default"
                     checked={formData.is_default || false}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked: boolean) => 
                       setFormData({ ...formData, is_default: checked as boolean })
                     }
                   />

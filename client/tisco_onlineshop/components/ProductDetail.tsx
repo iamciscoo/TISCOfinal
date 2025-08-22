@@ -9,23 +9,21 @@ import { Separator } from '@/components/ui/separator'
 import { 
   Star, 
   ShoppingCart, 
-  Heart, 
   Share2, 
   ChevronLeft,
   ChevronRight,
   Minus,
   Plus,
-  Truck,
-  Shield,
-  RotateCcw,
   ZoomIn
 } from 'lucide-react'
 import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
-import { getImageUrl } from '@/lib/shared-utils'
+import { getImageUrl, getDealPricing } from '@/lib/shared-utils'
 import { getProductsByCategory } from '@/lib/database'
 import { ProductCard } from '@/components/shared/ProductCard'
+import { ReviewForm } from '@/components/ReviewForm'
+import { ReviewsList } from '@/components/ReviewsList'
 
 interface ProductDetailProps {
   product: Product
@@ -34,10 +32,10 @@ interface ProductDetailProps {
 export const ProductDetail = ({ product }: ProductDetailProps) => {
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
   
   const { addItem, openCart } = useCartStore()
 
@@ -72,9 +70,30 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
         })
         .map(img => img.url)
     : [getImageUrl(product) || '/circular.svg']
-
-  const rating = product.rating || 4.5
-  const reviewCount = product.reviews_count || 127
+  
+  const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
+  
+  // Fetch actual reviews to calculate real rating
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const response = await fetch(`/api/reviews?product_id=${product.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setActualReviews(data.reviews || [])
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error)
+      }
+    }
+    fetchReviews()
+  }, [product.id])
+  
+  const reviewCount = actualReviews.length
+  const rating = reviewCount > 0 
+    ? actualReviews.reduce((sum, review) => sum + review.rating, 0) / reviewCount 
+    : 0
+  const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
 
   const handleQuantityChange = (change: number) => {
     setQuantity(Math.max(1, Math.min(product.stock_quantity || 999, quantity + change)))
@@ -87,7 +106,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
       addItem({
         id: product.id.toString(),
         name: product.name,
-        price: product.price,
+        price: currentPrice,
         image_url: getImageUrl(product) || '/circular.svg'
       }, quantity)
       
@@ -101,10 +120,6 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     } finally {
       setIsAddingToCart(false)
     }
-  }
-
-  const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted)
   }
 
   return (
@@ -215,7 +230,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   onClick={() => setSelectedImageIndex(index)}
                 >
                   <Image
-                    src={image}
+                    src={image || '/circular.svg'}
                     alt={`${product.name} thumbnail ${index + 1}`}
                     fill
                     className="object-cover rounded-md"
@@ -259,7 +274,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                 ))}
               </div>
               <span className="text-sm text-gray-600">
-                {rating} ({reviewCount} reviews)
+                {rating.toFixed(1)} ({reviewCount} reviews)
               </span>
             </div>
           </div>
@@ -267,9 +282,23 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
           {/* Price */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <span className="text-4xl font-bold text-gray-900">
-                <PriceDisplay price={product.price} />
-              </span>
+              {isDeal ? (
+                <>
+                  <span className="text-4xl font-bold text-red-600">
+                    <PriceDisplay price={currentPrice} />
+                  </span>
+                  {originalPrice && originalPrice > currentPrice && (
+                    <span className="text-xl text-gray-500 line-through">
+                      <PriceDisplay price={originalPrice} />
+                    </span>
+                  )}
+                  <Badge variant="destructive">Deal</Badge>
+                </>
+              ) : (
+                <span className="text-4xl font-bold text-gray-900">
+                  <PriceDisplay price={currentPrice} />
+                </span>
+              )}
             </div>
             <p className="text-sm text-green-600 font-medium">
               Free shipping on orders over <PriceDisplay price={50} />
@@ -342,13 +371,6 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 {isAddingToCart ? 'Adding...' : 'Add to Cart'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleWishlistToggle}
-                className="h-12 w-12 p-0"
-              >
-                <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current text-red-500' : ''}`} />
-              </Button>
             </div>
 
             <Button variant="outline" className="w-full h-12">
@@ -356,148 +378,27 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             </Button>
           </div>
 
-          <Separator />
-
-          {/* Product Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Truck className="h-5 w-5 text-blue-600" />
-              <div>
-                <div className="text-sm font-medium">Free Delivery</div>
-                <div className="text-xs text-gray-600">Orders over $50</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Shield className="h-5 w-5 text-green-600" />
-              <div>
-                <div className="text-sm font-medium">Warranty</div>
-                <div className="text-xs text-gray-600">1 Year Coverage</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <RotateCcw className="h-5 w-5 text-orange-600" />
-              <div>
-                <div className="text-sm font-medium">Easy Returns</div>
-                <div className="text-xs text-gray-600">30 Day Policy</div>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
 
       {/* Reviews Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Reviews Summary */}
-          <div className="lg:col-span-1">
-            <h3 className="text-2xl font-bold mb-6">Customer Reviews</h3>
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-gray-900 mb-2">{rating}</div>
-                <div className="flex justify-center mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-6 w-6 ${
-                        i < Math.floor(rating)
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="text-sm text-gray-600">Based on {reviewCount} reviews</div>
-              </div>
-              
-              {/* Rating Breakdown */}
-              <div className="space-y-2">
-                {[5, 4, 3, 2, 1].map((stars) => (
-                  <div key={stars} className="flex items-center gap-2">
-                    <span className="text-sm w-8">{stars}</span>
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-yellow-400 h-2 rounded-full" 
-                        style={{ width: `${stars === 5 ? 60 : stars === 4 ? 25 : stars === 3 ? 10 : stars === 2 ? 3 : 2}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm text-gray-600 w-8">
-                      {stars === 5 ? 76 : stars === 4 ? 32 : stars === 3 ? 13 : stars === 2 ? 4 : 2}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Review Form */}
+          <div>
+            <ReviewForm 
+              productId={String(product.id)} 
+              onReviewSubmitted={() => setReviewRefreshTrigger(prev => prev + 1)}
+            />
           </div>
 
-          {/* Individual Reviews */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Sample Reviews */}
-            {[
-              {
-                id: 1,
-                name: "Sarah Johnson",
-                rating: 5,
-                date: "2 days ago",
-                verified: true,
-                review: "Absolutely love this product! The quality exceeded my expectations and it arrived faster than promised. Highly recommend!"
-              },
-              {
-                id: 2,
-                name: "Mike Chen",
-                rating: 4,
-                date: "1 week ago",
-                verified: true,
-                review: "Great value for money. Works exactly as described. Only minor issue was the packaging could be better, but the product itself is excellent."
-              },
-              {
-                id: 3,
-                name: "Emily Davis",
-                rating: 5,
-                date: "2 weeks ago",
-                verified: false,
-                review: "This is my second purchase of this item. Consistent quality and great customer service. Will definitely buy again!"
-              }
-            ].map((review) => (
-              <div key={review.id} className="bg-white rounded-lg p-6 border border-gray-200">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium">{review.name[0]}</span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{review.name}</div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating
-                                  ? 'text-yellow-400 fill-current'
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        {review.verified && (
-                          <Badge variant="secondary" className="text-xs">Verified Purchase</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-sm text-gray-500">{review.date}</span>
-                </div>
-                <p className="text-gray-700 leading-relaxed">{review.review}</p>
-              </div>
-            ))}
-
-            {/* Load More Reviews */}
-            <div className="text-center pt-6">
-              <Button variant="outline" className="px-8">
-                Load More Reviews
-              </Button>
-            </div>
+          {/* Reviews List */}
+          <div>
+            <ReviewsList 
+              productId={String(product.id)} 
+              refreshTrigger={reviewRefreshTrigger}
+            />
           </div>
         </div>
       </div>

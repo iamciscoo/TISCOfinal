@@ -142,7 +142,7 @@ export async function DELETE(req: Request, { params }: Params) {
       }
     }
 
-    return NextResponse.json(null, { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 });
   }

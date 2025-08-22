@@ -42,7 +42,7 @@ export default function ReviewsManagement() {
       if (!response.ok) throw new Error('Failed to fetch reviews')
       
       const data = await response.json()
-      setReviews(data.data || [])
+      setReviews(data.reviews || [])
     } catch (error) {
       console.error('Error fetching reviews:', error)
       toast({
@@ -70,7 +70,12 @@ export default function ReviewsManagement() {
         })
       })
 
-      if (!response.ok) throw new Error('Action failed')
+      // Try to read server response to show a meaningful error
+      const result = await response.json().catch(() => null as any)
+      if (!response.ok) {
+        const msg = (result && (result.error || result.message)) || `Failed to ${action} review`
+        throw new Error(msg)
+      }
 
       toast({
         title: 'Success',
@@ -79,9 +84,10 @@ export default function ReviewsManagement() {
       
       fetchReviews()
     } catch (error) {
+      console.error(`Failed to ${action} review`, error)
       toast({
         title: 'Error',
-        description: `Failed to ${action} review`,
+        description: (error as Error)?.message || `Failed to ${action} review`,
         variant: 'destructive'
       })
     } finally {
@@ -106,7 +112,8 @@ export default function ReviewsManagement() {
 
   const reviewColumns: ColumnDef<Review>[] = [
     {
-      accessorKey: 'product.name',
+      id: 'productName',
+      accessorFn: (row) => row.product?.name ?? '',
       header: 'Product',
       cell: ({ row }) => (
         <div className="flex items-center space-x-3">
@@ -123,7 +130,8 @@ export default function ReviewsManagement() {
       )
     },
     {
-      accessorKey: 'user.email',
+      id: 'userEmail',
+      accessorFn: (row) => row.user?.email ?? '',
       header: 'Customer',
       cell: ({ row }) => (
         <div>
@@ -275,7 +283,7 @@ export default function ReviewsManagement() {
             <DataTable 
               columns={reviewColumns} 
               data={reviews}
-              searchKey="product.name"
+              searchKey="productName"
             />
           )}
         </CardContent>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -22,7 +22,7 @@ export async function GET() {
         addresses(*),
         orders(id, status, total_amount, created_at)
       `)
-      .eq('clerk_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (error && error.code !== 'PGRST116') {
@@ -31,15 +31,21 @@ export async function GET() {
 
     // If no profile exists, create one
     if (!profile) {
+      const isVerified = (
+        user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
+        user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
+      ) ?? false
+
       const { data: newProfile, error: createError } = await supabase
         .from('users')
         .insert({
-          clerk_id: user.id,
+          id: user.id,
           email: user.emailAddresses[0]?.emailAddress,
           first_name: user.firstName,
           last_name: user.lastName,
           phone: user.phoneNumbers[0]?.phoneNumber,
-          avatar_url: user.imageUrl
+          avatar_url: user.imageUrl,
+          is_verified: isVerified
         })
         .select(`
           *,
@@ -100,7 +106,7 @@ export async function PATCH(req: NextRequest) {
         ...updates,
         updated_at: new Date().toISOString()
       })
-      .eq('clerk_id', user.id)
+      .eq('id', user.id)
       .select()
       .single()
 

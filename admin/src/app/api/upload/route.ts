@@ -3,6 +3,20 @@ import { supabase } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
+// Image validation constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+function validateImage(file: File): string | null {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return `Invalid file type: ${file.type}. Allowed types: ${ALLOWED_TYPES.join(', ')}`;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max size: 5MB`;
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -21,7 +35,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const BUCKET = 'product_images';
+    // Validate all files
+    for (const file of files) {
+      const validationError = validateImage(file);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+    }
+
+    const BUCKET = 'product-images';
 
     // Ensure bucket exists; create if missing
     const { data: buckets, error: listErr } = await supabase.storage.listBuckets();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,15 +15,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { action } = await req.json()
+    // Read JSON body ONCE and reuse
+    type GuestItem = { id: string; quantity: number }
+    type Payload = {
+      action?: 'sync_profile' | 'merge_guest_data' | 'cleanup_session'
+      guest_cart?: GuestItem[]
+      guest_cart_items?: GuestItem[]
+    }
+    const payload: Payload = await req.json().catch(() => ({} as Payload))
+    const { action } = payload
 
     switch (action) {
       case 'sync_profile':
         // Sync Clerk user data to Supabase users table
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
-          .select('id, clerk_id')
-          .eq('clerk_id', user.id)
+          .select('id')
+          .eq('id', user.id)
           .single()
 
         if (fetchError && fetchError.code !== 'PGRST116') {
@@ -31,17 +40,21 @@ export async function POST(req: NextRequest) {
 
         if (!existingUser) {
           // Create new user record
+          const isVerified = (
+            user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
+            user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
+          ) ?? false
+
           const { data: newUser, error: createError } = await supabase
             .from('users')
             .insert({
-              clerk_id: user.id,
+              id: user.id,
               email: user.emailAddresses[0]?.emailAddress,
               first_name: user.firstName,
               last_name: user.lastName,
               phone: user.phoneNumbers[0]?.phoneNumber,
               avatar_url: user.imageUrl,
-              email_verified: user.emailAddresses[0]?.verification?.status === 'verified',
-              phone_verified: user.phoneNumbers[0]?.verification?.status === 'verified'
+              is_verified: isVerified
             })
             .select()
             .single()
@@ -56,6 +69,11 @@ export async function POST(req: NextRequest) {
           }, { status: 201 })
         } else {
           // Update existing user record
+          const isVerified = (
+            user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
+            user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
+          ) ?? false
+
           const { data: updatedUser, error: updateError } = await supabase
             .from('users')
             .update({
@@ -64,11 +82,10 @@ export async function POST(req: NextRequest) {
               last_name: user.lastName,
               phone: user.phoneNumbers[0]?.phoneNumber,
               avatar_url: user.imageUrl,
-              email_verified: user.emailAddresses[0]?.verification?.status === 'verified',
-              phone_verified: user.phoneNumbers[0]?.verification?.status === 'verified',
+              is_verified: isVerified,
               updated_at: new Date().toISOString()
             })
-            .eq('clerk_id', user.id)
+            .eq('id', user.id)
             .select()
             .single()
 
@@ -84,22 +101,33 @@ export async function POST(req: NextRequest) {
 
       case 'merge_guest_data':
         // Merge guest cart and other data when user logs in
-        const { guest_cart_items } = await req.json()
+        const guestCart = Array.isArray(payload?.guest_cart)
+          ? payload.guest_cart
+          : Array.isArray(payload?.guest_cart_items)
+            ? payload.guest_cart_items
+            : []
 
-        if (guest_cart_items && guest_cart_items.length > 0) {
+        if (guestCart && guestCart.length > 0) {
           // Use the existing guest cart conversion API
-          const conversionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/guest`, {
+          const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || req.nextUrl.origin
+          const url = `${base}/api/cart/guest`
+          const conversionResponse = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              // Forward cookies to preserve Clerk auth context for currentUser()
+              Cookie: cookies().toString(),
+            },
             body: JSON.stringify({
-              guest_cart_items,
-              user_id: user.id
+              guest_cart: guestCart
             })
           })
 
           if (!conversionResponse.ok) {
+            const details = await conversionResponse.text().catch(() => '')
             return NextResponse.json({ 
-              error: 'Failed to merge guest cart' 
+              error: 'Failed to merge guest cart',
+              details: details || undefined
             }, { status: 500 })
           }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         .eq('discount_id', discount.id)
         .eq('user_id', user.id)
 
-      if (count >= discount.per_user_limit) {
+      if ((count ?? 0) >= discount.per_user_limit) {
         return NextResponse.json({ error: 'You have already used this discount code' }, { status: 400 })
       }
     }
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     const eligibleItems = []
 
     for (const item of cartItems) {
-      const itemTotal = item.quantity * item.unit_price
+      const unitPrice = item.products?.price ?? 0
+      const itemTotal = item.quantity * unitPrice
       subtotal += itemTotal
 
       // Check if item is eligible for discount
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
           cart_item_id: item.id,
           product_id: item.product_id,
           quantity: item.quantity,
-          unit_price: item.unit_price,
+          current_unit_price: unitPrice,
           item_total: itemTotal
         })
       }

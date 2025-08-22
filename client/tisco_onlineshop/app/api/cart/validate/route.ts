@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { NextResponse } from 'next/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -42,7 +42,7 @@ export async function POST() {
         cart_item_id: item.id,
         product_id: item.product_id,
         original_quantity: item.quantity,
-        original_price: item.unit_price,
+        original_price: item.products?.price,
         issues: [] as string[]
       }
 
@@ -56,16 +56,7 @@ export async function POST() {
         })
         hasChanges = true
       } else {
-        // Check price changes
-        if (item.unit_price !== item.products.price) {
-          validation.issues.push(`Price updated from $${item.unit_price} to $${item.products.price}`)
-          updates.push({
-            action: 'update_price',
-            cart_item_id: item.id,
-            new_price: item.products.price
-          })
-          hasChanges = true
-        }
+        // Note: We no longer track stored unit prices in cart_items. We only surface current product price.
 
         // Check stock availability
         if (item.quantity > item.products.stock_quantity) {
@@ -99,20 +90,11 @@ export async function POST() {
             .from('cart_items')
             .delete()
             .eq('id', update.cart_item_id)
-        } else if (update.action === 'update_price') {
-          await supabase
-            .from('cart_items')
-            .update({
-              unit_price: update.new_price,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', update.cart_item_id)
         } else if (update.action === 'update_quantity') {
           await supabase
             .from('cart_items')
             .update({
-              quantity: update.new_quantity,
-              updated_at: new Date().toISOString()
+              quantity: update.new_quantity
             })
             .eq('id', update.cart_item_id)
         }

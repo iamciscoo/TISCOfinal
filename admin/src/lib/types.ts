@@ -17,6 +17,10 @@ export interface Product {
   stock_quantity?: number
   is_featured: boolean
   is_active: boolean
+  // deal fields
+  is_deal?: boolean
+  original_price?: number | null
+  deal_price?: number | null
   rating?: number
   reviews_count?: number
   discount_percentage?: number
@@ -127,15 +131,13 @@ export interface Review {
 }
 
 export interface Service {
-  id: string | number
-  name: string
+  id: string
+  title: string
   description: string
-  price: number
-  duration_hours: number
-  is_active: boolean
-  category: string
-  requirements?: string[]
-  image_url?: string
+  features: string[]
+  duration: string
+  image: string
+  gallery: string[]
   created_at: string
   updated_at: string
 }

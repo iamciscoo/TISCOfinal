@@ -54,7 +54,19 @@ export async function PATCH(req: Request, { params }: Params) {
       updateData.rating = rating;
     }
 
-    updateData.updated_at = new Date().toISOString();
+    // Schema guard: if updating approval, ensure column exists
+    if (Object.prototype.hasOwnProperty.call(updateData, 'is_approved')) {
+      const { error: approvalColError } = await supabase
+        .from('reviews')
+        .select('is_approved')
+        .limit(1)
+      if (approvalColError) {
+        return NextResponse.json(
+          { error: "Approval not supported: 'is_approved' column missing in reviews table" },
+          { status: 400 }
+        );
+      }
+    }
 
     const { data, error } = await supabase
       .from("reviews")

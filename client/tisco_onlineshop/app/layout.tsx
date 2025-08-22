@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Chango } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs'
 import { CurrencyProvider } from '@/lib/currency-context'
+import { Toaster } from '@/components/ui/toaster'
+import AuthSync from '@/components/AuthSync'
 import "./globals.css";
 
 const geistSans = Geist({
@@ -38,8 +40,10 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} ${chango.variable} antialiased`}
         >
           <CurrencyProvider>
+            <AuthSync />
             {children}
           </CurrencyProvider>
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

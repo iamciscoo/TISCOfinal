@@ -278,7 +278,7 @@ export async function getServices() {
   const { data, error } = await supabase
     .from('services')
     .select('*')
-    .order('is_popular', { ascending: false })
+    .order('created_at', { ascending: false })
   
   if (error) throw error
   return data

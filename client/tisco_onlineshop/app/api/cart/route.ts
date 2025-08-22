@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -95,9 +95,7 @@ export async function POST(req: NextRequest) {
       const { data: updatedItem, error: updateError } = await supabase
         .from('cart_items')
         .update({
-          quantity: newQuantity,
-          unit_price: product.price,
-          updated_at: new Date().toISOString()
+          quantity: newQuantity
         })
         .eq('id', existingItem.id)
         .select()
@@ -115,8 +113,7 @@ export async function POST(req: NextRequest) {
         .insert({
           user_id: user.id,
           product_id,
-          quantity,
-          unit_price: product.price
+          quantity
         })
         .select()
         .single()

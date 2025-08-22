@@ -38,7 +38,7 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
-  const productsPerPage = 12
+  const [columns, setColumns] = useState(1)
 
   // Fetch data
   useEffect(() => {
@@ -61,6 +61,19 @@ export default function ProductsPage() {
     }
     
     fetchData()
+  }, [])
+
+  // Track responsive columns to enforce max 3 rows per page
+  useEffect(() => {
+    const updateColumns = () => {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 0
+      if (w >= 1024) setColumns(3) // lg:grid-cols-3
+      else if (w >= 640) setColumns(2) // sm:grid-cols-2
+      else setColumns(1)
+    }
+    updateColumns()
+    window.addEventListener('resize', updateColumns)
+    return () => window.removeEventListener('resize', updateColumns)
   }, [])
 
   // Filter and sort products
@@ -111,10 +124,11 @@ export default function ProductsPage() {
 
   // Add to cart handled inside ProductCard
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
-  const startIndex = (currentPage - 1) * productsPerPage
-  const displayedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage)
+  // Pagination (max 3 rows per page)
+  const itemsPerPage = viewMode === 'grid' ? columns * 3 : 3
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
   if (loading) {
     return (
@@ -280,54 +294,58 @@ export default function ProductsPage() {
             ) : (
               <>
                 {/* Products Grid */}
-                <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
-                  : 'space-y-4'
-                }>
+                <div
+                  className={
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                      : 'space-y-4'
+                  }
+                >
                   {displayedProducts.map((product) => (
                     <ProductCard key={product.id} product={product} variant={viewMode} />
                   ))}
                 </div>
-
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-12">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
-                    </Button>
-                    
-                    <div className="flex gap-1">
-                      {[...Array(totalPages)].map((_, i) => (
-                        <Button
-                          key={i + 1}
-                          variant={currentPage === i + 1 ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setCurrentPage(i + 1)}
-                        >
-                          {i + 1}
-                        </Button>
-                      ))}
+                  <div className="flex flex-col items-center gap-3 mt-12">
+                    <div className="flex justify-center items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex gap-1">
+                        {[...Array(totalPages)].map((_, i) => (
+                          <Button
+                            key={i + 1}
+                            variant={currentPage === i + 1 ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCurrentPage(i + 1)}
+                          >
+                            {i + 1}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
                     </div>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
                   </div>
                 )}
               </>
             )}
           </div>
         </div>
+
       </div>
 
       <Footer />

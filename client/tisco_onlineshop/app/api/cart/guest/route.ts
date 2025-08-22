@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     })
 
     for (const guestItem of guest_cart) {
-      const { id: product_id, quantity, price } = guestItem
+      const product_id = guestItem.id
+      let quantity = guestItem.quantity
 
       if (!product_id || !quantity || quantity < 1) {
         itemsSkipped++
@@ -91,9 +92,7 @@ export async function POST(req: NextRequest) {
         const { error: updateError } = await supabase
           .from('cart_items')
           .update({
-            quantity: existingQuantity + quantity,
-            unit_price: product.price,
-            updated_at: new Date().toISOString()
+            quantity: existingQuantity + quantity
           })
           .eq('user_id', user.id)
           .eq('product_id', product_id)
@@ -121,8 +120,7 @@ export async function POST(req: NextRequest) {
           .insert({
             user_id: user.id,
             product_id,
-            quantity,
-            unit_price: product.price
+            quantity
           })
 
         if (insertError) {
@@ -191,7 +189,7 @@ export async function GET() {
         products(id, name, price, image_url, product_images(url, is_main))
       `)
       .eq('user_id', user.id)
-      .lt('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // 24 hours ago
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // 24 hours ago
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

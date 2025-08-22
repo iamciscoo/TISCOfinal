@@ -5,6 +5,26 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
+export async function GET(_req: Request, { params }: Params) {
+  try {
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: Request, { params }: Params) {
   try {
     const id = params?.id;
@@ -17,7 +37,6 @@ export async function PATCH(req: Request, { params }: Params) {
     const allowedFields = [
       "name",
       "description",
-      "is_active",
     ] as const;
 
     const updates: Record<string, any> = {};
@@ -32,8 +51,6 @@ export async function PATCH(req: Request, { params }: Params) {
       );
     }
 
-    updates.updated_at = new Date().toISOString();
-
     const { data, error } = await supabase
       .from("categories")
       .update(updates)
@@ -41,7 +58,11 @@ export async function PATCH(req: Request, { params }: Params) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      // Map common constraint errors to clearer HTTP codes
+      const status = (error as any)?.code === '23505' ? 409 : 500;
+      return NextResponse.json({ error: error.message, code: (error as any)?.code }, { status });
+    }
     return NextResponse.json({ data }, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
@@ -61,7 +82,7 @@ export async function DELETE(_req: Request, { params }: Params) {
       .eq("id", id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(null, { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
   }

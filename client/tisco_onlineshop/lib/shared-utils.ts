@@ -1,6 +1,6 @@
 // Shared utility functions used across the application
 
-import { Currency, ValidationError } from './types'
+import { Currency, ValidationError, Product } from './types'
 
 // Status utilities
 export const getOrderStatusColor = (status: string): string => {
@@ -63,14 +63,81 @@ export const convertPrice = (
   return price
 }
 
+// Deal pricing utilities
+export function getDealPricing(product: Product): { isDeal: boolean; currentPrice: number; originalPrice?: number } {
+  const dealPrice = typeof product.deal_price === 'number' ? product.deal_price : undefined
+  const origPrice = typeof product.original_price === 'number' ? product.original_price : undefined
+  const basePrice = product.price
+  const isDeal = !!product.is_deal && typeof dealPrice === 'number' && ((origPrice ?? basePrice) > dealPrice)
+  const currentPrice = isDeal && typeof dealPrice === 'number' ? dealPrice : basePrice
+  return { isDeal, currentPrice, originalPrice: origPrice }
+}
+
+export function getDiscountPercent(product: Product): number | null {
+  const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
+  const base = originalPrice ?? product.price
+  if (!isDeal || !(base > currentPrice)) return null
+  return Math.round(((base - currentPrice) / base) * 100)
+}
+
 // Image utilities
-export const getImageUrl = (
-  product: { image_url?: string; image?: string; product_images?: { url?: string; is_main?: boolean; sort_order?: number }[] }, 
-  fallback: string = '/circular.svg'
-): string => {
-  const imgs = (product as any)?.product_images as any[] | undefined
-  const mainFromList = imgs?.find(img => img?.is_main)?.url || imgs?.[0]?.url
-  return mainFromList || product.image_url || (product as any).image || fallback
+export function getImageUrl(product: Product): string {
+  // Priority order:
+  // 1. Main image from product_images array
+  // 2. First image from product_images array
+  // 3. Legacy image_url field
+  // 4. Fallback image
+  
+  if (product.product_images && product.product_images.length > 0) {
+    // Find main image first
+    const mainImage = product.product_images.find(img => img.is_main)
+    if (mainImage?.url) return mainImage.url
+    
+    // Fall back to first image
+    const firstImage = product.product_images[0]
+    if (firstImage?.url) return firstImage.url
+  }
+  
+  // Legacy fallback
+  if (product.image_url) return product.image_url
+  
+  // Final fallback
+  return '/circular.svg'
+}
+
+export function getSupabaseImageUrl(path: string): string {
+  if (!path) return '/circular.svg'
+  
+  // If it's already a full URL, return as is
+  if (path.startsWith('http')) return path
+  
+  // Construct Supabase Storage URL
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) return '/circular.svg'
+  
+  return `${supabaseUrl}/storage/v1/object/public/product-images/${path}`
+}
+
+export function getAllProductImages(product: Product): string[] {
+  const images: string[] = []
+  
+  if (product.product_images && product.product_images.length > 0) {
+    // Sort by main first, then by sort_order
+    const sortedImages = [...product.product_images].sort((a, b) => {
+      if (a.is_main && !b.is_main) return -1
+      if (!a.is_main && b.is_main) return 1
+      return (a.sort_order || 0) - (b.sort_order || 0)
+    })
+    
+    images.push(...sortedImages.map(img => img.url).filter((url): url is string => Boolean(url)))
+  }
+  
+  // Add legacy image_url if not already included
+  if (product.image_url && !images.includes(product.image_url)) {
+    images.push(product.image_url)
+  }
+  
+  return images.length > 0 ? images : ['/circular.svg']
 }
 
 export const getCategoryName = (product: { categories?: { name: string }; category?: string }, fallback: string = 'Uncategorized'): string => {

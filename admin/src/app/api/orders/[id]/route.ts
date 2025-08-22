@@ -68,7 +68,7 @@ export async function DELETE(_req: Request, { params }: Params) {
       .eq("id", id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(null, { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
   }

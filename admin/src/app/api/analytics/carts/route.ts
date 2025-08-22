@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - periodDays)
     const startDateISO = startDate.toISOString()
+    const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
     // Cart abandonment analytics
     const { data: abandonmentData, error: abandonmentError } = await supabase
@@ -27,24 +28,51 @@ export async function GET(req: NextRequest) {
       console.error('Cart abandonment analytics error:', abandonmentError)
     }
 
-    // Most abandoned products
-    const { data: abandonedProducts, error: productsError } = await supabase
-      .from('cart_items')
-      .select(`
-        product_id,
-        products(id, name, price, image_url),
-        quantity
-      `)
-      .gte('created_at', startDateISO)
-      .lt('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    // Most abandoned products (fallback if updated_at column is missing)
+    let abandonedRaw: any[] | null = null
+    let productsError: any = null
+    {
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select(`
+          product_id,
+          products(id, name, price, image_url),
+          quantity,
+          created_at,
+          updated_at
+        `)
+        .gte('created_at', startDateISO)
+      if (error && String(error.message).toLowerCase().includes('updated_at')) {
+        const { data: dataFallback, error: errorFallback } = await supabase
+          .from('cart_items')
+          .select(`
+            product_id,
+            products(id, name, price, image_url),
+            quantity,
+            created_at
+          `)
+          .gte('created_at', startDateISO)
+        abandonedRaw = dataFallback
+        productsError = errorFallback
+      } else {
+        abandonedRaw = data
+        productsError = error
+      }
+    }
 
     if (productsError) {
       console.error('Abandoned products error:', productsError)
     }
 
+    // Filter abandoned by last activity (updated_at || created_at) older than 24h
+    const abandonedProducts = (abandonedRaw || []).filter((item: any) => {
+      const activity = item.updated_at || item.created_at
+      return activity && new Date(activity) < cutoffDate
+    })
+
     // Group and count abandoned products
     const productCounts = new Map()
-    abandonedProducts?.forEach(item => {
+    abandonedProducts.forEach((item: any) => {
       const productId = item.product_id
       if (!productCounts.has(productId)) {
         productCounts.set(productId, {
@@ -77,26 +105,57 @@ export async function GET(req: NextRequest) {
     const totalConverted = conversionData?.reduce((sum, conv) => sum + conv.items_added + conv.items_updated, 0) || 0
     const conversionRate = totalGuestCarts > 0 ? (totalConverted / totalGuestCarts) * 100 : 0
 
-    // Current active carts
-    const { data: activeCarts, error: activeError } = await supabase
-      .from('cart_items')
-      .select('user_id, quantity, unit_price', { count: 'exact' })
-      .gte('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    // Current active carts (filter in JS by last activity)
+    let activeItems: any[] | null = null
+    let activeError: any = null
+    {
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select(`
+          user_id,
+          quantity,
+          unit_price,
+          created_at,
+          updated_at,
+          products(price)
+        `)
+        .gte('created_at', startDateISO)
+      if (error && String(error.message).toLowerCase().includes('updated_at')) {
+        const { data: dataFallback, error: errorFallback } = await supabase
+          .from('cart_items')
+          .select(`
+            user_id,
+            quantity,
+            unit_price,
+            created_at,
+            products(price)
+          `)
+          .gte('created_at', startDateISO)
+        activeItems = dataFallback
+        activeError = errorFallback
+      } else {
+        activeItems = data
+        activeError = error
+      }
+    }
 
     if (activeError) {
       console.error('Active carts error:', activeError)
     }
 
-    // Group active carts by user
+    // Group active carts by user (last activity within 24h)
     const activeCartsByUser = new Map()
-    activeCarts?.forEach(item => {
+    activeItems?.forEach((item: any) => {
+      const activity = item.updated_at || item.created_at
+      if (!activity || new Date(activity) < cutoffDate) return
       const userId = item.user_id
       if (!activeCartsByUser.has(userId)) {
         activeCartsByUser.set(userId, { items: 0, value: 0 })
       }
       const cart = activeCartsByUser.get(userId)
       cart.items += item.quantity
-      cart.value += item.quantity * item.unit_price
+      const price = item.unit_price ?? item.products?.price ?? 0
+      cart.value += item.quantity * price
     })
 
     const activeCartsCount = activeCartsByUser.size
@@ -111,7 +170,7 @@ export async function GET(req: NextRequest) {
         average_cart_value: Math.round(averageCartValue * 100) / 100,
         abandonment_rate: abandonmentData?.[0]?.abandonment_rate || 0,
         conversion_rate: Math.round(conversionRate * 100) / 100,
-        total_abandoned_items: abandonedProducts?.length || 0
+        total_abandoned_items: abandonedProducts.length || 0
       },
       top_abandoned_products: topAbandonedProducts,
       conversion_stats: {

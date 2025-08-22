@@ -29,19 +29,17 @@ export async function GET(req: NextRequest) {
       query = query.eq('user_id', userId)
     }
 
-    // Filter by status
+    // Filter by status (use created_at for compatibility when updated_at may not exist)
     if (status === 'abandoned') {
-      // Items older than 24 hours without recent activity
       const abandonedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      query = query.lt('updated_at', abandonedCutoff)
+      query = query.lt('created_at', abandonedCutoff)
     } else if (status === 'active') {
-      // Items updated within last 24 hours
       const activeCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      query = query.gt('updated_at', activeCutoff)
+      query = query.gte('created_at', activeCutoff)
     }
 
     const { data: cartItems, error, count } = await query
-      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (error) {
@@ -60,28 +58,30 @@ export async function GET(req: NextRequest) {
           items: [],
           total_items: 0,
           total_value: 0,
-          last_updated: item.updated_at,
+          last_updated: item.updated_at || item.created_at,
           created_at: item.created_at
         })
       }
       
       const cart = cartsByUser.get(userId)
+      const unitPrice = item.unit_price ?? item.products?.price ?? 0
+      const lastUpdated = item.updated_at || item.created_at
       cart.items.push({
         id: item.id,
         product: item.products,
         quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.quantity * item.unit_price,
+        unit_price: unitPrice,
+        total_price: item.quantity * unitPrice,
         created_at: item.created_at,
-        updated_at: item.updated_at
+        updated_at: lastUpdated
       })
       
       cart.total_items += item.quantity
-      cart.total_value += item.quantity * item.unit_price
+      cart.total_value += item.quantity * unitPrice
       
       // Update last_updated to most recent item update
-      if (new Date(item.updated_at) > new Date(cart.last_updated)) {
-        cart.last_updated = item.updated_at
+      if (new Date(lastUpdated) > new Date(cart.last_updated)) {
+        cart.last_updated = lastUpdated
       }
     })
 

@@ -7,6 +7,18 @@ const nextConfig: NextConfig = {
       {
         protocol:"https",
         hostname:"images.pexels.com",
+      },
+      {
+        protocol:"https",
+        hostname:"hgxvlbpvxbliefqlxzak.supabase.co",
+      },
+      {
+        protocol:"https",
+        hostname:"img.clerk.com",
+      },
+      {
+        protocol:"https",
+        hostname:"images.clerk.dev",
       }
     ]
   }

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { supabase } from '@/lib/supabase'
 
 type Params = { params: { id: string } }
 
 export async function GET(req: Request, { params }: Params) {
   try {
-    const { userId } = auth()
-    if (!userId) {
+    const user = await currentUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function GET(req: Request, { params }: Params) {
         )
       `)
       .eq('id', params.id)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single()
 
     if (error) {
@@ -44,8 +44,8 @@ export async function GET(req: Request, { params }: Params) {
 
 export async function PATCH(req: Request, { params }: Params) {
   try {
-    const { userId } = auth()
-    if (!userId) {
+    const user = await currentUser()
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -80,7 +80,7 @@ export async function PATCH(req: Request, { params }: Params) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    if (existingOrder.user_id !== userId) {
+    if (existingOrder.user_id !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -95,7 +95,7 @@ export async function PATCH(req: Request, { params }: Params) {
       .from('orders')
       .update(updates)
       .eq('id', params.id)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .select()
       .single()
 

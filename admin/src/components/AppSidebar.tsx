@@ -16,6 +16,7 @@ import {
   LogOut,
   ShoppingCart,
   Star,
+  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
@@ -220,6 +221,32 @@ const AppSidebar = () => {
                     </SheetTrigger>
                     <AddOrder />
                   </Sheet>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Services</SidebarGroupLabel>
+          <SidebarGroupAction>
+            <Plus /> <span className="sr-only">Add Service</span>
+          </SidebarGroupAction>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/services">
+                    <Wrench />
+                    All Services
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/services/new">
+                    <Plus />
+                    Add Service
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

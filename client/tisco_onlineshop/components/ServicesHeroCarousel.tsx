@@ -115,7 +115,7 @@ export const ServicesHeroCarousel = () => {
                 <p className="text-blue-400 font-medium text-lg">
                   {heroSlides[currentSlide].subtitle}
                 </p>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight font-chango">
                   {heroSlides[currentSlide].title}
                 </h1>
               </div>

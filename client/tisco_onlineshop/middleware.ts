@@ -6,6 +6,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/products(.*)',
   '/api/products(.*)',
+  '/api/reviews(.*)',
+  // Webhooks must be publicly reachable; they are authenticated via signature, not session
+  '/api/webhooks(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {

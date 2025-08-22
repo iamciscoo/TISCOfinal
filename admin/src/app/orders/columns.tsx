@@ -195,7 +195,7 @@ export const columns: ColumnDef<Order>[] = [
                 <DropdownMenuSubContent>
                   <DropdownMenuItem
                     onClick={async () => {
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                      const response = await fetch(`/api/orders/${order.id}/status`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -215,7 +215,7 @@ export const columns: ColumnDef<Order>[] = [
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={async () => {
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                      const response = await fetch(`/api/orders/${order.id}/status`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -235,7 +235,7 @@ export const columns: ColumnDef<Order>[] = [
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={async () => {
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                      const response = await fetch(`/api/orders/${order.id}/status`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -263,7 +263,7 @@ export const columns: ColumnDef<Order>[] = [
               onClick={async () => {
                 const confirmed = window.confirm(`Cancel order ${order.id}?`);
                 if (!confirmed) return;
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}/status`, {
+                const response = await fetch(`/api/orders/${order.id}/status`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 

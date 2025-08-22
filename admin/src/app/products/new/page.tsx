@@ -21,8 +21,21 @@ const formSchema = z.object({
   category_id: z.string().min(1, { message: "Category is required!" }),
   stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean().default(false),
+  is_deal: z.boolean().default(false),
+  original_price: z.coerce.number().min(0.01).optional(),
+  deal_price: z.coerce.number().min(0.01).optional(),
   images: z.any().optional(),
+}).refine((data) => {
+  if (data.is_deal) {
+    return data.original_price && data.deal_price && data.original_price > data.deal_price;
+  }
+  return true;
+}, {
+  message: "When marking as deal, original price must be greater than deal price",
+  path: ["deal_price"],
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -30,7 +43,7 @@ const AddProductPage = () => {
   const { toast } = useToast();
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -39,6 +52,9 @@ const AddProductPage = () => {
       category_id: "",
       stock_quantity: 0,
       is_featured: false,
+      is_deal: false,
+      original_price: 0,
+      deal_price: 0,
     },
   });
 
@@ -61,7 +77,7 @@ const AddProductPage = () => {
     fetchCategories();
   }, [toast]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormData) => {
     setLoading(true);
     try {
       const { images, ...productData } = values;
@@ -232,6 +248,56 @@ const AddProductPage = () => {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="is_deal"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Deal Item</FormLabel>
+                  <FormDescription>Mark this product as a deal with special pricing.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+          {form.watch("is_deal") && (
+            <>
+              <FormField
+                control={form.control}
+                name="original_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Original Price</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormDescription>Enter the original price before discount.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="deal_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deal Price</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormDescription>Enter the discounted deal price.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
           <Button type="submit" disabled={loading}>
             {loading ? "Creating..." : "Create Product"}
           </Button>

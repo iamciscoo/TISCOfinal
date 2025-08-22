@@ -6,11 +6,12 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Star, ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { Product } from '@/lib/types'
-import { getImageUrl, getCategoryName, isInStock } from '@/lib/shared-utils'
+import { getImageUrl, getCategoryName, isInStock, getDealPricing } from '@/lib/shared-utils'
+ 
 
 interface ProductCardProps {
   product: Product
@@ -22,8 +23,7 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   variant = 'grid',
-  showAddToCart = true,
-  showWishlist = true
+  showAddToCart = true
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const addItem = useCartStore((state) => state.addItem)
@@ -37,7 +37,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       addItem({
         id: String(product.id),
         name: product.name,
-        price: product.price,
+        price: currentPrice,
         image_url: imageUrl
       }, 1)
     } finally {
@@ -48,6 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const imageUrl = getImageUrl(product)
   const categoryName = getCategoryName(product)
   const inStock = isInStock(product)
+  const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
 
   if (variant === 'list') {
     return (
@@ -71,13 +72,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
             
             <div className="flex-1 p-6">
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex items-start mb-2">
                 <Badge variant="secondary">{categoryName}</Badge>
-                {showWishlist && (
-                  <Button variant="ghost" size="sm">
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
               
               <Link href={`/products/${product.id}`}>
@@ -92,29 +88,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </p>
               )}
 
-              {(product.rating || product.reviews_count) && (
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  {product.reviews_count && (
-                    <span className="text-sm text-gray-500">({product.reviews_count})</span>
-                  )}
-                </div>
-              )}
 
               <div className="flex items-center justify-between">
-                <PriceDisplay 
-                  price={product.price} 
-                  className="text-2xl font-bold text-blue-600" 
-                />
+                {isDeal ? (
+                  <div className="flex items-center gap-2">
+                    <PriceDisplay 
+                      price={currentPrice} 
+                      className="text-2xl font-bold text-red-600" 
+                    />
+                    {originalPrice && originalPrice > currentPrice && (
+                      <PriceDisplay 
+                        price={originalPrice} 
+                        className="text-sm text-gray-500 line-through" 
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <PriceDisplay 
+                    price={currentPrice} 
+                    className="text-2xl font-bold text-blue-600" 
+                  />
+                )}
                 {showAddToCart && isInStock(product) && (
                   <Button 
                     onClick={handleAddToCart}
@@ -153,15 +147,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </Badge>
           )}
           
-          {showWishlist && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-            >
-              <Heart className="h-4 w-4" />
-            </Button>
-          )}
+          
         </div>
         
         <div className="p-4">
@@ -175,29 +161,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </h3>
           </Link>
 
-          {(product.rating || product.reviews_count) && (
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3 w-3 ${
-                      i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-              {product.reviews_count && (
-                <span className="text-xs text-gray-500">({product.reviews_count})</span>
-              )}
-            </div>
-          )}
           
           <div className="flex items-center justify-between">
-            <PriceDisplay 
-              price={product.price} 
-              className="text-lg font-bold text-blue-600" 
-            />
+            {isDeal ? (
+              <div className="flex items-center gap-2">
+                <PriceDisplay 
+                  price={currentPrice} 
+                  className="text-lg font-bold text-red-600" 
+                />
+                {originalPrice && originalPrice > currentPrice && (
+                  <PriceDisplay 
+                    price={originalPrice} 
+                    className="text-xs text-gray-500 line-through" 
+                  />
+                )}
+              </div>
+            ) : (
+              <PriceDisplay 
+                price={currentPrice} 
+                className="text-lg font-bold text-blue-600" 
+              />
+            )}
             {showAddToCart && isInStock(product) && (
               <Button 
                 variant="outline" 

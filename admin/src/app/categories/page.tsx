@@ -3,15 +3,16 @@ import { PageLayout } from "@/components/shared/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Category } from "@/lib/types";
 import Link from "next/link";
+import { getCategories } from "@/lib/database";
 
 async function getData(): Promise<Category[]> {
-  // Fetch data from your API here.
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch categories');
+  try {
+    const categories = await getCategories();
+    return categories;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
   }
-  const data = await res.json();
-  return data.categories;
 }
 
 const CategoriesPage = async () => {

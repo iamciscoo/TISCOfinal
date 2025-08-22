@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Star, ShoppingCart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { getProducts } from '@/lib/database'
 import type { Product } from '@/lib/types'
@@ -73,24 +73,7 @@ export const FeaturedProducts = () => {
                   <span>{product.name}</span>
                 </h3>
 
-                {/* Rating */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor((product.rating ?? 4.5))
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  {typeof product.rating === 'number' && (
-                    <span className="text-sm text-gray-600">{product.rating.toFixed(1)}</span>
-                  )}
-                </div>
+                {/* Rating removed from cards */}
 
                 {/* Price */}
                 <div className="flex items-center gap-2 mb-4">

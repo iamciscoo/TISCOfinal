@@ -28,7 +28,7 @@ type CheckoutStep = 'shipping' | 'payment' | 'review'
 export default function CheckoutPage() {
   const router = useRouter()
   const { user } = useUser()
-  const { items, clearCart, getTotalPrice } = useCartStore()
+  const { items, clearCart, getTotalPrice, getTotalItems } = useCartStore()
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -133,7 +133,7 @@ export default function CheckoutPage() {
       
       const orderData = {
         items: items.map(item => ({
-          product_id: item.id,
+          product_id: item.productId,
           quantity: item.quantity,
           price: item.price
         })),

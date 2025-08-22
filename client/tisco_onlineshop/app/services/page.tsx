@@ -2,7 +2,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,7 +12,6 @@ import {
   Settings,
   CheckCircle,
   ArrowRight,
-  Star,
   Users,
   Calendar,
   Clock,
@@ -31,7 +29,6 @@ interface Service {
   description: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   features: string[]
-  popular?: boolean
   image: string
   gallery: string[]
 }
@@ -50,7 +47,6 @@ const services: Service[] = [
       '1-year build warranty',
       'Performance benchmarking'
     ],
-    popular: true,
     image: '/services/pcbuild.jpeg',
     gallery: ['/services/pcbuild.jpeg', '/services/gaming-pc-build.jpeg']
   },
@@ -90,7 +86,7 @@ const services: Service[] = [
   }
 ]
 
-export default function ServicesPage() {
+export default function ServicesPage({ searchParams }: { searchParams: { service?: string } }) {
   return (
     <PageLayout>
       {/* Hero Carousel */}
@@ -122,15 +118,7 @@ export default function ServicesPage() {
           {services.map((service) => {
             const IconComponent = service.icon
             return (
-              <Card key={service.id} className={`relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col ${
-                service.popular ? 'ring-2 ring-blue-500 transform scale-105' : ''
-              }`}>
-                {service.popular && (
-                  <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-blue-600 z-10">
-                    Most Popular
-                  </Badge>
-                )}
-                
+              <Card key={service.id} className="relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
                 {/* Service Image */}
                 <div className="relative h-48 overflow-hidden">
                   <Image
@@ -140,15 +128,12 @@ export default function ServicesPage() {
                     className="object-cover transition-transform duration-300 hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  {/* Removed deprecated popularity badge */}
                   
                   {/* Icon Overlay */}
                   <div className="absolute top-4 right-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      service.popular ? 'bg-blue-600' : 'bg-white/90'
-                    }`}>
-                      <IconComponent className={`h-6 w-6 ${
-                        service.popular ? 'text-white' : 'text-gray-600'
-                      }`} />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
+                      <IconComponent className="h-6 w-6 text-gray-600" />
                     </div>
                   </div>
                 </div>
@@ -169,21 +154,42 @@ export default function ServicesPage() {
                   </div>
 
                   <div className="border-t pt-4 mt-auto">
-                    <Button 
-                      className={`w-full ${
-                        service.popular 
-                          ? 'bg-blue-600 hover:bg-blue-700' 
-                          : 'bg-gray-900 hover:bg-gray-800'
-                      }`}
-                    >
-                      Select Service
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                    <Button asChild className="w-full bg-gray-900 hover:bg-gray-800">
+                      <Link href={`/services?service=${service.id}#booking-form`}>
+                        Select Service
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             )
           })}
+        </div>
+
+        {/* Custom Service Promo */}
+        <div className="mb-16">
+          <Card className="overflow-hidden">
+            <div className="relative w-full h-56 sm:h-72 lg:h-80 bg-gray-900">
+              <Image
+                src="/services/customservice.webp"
+                alt="Describe your issue - custom service"
+                fill
+                className="object-contain object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute inset-0 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 px-6 sm:px-10">
+                <div className="text-white max-w-2xl text-center md:text-left">
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-2">Have a unique issue?</h3>
+                  <p className="text-white/90">Tell us your problem and we’ll craft the final piece of the solution.</p>
+                </div>
+                <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100">
+                  <Link href="/services?service=other#booking-form">Describe Your Issue</Link>
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Service Booking Form */}
@@ -207,8 +213,8 @@ export default function ServicesPage() {
                       <Label htmlFor="serviceType" className="text-sm font-medium">
                         Service Type *
                       </Label>
-                      <Select>
-                        <SelectTrigger>
+                      <Select defaultValue={searchParams?.service}>
+                        <SelectTrigger id="serviceType">
                           <SelectValue placeholder="Select a service" />
                         </SelectTrigger>
                         <SelectContent>
@@ -378,85 +384,9 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        {/* Customer Reviews */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            What Our Customers Say
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Alex Thompson',
-                service: 'Custom PC Building',
-                rating: 5,
-                review: 'Amazing work! Built my dream gaming PC perfectly. Great cable management and performance is incredible.',
-                avatar: '/users/1.png'
-              },
-              {
-                name: 'Jennifer Park',
-                service: 'Office Space Setup',
-                rating: 5,
-                review: 'Transformed my home office completely. Ergonomic setup increased my productivity significantly.',
-                avatar: '/users/2.png'
-              },
-              {
-                name: 'David Miller',
-                service: 'Software Installation',
-                rating: 5,
-                review: 'Professional setup of all my development tools. Saved me hours of configuration time.',
-                avatar: '/users/3.png'
-              }
-            ].map((review, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  
-                  <p className="text-gray-700 mb-4 italic">
-                    &quot;{review.review}&quot;
-                  </p>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <Users className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{review.name}</p>
-                      <p className="text-sm text-gray-500">{review.service}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+        {/* Removed: Customer Reviews */}
 
-        {/* CTA Section */}
-        <section className="text-center">
-          <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-            <CardContent className="py-16">
-              <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Tech Setup?</h2>
-              <p className="text-blue-100 mb-8 max-w-2xl mx-auto text-lg">
-                Get professional tech services tailored to your needs. From custom PC builds to complete office setups, we&apos;ve got you covered.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="secondary" className="text-blue-600">
-                  <Link href="#booking-form">
-                    Book Service Now
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-blue-600">
-                  <Link href="/contact">Call: (555) 123-TECH</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+        {/* Removed: Gradient CTA */}
       </div>
     </PageLayout>
   )

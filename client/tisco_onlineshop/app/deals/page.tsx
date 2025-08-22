@@ -17,145 +17,90 @@ import {
   Search, 
   Grid3X3, 
   List, 
-  Star, 
   ShoppingCart,
   Heart,
-  Timer,
-  Zap,
-  Percent
+  Percent,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
+import { PriceDisplay } from '@/components/PriceDisplay'
+import Image from 'next/image'
 
 interface Deal {
   id: string
   name: string
   description: string
   originalPrice: number
-  salePrice: number
+  dealPrice: number
+  currentPrice: number
   discount: number
   image_url: string
   category: string
-  rating: number
-  reviews: number
+  category_id: string
+  rating?: number | null
+  reviews_count?: number | null
   stock_quantity: number
-  endDate: string
-  isFlashDeal: boolean
-  isFeatured: boolean
+  slug: string
+  tags: string[]
+  created_at: string
 }
 
-const deals: Deal[] = [
-  {
-    id: '1',
-    name: 'Premium Wireless Headphones',
-    description: 'Noise-canceling wireless headphones with 30-hour battery life',
-    originalPrice: 299.99,
-    salePrice: 199.99,
-    discount: 33,
-    image_url: '/circular.svg',
-    category: 'Electronics',
-    rating: 4.8,
-    reviews: 1234,
-    stock_quantity: 45,
-    endDate: '2024-02-15',
-    isFlashDeal: true,
-    isFeatured: true
-  },
-  {
-    id: '2',
-    name: 'Smart Fitness Watch',
-    description: 'Advanced fitness tracking with heart rate monitor and GPS',
-    originalPrice: 249.99,
-    salePrice: 179.99,
-    discount: 28,
-    image_url: '/circular.svg',
-    category: 'Electronics',
-    rating: 4.6,
-    reviews: 892,
-    stock_quantity: 23,
-    endDate: '2024-02-20',
-    isFlashDeal: false,
-    isFeatured: true
-  },
-  {
-    id: '3',
-    name: 'Designer Running Shoes',
-    description: 'Lightweight running shoes with advanced cushioning technology',
-    originalPrice: 159.99,
-    salePrice: 89.99,
-    discount: 44,
-    image_url: '/circular.svg',
-    category: 'Sports',
-    rating: 4.7,
-    reviews: 567,
-    stock_quantity: 78,
-    endDate: '2024-02-18',
-    isFlashDeal: true,
-    isFeatured: false
-  },
-  {
-    id: '4',
-    name: 'Organic Cotton Bedding Set',
-    description: 'Luxurious 4-piece organic cotton bedding set, queen size',
-    originalPrice: 129.99,
-    salePrice: 79.99,
-    discount: 38,
-    image_url: '/circular.svg',
-    category: 'Home',
-    rating: 4.5,
-    reviews: 345,
-    stock_quantity: 56,
-    endDate: '2024-02-25',
-    isFlashDeal: false,
-    isFeatured: true
-  },
-  {
-    id: '5',
-    name: 'Professional Chef Knife Set',
-    description: 'High-carbon steel knife set with wooden storage block',
-    originalPrice: 199.99,
-    salePrice: 119.99,
-    discount: 40,
-    image_url: '/circular.svg',
-    category: 'Kitchen',
-    rating: 4.9,
-    reviews: 678,
-    stock_quantity: 34,
-    endDate: '2024-02-22',
-    isFlashDeal: false,
-    isFeatured: false
-  },
-  {
-    id: '6',
-    name: 'Bluetooth Portable Speaker',
-    description: 'Waterproof portable speaker with 20-hour battery life',
-    originalPrice: 79.99,
-    salePrice: 49.99,
-    discount: 38,
-    image_url: '/circular.svg',
-    category: 'Electronics',
-    rating: 4.4,
-    reviews: 423,
-    stock_quantity: 67,
-    endDate: '2024-02-28',
-    isFlashDeal: true,
-    isFeatured: false
-  }
-]
 
 export default function DealsPage() {
-  const [filteredDeals, setFilteredDeals] = useState<Deal[]>(deals)
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('discount')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [columns, setColumns] = useState(1)
   
   const { addItem } = useCartStore()
   
+  // Fetch deals from API
+  useEffect(() => {
+    const fetchDeals = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/deals')
+        if (!response.ok) {
+          throw new Error('Failed to fetch deals')
+        }
+        const data = await response.json()
+        setDeals(data.deals || [])
+        setFilteredDeals(data.deals || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load deals')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchDeals()
+  }, [])
+  
+  // Track responsive columns to enforce max 3 rows per page
+  useEffect(() => {
+    const updateColumns = () => {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 0
+      if (w >= 1280) setColumns(4) // xl:grid-cols-4
+      else if (w >= 1024) setColumns(3) // lg:grid-cols-3
+      else if (w >= 640) setColumns(2) // sm:grid-cols-2
+      else setColumns(1)
+    }
+    updateColumns()
+    window.addEventListener('resize', updateColumns)
+    return () => window.removeEventListener('resize', updateColumns)
+  }, [])
+  
   const categories = Array.from(new Set(deals.map(deal => deal.category)))
-  const flashDeals = deals.filter(deal => deal.isFlashDeal)
 
   // Filter and sort deals
   useEffect(() => {
@@ -180,24 +125,38 @@ export default function DealsPage() {
         case 'discount':
           return b.discount - a.discount
         case 'price-low':
-          return a.salePrice - b.salePrice
+          return a.dealPrice - b.dealPrice
         case 'price-high':
-          return b.salePrice - a.salePrice
+          return b.dealPrice - a.dealPrice
         case 'rating':
-          return b.rating - a.rating
+          {
+            const ar = a.rating
+            const br = b.rating
+            if (br == null && ar == null) return 0
+            if (br == null) return 1 // place unrated after rated
+            if (ar == null) return -1
+            return br - ar
+          }
         default:
           return 0
       }
     })
 
     setFilteredDeals(filtered)
-  }, [searchTerm, selectedCategory, sortBy])
+    setCurrentPage(1)
+  }, [searchTerm, selectedCategory, sortBy, deals])
+
+  // Pagination derived values
+  const itemsPerPage = viewMode === 'grid' ? columns * 3 : 3
+  const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)
 
   const handleAddToCart = (deal: Deal) => {
     addItem({
       id: deal.id,
       name: deal.name,
-      price: deal.salePrice,
+      price: deal.dealPrice,
       image_url: deal.image_url
     })
   }
@@ -224,90 +183,23 @@ export default function DealsPage() {
           </p>
         </div>
 
-        {/* Flash Deals Section */}
-        {flashDeals.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-2">
-                <Zap className="h-6 w-6 text-yellow-500" />
-                <h2 className="text-2xl font-bold text-gray-900">Flash Deals</h2>
-              </div>
-              <Badge className="bg-red-500 animate-pulse">Limited Time</Badge>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {flashDeals.map((deal) => (
-                <Card key={deal.id} className="group hover:shadow-xl transition-all duration-300 border-2 border-red-200">
-                  <CardContent className="p-4">
-                    <div className="relative mb-4">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                          <div className="text-gray-400 text-sm">IMG</div>
-                        </div>
-                      </div>
-                      <Badge className="absolute top-2 right-2 bg-red-500">
-                        -{deal.discount}%
-                      </Badge>
-                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 rounded px-2 py-1">
-                        <Timer className="h-3 w-3 text-red-500" />
-                        <span className="text-xs font-medium text-red-500">Flash Deal</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {deal.name}
-                      </h3>
-                      
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${i < Math.floor(deal.rating) 
-                              ? 'text-yellow-400 fill-current' 
-                              : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                        <span className="text-sm text-gray-600 ml-1">({deal.reviews})</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-bold text-red-600">
-                          ${deal.salePrice.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-gray-500 line-through">
-                          ${deal.originalPrice.toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="p-2"
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddToCart(deal)}
-                          className="flex-1"
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-1" />
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
         )}
 
         {/* Filters and Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
+        {!loading && !error && (
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
@@ -366,121 +258,157 @@ export default function DealsPage() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* All Deals Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">All Deals</h2>
-            <span className="text-gray-600">
-              {filteredDeals.length} deals found
-            </span>
-          </div>
+        {!loading && !error && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Deals</h2>
+              <span className="text-gray-600">
+                {filteredDeals.length} deals found
+              </span>
+            </div>
 
-          {filteredDeals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Percent className="h-16 w-16 text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No deals found</h3>
-                <p className="text-gray-600 text-center">
-                  Try adjusting your filters to find more deals.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
-              : 'space-y-4'
-            }>
-              {filteredDeals.map((deal) => (
-                <Card key={deal.id} className="group hover:shadow-lg transition-shadow">
-                  <CardContent className={viewMode === 'grid' ? 'p-4' : 'p-4 flex gap-4'}>
-                    {/* Product Image */}
-                    <div className={viewMode === 'grid' 
-                      ? 'aspect-square bg-gray-100 rounded-md mb-4 overflow-hidden relative' 
-                      : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0 relative'
-                    }>
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                        <div className="text-gray-400 text-sm">IMG</div>
-                      </div>
-                      <Badge className="absolute top-2 right-2 bg-green-600">
-                        -{deal.discount}%
-                      </Badge>
-                    </div>
+            {filteredDeals.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Percent className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No deals found</h3>
+                  <p className="text-gray-600 text-center">
+                    Try adjusting your filters to find more deals.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+              <div className={viewMode === 'grid' 
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
+                : 'space-y-4'
+              }>
+                {displayedDeals.map((deal) => (
+                  <Card key={deal.id} className="group hover:shadow-lg transition-shadow">
+                    <CardContent className={viewMode === 'grid' ? 'p-4' : 'p-4 flex gap-4'}>
+                      {/* Product Image */}
+                      <Link href={`/products/${deal.id}`} className={viewMode === 'grid' 
+                        ? 'aspect-square bg-gray-100 rounded-md mb-4 overflow-hidden relative block' 
+                        : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0 relative block'
+                      }>
+                        <Image
+                          src={deal.image_url}
+                          alt={deal.name}
+                          fill
+                          className="object-cover"
+                          sizes={viewMode === 'grid' 
+                            ? '(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw' 
+                            : '96px'
+                          }
+                        />
+                        <Badge className="absolute top-2 right-2 bg-green-600">
+                          -{deal.discount}%
+                        </Badge>
+                      </Link>
 
-                    <div className={viewMode === 'grid' ? '' : 'flex-1'}>
-                      {/* Product Info */}
-                      <div className="mb-3">
-                        <div className="text-xs text-blue-600 font-medium mb-1">
-                          {deal.category}
-                        </div>
-                        <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {deal.name}
-                        </h3>
-                        {viewMode === 'list' && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                            {deal.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Rating */}
-                      <div className="flex items-center gap-1 mb-3">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${i < Math.floor(deal.rating) 
-                              ? 'text-yellow-400 fill-current' 
-                              : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                        <span className="text-xs text-gray-600 ml-1">({deal.reviews})</span>
-                      </div>
-
-                      {/* Price & Actions */}
-                      <div className={`flex items-center ${viewMode === 'grid' ? 'justify-between' : 'gap-4'}`}>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-red-600">
-                              ${deal.salePrice.toFixed(2)}
-                            </span>
-                            <span className="text-sm text-gray-500 line-through">
-                              ${deal.originalPrice.toFixed(2)}
-                            </span>
+                      <div className={viewMode === 'grid' ? '' : 'flex-1'}>
+                        {/* Product Info */}
+                        <div className="mb-3">
+                          <div className="text-xs text-blue-600 font-medium mb-1">
+                            {deal.category}
                           </div>
-                          {deal.stock_quantity > 0 ? (
-                            <div className="text-xs text-green-600">In Stock ({deal.stock_quantity})</div>
-                          ) : (
-                            <div className="text-xs text-red-600">Out of Stock</div>
+                          <Link href={`/products/${deal.id}`}>
+                            <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                              {deal.name}
+                            </h3>
+                          </Link>
+                          {viewMode === 'list' && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {deal.description}
+                            </p>
                           )}
                         </div>
-                        
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="p-2"
-                          >
-                            <Heart className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddToCart(deal)}
-                            disabled={deal.stock_quantity === 0}
-                          >
-                            <ShoppingCart className="h-4 w-4 mr-1" />
-                            {viewMode === 'list' ? 'Add to Cart' : ''}
-                          </Button>
+
+                        {/* Rating removed from cards */}
+
+                        {/* Price & Actions */}
+                        <div className={`flex items-center ${viewMode === 'grid' ? 'justify-between' : 'gap-4'}`}>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <PriceDisplay price={deal.dealPrice} className="text-lg font-bold text-red-600" />
+                              {deal.discount > 0 && deal.originalPrice > deal.dealPrice && (
+                                <PriceDisplay price={deal.originalPrice} className="text-sm text-gray-500 line-through" />
+                              )}
+                            </div>
+                            {deal.stock_quantity > 0 ? (
+                              <div className="text-xs text-green-600">In Stock ({deal.stock_quantity})</div>
+                            ) : (
+                              <div className="text-xs text-red-600">Out of Stock</div>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="p-2"
+                            >
+                              <Heart className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddToCart(deal)}
+                              disabled={deal.stock_quantity === 0}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-1" />
+                              {viewMode === 'list' ? 'Add to Cart' : ''}
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex flex-col items-center gap-3 mt-12">
+                  <div className="flex justify-center items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    <div className="flex gap-1">
+                      {[...Array(totalPages)].map((_, i) => (
+                        <Button
+                          key={i + 1}
+                          variant={currentPage === i + 1 ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(i + 1)}
+                        >
+                          {i + 1}
+                        </Button>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                  <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
+                </div>
+              )}
+              </>
+            )}
+          </section>
+        )}
       </div>
 
       <Footer />

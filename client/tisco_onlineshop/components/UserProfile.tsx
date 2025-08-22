@@ -6,19 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
 
 interface UserProfileData {
   id: string
-  clerk_id: string
   email: string
   first_name: string
   last_name: string
   phone?: string
   avatar_url?: string
-  email_verified: boolean
-  phone_verified: boolean
+  is_verified: boolean
   addresses?: Address[]
   orders?: Order[]
 }
@@ -47,17 +45,21 @@ interface Order {
 }
 
 export default function UserProfile() {
-  const { user: clerkUser } = useUser()
+  const { user, isLoaded } = useUser()
+  const { toast } = useToast()
   const [profile, setProfile] = useState<UserProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState<Partial<UserProfileData>>({})
 
   useEffect(() => {
-    if (clerkUser) {
+    if (!isLoaded) return
+    if (user) {
       fetchProfile()
+    } else {
+      setLoading(false)
     }
-  }, [clerkUser])
+  }, [isLoaded, user])
 
   const fetchProfile = async () => {
     try {
@@ -236,7 +238,7 @@ export default function UserProfile() {
           <Label htmlFor="email">Email</Label>
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">{profile.email}</p>
-            {profile.email_verified ? (
+            {profile.is_verified ? (
               <Badge variant="secondary">Verified</Badge>
             ) : (
               <Badge variant="destructive">Unverified</Badge>
@@ -255,7 +257,7 @@ export default function UserProfile() {
           ) : (
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium">{profile.phone || 'Not provided'}</p>
-              {profile.phone_verified && profile.phone && (
+              {profile.is_verified && profile.phone && (
                 <Badge variant="secondary">Verified</Badge>
               )}
             </div>

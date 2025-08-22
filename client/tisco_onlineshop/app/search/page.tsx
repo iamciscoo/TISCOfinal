@@ -18,17 +18,14 @@ import {
   Search, 
   Grid3X3, 
   List, 
-  Star, 
-  ShoppingCart,
-  Heart,
   ChevronLeft,
   ChevronRight,
   X
 } from 'lucide-react'
-import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
+import { ProductCard } from '@/components/shared/ProductCard'
 
 import { Product } from '@/lib/types'
 
@@ -46,39 +43,33 @@ function SearchResults() {
   const [currentPage, setCurrentPage] = useState(1)
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   
-  const { addItem } = useCartStore()
   const productsPerPage = 12
 
-  // Sample search results - in real app, this would be an API call
+  // Fetch real search results from database
   useEffect(() => {
     const fetchSearchResults = async () => {
       setLoading(true)
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Sample products that match search
-      const allProducts: Product[] = [
-        { id: '1', name: 'Smartphone Pro Max', price: 999.99, description: 'Latest flagship smartphone with advanced features', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 50, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-        { id: '2', name: 'Wireless Headphones', price: 299.99, description: 'Premium noise-canceling wireless headphones', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 100, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-        { id: '3', name: 'Designer T-Shirt', price: 49.99, description: 'Premium cotton t-shirt with modern design', image_url: '/circular.svg', category_id: 'clothing', stock_quantity: 200, categories: { id: 'clothing', name: 'Clothing', slug: 'clothing' } },
-        { id: '4', name: 'Running Shoes', price: 129.99, description: 'Professional running shoes for athletes', image_url: '/circular.svg', category_id: 'sports', stock_quantity: 75, categories: { id: 'sports', name: 'Sports', slug: 'sports' } },
-        { id: '5', name: 'Coffee Maker', price: 179.99, description: 'Automatic coffee maker with programmable settings', image_url: '/circular.svg', category_id: 'home', stock_quantity: 30, categories: { id: 'home', name: 'Home & Garden', slug: 'home' } },
-        { id: '6', name: 'Gaming Laptop', price: 1299.99, description: 'High-performance gaming laptop', image_url: '/circular.svg', category_id: 'electronics', stock_quantity: 25, categories: { id: 'electronics', name: 'Electronics', slug: 'electronics' } },
-      ]
-      
-      // Filter products based on search query
-      const searchResults = query 
-        ? allProducts.filter(product =>
-            product.name.toLowerCase().includes(query.toLowerCase()) ||
-            product.description.toLowerCase().includes(query.toLowerCase()) ||
-            product.categories?.name.toLowerCase().includes(query.toLowerCase())
-          )
-        : allProducts
-      
-      setProducts(searchResults)
-      setFilteredProducts(searchResults)
-      setLoading(false)
+      try {
+        const response = await fetch('/api/products/search?' + new URLSearchParams({
+          q: query || '',
+          limit: '50'
+        }))
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch search results')
+        }
+        
+        const data = await response.json()
+        setProducts(data || [])
+        setFilteredProducts(data || [])
+      } catch (error) {
+        console.error('Search error:', error)
+        setProducts([])
+        setFilteredProducts([])
+      } finally {
+        setLoading(false)
+      }
     }
     
     fetchSearchResults()
@@ -130,15 +121,6 @@ function SearchResults() {
     setFilteredProducts(filtered)
     setCurrentPage(1)
   }, [products, searchTerm, selectedCategory, sortBy, priceRange, query])
-
-  const handleAddToCart = (product: Product) => {
-    addItem({
-      id: product.id.toString(),
-      name: product.name,
-      price: product.price,
-      image_url: product.image_url || '/circular.svg'
-    })
-  }
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
@@ -336,81 +318,11 @@ function SearchResults() {
                   : 'space-y-4'
                 }>
                   {displayedProducts.map((product) => (
-                    <Card key={product.id} className="group hover:shadow-lg transition-shadow">
-                      <CardContent className={viewMode === 'grid' ? 'p-4' : 'p-4 flex gap-4'}>
-                        {/* Product Image */}
-                        <div className={viewMode === 'grid' 
-                          ? 'aspect-square bg-gray-100 rounded-md mb-4 overflow-hidden' 
-                          : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0'
-                        }>
-                          <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                            <div className="text-gray-400 text-sm">IMG</div>
-                          </div>
-                        </div>
-
-                        <div className={viewMode === 'grid' ? '' : 'flex-1'}>
-                          {/* Product Info */}
-                          <div className="mb-3">
-                            <div className="text-xs text-blue-600 font-medium mb-1">
-                              {product.categories?.name || 'Product'}
-                            </div>
-                            <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                              <Link href={`/products/${product.id}`}>
-                                {product.name}
-                              </Link>
-                            </h3>
-                            {viewMode === 'list' && (
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {product.description}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Rating */}
-                          <div className="flex items-center gap-1 mb-3">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className="h-4 w-4 text-yellow-400 fill-current"
-                              />
-                            ))}
-                            <span className="text-xs text-gray-600 ml-1">(4.5)</span>
-                          </div>
-
-                          {/* Price & Actions */}
-                          <div className={`flex items-center ${viewMode === 'grid' ? 'justify-between' : 'gap-4'}`}>
-                            <div>
-                              <span className="text-lg font-bold text-gray-900">
-                                ${product.price.toFixed(2)}
-                              </span>
-                              {(product.stock_quantity || 0) > 0 ? (
-                                <div className="text-xs text-green-600">In Stock</div>
-                              ) : (
-                                <div className="text-xs text-red-600">Out of Stock</div>
-                              )}
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="p-2"
-                              >
-                                <Heart className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleAddToCart(product)}
-                                disabled={product.stock_quantity === 0}
-                              >
-                                <ShoppingCart className="h-4 w-4 mr-1" />
-                                {viewMode === 'list' ? 'Add to Cart' : ''}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      variant={viewMode}
+                    />
                   ))}
                 </div>
 
