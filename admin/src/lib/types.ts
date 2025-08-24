@@ -58,6 +58,8 @@ export interface User {
   last_login?: string
   created_at: string
   updated_at: string
+  // Relations (admin computed)
+  default_shipping_address?: Address
 }
 
 export interface Address {

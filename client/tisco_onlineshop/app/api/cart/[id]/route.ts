@@ -8,12 +8,13 @@ const supabase = createClient(
 )
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   try {
     const user = await currentUser()
     if (!user) {
@@ -33,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         *,
         products(id, stock_quantity, price)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
@@ -53,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         quantity,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -72,6 +73,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   try {
     const user = await currentUser()
     if (!user) {
@@ -81,8 +83,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     // Verify ownership and delete
     const { error } = await supabase
       .from('cart_items')
-      .delete()
-      .eq('id', params.id)
+      .update({ quantity: 0 })
+      .eq('id', id)
       .eq('user_id', user.id)
 
     if (error) {

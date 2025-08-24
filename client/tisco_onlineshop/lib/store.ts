@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-interface CartItem {
+export interface CartItem {
   id: string
   productId: string
   name: string
@@ -13,6 +13,10 @@ interface CartItem {
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
+  // Replace the entire items array (used for server sync)
+  setItemsFromServer: (items: CartItem[]) => void
+  // Timestamp of the last server-driven hydration; not persisted
+  _lastServerHydrate?: number
   addItem: (product: {
     id: string
     name: string
@@ -33,6 +37,12 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      _lastServerHydrate: 0,
+
+      setItemsFromServer: (items) => {
+        // Replace the local items with the canonical server items
+        set({ items, _lastServerHydrate: Date.now() })
+      },
 
       addItem: (product, quantity = 1) => {
         const items = get().items

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +43,7 @@ interface Cart {
 }
 
 export default function CartsManagement() {
+  const router = useRouter()
   const [carts, setCarts] = useState<Cart[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -97,6 +99,25 @@ export default function CartsManagement() {
     fetchCarts()
     fetchAnalytics()
   }, [filters])
+
+  // Realtime: listen for cart changes and refresh list
+  useEffect(() => {
+    const es = new EventSource('/api/carts/stream')
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        if (data?.type === 'cart_change') {
+          fetchCarts()
+        }
+      } catch {}
+    }
+    es.onerror = () => {
+      try { es.close() } catch {}
+    }
+    return () => {
+      try { es.close() } catch {}
+    }
+  }, [filters.page, filters.limit, filters.status, filters.search])
 
   const handleCartAction = async (action: string, userId?: string, itemIds?: string[]) => {
     setActionLoading(`${action}-${userId || 'bulk'}`)
@@ -192,7 +213,7 @@ export default function CartsManagement() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {/* View cart details */}}
+            onClick={() => { router.push(`/carts/${row.original.user_id}`) }}
           >
             <Eye className="w-4 h-4" />
           </Button>

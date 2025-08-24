@@ -88,11 +88,7 @@ export const columns: ColumnDef<Order>[] = [
     },
     cell: ({ row }) => {
       const total = parseFloat(row.getValue("total"));
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(total);
-
+      const formatted = `TZS ${Number(total || 0).toLocaleString()}`;
       return <div className="font-medium">{formatted}</div>;
     },
   },
@@ -189,6 +185,23 @@ export const columns: ColumnDef<Order>[] = [
             <DropdownMenuItem>
               <Link href={`/users/${order.customerId}`}>View customer</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                const response = await fetch(`/api/orders/${order.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ payment_status: 'paid' })
+                })
+                if (response.ok) {
+                  toast({ title: "Marked as paid" })
+                  window.location.reload()
+                } else {
+                  toast({ title: "Failed to update payment", variant: "destructive" })
+                }
+              }}
+            >
+              Mark as paid
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
               <DropdownMenuPortal>
@@ -256,7 +269,6 @@ export const columns: ColumnDef<Order>[] = [
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
-            <DropdownMenuItem>Send tracking info</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-red-600"

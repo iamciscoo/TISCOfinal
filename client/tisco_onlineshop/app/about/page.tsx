@@ -148,8 +148,8 @@ export default function AboutPage() {
               },
               {
                 icon: CheckCircle,
-                title: 'Easy Returns',
-                description: '30-day hassle-free returns on most items. No questions asked.'
+                title: 'Safe, Secure Delivery',
+                description: 'Items handled with care and sealed packaging.'
               },
               {
                 icon: Users,

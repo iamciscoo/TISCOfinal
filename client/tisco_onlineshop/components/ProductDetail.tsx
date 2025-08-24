@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/store'
 import { Badge } from '@/components/ui/badge'
@@ -30,9 +31,11 @@ interface ProductDetailProps {
 }
 
 export const ProductDetail = ({ product }: ProductDetailProps) => {
+  const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [isBuyingNow, setIsBuyingNow] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
@@ -119,6 +122,26 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
       console.error('Error adding to cart:', error)
     } finally {
       setIsAddingToCart(false)
+    }
+  }
+
+  const handleBuyNow = async () => {
+    if ((product.stock_quantity || 0) <= 0) return
+    setIsBuyingNow(true)
+    try {
+      // Ensure item is in cart with selected quantity
+      addItem({
+        id: product.id.toString(),
+        name: product.name,
+        price: currentPrice,
+        image_url: getImageUrl(product) || '/circular.svg'
+      }, quantity)
+      // Navigate to checkout immediately
+      router.push('/checkout')
+    } catch (error) {
+      console.error('Error on Buy Now:', error)
+    } finally {
+      setIsBuyingNow(false)
     }
   }
 
@@ -373,8 +396,13 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
               </Button>
             </div>
 
-            <Button variant="outline" className="w-full h-12">
-              Buy Now
+            <Button 
+              variant="outline" 
+              className="w-full h-12"
+              onClick={handleBuyNow}
+              disabled={product.stock_quantity === 0 || isBuyingNow}
+            >
+              {isBuyingNow ? 'Processing…' : 'Buy Now'}
             </Button>
           </div>
 

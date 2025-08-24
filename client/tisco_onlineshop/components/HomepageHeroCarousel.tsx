@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Tag, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Tag, ArrowRight, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface HeroSlide {
@@ -57,6 +57,16 @@ const heroSlides: HeroSlide[] = [
     cta: 'Our Services',
     ctaLink: '/services',
     ctaIcon: ArrowRight
+  },
+  {
+    id: 'anime',
+    title: "It wouldn't be TISCO without a bit of anime",
+    subtitle: 'Shop top otaku merch',
+    description: 'From collectibles to apparel, discover our curated selection of anime merchandise. Quality products for true fans.',
+    image: '/homehero5.webp',
+    cta: 'Shop Anime',
+    ctaLink: '/products?category=anime&query=anime',
+    ctaIcon: Heart
   }
 ]
 

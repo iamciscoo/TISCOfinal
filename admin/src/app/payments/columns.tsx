@@ -21,7 +21,7 @@ export type Payment = {
   fullName: string;
   userId: string;
   email: string;
-  status: "pending" | "processing" | "success" | "failed";
+  status: "pending" | "paid" | "failed" | "refunded";
 };
 
 export const columns: ColumnDef<Payment>[] = [
@@ -72,8 +72,9 @@ export const columns: ColumnDef<Payment>[] = [
           className={cn(
             `p-1 rounded-md w-max text-xs`,
             status === "pending" && "bg-yellow-500/40",
-            status === "success" && "bg-green-500/40",
-            status === "failed" && "bg-red-500/40"
+            status === "paid" && "bg-green-500/40",
+            status === "failed" && "bg-red-500/40",
+            status === "refunded" && "bg-blue-500/30"
           )}
         >
           {status as string}
@@ -86,10 +87,7 @@ export const columns: ColumnDef<Payment>[] = [
     header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("amount"));
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
+      const formatted = `TZS ${Number(amount || 0).toLocaleString()}`;
 
       return <div className="text-right font-medium">{formatted}</div>;
     },
@@ -118,7 +116,9 @@ export const columns: ColumnDef<Payment>[] = [
             <DropdownMenuItem>
               <Link href={`/users/${payment.userId}`}>View customer</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link href={`/payments/${payment.id}`}>View payment details</Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

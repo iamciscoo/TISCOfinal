@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { CurrencyProvider } from '@/lib/currency-context'
 import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
+import CartRealtime from '@/components/CartRealtime'
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,6 +42,7 @@ export default function RootLayout({
         >
           <CurrencyProvider>
             <AuthSync />
+            <CartRealtime />
             {children}
           </CurrencyProvider>
           <Toaster />

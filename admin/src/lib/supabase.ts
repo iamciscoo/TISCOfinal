@@ -2,16 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 
 import 'server-only'
 
-const supabaseUrl =
-  process.env.SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL
-
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Admin server must use Service Role to bypass RLS for administrative reads.
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE (server) or NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+  throw new Error('Missing Supabase environment variables. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE for the admin server environment.')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {

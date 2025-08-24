@@ -86,18 +86,8 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/shipping" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Shipping Info
-                </Link>
-              </li>
-              <li>
-                <Link href="/returns" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Returns & Exchanges
-                </Link>
-              </li>
-              <li>
-                <Link href="/track-order" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Track Your Order
+                <Link href="/delivery-guide" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Delivery Guide
                 </Link>
               </li>
             </ul>

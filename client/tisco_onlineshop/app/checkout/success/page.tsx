@@ -66,7 +66,7 @@ export default function CheckoutSuccessPage() {
                   <div>
                     <h4 className="font-medium text-gray-900">Order Processing</h4>
                     <p className="text-sm text-gray-600">
-                      We&apos;re preparing your items for shipment. This usually takes 1-2 business days.
+                      We&apos;re preparing your items for delivery. This usually takes 1-2 business days.
                     </p>
                   </div>
                 </div>
@@ -75,9 +75,9 @@ export default function CheckoutSuccessPage() {
                     <Package className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">Shipping Notification</h4>
+                    <h4 className="font-medium text-gray-900">Delivery Update</h4>
                     <p className="text-sm text-gray-600">
-                      Once shipped, you&apos;ll receive tracking information to monitor your package.
+                      Once dispatched, we&apos;ll notify you. Live tracking is not currently available.
                     </p>
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export default function CheckoutSuccessPage() {
         {/* Navigation */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button asChild variant="outline" className="h-12 px-8">
-            <Link href="/orders">
+            <Link href="/account/orders">
               View Order Status
             </Link>
           </Button>

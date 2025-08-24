@@ -1,5 +1,4 @@
-import CardList from "@/components/CardList";
-import { Badge } from "@/components/ui/badge";
+ 
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,23 +7,36 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { Progress } from "@/components/ui/progress";
-import { BadgeCheck, Candy, Citrus, Shield } from "lucide-react";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import EditUser from "@/components/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
-import { getUserById } from "@/lib/database";
+import { getUserById, getUserMonthlyOrderActivity } from "@/lib/database";
 
-const SingleUserPage = async ({ params }: { params: { id: string } }) => {
-  const user = await getUserById(params.id).catch(() => null);
+const SingleUserPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
+  const user = await getUserById(id).catch(() => null);
+  const activity = user ? await getUserMonthlyOrderActivity(id, 6).catch(() => []) : [];
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
+
+  // Address fallbacks: prefer user columns, then default shipping address if present
+  const addressLine1 = (user as any)?.address_line_1 || (user as any)?.default_shipping_address?.address_line_1 || "";
+  const city = (user as any)?.city || (user as any)?.default_shipping_address?.city || "";
+
+  // Compute profile completion based on selected fields
+  const profileFields = [
+    user?.email,
+    user?.phone,
+    addressLine1,
+    city,
+    user?.avatar_url,
+    user?.first_name,
+    user?.last_name,
+  ];
+  const filled = profileFields.filter((v) => (typeof v === 'string' ? v.trim().length > 0 : Boolean(v))).length;
+  const progress = Math.round((filled / profileFields.length) * 100);
   return (
     <div className="">
       <Breadcrumb>
@@ -46,69 +58,7 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
       <div className="mt-4 flex flex-col xl:flex-row gap-8">
         {/* LEFT */}
         <div className="w-full xl:w-1/3 space-y-6">
-          {/* USER BADGES CONTAINER */}
-          <div className="bg-primary-foreground p-4 rounded-lg">
-            <h1 className="text-xl font-semibold">User Badges</h1>
-            <div className="flex gap-4 mt-4">
-              <HoverCard>
-                <HoverCardTrigger>
-                  <BadgeCheck
-                    size={36}
-                    className="rounded-full bg-blue-500/30 border-1 border-blue-500/50 p-2"
-                  />
-                </HoverCardTrigger>
-                <HoverCardContent>
-                  <h1 className="font-bold mb-2">Verified User</h1>
-                  <p className="text-sm text-muted-foreground">
-                    This user has been verified by the admin.
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-              <HoverCard>
-                <HoverCardTrigger>
-                  <Shield
-                    size={36}
-                    className="rounded-full bg-green-800/30 border-1 border-green-800/50 p-2"
-                  />
-                </HoverCardTrigger>
-                <HoverCardContent>
-                  <h1 className="font-bold mb-2">Admin</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Admin users have access to all features and can manage
-                    users.
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-              <HoverCard>
-                <HoverCardTrigger>
-                  <Candy
-                    size={36}
-                    className="rounded-full bg-yellow-500/30 border-1 border-yellow-500/50 p-2"
-                  />
-                </HoverCardTrigger>
-                <HoverCardContent>
-                  <h1 className="font-bold mb-2">Awarded</h1>
-                  <p className="text-sm text-muted-foreground">
-                    This user has been awarded for their contributions.
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-              <HoverCard>
-                <HoverCardTrigger>
-                  <Citrus
-                    size={36}
-                    className="rounded-full bg-orange-500/30 border-1 border-orange-500/50 p-2"
-                  />
-                </HoverCardTrigger>
-                <HoverCardContent>
-                  <h1 className="font-bold mb-2">Popular</h1>
-                  <p className="text-sm text-muted-foreground">
-                    This user has been popular in the community.
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-            </div>
-          </div>
+          {/* USER BADGES REMOVED */}
           {/* USER CARD CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
@@ -120,12 +70,6 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
               </Avatar>
               <h1 className="text-xl font-semibold">{fullName}</h1>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel
-              voluptas distinctio ab ipsa commodi fugiat labore quos veritatis
-              cum corrupti sed repudiandae ipsum, harum recusandae ratione ipsam
-              in, quis quia.
-            </p>
           </div>
           {/* INFORMATION CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg">
@@ -141,7 +85,9 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
                     defaultValues={{
                       fullName,
                       email: user.email,
-                      phone: user.phone ?? "+1 234 5678",
+                      phone: user.phone ?? "",
+                      address: addressLine1,
+                      city: city,
                     }}
                   />
                 )}
@@ -149,10 +95,8 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
             </div>
             <div className="space-y-4 mt-4">
               <div className="flex flex-col gap-2 mb-8">
-                <p className="text-sm text-muted-foreground">
-                  Profile completion
-                </p>
-                <Progress value={66} />
+                <p className="text-sm text-muted-foreground">Profile completion</p>
+                <Progress value={progress} />
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Full name:</span>
@@ -168,11 +112,11 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Address:</span>
-                <span>-</span>
+                <span>{addressLine1 || '-'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">City:</span>
-                <span>-</span>
+                <span>{city || '-'}</span>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
@@ -186,7 +130,7 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
           {/* CHART CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg">
             <h1 className="text-xl font-semibold">User Activity</h1>
-            <AppLineChart />
+            <AppLineChart data={activity} />
           </div>
         </div>
       </div>

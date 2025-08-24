@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -31,11 +33,13 @@ export default function CartPage() {
     clearCart
   } = useCartStore()
 
-  const totalItems = getTotalItems()
-  const totalPrice = getTotalPrice()
-  const shippingCost = totalPrice > 50 ? 0 : 9.99
-  const taxAmount = totalPrice * 0.08 // 8% tax
-  const finalTotal = totalPrice + shippingCost + taxAmount
+  // Avoid hydration mismatch by deferring persisted cart reads until after mount
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  const totalItems = mounted ? getTotalItems() : 0
+  const subtotal = mounted ? getTotalPrice() : 0
+  const finalTotal = subtotal
+  const displayItems = mounted ? items : []
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -62,7 +66,7 @@ export default function CartPage() {
           <h1 className="text-3xl font-bold text-gray-900">
             Shopping Cart ({totalItems} items)
           </h1>
-          {items.length > 0 && (
+          {displayItems.length > 0 && (
             <Button
               variant="outline"
               onClick={clearCart}
@@ -74,7 +78,7 @@ export default function CartPage() {
           )}
         </div>
 
-        {items.length === 0 ? (
+        {displayItems.length === 0 ? (
           /* Empty Cart State */
           <Card className="bg-white">
             <CardContent className="flex flex-col items-center justify-center py-16">
@@ -110,14 +114,25 @@ export default function CartPage() {
               <Card className="bg-white">
                 <CardContent className="p-6">
                   <div className="space-y-6">
-                    {items.map((item, index) => (
+                    {displayItems.map((item, index) => (
                       <div key={item.id}>
                         <div className="flex gap-6">
                           {/* Product Image */}
                           <div className="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                              <div className="text-gray-400 text-sm">IMG</div>
-                            </div>
+                            {item.image_url ? (
+                              <Image
+                                src={item.image_url}
+                                alt={item.name}
+                                width={96}
+                                height={96}
+                                className="w-full h-full object-cover"
+                                sizes="96px"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                <div className="text-gray-400 text-sm">IMG</div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Product Details */}
@@ -178,7 +193,7 @@ export default function CartPage() {
                             </div>
                           </div>
                         </div>
-                        {index < items.length - 1 && <Separator className="mt-6" />}
+                        {index < displayItems.length - 1 && <Separator className="mt-6" />}
                       </div>
                     ))}
                   </div>
@@ -193,8 +208,8 @@ export default function CartPage() {
                     <div className="flex items-center gap-3">
                       <Truck className="h-5 w-5 text-blue-600" />
                       <div>
-                        <div className="text-sm font-medium">Free Shipping</div>
-                        <div className="text-xs text-gray-500">Orders over <PriceDisplay price={50} /></div>
+                        <div className="text-sm font-medium">Flexible Delivery</div>
+                        <div className="text-xs text-gray-500">Pickup is free. Delivery fee is paid on delivery.</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -207,8 +222,8 @@ export default function CartPage() {
                     <div className="flex items-center gap-3">
                       <RotateCcw className="h-5 w-5 text-orange-600" />
                       <div>
-                        <div className="text-sm font-medium">Easy Returns</div>
-                        <div className="text-xs text-gray-500">30 Day Policy</div>
+                        <div className="text-sm font-medium">Safe, Secure Delivery</div>
+                        <div className="text-xs text-gray-500">Items handled with care and sealed packaging.</div>
                       </div>
                     </div>
                   </div>
@@ -226,28 +241,19 @@ export default function CartPage() {
                     {/* Subtotal */}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal ({totalItems} items)</span>
-                      <span className="font-medium"><PriceDisplay price={totalPrice} /></span>
+                      <span className="font-medium"><PriceDisplay price={subtotal} /></span>
                     </div>
 
                     {/* Shipping */}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Shipping</span>
                       <div className="text-right">
-                        {shippingCost === 0 ? (
-                          <div>
-                            <span className="font-medium text-green-600">FREE</span>
-                            <div className="text-xs text-gray-500">Orders over <PriceDisplay price={50} /></div>
-                          </div>
-                        ) : (
-                          <span className="font-medium"><PriceDisplay price={shippingCost} /></span>
-                        )}
+                        <div className="font-medium">Calculated at checkout</div>
+                        <div className="text-xs text-gray-500">
+                          Within Dar es Salaam: TSH 5,000–10,000. Other regions: TSH 15,000. Pickup is free.
+                        </div>
+                        <div className="text-xs text-gray-500">Delivery fee is paid upon delivery.</div>
                       </div>
-                    </div>
-
-                    {/* Tax */}
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tax (8%)</span>
-                      <span className="font-medium"><PriceDisplay price={taxAmount} /></span>
                     </div>
 
                     <Separator />
@@ -258,20 +264,7 @@ export default function CartPage() {
                       <span><PriceDisplay price={finalTotal} /></span>
                     </div>
 
-                    {/* Free Shipping Progress */}
-                    {totalPrice < 50 && (
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <div className="text-sm text-blue-800 mb-2">
-                          Add <PriceDisplay price={50 - totalPrice} /> more for free shipping!
-                        </div>
-                        <div className="w-full bg-blue-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((totalPrice / 50) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
+                    {/* Shipping info mirrors checkout. No progress bar since fees depend on location/method. */}
 
                     {/* Checkout Button */}
                     <Button asChild className="w-full h-12 mt-6">
@@ -285,6 +278,32 @@ export default function CartPage() {
                     <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-4">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <span>256-bit SSL encrypted checkout</span>
+                    </div>
+                    
+                    {/* Payment Method Banners */}
+                    <div className="space-y-3 pt-4">
+                      <div className="w-full rounded-lg overflow-hidden border bg-white">
+                        <Image
+                          src="/images/mobilepayment.png"
+                          alt="Mobile payment methods"
+                          width={1200}
+                          height={200}
+                          className="w-full h-auto object-cover"
+                          sizes="(max-width: 768px) 100vw, 400px"
+                          priority={false}
+                        />
+                      </div>
+                      <div className="w-full rounded-lg overflow-hidden border bg-white">
+                        <Image
+                          src="/images/visamastercard.png"
+                          alt="Visa and Mastercard"
+                          width={1200}
+                          height={200}
+                          className="w-full h-auto object-cover"
+                          sizes="(max-width: 768px) 100vw, 400px"
+                          priority={false}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>

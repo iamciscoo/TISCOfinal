@@ -8,6 +8,7 @@ interface PageLayoutProps<TData, TValue> {
   data: TData[];
   entityName?: string;
   addEntityButton?: ReactNode;
+  deleteApiBase?: string;
 }
 
 export function PageLayout<TData, TValue>({
@@ -16,6 +17,7 @@ export function PageLayout<TData, TValue>({
   data,
   entityName,
   addEntityButton,
+  deleteApiBase,
 }: PageLayoutProps<TData, TValue>) {
   return (
     <div className="">
@@ -23,7 +25,12 @@ export function PageLayout<TData, TValue>({
         <h1 className="font-semibold">{title}</h1>
         {addEntityButton}
       </div>
-      <DataTable columns={columns} data={data} entityName={entityName} />
+      <DataTable 
+        columns={columns} 
+        data={data} 
+        entityName={entityName}
+        deleteApiBase={deleteApiBase}
+      />
     </div>
   );
 }

@@ -3,8 +3,6 @@
 import { useRouter } from 'next/navigation'
 import {
   Home,
-  Search,
-  Settings,
   User2,
   ChevronUp,
   Plus,
@@ -17,6 +15,8 @@ import {
   ShoppingCart,
   Star,
   Wrench,
+  DollarSign,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -53,14 +53,9 @@ const items = [
     icon: Home,
   },
   {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
+    title: "Revenue",
+    url: "/revenue",
+    icon: DollarSign,
   },
 ];
 
@@ -238,6 +233,14 @@ const AppSidebar = () => {
                   <Link href="/services">
                     <Wrench />
                     All Services
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/service-bookings">
+                    <CalendarCheck />
+                    Service Bookings
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

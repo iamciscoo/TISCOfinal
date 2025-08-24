@@ -2,13 +2,29 @@
 
 import { useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { useCartStore } from '@/lib/store'
+import { useCartStore, type CartItem } from '@/lib/store'
+
+// Minimal server payload types for mapping
+type ServerProductImage = { url: string; is_main?: boolean; sort_order?: number }
+type ServerProduct = {
+  id?: string
+  name?: string
+  price?: number
+  image_url?: string
+  product_images?: ServerProductImage[]
+}
+type ServerCartItem = {
+  id: string
+  product_id: string
+  quantity: number
+  products?: ServerProduct
+}
 
 // Automatically sync Clerk user to local DB on login and merge guest cart
 export default function AuthSync() {
   const { isLoaded, isSignedIn } = useUser()
   const items = useCartStore((state) => state.items)
-  const clearCart = useCartStore((state) => state.clearCart)
+  const setItemsFromServer = useCartStore((state) => state.setItemsFromServer)
   const hasSyncedRef = useRef(false)
 
   useEffect(() => {
@@ -53,8 +69,27 @@ export default function AuthSync() {
             body: JSON.stringify({ action: 'merge_guest_data', guest_cart })
           })
           if (res.ok) {
-            // Clear local cart after successful merge to prevent duplicates
-            clearCart()
+            // Hydrate local store from server to avoid outbound sync deleting items
+            try {
+              const cartRes = await fetch('/api/cart', { cache: 'no-store' })
+              if (cartRes.ok) {
+                const data = await cartRes.json()
+                const mapped: CartItem[] = (data.items || []).map((it: ServerCartItem) => {
+                  const p = it.products || {}
+                  const imgs = Array.isArray(p.product_images) ? p.product_images : []
+                  const main = (imgs.find((img: ServerProductImage) => img?.is_main)?.url) || p.image_url || ''
+                  return {
+                    id: String(it.id),
+                    productId: String(it.product_id),
+                    name: p.name ?? 'Product',
+                    price: Number(p.price ?? 0),
+                    quantity: Number(it.quantity ?? 0),
+                    image_url: main,
+                  }
+                })
+                setItemsFromServer(mapped)
+              }
+            } catch {}
           } else {
             console.warn('Guest cart merge failed')
           }
@@ -65,7 +100,14 @@ export default function AuthSync() {
     }
 
     run()
-  }, [isLoaded, isSignedIn, items, clearCart])
+  }, [isLoaded, isSignedIn, items, setItemsFromServer])
+
+  // Reset one-time guard on sign-out so next login merges again
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      hasSyncedRef.current = false
+    }
+  }, [isLoaded, isSignedIn])
 
   return null
 }

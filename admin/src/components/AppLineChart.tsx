@@ -3,31 +3,21 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "./ui/chart";
 
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-];
+type ActivityPoint = { month: string; orders: number };
+
 const chartConfig = {
-  desktop: {
-    label: "Desktop",
+  orders: {
+    label: "Orders",
     color: "var(--chart-1)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
-const AppLineChart = () => {
+const AppLineChart = ({ data }: { data: ActivityPoint[] }) => {
   return (
     <ChartContainer config={chartConfig} className="mt-6">
       <LineChart
         accessibilityLayer
-        data={chartData}
+        data={data}
         margin={{
           left: 12,
           right: 12,
@@ -39,25 +29,14 @@ const AppLineChart = () => {
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          tickFormatter={(value) => value.slice(0, 3)}
+          tickFormatter={(value) => String(value).slice(0, 3)}
         />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
         <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
         <Line
-          dataKey="desktop"
+          dataKey="orders"
           type="monotone"
-          stroke="var(--color-desktop)"
-          strokeWidth={2}
-          dot={false}
-        />
-        <Line
-          dataKey="mobile"
-          type="monotone"
-          stroke="var(--color-mobile)"
+          stroke="var(--color-orders)"
           strokeWidth={2}
           dot={false}
         />

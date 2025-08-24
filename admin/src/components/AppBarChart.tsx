@@ -1,6 +1,9 @@
 "use client";
+import { useEffect, useState } from "react";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
+type RevenuePoint = { month: string; total: number; successful: number };
 
 const chartConfig = {
   total: {
@@ -13,16 +16,47 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const chartData = [
-  { month: "January", total: 186, successful: 80 },
-  { month: "February", total: 305, successful: 200 },
-  { month: "March", total: 237, successful: 120 },
-  { month: "April", total: 173, successful: 100 },
-  { month: "May", total: 209, successful: 130 },
-  { month: "June", total: 214, successful: 140 },
-];
+async function fetchRevenue(): Promise<RevenuePoint[]> {
+  const res = await fetch("/api/dashboard/revenue", { cache: "no-store" });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return Array.isArray(json?.data) ? json.data : [];
+}
 
 const AppBarChart = () => {
+  const [chartData, setChartData] = useState<RevenuePoint[]>([]);
+
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let aborted = false;
+
+    const load = async () => {
+      const data = await fetchRevenue();
+      if (!aborted) setChartData(data);
+    };
+    load();
+
+    try {
+      es = new EventSource("/api/dashboard/revenue/stream");
+      es.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg?.type === "orders_change") {
+            load();
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        es?.close();
+      };
+    } catch {}
+
+    return () => {
+      aborted = true;
+      if (es) es.close();
+    };
+  }, []);
+
   return (
     <div className="">
       <h1 className="text-lg font-medium mb-6">Total Revenue</h1>
@@ -34,13 +68,9 @@ const AppBarChart = () => {
             tickLine={false}
             tickMargin={10}
             axisLine={false}
-            tickFormatter={(value) => value.slice(0, 3)}
+            tickFormatter={(value) => String(value).slice(0, 3)}
           />
-          <YAxis
-            tickLine={false}
-            tickMargin={10}
-            axisLine={false}
-          />
+          <YAxis tickLine={false} tickMargin={10} axisLine={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
           <ChartLegend content={<ChartLegendContent />} />
           <Bar dataKey="total" fill="var(--color-total)" radius={4} />

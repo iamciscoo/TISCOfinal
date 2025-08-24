@@ -128,20 +128,11 @@ export default function ContactPage() {
                     <p className="text-sm text-gray-600">Find answers to common questions</p>
                   </Link>
                   
-                  <Link href="/shipping" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <p className="font-medium text-gray-900">Shipping Information</p>
-                    <p className="text-sm text-gray-600">Learn about our shipping policies</p>
+                  <Link href="/delivery-guide" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <p className="font-medium text-gray-900">Delivery Guide</p>
+                    <p className="text-sm text-gray-600">How delivery works and what to expect</p>
                   </Link>
                   
-                  <Link href="/returns" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <p className="font-medium text-gray-900">Returns & Exchanges</p>
-                    <p className="text-sm text-gray-600">Easy return process</p>
-                  </Link>
-                  
-                  <Link href="/track-order" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <p className="font-medium text-gray-900">Track Your Order</p>
-                    <p className="text-sm text-gray-600">Check your order status</p>
-                  </Link>
                 </CardContent>
               </Card>
             </div>

@@ -24,20 +24,39 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Download,
   ArrowLeft,
-  Star
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
+import { useCurrency } from '@/lib/currency-context'
+
+type OrderItem = {
+  quantity: number
+  products?: {
+    id: string
+    name: string
+    price: number
+    image_url: string | null
+  } | null
+}
+
+type Order = {
+  id: string
+  created_at: string
+  total_amount: number
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  shipping_address?: string | null
+  order_items?: OrderItem[]
+}
 
 export default function OrdersPage() {
   const { user, isLoaded } = useUser()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const { formatPrice } = useCurrency()
 
   useEffect(() => {
     fetchOrders()
@@ -49,7 +68,7 @@ export default function OrdersPage() {
       const response = await fetch('/api/orders')
       if (response.ok) {
         const data = await response.json()
-        setOrders(data.orders || [])
+        setOrders(Array.isArray(data?.orders) ? (data.orders as Order[]) : [])
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error)
@@ -74,9 +93,9 @@ export default function OrdersPage() {
   }
 
   // Filter and sort orders
-  const filteredOrders = orders.filter((order: any) => {
+  const filteredOrders = orders.filter((order: Order) => {
     const matchesSearch = order.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.order_items?.some((item: any) => 
+      order.order_items?.some((item: OrderItem) => 
         item.products?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
@@ -204,7 +223,7 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredOrders.map((order: any) => (
+            {filteredOrders.map((order: Order) => (
               <Card key={order.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -230,7 +249,7 @@ export default function OrdersPage() {
                           <span className="font-medium">Date:</span> {new Date(order.created_at).toLocaleDateString()}
                         </div>
                         <div>
-                          <span className="font-medium">Total:</span> ${order.total_amount?.toFixed(2)}
+                          <span className="font-medium">Total:</span> {formatPrice(order.total_amount ?? 0)}
                         </div>
                         <div>
                           <span className="font-medium">Items:</span> {order.order_items?.length || 0} {order.order_items?.length === 1 ? 'item' : 'items'}
@@ -239,7 +258,7 @@ export default function OrdersPage() {
 
                       {/* Order Items Preview */}
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {order.order_items?.slice(0, 3).map((item: any, index: number) => (
+                        {order.order_items?.slice(0, 3).map((item: OrderItem, index: number) => (
                           <div key={index} className="text-sm text-gray-700 bg-gray-50 px-2 py-1 rounded flex items-center gap-2">
                             {item.products?.image_url && (
                               <Image 
@@ -263,7 +282,7 @@ export default function OrdersPage() {
                       {/* Shipping Address */}
                       {order.shipping_address && (
                         <div className="text-sm text-gray-600 mb-2">
-                          <span className="font-medium">Shipping to:</span> {order.shipping_address}
+                          <span className="font-medium">Delivery to:</span> {order.shipping_address}
                         </div>
                       )}
                     </div>

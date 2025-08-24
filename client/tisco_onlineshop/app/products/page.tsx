@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -27,7 +28,17 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
 
+// Helper: create URL-friendly slug from a string
+const slugify = (s: string = '') =>
+  s
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
 export default function ProductsPage() {
+  const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
@@ -62,6 +73,102 @@ export default function ProductsPage() {
     
     fetchData()
   }, [])
+
+  // Initialize category from URL (?category=)
+  useEffect(() => {
+    const param = searchParams?.get('category')
+    if (!param) return
+
+    const raw = String(param).trim()
+    const val = raw.toLowerCase()
+    const slugVal = slugify(raw)
+
+    console.debug('[Products] URL category param:', { raw, val, slugVal })
+    if (categories?.length) {
+      console.debug('[Products] Available categories:', categories.map(c => ({ id: String(c.id), name: c.name, slug: (c.slug || '') })))
+    }
+
+    if (val === 'all') {
+      setSelectedCategory('all')
+      return
+    }
+
+    // If categories are not loaded yet, wait to resolve instead of falling back to search
+    if (!categories || categories.length === 0) {
+      console.debug('[Products] Categories not loaded yet; deferring category resolution')
+      return
+    }
+
+    // Try to match a UUID id from param
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)
+    if (isUuid) {
+      const byId = categories.find(c => String(c.id).toLowerCase() === val)
+      if (byId) {
+        console.debug('[Products] Matched UUID category id:', { id: String(byId.id), name: byId.name })
+        setSelectedCategory(String(byId.id))
+        return
+      }
+    }
+
+    // Numeric id provided
+    if (/^\d+$/.test(val)) {
+      const byNum = categories.find(c => String(c.id).toLowerCase() === val)
+      if (byNum) {
+        console.debug('[Products] Matched numeric category id:', { id: String(byNum.id), name: byNum.name })
+        setSelectedCategory(String(byNum.id))
+        return
+      }
+    }
+
+    // Exact match by id, slug, name, or slugified name
+    const match = categories.find((c) => {
+      const cid = String(c.id).toLowerCase()
+      const cslug = (c.slug || '').toLowerCase()
+      const cname = (c.name || '').toLowerCase()
+      const cnameSlug = slugify(c.name || '')
+      return (
+        cid === val ||
+        cslug === val ||
+        cslug === slugVal ||
+        cname === val ||
+        cnameSlug === slugVal
+      )
+    })
+    if (match) {
+      console.debug('[Products] Matched category exactly:', { id: String(match.id), name: match.name })
+      setSelectedCategory(String(match.id))
+      return
+    }
+
+    // Fallback: partial match on slug or name (e.g., "anime" matches "Anime Merchandise")
+    const partial = categories.find((c) => {
+      const cslug = (c.slug || '').toLowerCase()
+      const cname = (c.name || '').toLowerCase()
+      const cnameSlug = slugify(c.name || '')
+      return (
+        cslug.includes(val) ||
+        cslug.includes(slugVal) ||
+        cname.includes(val) ||
+        cnameSlug.includes(slugVal)
+      )
+    })
+    if (partial) {
+      console.debug('[Products] Partially matched category:', { id: String(partial.id), name: partial.name })
+      setSelectedCategory(String(partial.id))
+      return
+    }
+
+    // Last resort: use the term as a search keyword
+    console.debug('[Products] No category match. Falling back to search term.')
+    setSearchTerm(val)
+  }, [searchParams, categories])
+
+  // Initialize search keyword from URL (?query=) only if no category param or category=all
+  useEffect(() => {
+    const q = searchParams?.get('query')
+    const cat = searchParams?.get('category')
+    if (q && (!cat || String(cat).toLowerCase() === 'all')) setSearchTerm(String(q))
+  }, [searchParams])
 
   // Track responsive columns to enforce max 3 rows per page
   useEffect(() => {

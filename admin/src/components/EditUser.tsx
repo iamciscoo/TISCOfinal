@@ -72,6 +72,9 @@ const EditUser = ({ userId, defaultValues }: EditUserProps) => {
           phone: values.phone,
           first_name,
           last_name,
+          // address fields for default shipping address update
+          address_line_1: values.address,
+          city: values.city,
         }),
       });
       if (!res.ok) {

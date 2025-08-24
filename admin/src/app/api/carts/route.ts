@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)!,
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
@@ -16,45 +16,103 @@ export async function GET(req: NextRequest) {
     
     const offset = (page - 1) * limit
 
-    let query = supabase
+    // Compute distinct carts (users) with last activity in chunks
+    const chunkSize = 500
+    let position = 0
+    const userActivity = new Map<string, { user_id: string; last_updated: string; created_at: string }>()
+    while (true) {
+      let base = supabase
+        .from('cart_items')
+        .select('user_id, created_at')
+        .order('created_at', { ascending: false })
+        .range(position, position + chunkSize - 1)
+      if (userId) base = base.eq('user_id', userId)
+      const { data, error } = await base
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      if (!data || data.length === 0) break
+      for (const row of data as any[]) {
+        const uid = row.user_id
+        if (!uid) continue
+        const last = row.created_at
+        const existing = userActivity.get(uid)
+        if (!existing) {
+          userActivity.set(uid, { user_id: uid, last_updated: last, created_at: row.created_at })
+        } else {
+          if (new Date(last) > new Date(existing.last_updated)) {
+            existing.last_updated = last
+          }
+        }
+      }
+      position += data.length
+      if (data.length < chunkSize) break
+    }
+
+    // Apply status filter at the user level
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    let groups = Array.from(userActivity.values())
+    if (status === 'abandoned') {
+      groups = groups.filter(g => new Date(g.last_updated) < cutoff)
+    } else if (status === 'active') {
+      groups = groups.filter(g => new Date(g.last_updated) >= cutoff)
+    }
+    // Sort by last activity desc
+    groups.sort((a, b) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())
+
+    const totalDistinct = groups.length
+    const pageGroups = groups.slice(offset, offset + limit)
+    const pageUserIds = pageGroups.map(g => g.user_id)
+
+    if (pageUserIds.length === 0) {
+      return NextResponse.json({
+        carts: [],
+        pagination: {
+          page,
+          limit,
+          total: totalDistinct,
+          pages: Math.max(1, Math.ceil(totalDistinct / limit))
+        }
+      }, { status: 200 })
+    }
+
+    // Fetch all items for the paginated users
+    const { data: cartItems, error: itemsError } = await supabase
       .from('cart_items')
       .select(`
         *,
-        products(id, name, price, image_url),
-        users(id, first_name, last_name, email)
-      `, { count: 'exact' })
-
-    // Filter by user if specified
-    if (userId) {
-      query = query.eq('user_id', userId)
-    }
-
-    // Filter by status (use created_at for compatibility when updated_at may not exist)
-    if (status === 'abandoned') {
-      const abandonedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      query = query.lt('created_at', abandonedCutoff)
-    } else if (status === 'active') {
-      const activeCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      query = query.gte('created_at', activeCutoff)
-    }
-
-    const { data: cartItems, error, count } = await query
+        products(id, name, price, image_url)
+      `)
+      .in('user_id', pageUserIds)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (itemsError) {
+      return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
 
-    // Group cart items by user
-    const cartsByUser = new Map()
-    
-    cartItems?.forEach(item => {
-      const userId = item.user_id
-      if (!cartsByUser.has(userId)) {
-        cartsByUser.set(userId, {
-          user_id: userId,
-          user: item.users,
+    // Fetch user profiles for the paginated users
+    let userMap = new Map<string, any>()
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email')
+      .in('id', pageUserIds)
+    if (usersError) {
+      console.error('Admin cart fetch: users lookup error:', usersError)
+    } else if (usersData) {
+      userMap = new Map(usersData.map((u: any) => [u.id, u]))
+    }
+
+    // Build carts for the paginated users
+    const cartsByUser = new Map<string, any>()
+    const orderIndex = new Map<string, number>()
+    pageGroups.forEach((g, idx) => orderIndex.set(g.user_id, idx))
+
+    cartItems?.forEach((item: any) => {
+      const uid = item.user_id
+      if (!cartsByUser.has(uid)) {
+        cartsByUser.set(uid, {
+          user_id: uid,
+          user: userMap.get(uid) || { id: uid, first_name: 'Unknown', last_name: '', email: '' },
           items: [],
           total_items: 0,
           total_value: 0,
@@ -62,8 +120,7 @@ export async function GET(req: NextRequest) {
           created_at: item.created_at
         })
       }
-      
-      const cart = cartsByUser.get(userId)
+      const cart = cartsByUser.get(uid)
       const unitPrice = item.unit_price ?? item.products?.price ?? 0
       const lastUpdated = item.updated_at || item.created_at
       cart.items.push({
@@ -75,25 +132,24 @@ export async function GET(req: NextRequest) {
         created_at: item.created_at,
         updated_at: lastUpdated
       })
-      
       cart.total_items += item.quantity
       cart.total_value += item.quantity * unitPrice
-      
-      // Update last_updated to most recent item update
       if (new Date(lastUpdated) > new Date(cart.last_updated)) {
         cart.last_updated = lastUpdated
       }
     })
 
-    const carts = Array.from(cartsByUser.values())
+    let carts = Array.from(cartsByUser.values())
+    // Ensure the carts are ordered by the computed order
+    carts.sort((a, b) => (orderIndex.get(a.user_id) ?? 0) - (orderIndex.get(b.user_id) ?? 0))
 
     return NextResponse.json({
       carts,
       pagination: {
         page,
         limit,
-        total: count || 0,
-        pages: Math.ceil((count || 0) / limit)
+        total: totalDistinct,
+        pages: Math.max(1, Math.ceil(totalDistinct / limit))
       }
     }, { status: 200 })
 

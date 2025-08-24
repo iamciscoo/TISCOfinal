@@ -1,4 +1,5 @@
-import { Order, columns } from "./columns";
+import { columns } from "./columns";
+import type { OrderColumn as Order } from "@/lib/ui-types";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { getOrders } from "@/lib/database";
 
@@ -51,6 +52,7 @@ const OrdersPage = async () => {
       columns={columns}
       data={data}
       entityName="Order"
+      deleteApiBase="/api/orders"
     />
   );
 };
