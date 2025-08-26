@@ -44,7 +44,7 @@ import { Sheet, SheetTrigger } from "./ui/sheet";
 import AddOrder from "./AddOrder";
 import AddUser from "./AddUser";
 import AddCategory from "./AddCategory";
-import AddProduct from "./AddProduct";
+// Removed unused AddProduct import
 
 const items = [
   {

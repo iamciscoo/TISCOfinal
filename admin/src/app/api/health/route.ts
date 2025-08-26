@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from("users")
       .select("id", { count: "exact", head: true })
       .limit(1);
@@ -22,7 +22,8 @@ export async function GET() {
       },
       { status: 200 }
     );
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

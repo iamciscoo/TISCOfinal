@@ -2,10 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+// Removed unused form primitives now that form is a separate component
+import { ServiceBookingForm } from '@/components/ServiceBookingForm'
 import { 
   Monitor, 
   Cpu, 
@@ -13,14 +11,11 @@ import {
   CheckCircle,
   ArrowRight,
   Users,
-  Calendar,
-  Clock,
-  Mail,
-  Phone,
   Award,
   Zap
 } from 'lucide-react'
 import { PageLayout, Breadcrumb } from '@/components/shared'
+import { getServices } from '@/lib/database'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
 
 interface Service {
@@ -86,7 +81,22 @@ const services: Service[] = [
   }
 ]
 
-export default function ServicesPage({ searchParams }: { searchParams: { service?: string } }) {
+interface DbService {
+  id: string
+  title: string
+  description?: string
+  features?: string[]
+  image?: string
+  gallery?: string[]
+}
+
+export default async function ServicesPage({ searchParams }: { searchParams: { service?: string } }) {
+  // Fetch real services from DB to ensure we have valid UUID ids
+  const dbServices = (await getServices()) as DbService[]
+  const dbServiceIdByTitle = new Map<string, string>(
+    (dbServices || []).map((s) => [s.title, s.id])
+  )
+
   return (
     <PageLayout>
       {/* Hero Carousel */}
@@ -117,6 +127,7 @@ export default function ServicesPage({ searchParams }: { searchParams: { service
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16 auto-rows-fr">
           {services.map((service) => {
             const IconComponent = service.icon
+            const resolvedId = dbServiceIdByTitle.get(service.title) ?? service.id
             return (
               <Card key={service.id} className="relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
                 {/* Service Image */}
@@ -155,7 +166,7 @@ export default function ServicesPage({ searchParams }: { searchParams: { service
 
                   <div className="border-t pt-4 mt-auto">
                     <Button asChild className="w-full bg-gray-900 hover:bg-gray-800">
-                      <Link href={`/services?service=${service.id}#booking-form`}>
+                      <Link href={`/services?service=${resolvedId}#booking-form`}>
                         Select Service
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Link>
@@ -204,143 +215,10 @@ export default function ServicesPage({ searchParams }: { searchParams: { service
               </p>
             </div>
 
-            <Card className="shadow-xl">
-              <CardContent className="p-8">
-                <form className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Service Type */}
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceType" className="text-sm font-medium">
-                        Service Type *
-                      </Label>
-                      <Select defaultValue={searchParams?.service}>
-                        <SelectTrigger id="serviceType">
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pc-building">Custom PC Building</SelectItem>
-                          <SelectItem value="office-setup">Desktop/Office Space Setup</SelectItem>
-                          <SelectItem value="software-installation">Computer/Software Installation</SelectItem>
-                          <SelectItem value="other">Other (please specify in description)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Email */}
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium">
-                        Email Address *
-                      </Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          placeholder="your.email@example.com"
-                          className="pl-10"
-                          autoComplete="email"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Phone */}
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm font-medium">
-                        Phone Number *
-                      </Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input 
-                          id="phone" 
-                          type="tel" 
-                          placeholder="(555) 123-4567"
-                          className="pl-10"
-                          autoComplete="tel"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Preferred Date */}
-                    <div className="space-y-2">
-                      <Label htmlFor="preferredDate" className="text-sm font-medium">
-                        Preferred Date *
-                      </Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input 
-                          id="preferredDate" 
-                          type="date" 
-                          autoComplete="off"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Preferred Time */}
-                    <div className="space-y-2">
-                      <Label htmlFor="preferredTime" className="text-sm font-medium">
-                        Preferred Time *
-                      </Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Select>
-                          <SelectTrigger className="pl-10">
-                            <SelectValue placeholder="Select time slot" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="9-12">Morning (9:00 AM - 12:00 PM)</SelectItem>
-                            <SelectItem value="12-15">Afternoon (12:00 PM - 3:00 PM)</SelectItem>
-                            <SelectItem value="15-18">Late Afternoon (3:00 PM - 6:00 PM)</SelectItem>
-                            <SelectItem value="flexible">Flexible</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-medium">
-                        Full Name *
-                      </Label>
-                      <Input 
-                        id="name" 
-                        type="text" 
-                        placeholder="John Doe"
-                        autoComplete="name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm font-medium">
-                      Service Description *
-                    </Label>
-                    <Textarea 
-                      id="description" 
-                      placeholder="Please describe your specific needs, requirements, or any questions you have about the service. Include details like budget range, timeline, specific components (for PC building), or any special requirements."
-                      className="min-h-[120px]"
-                      required
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    <Button type="submit" size="lg" className="flex-1">
-                      Submit Service Request
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                    <Button type="button" variant="outline" size="lg" className="flex-1">
-                      Call Us: (555) 123-TECH
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+            <ServiceBookingForm 
+              defaultServiceId={searchParams?.service}
+              services={(dbServices || []).map((s) => ({ id: s.id, title: s.title }))}
+            />
           </div>
         </section>
 

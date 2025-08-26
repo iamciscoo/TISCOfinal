@@ -149,6 +149,7 @@ export interface ServiceBooking {
   service_id: string | number
   user_id: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
   scheduled_date: string
   total_amount: number
   notes?: string
@@ -165,6 +166,8 @@ export interface AdminStats {
   totalOrders: number
   totalUsers: number
   totalRevenue: number
+  productRevenue: number
+  serviceRevenue: number
   pendingOrders: number
   lowStockProducts: number
 }

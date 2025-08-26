@@ -51,11 +51,16 @@ export default function EditServicePage() {
       if (!response.ok) throw new Error('Failed to fetch service')
       
       const service = await response.json()
+      // Normalize null/undefined values to avoid passing null to controlled inputs
       setFormData(prev => ({
         ...prev,
-        ...service,
-        features: service?.features ?? [],
-        gallery: service?.gallery ?? []
+        id: service?.id ?? prev.id ?? '',
+        title: service?.title ?? '',
+        description: service?.description ?? '',
+        duration: service?.duration ?? '',
+        image: service?.image ?? '',
+        features: Array.isArray(service?.features) ? service.features.filter(Boolean) : [],
+        gallery: Array.isArray(service?.gallery) ? service.gallery.filter(Boolean) : []
       }))
     } catch (error) {
       toast({

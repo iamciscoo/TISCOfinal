@@ -4,9 +4,7 @@ import { supabase } from '@/lib/supabase'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0)
-}
+// startOfMonth not used; removed to satisfy linter
 
 function monthLabel(d: Date) {
   return d.toLocaleString('en-US', { month: 'long' })
@@ -41,16 +39,51 @@ export async function GET() {
       buckets.set(m.key, { total: 0, successful: 0 })
     }
 
-    for (const row of data || []) {
-      const createdAt = new Date(row.created_at as string)
+    for (const row of (data || []) as Array<{ created_at: string; total_amount: number | string; payment_status?: string }>) {
+      const createdAt = new Date(row.created_at)
       const key = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`
       if (!buckets.has(key)) continue
       const b = buckets.get(key)!
-      const amt = Number((row as any).total_amount ?? 0)
+      const amt = Number(row.total_amount ?? 0)
       b.total += amt
-      if ((row as any).payment_status === 'paid') {
+      if (row.payment_status === 'paid') {
         b.successful += amt
       }
+    }
+
+    // Also include service bookings in the same buckets
+    try {
+      const { data: svcData, error: svcErr } = await supabase
+        .from('service_bookings')
+        .select('created_at,total_amount,payment_status')
+        .gte('created_at', start)
+
+      if (!svcErr) {
+        for (const row of (svcData || []) as Array<{ created_at: string; total_amount: number | string; payment_status?: string }>) {
+          const createdAt = new Date(row.created_at)
+          const key = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`
+          if (!buckets.has(key)) continue
+          const b = buckets.get(key)!
+          const amt = Number(row.total_amount ?? 0)
+          b.total += amt
+          if (String(row.payment_status || '').toLowerCase() === 'paid') {
+            b.successful += amt
+          }
+        }
+      } else {
+        const msg = String(svcErr.message || '').toLowerCase()
+        // Ignore missing table/column errors; treat service revenue as zero
+        if (!(
+          msg.includes('relation') && msg.includes('does not exist') ||
+          msg.includes('schema cache') ||
+          msg.includes('column') && msg.includes('payment_status') && msg.includes('does not exist')
+        )) {
+          console.warn('Service bookings revenue skipped due to error:', svcErr.message)
+        }
+      }
+    } catch (e) {
+      // Best-effort; chart can still render with orders only
+      console.warn('Service bookings revenue aggregation failed:', (e as Error)?.message)
     }
 
     const out = months.map((m) => ({

@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
-type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -14,10 +14,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => ({} as Partial<{ status: OrderStatus } >));
+    const body = await req.json().catch(() => ({} as Partial<{ status: BookingStatus } >));
     const status = body.status;
 
-    const allowed: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const allowed: BookingStatus[] = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
     if (!status || !allowed.includes(status)) {
       return NextResponse.json({ error: "Invalid or missing 'status'" }, { status: 400 });
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     };
 
     const { data, error } = await supabase
-      .from('orders')
+      .from('service_bookings')
       .update(updates)
       .eq('id', id)
       .select()
@@ -41,4 +41,3 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

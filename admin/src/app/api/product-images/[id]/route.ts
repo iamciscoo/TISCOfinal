@@ -5,21 +5,24 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => ({} as Record<string, any>));
+    const body = await req.json().catch(() => ({} as Partial<{
+      is_main: boolean
+      sort_order: number
+    }>));
 
     const allowedFields = [
       "is_main",
       "sort_order",
     ] as const;
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
       if (key in body) updates[key] = body[key as keyof typeof body];
     }
@@ -75,14 +78,15 @@ export async function PATCH(req: Request, { params }: Params) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
@@ -143,7 +147,8 @@ export async function DELETE(_req: Request, { params }: Params) {
     }
 
     return new Response(null, { status: 204 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

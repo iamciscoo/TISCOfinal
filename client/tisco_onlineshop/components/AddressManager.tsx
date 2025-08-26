@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,11 +40,7 @@ export default function AddressManager() {
     country: 'TZ'
   })
 
-  useEffect(() => {
-    fetchAddresses()
-  }, [])
-
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/addresses')
       if (response.ok) {
@@ -67,7 +63,13 @@ export default function AddressManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchAddresses()
+  }, [fetchAddresses])
+
+  
 
   const handleSave = async () => {
     try {

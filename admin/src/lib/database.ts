@@ -320,26 +320,43 @@ export async function getAdminStats(): Promise<AdminStats> {
       { count: totalUsers },
       { data: revenueData },
       { count: pendingOrders },
-      { data: lowStockData }
+      { data: lowStockData },
+      { data: serviceRevenueRows, error: serviceRevenueErr }
     ] = await Promise.all([
       supabase.from('products').select('*', { count: 'exact', head: true }),
       supabase.from('orders').select('*', { count: 'exact', head: true }),
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('orders').select('total_amount').eq('payment_status', 'paid'),
       supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('products').select('*').lt('stock_quantity', 10)
+      supabase.from('products').select('*').lt('stock_quantity', 10),
+      // Service revenue: paid service bookings; tolerate missing table/column
+      supabase.from('service_bookings').select('total_amount,payment_status')
     ])
 
-    const totalRevenue = (revenueData || []).reduce((sum: number, order: { total_amount: number | string }) =>
+    const productRevenue = (revenueData || []).reduce((sum: number, order: { total_amount: number | string }) =>
       sum + Number(order.total_amount ?? 0),
       0
     )
+
+    let serviceRevenue = 0
+    if (!serviceRevenueErr && Array.isArray(serviceRevenueRows)) {
+      serviceRevenue = (serviceRevenueRows as Array<{ total_amount: number | string; payment_status?: string }>).
+        filter(r => String((r?.payment_status ?? '')).toLowerCase() === 'paid')
+        .reduce((sum, r) => sum + Number(r.total_amount ?? 0), 0)
+    } else if (serviceRevenueErr) {
+      // Table or column may be missing; ignore and default to 0
+      console.warn('Service revenue unavailable:', serviceRevenueErr.message)
+    }
+
+    const totalRevenue = productRevenue + serviceRevenue
 
     return {
       totalProducts: totalProducts || 0,
       totalOrders: totalOrders || 0,
       totalUsers: totalUsers || 0,
       totalRevenue,
+      productRevenue,
+      serviceRevenue,
       pendingOrders: pendingOrders || 0,
       lowStockProducts: lowStockData?.length || 0
     }
@@ -350,6 +367,8 @@ export async function getAdminStats(): Promise<AdminStats> {
       totalOrders: 0,
       totalUsers: 0,
       totalRevenue: 0,
+      productRevenue: 0,
+      serviceRevenue: 0,
       pendingOrders: 0,
       lowStockProducts: 0
     }
@@ -362,6 +381,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     totalOrders: 0,
     totalUsers: 0,
     totalRevenue: 0,
+    productRevenue: 0,
+    serviceRevenue: 0,
     pendingOrders: 0,
     lowStockProducts: 0,
   }

@@ -5,9 +5,9 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
@@ -31,9 +31,9 @@ export async function GET(_req: Request, { params }: Params) {
   }
 }
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
@@ -83,9 +83,9 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
@@ -102,3 +102,4 @@ export async function DELETE(_req: Request, { params }: Params) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

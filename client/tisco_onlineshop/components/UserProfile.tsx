@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -52,16 +52,7 @@ export default function UserProfile() {
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState<Partial<UserProfileData>>({})
 
-  useEffect(() => {
-    if (!isLoaded) return
-    if (user) {
-      fetchProfile()
-    } else {
-      setLoading(false)
-    }
-  }, [isLoaded, user])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/profile')
       if (response.ok) {
@@ -85,7 +76,18 @@ export default function UserProfile() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    if (!isLoaded) return
+    if (user) {
+      fetchProfile()
+    } else {
+      setLoading(false)
+    }
+  }, [isLoaded, user, fetchProfile])
+
+  
 
   const handleSave = async () => {
     try {

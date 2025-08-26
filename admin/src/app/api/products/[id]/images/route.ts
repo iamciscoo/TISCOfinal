@@ -5,9 +5,9 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params?.id;
+    const { id: productId } = await context.params;
     if (!productId) return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
 
     const { data, error } = await supabase
@@ -19,20 +19,21 @@ export async function GET(_req: Request, { params }: Params) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params?.id;
+    const { id: productId } = await context.params;
     if (!productId) return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
 
-    const body = await req.json().catch(() => ({} as any));
-    const imageId: string | undefined = body?.id;
-    const setMain: boolean | undefined = body?.is_main;
-    const sortOrder: number | undefined = typeof body?.sort_order === 'number' ? body.sort_order : undefined;
+    const body = await req.json().catch(() => ({} as Partial<{ id: string; is_main: boolean; sort_order: number }>));
+    const imageId: string | undefined = body.id;
+    const setMain: boolean | undefined = body.is_main;
+    const sortOrder: number | undefined = typeof body.sort_order === 'number' ? body.sort_order : undefined;
 
     if (!imageId) return NextResponse.json({ error: "Missing 'id' of image" }, { status: 400 });
 
@@ -75,14 +76,15 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params?.id;
+    const { id: productId } = await context.params;
     if (!productId) return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
 
     const { searchParams } = new URL(req.url);
@@ -143,7 +145,9 @@ export async function DELETE(req: Request, { params }: Params) {
     }
 
     return new Response(null, { status: 204 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

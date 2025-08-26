@@ -2,6 +2,24 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import Link from "next/link";
+import ServiceCostPanel from "@/components/ServiceCostPanel";
 
 export type ServiceBookingRow = {
   id: string;
@@ -74,6 +92,137 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     cell: ({ row }) => {
       const iso = row.getValue<string>("createdAt");
       return <span className="text-sm">{new Date(iso).toLocaleString()}</span>;
+    },
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const booking = row.original;
+      const updateStatus = async (status: ServiceBookingRow["status"]) => {
+        const response = await fetch(`/api/service-bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        if (response.ok) {
+          toast({ title: "Booking updated" });
+          window.location.reload();
+        } else {
+          toast({ title: "Failed to update status", variant: "destructive" });
+        }
+      };
+
+      const clearSchedule = async () => {
+        const response = await fetch(`/api/service-bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferred_date: null, preferred_time: null }),
+        });
+        if (response.ok) {
+          toast({ title: "Schedule cleared" });
+          window.location.reload();
+        } else {
+          toast({ title: "Failed to clear schedule", variant: "destructive" });
+        }
+      };
+
+      const markPaid = async () => {
+        const response = await fetch(`/api/service-bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payment_status: "paid" }),
+        });
+        if (response.ok) {
+          toast({ title: "Marked as paid" });
+          window.location.reload();
+        } else {
+          const msg = await response.json().catch(() => ({}));
+          toast({ title: msg?.error || "Failed to mark as paid", variant: "destructive" });
+        }
+      };
+
+      const markUnpaid = async () => {
+        const response = await fetch(`/api/service-bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payment_status: "pending" }),
+        });
+        if (response.ok) {
+          toast({ title: "Marked as unpaid" });
+          window.location.reload();
+        } else {
+          const msg = await response.json().catch(() => ({}));
+          toast({ title: msg?.error || "Failed to mark as unpaid", variant: "destructive" });
+        }
+      };
+
+      const markPaidAndCompleted = async () => {
+        const response = await fetch(`/api/service-bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payment_status: "paid", status: "completed" }),
+        });
+        if (response.ok) {
+          toast({ title: "Marked paid & completed" });
+          window.location.reload();
+        } else {
+          const msg = await response.json().catch(() => ({}));
+          toast({ title: msg?.error || "Failed to update", variant: "destructive" });
+        }
+      };
+
+      return (
+        <Sheet>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(booking.id)}>
+                Copy booking ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <SheetTrigger asChild>
+                <DropdownMenuItem>Manage costs</DropdownMenuItem>
+              </SheetTrigger>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => updateStatus("pending")}>Mark as pending</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateStatus("confirmed")}>Mark as confirmed</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateStatus("in_progress")}>Mark as in progress</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateStatus("completed")}>Mark as completed</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateStatus("cancelled")} className="text-red-600">Cancel booking</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Payment</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={markUnpaid}>Mark as unpaid</DropdownMenuItem>
+                    <DropdownMenuItem onClick={markPaid}>Mark as paid</DropdownMenuItem>
+                    <DropdownMenuItem onClick={markPaidAndCompleted}>Mark paid & completed</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Link href={`/service-bookings/${booking.id}`}>Edit booking</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={clearSchedule}>Clear schedule</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* Sheet content lives alongside the trigger */}
+          <ServiceCostPanel bookingId={booking.id} />
+        </Sheet>
+      );
     },
   },
 ];

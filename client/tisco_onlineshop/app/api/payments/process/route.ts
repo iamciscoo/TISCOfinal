@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Process payment based on method type
-    let paymentResponse
+    let paymentResponse: unknown
     try {
       switch (paymentMethod.type) {
         case 'card':
@@ -136,7 +136,10 @@ export async function POST(req: NextRequest) {
 }
 
 // Payment processor implementations
-async function processCardPayment(transaction: any, paymentMethod: any, returnUrl?: string) {
+type PaymentMethod = { id: string; type: 'card' | 'mobile_money' | 'bank_transfer' | 'cash_on_delivery'; provider?: string; account_number?: string }
+type PaymentTransaction = { id: string; order_id: string; user_id: string; amount: number; currency: string; status: string; payment_type?: string; provider?: string; transaction_reference: string; gateway_transaction_id?: string }
+
+async function processCardPayment(transaction: PaymentTransaction, paymentMethod: PaymentMethod, returnUrl?: string) {
   // Mock card payment processing - integrate with actual payment gateway
   const mockSuccess = Math.random() > 0.1 // 90% success rate for demo
 
@@ -161,7 +164,7 @@ async function processCardPayment(transaction: any, paymentMethod: any, returnUr
   }
 }
 
-async function processMobileMoneyPayment(transaction: any, paymentMethod: any) {
+async function processMobileMoneyPayment(transaction: PaymentTransaction, paymentMethod: PaymentMethod) {
   // Mock mobile money payment processing
   const mockSuccess = Math.random() > 0.05 // 95% success rate for demo
 
@@ -186,7 +189,7 @@ async function processMobileMoneyPayment(transaction: any, paymentMethod: any) {
   }
 }
 
-async function processBankTransferPayment(transaction: any, paymentMethod: any) {
+async function processBankTransferPayment(transaction: PaymentTransaction, _paymentMethod: PaymentMethod) {
   // Bank transfer is typically manual verification
   await supabase
     .from('payment_transactions')
@@ -208,7 +211,7 @@ async function processBankTransferPayment(transaction: any, paymentMethod: any) 
   }
 }
 
-async function processCashOnDeliveryPayment(transaction: any) {
+async function processCashOnDeliveryPayment(transaction: PaymentTransaction) {
   // COD is confirmed on delivery
   await supabase
     .from('payment_transactions')

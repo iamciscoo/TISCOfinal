@@ -8,13 +8,14 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
@@ -35,7 +36,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -46,9 +47,9 @@ export async function PATCH(
       duration,
       image,
       gallery,
-    } = body
+    } = body as Partial<{ title: string; description: string; features: string[]; duration: string; image: string; gallery: string[] }>
 
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (features !== undefined) updateData.features = features
@@ -56,10 +57,11 @@ export async function PATCH(
     if (image !== undefined) updateData.image = image
     if (gallery !== undefined) updateData.gallery = gallery
 
+    const { id } = await context.params
     const { data, error } = await supabase
       .from('services')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -81,13 +83,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { error } = await supabase
       .from('services')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) {
       console.error('Error deleting service:', error)

@@ -16,7 +16,7 @@ import { useTheme } from "next-themes";
 import { SidebarTrigger } from "./ui/sidebar";
 
 const Navbar = () => {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
   return (
     <nav className="p-4 flex items-center justify-between sticky top-0 bg-background z-10">
       {/* LEFT */}

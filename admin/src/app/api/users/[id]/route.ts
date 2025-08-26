@@ -5,14 +5,24 @@ export const runtime = 'nodejs';
 
 type Params = { params: { id: string } };
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    const body = (await req.json().catch(() => ({}))) as any;
+    const body = (await req.json().catch(() => ({} as Partial<{
+      email: string
+      first_name: string
+      last_name: string
+      phone: string
+      avatar_url: string
+      is_verified: boolean
+      address: string
+      address_line_1: string
+      city: string
+    }>)));
 
     const allowedFields = [
       "email",
@@ -26,7 +36,7 @@ export async function PATCH(req: Request, { params }: Params) {
       "city",
     ] as const;
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
       if (body[key] !== undefined) updates[key] = body[key];
     }
@@ -53,7 +63,7 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     // Update user if needed, otherwise fetch existing to return
-    let user: any = null
+    let user: Record<string, unknown> | null = null
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
       const { data: upd, error } = await supabase
@@ -75,7 +85,7 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     // Optional: update the user's default shipping address if address fields were provided
-    let updatedAddress: any = null
+    let updatedAddress: Record<string, unknown> | null = null
     if (hasAddressUpdate) {
       // Find current default shipping address
       const { data: found, error: findErr } = await supabase
@@ -94,7 +104,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
       const existing = Array.isArray(found) && found.length ? found[0] : null
       if (existing) {
-        const addrUpdates: Record<string, any> = { updated_at: new Date().toISOString() }
+        const addrUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() }
         if (address_line_1 && String(address_line_1).trim()) addrUpdates.address_line_1 = String(address_line_1).trim()
         if (city && String(city).trim()) addrUpdates.city = String(city).trim()
 
@@ -114,14 +124,15 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     return NextResponse.json({ data: user, default_shipping_address: updatedAddress }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const id = params?.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
@@ -157,7 +168,8 @@ export async function DELETE(_req: Request, { params }: Params) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     // Return a standard JSON response to avoid 204-with-body issues
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

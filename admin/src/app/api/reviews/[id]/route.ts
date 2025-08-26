@@ -6,8 +6,9 @@ interface Params {
   params: { id: string }
 }
 
-export async function GET(req: Request, { params }: Params) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params
     const { data, error } = await supabase
       .from("reviews")
       .select(`
@@ -15,7 +16,7 @@ export async function GET(req: Request, { params }: Params) {
         user:users(*),
         product:products(*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -27,17 +28,18 @@ export async function GET(req: Request, { params }: Params) {
     }
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const body = await req.json();
-    const { is_approved, comment, rating } = body ?? {};
+    const body = await req.json().catch(() => ({} as Partial<{ is_approved: boolean; comment: string; rating: number } >));
+    const { is_approved, comment, rating } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (typeof is_approved === 'boolean') {
       updateData.is_approved = is_approved;
@@ -68,10 +70,11 @@ export async function PATCH(req: Request, { params }: Params) {
       }
     }
 
+    const { id } = await context.params
     const { data, error } = await supabase
       .from("reviews")
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -84,17 +87,19 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params
     const { data, error } = await supabase
       .from("reviews")
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -107,7 +112,8 @@ export async function DELETE(req: Request, { params }: Params) {
     }
 
     return NextResponse.json({ message: "Review deleted successfully" }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

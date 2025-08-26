@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Most abandoned products (fallback if updated_at column is missing)
-    let abandonedRaw: any[] | null = null
-    let productsError: any = null
+    let abandonedRaw: Array<{ product_id: string; products?: { id: string; name: string; price: number; image_url?: string }; quantity: number; created_at: string; updated_at?: string }> | null = null
+    let productsError: { message: string } | null = null
     {
       const { data, error } = await supabase
         .from('cart_items')
@@ -65,14 +65,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter abandoned by last activity (updated_at || created_at) older than 24h
-    const abandonedProducts = (abandonedRaw || []).filter((item: any) => {
+    const abandonedProducts = (abandonedRaw || []).filter((item) => {
       const activity = item.updated_at || item.created_at
       return activity && new Date(activity) < cutoffDate
     })
 
     // Group and count abandoned products
-    const productCounts = new Map()
-    abandonedProducts.forEach((item: any) => {
+    const productCounts = new Map<string, { product: { id: string; name: string; price: number; image_url?: string } | undefined; total_abandoned: number; total_quantity: number }>()
+    abandonedProducts.forEach((item) => {
       const productId = item.product_id
       if (!productCounts.has(productId)) {
         productCounts.set(productId, {
@@ -82,8 +82,10 @@ export async function GET(req: NextRequest) {
         })
       }
       const product = productCounts.get(productId)
-      product.total_abandoned += 1
-      product.total_quantity += item.quantity
+      if (product) {
+        product.total_abandoned += 1
+        product.total_quantity += item.quantity
+      }
     })
 
     const topAbandonedProducts = Array.from(productCounts.values())
@@ -106,8 +108,8 @@ export async function GET(req: NextRequest) {
     const conversionRate = totalGuestCarts > 0 ? (totalConverted / totalGuestCarts) * 100 : 0
 
     // Current active carts (filter in JS by last activity)
-    let activeItems: any[] | null = null
-    let activeError: any = null
+    let activeItems: Array<{ user_id: string; quantity: number; created_at: string; updated_at?: string; unit_price?: number; products?: { price?: number } }> | null = null
+    let activeError: { message: string } | null = null
     {
       const { data, error } = await supabase
         .from('cart_items')
@@ -142,8 +144,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Group active carts by user (last activity within 24h)
-    const activeCartsByUser = new Map()
-    activeItems?.forEach((item: any) => {
+    const activeCartsByUser = new Map<string, { items: number; value: number }>()
+    activeItems?.forEach((item) => {
       const activity = item.updated_at || item.created_at
       if (!activity || new Date(activity) < cutoffDate) return
       const userId = item.user_id
@@ -151,9 +153,11 @@ export async function GET(req: NextRequest) {
         activeCartsByUser.set(userId, { items: 0, value: 0 })
       }
       const cart = activeCartsByUser.get(userId)
-      cart.items += item.quantity
-      const price = item.unit_price ?? item.products?.price ?? 0
-      cart.value += item.quantity * price
+      if (cart) {
+        cart.items += item.quantity
+        const price = item.unit_price ?? item.products?.price ?? 0
+        cart.value += item.quantity * price
+      }
     })
 
     const activeCartsCount = activeCartsByUser.size

@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
       if (!data || data.length === 0) break
-      for (const row of data as any[]) {
+      for (const row of data as Array<{ user_id: string; created_at: string }>) {
         const uid = row.user_id
         if (!uid) continue
         const last = row.created_at
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch user profiles for the paginated users
-    let userMap = new Map<string, any>()
+    let userMap = new Map<string, { id: string; first_name: string | null; last_name: string | null; email: string | null }>()
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name, email')
@@ -99,15 +99,15 @@ export async function GET(req: NextRequest) {
     if (usersError) {
       console.error('Admin cart fetch: users lookup error:', usersError)
     } else if (usersData) {
-      userMap = new Map(usersData.map((u: any) => [u.id, u]))
+      userMap = new Map(usersData.map((u: { id: string; first_name: string | null; last_name: string | null; email: string | null }) => [u.id, u]))
     }
 
     // Build carts for the paginated users
-    const cartsByUser = new Map<string, any>()
+    const cartsByUser = new Map<string, { user_id: string; user: { id: string; first_name: string | null; last_name: string | null; email: string | null }; items: Array<{ id: string; product: { id: string; name: string; price: number; image_url?: string } | null; quantity: number; unit_price: number; total_price: number; created_at: string; updated_at: string }>; total_items: number; total_value: number; last_updated: string; created_at: string }>()
     const orderIndex = new Map<string, number>()
     pageGroups.forEach((g, idx) => orderIndex.set(g.user_id, idx))
 
-    cartItems?.forEach((item: any) => {
+    cartItems?.forEach((item: { id: string; user_id: string; quantity: number; unit_price?: number; created_at: string; updated_at?: string; products?: { id: string; name: string; price: number; image_url?: string } | null }) => {
       const uid = item.user_id
       if (!cartsByUser.has(uid)) {
         cartsByUser.set(uid, {
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
       const cart = cartsByUser.get(uid)
       const unitPrice = item.unit_price ?? item.products?.price ?? 0
       const lastUpdated = item.updated_at || item.created_at
-      cart.items.push({
+      cart?.items.push({
         id: item.id,
         product: item.products,
         quantity: item.quantity,
@@ -132,14 +132,16 @@ export async function GET(req: NextRequest) {
         created_at: item.created_at,
         updated_at: lastUpdated
       })
-      cart.total_items += item.quantity
-      cart.total_value += item.quantity * unitPrice
-      if (new Date(lastUpdated) > new Date(cart.last_updated)) {
-        cart.last_updated = lastUpdated
+      if (cart) {
+        cart.total_items += item.quantity
+        cart.total_value += item.quantity * unitPrice
+        if (new Date(lastUpdated) > new Date(cart.last_updated)) {
+          cart.last_updated = lastUpdated
+        }
       }
     })
 
-    let carts = Array.from(cartsByUser.values())
+    const carts = Array.from(cartsByUser.values())
     // Ensure the carts are ordered by the computed order
     carts.sort((a, b) => (orderIndex.get(a.user_id) ?? 0) - (orderIndex.get(b.user_id) ?? 0))
 

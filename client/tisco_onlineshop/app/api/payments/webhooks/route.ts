@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
-)
+function getAdminSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  if (!url || !serviceKey) return null
+  return createClient(url, serviceKey)
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getAdminSupabase()
+    if (!supabase) {
+      return NextResponse.json({ error: 'Webhook disabled: missing SUPABASE_SERVICE_ROLE' }, { status: 503 })
+    }
     const body = await req.json()
     const signature = req.headers.get('x-webhook-signature')
     
@@ -18,16 +24,19 @@ export async function POST(req: NextRequest) {
 
     const { event_type, transaction_id, status, gateway_transaction_id, amount, failure_reason } = body
 
-    // Find the transaction
-    const { data: transaction, error: findError } = await supabase
+    // Find the transaction using reference or gateway id (conditionally)
+    let query = supabase
       .from('payment_transactions')
       .select(`
         *,
         orders(id, user_id, status)
       `)
-      .eq('transaction_reference', transaction_id)
-      .or(`gateway_transaction_id.eq.${gateway_transaction_id}`)
-      .single()
+    if (gateway_transaction_id) {
+      query = query.or(`transaction_reference.eq.${transaction_id},gateway_transaction_id.eq.${gateway_transaction_id}`)
+    } else {
+      query = query.eq('transaction_reference', transaction_id)
+    }
+    const { data: transaction, error: findError } = await query.single()
 
     if (findError || !transaction) {
       console.error('Transaction not found:', transaction_id, gateway_transaction_id)
@@ -70,8 +79,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handlePaymentSuccess(transaction: any, webhookData: any) {
+type WebhookData = { gateway_transaction_id?: string; [key: string]: unknown }
+type TransactionRow = { id: string; order_id: string; user_id: string; status: string; transaction_reference: string }
+
+async function handlePaymentSuccess(transaction: TransactionRow, webhookData: WebhookData) {
   try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
     // Update transaction status
     await supabase
       .from('payment_transactions')
@@ -114,8 +128,10 @@ async function handlePaymentSuccess(transaction: any, webhookData: any) {
   }
 }
 
-async function handlePaymentFailure(transaction: any, reason: string) {
+async function handlePaymentFailure(transaction: TransactionRow, reason: string) {
   try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
     // Update transaction status
     await supabase
       .from('payment_transactions')
@@ -155,8 +171,10 @@ async function handlePaymentFailure(transaction: any, reason: string) {
   }
 }
 
-async function handlePaymentPending(transaction: any) {
+async function handlePaymentPending(transaction: TransactionRow) {
   try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
     // Update transaction status if not already pending
     if (transaction.status !== 'pending') {
       await supabase
@@ -184,8 +202,10 @@ async function handlePaymentPending(transaction: any) {
   }
 }
 
-async function handlePaymentCancellation(transaction: any) {
+async function handlePaymentCancellation(transaction: TransactionRow) {
   try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
     // Update transaction status
     await supabase
       .from('payment_transactions')
@@ -229,7 +249,7 @@ async function handlePaymentCancellation(transaction: any) {
   }
 }
 
-function verifyWebhookSignature(body: any, signature: string | null): boolean {
+function verifyWebhookSignature(_body: unknown, signature: string | null): boolean {
   // Implement signature verification based on your payment provider
   // This is a placeholder implementation
   

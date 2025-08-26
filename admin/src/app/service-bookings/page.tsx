@@ -7,13 +7,21 @@ const getData = async (): Promise<ServiceBookingRow[]> => {
     const bookings = await getServiceBookings();
     return (bookings || []).map((b: any) => {
       const fullName = [b.user?.first_name, b.user?.last_name].filter(Boolean).join(" ") || b.user?.email || "Unknown User";
+      // Prefer explicit scheduled_date if present; otherwise fall back to preferred date+time
+      let scheduledISO: string | undefined = b.scheduled_date || undefined;
+      if (!scheduledISO && b.preferred_date && b.preferred_time) {
+        const date = String(b.preferred_date).trim();
+        const time = String(b.preferred_time).trim();
+        // Build an ISO-like string; columns renderer will format with toLocaleString()
+        scheduledISO = `${date}T${time.length >= 5 ? time.slice(0,5) : time}`;
+      }
       return {
         id: String(b.id),
         serviceTitle: b.service?.title || "Unknown Service",
         customerName: fullName,
         customerEmail: b.user?.email || "-",
         status: b.status || "pending",
-        scheduledDate: b.scheduled_date,
+        scheduledDate: scheduledISO,
         total: Number(b.total_amount ?? 0),
         createdAt: b.created_at,
       };

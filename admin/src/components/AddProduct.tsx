@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useToast } from '@/components/ui/use-toast'
 import { Loader2 } from 'lucide-react'
 
@@ -75,7 +75,7 @@ export default function AddProduct() {
         throw new Error('Failed to create product')
       }
 
-      const result = await response.json()
+      await response.json()
       
       toast({
         title: 'Success',
@@ -124,11 +124,7 @@ export default function AddProduct() {
   }
 
   // Load categories when sheet opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      fetchCategories()
-    }
-  }
+  // Categories are fetched on mount via onOpenAutoFocus
 
   return (
     <SheetContent onOpenAutoFocus={(e) => { fetchCategories(); e.preventDefault() }}>

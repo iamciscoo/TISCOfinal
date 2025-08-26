@@ -42,11 +42,9 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page
     }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "Unexpected error" },
-      { status: 500 }
-    );
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -75,7 +73,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const insertPayload: any = {
+    const insertPayload: Record<string, unknown> = {
       product_id,
       user_id,
       rating,
@@ -94,7 +92,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ data }, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

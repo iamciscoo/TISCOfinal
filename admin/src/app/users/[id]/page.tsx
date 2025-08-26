@@ -15,15 +15,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
 import { getUserById, getUserMonthlyOrderActivity } from "@/lib/database";
 
-const SingleUserPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const { id } = await params;
+const SingleUserPage = async ({ params }: { params: { id: string } }) => {
+  const { id } = params;
   const user = await getUserById(id).catch(() => null);
   const activity = user ? await getUserMonthlyOrderActivity(id, 6).catch(() => []) : [];
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
 
   // Address fallbacks: prefer user columns, then default shipping address if present
-  const addressLine1 = (user as any)?.address_line_1 || (user as any)?.default_shipping_address?.address_line_1 || "";
-  const city = (user as any)?.city || (user as any)?.default_shipping_address?.city || "";
+  const addressLine1 = (user && (user as { address_line_1?: string; default_shipping_address?: { address_line_1?: string } }).address_line_1) ||
+    (user && (user as { default_shipping_address?: { address_line_1?: string } }).default_shipping_address?.address_line_1) || "";
+  const city = (user && (user as { city?: string; default_shipping_address?: { city?: string } }).city) ||
+    (user && (user as { default_shipping_address?: { city?: string } }).default_shipping_address?.city) || "";
 
   // Compute profile completion based on selected fields
   const profileFields = [

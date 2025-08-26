@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     if (listErr) {
       return NextResponse.json({ error: listErr.message }, { status: 500 });
     }
-    const hasBucket = buckets?.some((b: any) => b.name === BUCKET);
+    const hasBucket = Array.isArray(buckets) && buckets.some((b) => b.name === BUCKET);
     if (!hasBucket) {
       const { error: createErr } = await supabase.storage.createBucket(BUCKET, { public: true });
       if (createErr) {
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     }
 
     // Optionally create DB records when productId is provided
-    const createdImages: any[] = [];
+    const createdImages: Array<{ id?: string; url: string; path: string; is_main?: boolean; sort_order?: number }> = [];
     if (productId) {
       const isMain = String(isMainParam).toLowerCase() === 'true';
       const sortOrder = Number.isFinite(parseInt(orderParam)) ? parseInt(orderParam) : 0;
@@ -96,17 +96,17 @@ export async function POST(req: Request) {
         if (!insertErr && inserted) createdImages.push(...inserted);
 
         // If any inserted image marked main, sync products.image_url
-        const main = inserted?.find((r: any) => r.is_main);
+        const main = inserted?.find((r: { is_main?: boolean }) => r.is_main);
         if (main) {
           await supabase
             .from('products')
             .update({ image_url: main.url })
             .eq('id', productId);
         }
-      } catch (e: any) {
+      } catch (e) {
         // Swallow DB errors and still return uploaded URLs
         // eslint-disable-next-line no-console
-        console.error('Upload DB insert error:', e?.message || e);
+        console.error('Upload DB insert error:', e instanceof Error ? e.message : e);
       }
     }
 
@@ -121,8 +121,9 @@ export async function POST(req: Request) {
       { urls: uploaded.map(u => u.url), images: createdImages },
       { status: 200 }
     );
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Unexpected error' }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unexpected error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

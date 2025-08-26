@@ -34,9 +34,10 @@ export async function GET(req: Request, { params }: Params) {
 
     return NextResponse.json({ order: data }, { status: 200 })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch order'
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch order' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -49,13 +50,13 @@ export async function PATCH(req: Request, { params }: Params) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}) as Record<string, unknown>)
     const allowedFields = [
       'shipping_address',
       'notes'
     ]
 
-    const updates: Record<string, any> = {}
+    const updates: Record<string, unknown> = {}
     for (const field of allowedFields) {
       if (field in body) {
         updates[field] = body[field]
@@ -105,9 +106,10 @@ export async function PATCH(req: Request, { params }: Params) {
 
     return NextResponse.json({ order: data }, { status: 200 })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update order'
     return NextResponse.json(
-      { error: error.message || 'Failed to update order' },
+      { error: message },
       { status: 500 }
     )
   }
