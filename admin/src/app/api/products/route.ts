@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price } = body ?? {};
+    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
 
     if (!name || !description || typeof price !== "number" || !category_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -39,10 +39,12 @@ export async function POST(req: Request) {
       stock_quantity: typeof stock_quantity === "number" ? stock_quantity : 0,
       is_featured: !!is_featured,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
-      // deal fields
+      // deal/sale fields
       is_deal: !!is_deal,
       original_price: typeof original_price === 'number' ? original_price : null,
       deal_price: typeof deal_price === 'number' ? deal_price : null,
+      is_on_sale: !!is_on_sale,
+      sale_price: typeof sale_price === 'number' ? sale_price : null,
     };
 
     const { data, error } = await supabase

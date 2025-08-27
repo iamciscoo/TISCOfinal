@@ -139,6 +139,66 @@ export default function CheckoutPage() {
     return '*'.repeat(Math.max(0, sanitized.length - 3)) + sanitized.slice(-3)
   }
 
+  // Strict TZ mobile phone format enforcement for payment: +255 7XX XXX XXX (also allow +255 6XX ...)
+  const TZ_PHONE_PATTERN = /^\+255 [67]\d{2} \d{3} \d{3}$/
+
+  const formatTzPhoneInput = (raw: string) => {
+    // Allow users to input in any format, but normalize and format for display
+    const digits = (raw || '').replace(/\D/g, '')
+    if (!digits) return ''
+    
+    let msisdn = digits
+    
+    // Normalize various input formats to 255XXXXXXXXX
+    if (msisdn.startsWith('0') && msisdn.length >= 10) {
+      // 0754123456 -> 255754123456
+      msisdn = '255' + msisdn.slice(1)
+    } else if (msisdn.length === 9 && (msisdn[0] === '6' || msisdn[0] === '7')) {
+      // 754123456 -> 255754123456
+      msisdn = '255' + msisdn
+    } else if (msisdn.startsWith('2550') && msisdn.length >= 13) {
+      // 2550754123456 -> 255754123456 (common mistake)
+      msisdn = '255' + msisdn.slice(4)
+    } else if (msisdn.startsWith('255')) {
+      // Already in international format
+      msisdn = msisdn
+    } else if (msisdn.length <= 9 && (msisdn[0] === '6' || msisdn[0] === '7' || msisdn[0] === '0')) {
+      // Handle partial typing of local numbers
+      if (msisdn[0] === '0') {
+        msisdn = '255' + msisdn.slice(1)
+      } else {
+        msisdn = '255' + msisdn
+      }
+    } else {
+      // For any other format, prepend 255 and let validation handle it
+      msisdn = '255' + msisdn
+    }
+    
+    // Limit to 12 digits total (255 + 9 local digits)
+    msisdn = msisdn.slice(0, 12)
+    
+    // Only format if we have meaningful digits beyond 255
+    if (msisdn.length <= 3) return digits // Return raw input for partial typing
+    
+    const localPart = msisdn.slice(3)
+    let formatted = '+255'
+    
+    if (localPart.length > 0) formatted += ' ' + localPart.slice(0, 3)
+    if (localPart.length > 3) formatted += ' ' + localPart.slice(3, 6)
+    if (localPart.length > 6) formatted += ' ' + localPart.slice(6, 9)
+    
+    return formatted
+  }
+
+  const isValidTzPhone = (value: string) => TZ_PHONE_PATTERN.test(value)
+
+  // Normalize formatted TZ mobile to digits-only E.164 without plus sign (e.g., 2557XXXXXXXXX)
+  // Assumes UI already enforces +255 6/7XX XXX XXX, so stripping non-digits is sufficient.
+  const normalizeTzPhoneForApi = (value: string) => {
+    const digits = (value || '').replace(/\D/g, '')
+    return digits
+  }
+
   const handleNextStep = () => {
     if (currentStep === 'shipping') {
       setCurrentStep('payment')
@@ -256,6 +316,7 @@ export default function CheckoutPage() {
         country: shippingData.country,
       }
 
+      // 1) Create the pending order first (we will only finalize after payment succeeds via webhook)
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -269,14 +330,85 @@ export default function CheckoutPage() {
       if (!response.ok) {
         throw new Error(result.error || 'Failed to place order')
       }
-      
-      toast({
-        title: "Order Placed!",
-        description: `Order #${result.order.id.slice(0, 8)} has been placed successfully.`,
-      })
-      
-      // Clear cart and redirect
+
+      // 2) If mobile money, initiate ZenoPay mobile money collection (USSD/SIM Toolkit)
+      if (paymentData.method === 'mobile') {
+        try {
+          const msisdn = normalizeTzPhoneForApi(paymentData.mobilePhone)
+          if (!(msisdn.length === 12 && msisdn.startsWith('255') && (msisdn[3] === '6' || msisdn[3] === '7'))) {
+            throw new Error('Invalid phone format. Use 2557XXXXXXXX (TZ)')
+          }
+          const procRes = await fetch('/api/payments/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_id: result.order.id,
+              amount: subtotal,
+              currency: 'TZS',
+              provider: paymentData.provider,
+              phone_number: msisdn,
+            }),
+          })
+          const procJson = await procRes.json()
+          if (!procRes.ok) throw new Error(procJson?.error || 'Failed to initiate mobile payment')
+
+          toast({
+            title: 'Payment Initiated',
+            description: 'Please approve the payment on your phone to complete the order.',
+          })
+
+          // Poll our status endpoint (updated via ZenoPay webhooks) so the user sees confirmation
+          const reference: string | undefined = procJson?.transaction?.transaction_reference
+          if (reference) {
+            const start = Date.now()
+            const timeoutMs = 90_000
+            const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+            while (Date.now() - start < timeoutMs) {
+              try {
+                const sres = await fetch('/api/payments/status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ reference })
+                })
+                const sjson = await sres.json()
+                const st = String(sjson?.status || '').toUpperCase()
+
+                const successSet = new Set(['SUCCESS', 'SETTLED', 'COMPLETED', 'APPROVED', 'SUCCESSFUL'])
+                const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR'])
+
+                if (successSet.has(st)) {
+                  toast({ title: 'Payment Confirmed', description: 'Your payment was successful.' })
+                  clearCart()
+                  void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+                  router.push('/account/orders')
+                  return
+                }
+                if (failureSet.has(st)) {
+                  toast({ title: 'Payment Failed', description: 'Payment was not completed.', variant: 'destructive' })
+                  return
+                }
+              } catch {}
+              await delay(3000)
+            }
+            toast({ title: 'Awaiting Confirmation', description: 'Payment is still processing. You can check status in Orders.' })
+            router.push('/account/orders')
+            return
+          }
+
+          // Fallback if no reference returned
+          router.push('/account/orders')
+          return
+        } catch (err) {
+          console.error('Payment processing error:', err)
+          toast({ title: 'Payment Error', description: (err as Error).message, variant: 'destructive' })
+          return
+        }
+      }
+
+      // 3) Non-mobile flows
+      toast({ title: 'Order Placed!', description: `Order #${result.order.id.slice(0, 8)} created.` })
       clearCart()
+      void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
       router.push('/account/orders')
       
     } catch (error: unknown) {
@@ -310,7 +442,7 @@ export default function CheckoutPage() {
           return !!(paymentData.cardNumber && paymentData.expiryDate && paymentData.cvv && paymentData.nameOnCard)
         }
         if (paymentData.method === 'mobile') {
-          return !!(paymentData.provider && paymentData.mobilePhone)
+          return !!(paymentData.provider && isValidTzPhone(paymentData.mobilePhone))
         }
         return true
       default:
@@ -436,11 +568,21 @@ export default function CheckoutPage() {
                       <Input
                         id="phone"
                         type="tel"
+                        inputMode="numeric"
+                        placeholder="0754 123 456, 754123456, or +255 754 123 456"
                         value={shippingData.phone}
-                        onChange={(e) => setShippingData(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
+                        onBlur={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
                         autoComplete="tel"
+                        pattern={'^\\+255 [67]\\d{2} \\d{3} \\d{3}$'}
+                        maxLength={16}
+                        title="Enter your TZ mobile number in any format - we'll format it automatically"
+                        aria-invalid={shippingData.phone !== '' && !isValidTzPhone(shippingData.phone)}
                         required
                       />
+                      {!isValidTzPhone(shippingData.phone) && shippingData.phone !== '' && shippingData.phone.length > 3 && (
+                        <p className="mt-1 text-xs text-red-600">Format must be +255 7XX XXX XXX (or +255 6XX XXX XXX)</p>
+                      )}
                     </div>
                   </div>
 
@@ -628,11 +770,20 @@ export default function CheckoutPage() {
                         <Input
                           id="mobilePhone"
                           type="tel"
-                          placeholder="e.g., +255 7XX XXX XXX"
+                          inputMode="numeric"
+                          placeholder="0754 123 456, 754123456, or +255 754 123 456"
                           value={paymentData.mobilePhone}
-                          onChange={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: e.target.value }))}
+                          onChange={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
+                          onBlur={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
                           autoComplete="tel"
+                          pattern={'^\\+255 [67]\\d{2} \\d{3} \\d{3}$'}
+                          maxLength={16}
+                          title="Enter your TZ mobile number in any format - we'll format it automatically"
+                          aria-invalid={paymentData.mobilePhone !== '' && !isValidTzPhone(paymentData.mobilePhone)}
                         />
+                        {!isValidTzPhone(paymentData.mobilePhone) && paymentData.mobilePhone !== '' && paymentData.mobilePhone.length > 3 && (
+                          <p className="mt-1 text-xs text-red-600">Format must be +255 7XX XXX XXX (or +255 6XX XXX XXX)</p>
+                        )}
                       </div>
                       <p className="text-xs text-gray-600">
                         You will receive a prompt on your phone to authorize the payment.

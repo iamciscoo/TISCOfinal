@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { revalidateTag } from 'next/cache'
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -8,8 +10,7 @@ export async function GET() {
       .from("orders")
       .select("*")
       .order("created_at", { ascending: false });
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) throw new Error(error.message)
     return NextResponse.json({ data }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
@@ -44,6 +45,17 @@ export async function POST(req: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Invalidate admin order caches and relevant entity tags
+    try {
+      revalidateTag('admin:orders')
+      revalidateTag('orders')
+      if (data?.id) revalidateTag(`order:${data.id}`)
+      if (user_id) revalidateTag(`user-orders:${user_id}`)
+    } catch (e) {
+      console.warn('Admin revalidation warning:', e)
+    }
+
     return NextResponse.json({ data }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";

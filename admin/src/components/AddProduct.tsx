@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 
 interface Category {
@@ -26,10 +26,12 @@ export default function AddProduct() {
     price: '',
     stock_quantity: '',
     category_id: '',
-    sku: '',
     is_featured: false,
     is_on_sale: false,
-    sale_price: ''
+    sale_price: '',
+    is_deal: false,
+    original_price: '',
+    deal_price: ''
   })
   
   const { toast } = useToast()
@@ -44,10 +46,18 @@ export default function AddProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log('Form submitted with data:', formData)
+    
     if (!formData.name || !formData.price || !formData.stock_quantity || !formData.category_id) {
+      console.log('Validation failed:', {
+        name: formData.name,
+        price: formData.price,
+        stock_quantity: formData.stock_quantity,
+        category_id: formData.category_id
+      })
       toast({
         title: 'Error',
-        description: 'Please fill in all required fields',
+        description: 'Please fill in all required fields (Name, Price, Stock, Category)',
         variant: 'destructive'
       })
       return
@@ -57,11 +67,20 @@ export default function AddProduct() {
 
     try {
       const productData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         price: parseFloat(formData.price),
         stock_quantity: parseInt(formData.stock_quantity),
-        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null
+        category_id: formData.category_id,
+        is_featured: formData.is_featured,
+        is_on_sale: formData.is_on_sale,
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        is_deal: formData.is_deal,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        deal_price: formData.deal_price ? parseFloat(formData.deal_price) : null
       }
+      
+      console.log('Sending product data:', productData)
 
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -71,11 +90,16 @@ export default function AddProduct() {
         body: JSON.stringify(productData),
       })
 
+      console.log('API Response status:', response.status)
+      
       if (!response.ok) {
-        throw new Error('Failed to create product')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('API Error:', errorData)
+        throw new Error(errorData.error || 'Failed to create product')
       }
 
-      await response.json()
+      const result = await response.json()
+      console.log('Product created successfully:', result)
       
       toast({
         title: 'Success',
@@ -89,10 +113,12 @@ export default function AddProduct() {
         price: '',
         stock_quantity: '',
         category_id: '',
-        sku: '',
         is_featured: false,
         is_on_sale: false,
-        sale_price: ''
+        sale_price: '',
+        is_deal: false,
+        original_price: '',
+        deal_price: ''
       })
 
       // Refresh page to show new product
@@ -102,7 +128,7 @@ export default function AddProduct() {
       console.error('Error creating product:', error)
       toast({
         title: 'Error',
-        description: 'Failed to create product',
+        description: error instanceof Error ? error.message : 'Failed to create product',
         variant: 'destructive'
       })
     } finally {
@@ -200,15 +226,7 @@ export default function AddProduct() {
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="sku">SKU</Label>
-          <Input
-            id="sku"
-            value={formData.sku}
-            onChange={(e) => handleInputChange('sku', e.target.value)}
-            placeholder="Product SKU"
-          />
-        </div>
+        
 
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
@@ -227,6 +245,15 @@ export default function AddProduct() {
               onCheckedChange={(checked) => handleInputChange('is_on_sale', !!checked)}
             />
             <Label htmlFor="on_sale">On Sale</Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="deal_item"
+              checked={formData.is_deal}
+              onCheckedChange={(checked) => handleInputChange('is_deal', !!checked)}
+            />
+            <Label htmlFor="deal_item">Deal Item</Label>
           </div>
         </div>
 

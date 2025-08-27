@@ -25,6 +25,7 @@ import { getProductsByCategory } from '@/lib/database'
 import { ProductCard } from '@/components/shared/ProductCard'
 import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
+import { LoadingSpinner } from '@/components/shared'
 
 interface ProductDetailProps {
   product: Product
@@ -185,7 +186,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
             {/* Loading overlay */}
             {imageLoading && (
               <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <LoadingSpinner size="sm" text="" />
               </div>
             )}
             

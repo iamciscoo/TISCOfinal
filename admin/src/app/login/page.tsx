@@ -19,16 +19,23 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Simple access key validation
-      const adminKey = process.env.NEXT_PUBLIC_ADMIN_ACCESS_KEY || 'admin_secret_key_123'
-      
-      if (accessKey === adminKey) {
-        // Set admin token cookie (no secure flag for local dev; use SameSite=Lax)
-        document.cookie = `admin-token=${accessKey}; path=/; max-age=86400; samesite=lax`
-        router.push('/')
-      } else {
-        setError('Invalid access key. Please check your credentials.')
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessKey })
+      })
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || ''
+        if (ct.includes('application/json')) {
+          const data = await res.json().catch(() => ({}))
+          setError((data as any)?.error || (data as any)?.message || 'Invalid access key. Please check your credentials.')
+        } else {
+          const text = await res.text().catch(() => '')
+          setError(text || 'Invalid access key. Please check your credentials.')
+        }
+        return
       }
+      router.push('/')
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {
@@ -97,13 +104,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-                <p className="font-semibold mb-1">For Development:</p>
-                <p>Default access key: <code className="bg-gray-200 px-1 rounded">admin_secret_key_123</code></p>
-                <p className="mt-1">Change this in production!</p>
-              </div>
-            </div>
+            <div className="mt-6 text-center text-xs text-gray-500">Enter your administrator access key.</div>
           </CardContent>
         </Card>
       </div>

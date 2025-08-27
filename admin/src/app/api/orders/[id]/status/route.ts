@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { revalidateTag } from "next/cache";
 
 export const runtime = 'nodejs';
 
@@ -35,6 +36,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Invalidate caches for orders across admin and client
+    try {
+      revalidateTag('orders');
+      revalidateTag('admin:orders');
+      revalidateTag(`order:${id}`);
+      if ((data as any)?.user_id) {
+        revalidateTag(`user-orders:${(data as any).user_id}`);
+      }
+    } catch (e) {
+      console.warn('Revalidation error (non-fatal):', e);
+    }
     return NextResponse.json({ data }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';

@@ -1,27 +1,123 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Admin access key for basic authentication
-const ADMIN_ACCESS_KEY = process.env.NEXT_PUBLIC_ADMIN_ACCESS_KEY || 'admin_secret_key_123'
+function base64UrlEncode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
 
-export function middleware(request: NextRequest) {
-  // Skip middleware for static files and API routes
-  if (request.nextUrl.pathname.startsWith('/_next') || 
-      request.nextUrl.pathname.startsWith('/api') ||
-      request.nextUrl.pathname.includes('.')) {
+async function verifySignedSession(token: string | undefined, secret: string | undefined): Promise<boolean> {
+  if (!token) return false
+  const [tsStr, sig] = token.split('.')
+  const ts = Number(tsStr)
+  if (!ts || !sig) return false
+  const maxAgeMs = 24 * 60 * 60 * 1000
+  if (Date.now() - ts > maxAgeMs) return false
+  // If no secret (e.g., local dev misconfig), allow token presence to avoid lockout
+  if (!secret) return true
+  try {
+    const enc = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    const signature = await crypto.subtle.sign('HMAC', key, enc.encode(String(ts)))
+    const expected = base64UrlEncode(signature)
+    return expected === sig
+  } catch {
+    // If WebCrypto is unavailable for some reason, fall back to allowing token presence
+    return true
+  }
+}
+
+function parseAllowlist(env: string | undefined): string[] {
+  return (env || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+
+function getClientIp(req: NextRequest): string | undefined {
+  const fwd = req.headers.get('x-forwarded-for')
+  if (fwd) return fwd.split(',')[0]?.trim()
+  // In some environments NextRequest.ip is available
+  // @ts-ignore
+  return req.ip || undefined
+}
+
+function checkIpAllowlist(req: NextRequest): boolean {
+  const allowlist = parseAllowlist(process.env.ADMIN_IP_ALLOWLIST)
+  if (allowlist.length === 0) return true
+  const ip = getClientIp(req)
+  if (!ip) return false
+  return allowlist.includes(ip)
+}
+
+function rateLimitApi(req: NextRequest): NextResponse | null {
+  // Simple cookie-based sliding window limiter (best-effort)
+  // 60 requests per 60 seconds per client (approximate)
+  const now = Date.now()
+  const key = 'api-rl'
+  const cookie = req.cookies.get(key)?.value
+  let count = 0
+  let start = now
+  if (cookie) {
+    const parts = cookie.split(':')
+    if (parts.length === 2) {
+      const parsedStart = Number(parts[0])
+      const parsedCount = Number(parts[1])
+      if (!Number.isNaN(parsedStart) && !Number.isNaN(parsedCount)) {
+        start = parsedStart
+        count = parsedCount
+      }
+    }
+  }
+  const windowMs = 60_000
+  if (now - start > windowMs) {
+    start = now
+    count = 0
+  }
+  count += 1
+  if (count > 60) {
+    return new NextResponse('Too Many Requests', { status: 429 })
+  }
+  const res = NextResponse.next()
+  res.cookies.set(key, `${start}:${count}`, { path: '/', sameSite: 'lax' })
+  return res
+}
+
+export async function middleware(request: NextRequest) {
+  // Always allow static files
+  if (request.nextUrl.pathname.startsWith('/_next') || request.nextUrl.pathname.includes('.')) {
     return NextResponse.next()
   }
 
-  // Skip middleware for login page
+  // API rate limiting branch
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    const rl = rateLimitApi(request)
+    return rl ?? NextResponse.next()
+  }
+
+  // Allow login page
   if (request.nextUrl.pathname === '/login') {
     return NextResponse.next()
   }
 
-  // Check if admin is authenticated
-  const adminToken = request.cookies.get('admin-token')?.value
+  // IP allowlist check (if configured)
+  if (!checkIpAllowlist(request)) {
+    return new NextResponse('Forbidden', { status: 403 })
+  }
 
-  if (!adminToken || adminToken !== ADMIN_ACCESS_KEY) {
-    // Redirect to login page
+  // Admin session check
+  const token = request.cookies.get('admin-session')?.value
+  const secret = process.env.ADMIN_SESSION_SECRET
+  const ok = await verifySignedSession(token, secret)
+  if (!ok) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -30,14 +126,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/(api|trpc)(.*)'
   ],
 }
 

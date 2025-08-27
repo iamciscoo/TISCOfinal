@@ -25,6 +25,31 @@ export async function getProducts(limit: number = 20) {
   return data
 }
 
+export async function getFeaturedProducts(limit: number = 9) {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      *,
+      product_images (
+        url,
+        is_main,
+        sort_order
+      ),
+      categories (
+        id,
+        name
+      )
+    `)
+    .eq('is_featured', true)
+    .limit(limit)
+    .order('created_at', { ascending: false })
+    .order('is_main', { foreignTable: 'product_images', ascending: false })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+  
+  if (error) throw error
+  return data
+}
+
 export async function getProductById(id: string) {
   const { data, error } = await supabase
     .from('products')

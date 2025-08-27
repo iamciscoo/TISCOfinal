@@ -1,38 +1,75 @@
 import { NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { revalidateTag, unstable_cache } from 'next/cache'
 
-type Params = { params: { id: string } }
+// Server-side Supabase client using service role (same as main orders route)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+)
+
+type Params = { params: Promise<{ id: string }> }
 
 export async function GET(req: Request, { params }: Params) {
+  const resolvedParams = await params
   try {
     const user = await currentUser()
+    
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items(
+    // Fresh/no-cache mode when requested
+    const url = new URL(req.url)
+    const fresh = url.searchParams.get('fresh') === '1'
+      || /no-store|no-cache/i.test(req.headers.get('cache-control') || '')
+      || req.headers.get('x-no-cache') === '1'
+
+    if (fresh) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
           *,
-          products(id, name, price, image_url, product_images(*))
-        )
-      `)
-      .eq('id', params.id)
-      .eq('user_id', user.id)
-      .single()
+          order_items(
+            *,
+            products(id, name, price, image_url, product_images(*))
+          )
+        `)
+        .eq('id', resolvedParams.id)
+        .eq('user_id', user.id)
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (!data || data.length === 0) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      return NextResponse.json({ order: data[0] }, { status: 200 })
     }
 
-    if (!data) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    }
+    const getOrderCached = unstable_cache(
+      async (id: string, uid: string) => {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items(
+              *,
+              products(id, name, price, image_url, product_images(*))
+            )
+          `)
+          .eq('id', id)
+          .eq('user_id', uid)
 
-    return NextResponse.json({ order: data }, { status: 200 })
+        if (error) throw new Error(error.message)
+        if (!data || data.length === 0) return null
+        return data[0]
+      },
+      ['order-by-id', resolvedParams.id, user.id],
+      { tags: ['orders', `order:${resolvedParams.id}`, `user-orders:${user.id}`] }
+    )
+
+    const order = await getOrderCached(resolvedParams.id, user.id)
+    if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+
+    return NextResponse.json({ order }, { status: 200 })
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch order'
@@ -44,6 +81,7 @@ export async function GET(req: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
+  const resolvedParams = await params
   try {
     const user = await currentUser()
     if (!user) {
@@ -71,11 +109,12 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     // Only allow updates to pending orders
-    const { data: existingOrder } = await supabase
+    const { data: existingOrderData } = await supabase
       .from('orders')
       .select('status, user_id')
-      .eq('id', params.id)
-      .single()
+      .eq('id', resolvedParams.id)
+    
+    const existingOrder = existingOrderData?.[0]
 
     if (!existingOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -95,16 +134,24 @@ export async function PATCH(req: Request, { params }: Params) {
     const { data, error } = await supabase
       .from('orders')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('user_id', user.id)
       .select()
-      .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ order: data }, { status: 200 })
+    // Revalidate caches for this order and user's orders list
+    try {
+      revalidateTag('orders')
+      revalidateTag(`order:${resolvedParams.id}`)
+      revalidateTag(`user-orders:${user.id}`)
+    } catch (e) {
+      console.warn('Revalidation error (non-fatal):', e)
+    }
+
+    return NextResponse.json({ order: data?.[0] }, { status: 200 })
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update order'

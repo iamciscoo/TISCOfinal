@@ -8,7 +8,7 @@ import { ShoppingCart, Search, Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useCartStore } from '@/lib/store'
 import { CurrencyToggle } from '@/components/CurrencyToggle'
 
@@ -25,6 +25,7 @@ export const Navbar = () => {
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const { isLoaded, isSignedIn } = useUser()
   const searchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { getTotalItems, openCart } = useCartStore()
@@ -156,17 +157,22 @@ export const Navbar = () => {
             <CurrencyToggle />
             
             {/* Authentication */}
-            <SignedOut>
+            {!isLoaded ? (
+              // Placeholder to prevent layout shift while Clerk loads and to avoid auth flash
+              <div className="hidden sm:block h-9 w-24" aria-hidden="true" />
+            ) : isSignedIn ? (
+              <div className="flex items-center gap-2">
+                <Link href="/account" className="hidden sm:inline text-sm text-gray-700 hover:text-blue-600">Account</Link>
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            ) : (
               <SignInButton>
                 <Button variant="ghost" size="sm" className="hidden sm:flex">
                   <User className="h-4 w-4 mr-2" />
                   Sign In
                 </Button>
               </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
+            )}
 
             {/* Cart */}
             <Button variant="ghost" size="sm" className="relative" onClick={openCart}>
@@ -201,6 +207,9 @@ export const Navbar = () => {
                   autoComplete="off"
                   enterKeyHint="search"
                   placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="pl-10 pr-4 py-2 w-full"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -237,14 +246,14 @@ export const Navbar = () => {
               </Link>
 
               {/* Mobile Sign In */}
-              <SignedOut>
+              {isLoaded && !isSignedIn && (
                 <SignInButton>
                   <div className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium cursor-pointer">
                     <User className="h-4 w-4 inline mr-2" />
                     Sign In
                   </div>
                 </SignInButton>
-              </SignedOut>
+              )}
             </div>
           </div>
         )}

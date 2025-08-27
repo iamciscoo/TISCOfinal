@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Chango } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server'
 import { CurrencyProvider } from '@/lib/currency-context'
 import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
@@ -29,15 +30,17 @@ export const metadata: Metadata = {
   description: "Your trusted online marketplace for quality products",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await currentUser()
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
+          data-signed-in={user ? 'true' : 'false'}
           className={`${geistSans.variable} ${geistMono.variable} ${chango.variable} antialiased`}
         >
           <CurrencyProvider>

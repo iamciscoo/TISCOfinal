@@ -31,7 +31,7 @@ ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS',
 ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50),
 ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'pending' 
-    CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
+    CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded', 'cancelled')),
 ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(100),
 ADD COLUMN IF NOT EXISTS notes TEXT;
 

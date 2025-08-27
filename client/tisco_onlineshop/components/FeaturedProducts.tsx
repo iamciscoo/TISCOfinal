@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
-import { getProducts } from '@/lib/database'
+import { getFeaturedProducts } from '@/lib/database'
 import type { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { getImageUrl } from '@/lib/shared-utils'
@@ -19,7 +19,7 @@ export const FeaturedProducts = () => {
     let isMounted = true
     ;(async () => {
       try {
-        const data = await getProducts(6)
+        const data = await getFeaturedProducts(9)
         if (isMounted) setProducts(data || [])
       } catch (e) {
         console.error('Failed to load featured products', e)
@@ -37,13 +37,13 @@ export const FeaturedProducts = () => {
             Featured Products
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Discover our handpicked selection of the best products with great deals and excellent reviews.
+            Discover our handpicked selection of featured products - up to 9 carefully curated items.
           </p>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {products.map((product) => (
+        {/* Products Grid - 3x3 layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-6xl mx-auto">
+          {products.slice(0, 9).map((product) => (
             <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden relative">
               <Link href={`/products/${String(product.id)}`} className="absolute inset-0 z-10" aria-label={product.name}>
                 <span aria-hidden="true" className="absolute inset-0" />

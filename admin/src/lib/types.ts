@@ -91,7 +91,7 @@ export interface Order {
   tax_amount: number
   currency: string
   payment_method?: string
-  payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'
   // Note: In the current DB schema, shipping_address is a TEXT column.
   // It may be stored as a raw string, or (in future) reference an Address object.
   shipping_address: string | Address
@@ -149,7 +149,7 @@ export interface ServiceBooking {
   service_id: string | number
   user_id: string
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
-  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'
   scheduled_date: string
   total_amount: number
   notes?: string

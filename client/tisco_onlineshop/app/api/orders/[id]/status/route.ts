@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { revalidateTag } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
 
-    // Validate status transitions
+    // Validate status transitions (customer cannot mark as paid; that is done via webhook)
     const currentStatus = currentOrder.status
     const allowedTransitions: Record<string, string[]> = {
       'pending': ['processing', 'cancelled'],
@@ -94,6 +95,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     // TODO: Send notification email/SMS about status change
     // TODO: Add order history/audit log entry
+
+    // Invalidate caches across client and admin
+    try {
+      revalidateTag('orders')
+      revalidateTag('admin:orders')
+      revalidateTag(`order:${params.id}`)
+      revalidateTag(`user-orders:${user.id}`)
+    } catch (e) {
+      console.warn('Revalidation error (non-fatal):', e)
+    }
 
     return NextResponse.json({ 
       order,

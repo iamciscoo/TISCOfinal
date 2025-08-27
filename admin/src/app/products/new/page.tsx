@@ -45,6 +45,7 @@ const AddProductPage = () => {
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    shouldUnregister: true,
     defaultValues: {
       name: "",
       description: "",
@@ -53,8 +54,8 @@ const AddProductPage = () => {
       stock_quantity: 0,
       is_featured: false,
       is_deal: false,
-      original_price: 0,
-      deal_price: 0,
+      original_price: undefined,
+      deal_price: undefined,
     },
   });
 

@@ -64,14 +64,14 @@ export interface CartItem {
 export interface Order {
   id: string
   user_id: string
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   total_amount: number
   currency: string
   items: OrderItem[]
   shipping_address: Address
   billing_address?: Address
   payment_method: string
-  payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'
   tracking_number?: string
   notes?: string
   created_at: string

@@ -30,6 +30,7 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import Image from 'next/image'
 
+import { LoadingSpinner } from '@/components/shared'
 interface Deal {
   id: string
   name: string
@@ -185,9 +186,7 @@ export default function DealsPage() {
 
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
+          <LoadingSpinner text="Loading deals..." />
         )}
 
         {/* Error State */}

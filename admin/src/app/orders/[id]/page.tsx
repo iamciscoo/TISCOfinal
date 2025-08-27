@@ -6,6 +6,8 @@ import { ArrowLeft } from 'lucide-react'
 import { getOrderById, getUserById } from '@/lib/database'
 import type { Order as DbOrder, OrderItem as DbOrderItem, Address, User } from '@/lib/types'
 
+export const dynamic = 'force-dynamic'
+
 function formatTZS(value: number | string | null | undefined): string {
   const n = Number(value ?? 0)
   return `TZS ${n.toLocaleString()}`
@@ -34,7 +36,10 @@ export default async function OrderDetailsPage({ params }: { params: { id: strin
 
   try {
     order = await getOrderById(id)
-    if (order?.user_id) {
+    // Prefer related user returned with the order to avoid extra query
+    customer = (order as any)?.user ?? null
+    // Fallback to direct fetch if relation is missing
+    if (!customer && order?.user_id) {
       try { customer = await getUserById(order.user_id) } catch {}
     }
   } catch (e) {

@@ -3,6 +3,8 @@ import type { OrderColumn as Order } from "@/lib/ui-types";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { getOrders } from "@/lib/database";
 
+export const dynamic = 'force-dynamic'
+
 const getData = async (): Promise<Order[]> => {
   try {
     const orders = await getOrders();

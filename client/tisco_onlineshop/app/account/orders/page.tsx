@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -30,6 +30,7 @@ import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { useCurrency } from '@/lib/currency-context'
+import { LoadingSpinner } from '@/components/shared'
 
 type OrderItem = {
   quantity: number
@@ -46,6 +47,7 @@ type Order = {
   created_at: string
   total_amount: number
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
   shipping_address?: string | null
   order_items?: OrderItem[]
 }
@@ -55,17 +57,23 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  // Show full-screen loader only on initial load; subsequent polls are silent refreshes
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const { formatPrice } = useCurrency()
 
   useEffect(() => {
-    fetchOrders()
+    fetchOrders(true)
   }, [])
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (isInitial = false) => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/orders')
+      if (isInitial) setInitialLoading(true)
+      else setRefreshing(true)
+      const response = await fetch('/api/orders?fresh=1', {
+        cache: 'no-store',
+        headers: { 'x-no-cache': '1' }
+      })
       if (response.ok) {
         const data = await response.json()
         setOrders(Array.isArray(data?.orders) ? (data.orders as Order[]) : [])
@@ -73,17 +81,29 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Failed to fetch orders:', error)
     } finally {
-      setLoading(false)
+      if (isInitial) setInitialLoading(false)
+      else setRefreshing(false)
     }
   }
+
+  // Lightweight polling: refresh while any order is pending/processing or has pending payment
+  const hasInFlight = useMemo(() => {
+    return orders.some(
+      (o) => o.status === 'pending' || o.status === 'processing' || o.payment_status === 'pending'
+    )
+  }, [orders])
+
+  useEffect(() => {
+    if (!hasInFlight) return
+    const id = setInterval(fetchOrders, 4000)
+    return () => clearInterval(id)
+  }, [hasInFlight])
 
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <LoadingSpinner text="Loading orders..." fullScreen />
       </div>
     )
   }
@@ -125,13 +145,11 @@ export default function OrdersPage() {
     }
   }
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <LoadingSpinner text="Loading orders..." fullScreen />
       </div>
     )
   }
@@ -159,6 +177,9 @@ export default function OrdersPage() {
               View and track all your orders in one place
             </p>
           </div>
+          {refreshing && (
+            <div className="text-sm text-gray-500">Refreshing…</div>
+          )}
         </div>
 
         {/* Filters */}
@@ -233,15 +254,31 @@ export default function OrdersPage() {
                         <h3 className="font-semibold text-lg">
                           Order #{order.id.slice(0, 8)}
                         </h3>
-                        <Badge 
-                          variant="secondary"
-                          className={`${getStatusColor(order.status)} border-0`}
-                        >
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(order.status)}
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                          </span>
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge 
+                            variant="secondary"
+                            className={`${getStatusColor(order.status)} border-0`}
+                          >
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(order.status)}
+                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            </span>
+                          </Badge>
+                          {order.payment_status && (
+                            <Badge 
+                              variant="outline"
+                              className={
+                                order.payment_status === 'paid' 
+                                  ? 'bg-green-50 text-green-700 border-green-200' 
+                                  : order.payment_status === 'failed'
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                              }
+                            >
+                              💳 {order.payment_status}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">

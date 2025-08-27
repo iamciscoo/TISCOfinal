@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Address } from '@/lib/types'
+import { revalidateTag, unstable_cache } from 'next/cache'
 
 type SupabaseErrorLike = {
   message?: string
@@ -242,12 +243,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
 
-    // Update product stock quantities
-    for (const item of typedItems) {
-      await supabase.rpc('update_product_stock', {
-        product_id: item.product_id ?? item.productId,
-        quantity_sold: item.quantity
-      })
+    // Invalidate caches for this user's orders and this order
+    try {
+      revalidateTag('orders')
+      revalidateTag(`user-orders:${user.id}`)
+      revalidateTag(`order:${order.id}`)
+    } catch (e) {
+      console.warn('Revalidation error (non-fatal):', e)
     }
 
     return NextResponse.json({ 
@@ -266,28 +268,59 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const user = await currentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items(
-          *,
-          products(id, name, price, image_url)
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    // Fresh/no-cache mode when requested
+    const url = new URL(req.url)
+    const fresh = url.searchParams.get('fresh') === '1'
+      || /no-store|no-cache/i.test(req.headers.get('cache-control') || '')
+      || req.headers.get('x-no-cache') === '1'
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (fresh) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(
+            *,
+            products(id, name, price, image_url)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ orders: data || [] }, { status: 200 })
     }
+
+    // Cached mode (tagged for webhook/admin revalidation)
+    const getUserOrdersCached = unstable_cache(
+      async (uid: string) => {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items(
+              *,
+              products(id, name, price, image_url)
+            )
+          `)
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+        if (error) throw new Error(error.message)
+        return data || []
+      },
+      ['orders-by-user', user.id],
+      { tags: ['orders', `user-orders:${user.id}`] }
+    )
+
+    const data = await getUserOrdersCached(user.id)
 
     return NextResponse.json({ orders: data }, { status: 200 })
 

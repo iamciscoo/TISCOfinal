@@ -28,6 +28,7 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { ProductCard } from '@/components/shared/ProductCard'
 
 import { Product } from '@/lib/types'
+import { LoadingSpinner } from '@/components/shared'
 
 function SearchResults() {
   const searchParams = useSearchParams()
@@ -133,12 +134,7 @@ function SearchResults() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Searching products...</p>
-          </div>
-        </div>
+        <LoadingSpinner text="Searching products..." fullScreen />
       </div>
     )
   }
@@ -378,12 +374,7 @@ export default function SearchPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading search...</p>
-          </div>
-        </div>
+        <LoadingSpinner text="Loading search..." fullScreen />
       </div>
     }>
       <SearchResults />

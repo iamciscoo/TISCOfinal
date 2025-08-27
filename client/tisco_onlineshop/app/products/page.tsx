@@ -27,6 +27,9 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
+import { LoadingSpinner } from '@/components/shared'
 
 // Helper: create URL-friendly slug from a string
 const slugify = (s: string = '') =>
@@ -241,12 +244,7 @@ export default function ProductsPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading products...</p>
-          </div>
-        </div>
+        <LoadingSpinner text="Loading products..." fullScreen />
       </div>
     )
   }
@@ -386,70 +384,72 @@ export default function ProductsPage() {
 
           {/* Products Grid/List */}
           <div className="lg:col-span-3">
-            {displayedProducts.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="text-gray-400 mb-4">
-                    <Search className="h-16 w-16" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
-                  <p className="text-gray-600 text-center">
-                    Try adjusting your search criteria or filters to find what you&apos;re looking for.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {/* Products Grid */}
-                <div
-                  className={
-                    viewMode === 'grid'
-                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
-                      : 'space-y-4'
-                  }
-                >
-                  {displayedProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} variant={viewMode} />
-                  ))}
-                </div>
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col items-center gap-3 mt-12">
-                    <div className="flex justify-center items-center gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </Button>
-                      <div className="flex gap-1">
-                        {[...Array(totalPages)].map((_, i) => (
-                          <Button
-                            key={i + 1}
-                            variant={currentPage === i + 1 ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setCurrentPage(i + 1)}
-                          >
-                            {i + 1}
-                          </Button>
-                        ))}
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
+            <ErrorBoundary fallback={ProductsErrorFallback}>
+              {displayedProducts.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <div className="text-gray-400 mb-4">
+                      <Search className="h-16 w-16" />
                     </div>
-                    <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-600 text-center">
+                      Try adjusting your search criteria or filters to find what you&apos;re looking for.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Products Grid */}
+                  <div
+                    className={
+                      viewMode === 'grid'
+                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                        : 'space-y-4'
+                    }
+                  >
+                    {displayedProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} variant={viewMode} />
+                    ))}
                   </div>
-                )}
-              </>
-            )}
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex flex-col items-center gap-3 mt-12">
+                      <div className="flex justify-center items-center gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        <div className="flex gap-1">
+                          {[...Array(totalPages)].map((_, i) => (
+                            <Button
+                              key={i + 1}
+                              variant={currentPage === i + 1 ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCurrentPage(i + 1)}
+                            >
+                              {i + 1}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                      <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </ErrorBoundary>
           </div>
         </div>
 

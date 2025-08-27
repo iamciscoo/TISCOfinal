@@ -1,18 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 import { 
   User, 
   Package, 
-  Heart, 
-  Settings, 
-  MapPin,
-  CreditCard,
   ChevronRight,
   Truck,
   Clock,
@@ -22,12 +20,57 @@ import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { LoadingSpinner, StatusBadge } from '@/components/shared'
+import { useCurrency } from '@/lib/currency-context'
+
+type OrderItem = {
+  quantity: number
+  products?: {
+    id: string
+    name: string
+    price: number
+    image_url: string | null
+  } | null
+}
+
+type Order = {
+  id: string
+  created_at: string
+  total_amount: number
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+  shipping_address?: string | null
+  order_items?: OrderItem[]
+}
 
 export default function AccountDashboard() {
   const { user, isLoaded } = useUser()
-  const [activeTab, setActiveTab] = useState('overview')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const { formatPrice } = useCurrency()
 
-  if (!isLoaded) {
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/orders?fresh=1', {
+        cache: 'no-store',
+        headers: { 'x-no-cache': '1' }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setOrders(Array.isArray(data?.orders) ? (data.orders as Order[]).slice(0, 3) : [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -39,42 +82,6 @@ export default function AccountDashboard() {
   if (!user) {
     redirect('/sign-in?redirect_url=/account')
   }
-
-  // Sample data - in real app, this would come from API
-  const recentOrders = [
-    {
-      id: 'ORD-001',
-      date: '2024-01-15',
-      status: 'delivered',
-      total: 299.99,
-      items: 3,
-      trackingNumber: 'TRK123456789'
-    },
-    {
-      id: 'ORD-002', 
-      date: '2024-01-10',
-      status: 'shipped',
-      total: 149.99,
-      items: 2,
-      trackingNumber: 'TRK987654321'
-    },
-    {
-      id: 'ORD-003',
-      date: '2024-01-05',
-      status: 'processing',
-      total: 79.99,
-      items: 1,
-      trackingNumber: null
-    }
-  ]
-
-  const wishlistItems = [
-    { id: '1', name: 'Gaming Laptop', price: 1299.99, image: '/circular.svg' },
-    { id: '2', name: 'Wireless Headphones', price: 299.99, image: '/circular.svg' },
-    { id: '3', name: 'Smart Watch', price: 399.99, image: '/circular.svg' }
-  ]
-
-
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -99,7 +106,7 @@ export default function AccountDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
+          {/* User Profile Card */}
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardContent className="p-6">
@@ -123,235 +130,129 @@ export default function AccountDashboard() {
                   </div>
                 </div>
 
-                {/* Navigation Menu */}
-                <nav className="space-y-1">
-                  {[
-                    { id: 'overview', label: 'Overview', icon: User },
-                    { id: 'orders', label: 'Orders', icon: Package },
-                    { id: 'wishlist', label: 'Wishlist', icon: Heart },
-                    { id: 'addresses', label: 'Addresses', icon: MapPin },
-                    { id: 'payments', label: 'Payment Methods', icon: CreditCard },
-                    { id: 'settings', label: 'Account Settings', icon: Settings },
-                  ].map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => setActiveTab(id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors ${
-                        activeTab === id 
-                          ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {label}
-                      <ChevronRight className="h-4 w-4 ml-auto" />
-                    </button>
-                  ))}
-                </nav>
+                {/* Navigation to Orders */}
+                <Link href="/account/orders" className="w-full">
+                  <Button className="w-full flex items-center gap-3" size="lg">
+                    <Package className="h-5 w-5" />
+                    View All Orders
+                    <ChevronRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Content */}
+          {/* Main Content - Quick Stats and Recent Orders */}
           <div className="lg:col-span-3">
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                          <p className="text-2xl font-bold text-gray-900">{recentOrders.length}</p>
-                        </div>
-                        <Package className="h-8 w-8 text-blue-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Wishlist Items</p>
-                          <p className="text-2xl font-bold text-gray-900">{wishlistItems.length}</p>
-                        </div>
-                        <Heart className="h-8 w-8 text-red-500" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            ${recentOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
-                          </p>
-                        </div>
-                        <CreditCard className="h-8 w-8 text-green-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Recent Orders */}
+            <div className="space-y-6">
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
-                  <CardHeader>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                      </div>
+                      <Package className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {formatPrice(orders.reduce((sum, order) => sum + (order.total_amount || 0), 0))}
+                        </p>
+                      </div>
+                      <User className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Recent Status</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {orders.length > 0 ? orders[0].status?.charAt(0).toUpperCase() + orders[0].status?.slice(1) : 'None'}
+                        </p>
+                      </div>
+                      {orders.length > 0 && getStatusIcon(orders[0].status)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Orders */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
                     <CardTitle>Recent Orders</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                    <Button variant="outline" asChild>
+                      <Link href="/account/orders">View All</Link>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
+                      <p className="text-gray-600 mb-6">When you place your first order, it will appear here.</p>
+                      <Button asChild>
+                        <Link href="/products">Start Shopping</Link>
+                      </Button>
+                    </div>
+                  ) : (
                     <div className="space-y-4">
-                      {recentOrders.map((order) => (
+                      {orders.map((order) => (
                         <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(order.status)}
                               <div>
-                                <p className="font-medium">Order {order.id}</p>
-                                <p className="text-sm text-gray-600">{order.date} • {order.items} items</p>
+                                <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
+                                <p className="text-sm text-gray-600">
+                                  {new Date(order.created_at).toLocaleDateString()} • {order.order_items?.length || 0} items
+                                </p>
                               </div>
                             </div>
-                            <StatusBadge status={order.status} />
+                            <div className="flex flex-col gap-1">
+                              <StatusBadge status={order.status} />
+                              {order.payment_status && (
+                                <Badge 
+                                  variant="outline"
+                                  className={
+                                    order.payment_status === 'paid' 
+                                      ? 'bg-green-50 text-green-700 border-green-200' 
+                                      : order.payment_status === 'failed'
+                                      ? 'bg-red-50 text-red-700 border-red-200'
+                                      : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                  }
+                                >
+                                  {order.payment_status}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">${order.total.toFixed(2)}</p>
-                            <Button variant="outline" size="sm" className="mt-1">
-                              View Details
+                            <p className="font-semibold">{formatPrice(order.total_amount || 0)}</p>
+                            <Button variant="outline" size="sm" className="mt-1" asChild>
+                              <Link href={`/account/orders/${order.id}`}>View Details</Link>
                             </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-6 text-center">
-                      <Button variant="outline" onClick={() => setActiveTab('orders')}>
-                        View All Orders
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Orders Tab */}
-            {activeTab === 'orders' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {recentOrders.map((order) => (
-                      <div key={order.id} className="border rounded-lg p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <div>
-                              <h3 className="font-semibold">Order {order.id}</h3>
-                              <p className="text-sm text-gray-600">Placed on {order.date}</p>
-                            </div>
-                            <StatusBadge status={order.status} />
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-semibold">${order.total.toFixed(2)}</p>
-                            <p className="text-sm text-gray-600">{order.items} items</p>
-                          </div>
-                        </div>
-                        
-                        {order.trackingNumber && (
-                          <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                            <p className="text-sm text-blue-800">
-                              <strong>Tracking Number:</strong> {order.trackingNumber}
-                            </p>
-                          </div>
-                        )}
-                        
-                        <div className="flex gap-3">
-                          <Button variant="outline" size="sm">View Details</Button>
-                          {order.trackingNumber && (
-                            <Button variant="outline" size="sm">Track Package</Button>
-                          )}
-                          {order.status === 'delivered' && (
-                            <Button variant="outline" size="sm">Leave Review</Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Wishlist Tab */}
-            {activeTab === 'wishlist' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Wishlist</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlistItems.map((item) => (
-                      <div key={item.id} className="border rounded-lg p-4">
-                        <div className="aspect-square bg-gray-100 rounded-md mb-4">
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            IMG
-                          </div>
-                        </div>
-                        <h3 className="font-medium text-gray-900 mb-2">{item.name}</h3>
-                        <p className="text-lg font-semibold text-gray-900 mb-3">
-                          ${item.price.toFixed(2)}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" className="flex-1">Add to Cart</Button>
-                          <Button variant="outline" size="sm">
-                            <Heart className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Other tabs placeholder */}
-            {['addresses', 'payments', 'settings'].includes(activeTab) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {activeTab === 'addresses' && 'Saved Addresses'}
-                    {activeTab === 'payments' && 'Payment Methods'}
-                    {activeTab === 'settings' && 'Account Settings'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      {activeTab === 'addresses' && <MapPin className="h-12 w-12 mx-auto" />}
-                      {activeTab === 'payments' && <CreditCard className="h-12 w-12 mx-auto" />}
-                      {activeTab === 'settings' && <Settings className="h-12 w-12 mx-auto" />}
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {activeTab === 'addresses' && 'No saved addresses'}
-                      {activeTab === 'payments' && 'No payment methods'}
-                      {activeTab === 'settings' && 'Account settings'}
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      {activeTab === 'addresses' && 'Add an address to make checkout faster next time.'}
-                      {activeTab === 'payments' && 'Add a payment method for faster checkout.'}
-                      {activeTab === 'settings' && 'Manage your account preferences and security settings.'}
-                    </p>
-                    <Button>
-                      {activeTab === 'addresses' && 'Add Address'}
-                      {activeTab === 'payments' && 'Add Payment Method'}
-                      {activeTab === 'settings' && 'Update Settings'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            </div>
           </div>
         </div>
       </div>

@@ -213,8 +213,30 @@ export async function getOrders(limit?: number): Promise<Order[]> {
 
   const { data, error } = await query
 
-  if (error) throw error
-  return data || []
+  if (error) {
+    console.error('getOrders: Supabase error', {
+      message: error.message,
+      code: (error as any).code,
+      details: (error as any).details,
+      hint: (error as any).hint,
+    })
+    throw error
+  }
+
+  const orders = (data || []) as any[]
+
+  // Attach user information without relying on a DB FK between orders.user_id and users.id
+  const userIds = Array.from(new Set(orders.map(o => o?.user_id).filter(Boolean))) as string[]
+  let usersById: Record<string, User> = {}
+  if (userIds.length > 0) {
+    try {
+      usersById = await getUsersByIds(userIds)
+    } catch (e) {
+      console.warn('getOrders: failed to fetch users for orders', e)
+    }
+  }
+
+  return orders.map(o => ({ ...o, user: usersById[String(o.user_id)] })) as unknown as Order[]
 }
 
 export async function getOrderById(id: string | number): Promise<Order | null> {
@@ -230,8 +252,26 @@ export async function getOrderById(id: string | number): Promise<Order | null> {
     .eq('id', id)
     .single()
 
-  if (error) throw error
-  return data
+  if (error) {
+    console.error('getOrderById: Supabase error', {
+      message: error.message,
+      code: (error as any).code,
+      details: (error as any).details,
+      hint: (error as any).hint,
+    })
+    throw error
+  }
+
+  if (!data) return null
+
+  // Enrich with user info independently of FK
+  try {
+    const user = await getUserById(String((data as any).user_id))
+    return { ...(data as any), user } as unknown as Order
+  } catch (e) {
+    console.warn('getOrderById: failed to fetch user', e)
+    return data as unknown as Order
+  }
 }
 
 export async function updateOrderStatus(id: string | number, status: Order['status']): Promise<Order> {
