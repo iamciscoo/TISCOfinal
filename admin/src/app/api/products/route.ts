@@ -2,17 +2,39 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { data, error } = await supabase
+    const url = new URL(req.url);
+    const qRaw = url.searchParams.get('q') || '';
+    const q = qRaw.trim();
+    const limitParam = url.searchParams.get('limit');
+    const limitNum = limitParam ? Number(limitParam) : undefined;
+    const limit = typeof limitNum === 'number' && !Number.isNaN(limitNum)
+      ? Math.max(1, Math.min(50, limitNum))
+      : undefined;
+
+    let query = supabase
       .from("products")
       .select(`
         *,
         product_images(*)
-      `)
+      `);
+
+    if (q) {
+      const like = `%${q}%`;
+      query = query.ilike('name', like);
+    }
+
+    query = query
       .order("created_at", { ascending: false })
       .order('sort_order', { ascending: true, foreignTable: 'product_images' })
       .order('created_at', { ascending: true, foreignTable: 'product_images' });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ data }, { status: 200 });

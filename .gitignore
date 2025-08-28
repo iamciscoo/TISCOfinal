@@ -21,6 +21,7 @@ next-env.d.ts
 .vscode/
 .idea/
 .cursor/
+.windsurf/
 
 # Env files (keep examples tracked)
 .env

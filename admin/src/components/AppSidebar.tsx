@@ -44,6 +44,7 @@ import { Sheet, SheetTrigger } from "./ui/sheet";
 import AddOrder from "./AddOrder";
 import AddUser from "./AddUser";
 import AddCategory from "./AddCategory";
+import AddReview from "./AddReview";
 // Removed unused AddProduct import
 
 const items = [
@@ -257,6 +258,9 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Content & Reviews</SidebarGroupLabel>
+          <SidebarGroupAction>
+            <Plus /> <span className="sr-only">Add Review</span>
+          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -265,6 +269,21 @@ const AppSidebar = () => {
                     <Star />
                     Reviews
                   </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <SidebarMenuButton asChild>
+                        <Link href="#">
+                          <Plus />
+                          Add Review
+                        </Link>
+                      </SidebarMenuButton>
+                    </SheetTrigger>
+                    <AddReview onCreated={() => { router.push('/reviews'); (router as any).refresh?.() }} />
+                  </Sheet>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

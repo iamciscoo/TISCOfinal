@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { updateProductRating } from "@/lib/reviews";
 export const runtime = 'nodejs';
 
 interface Params {
@@ -86,6 +87,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
+    // Recompute product aggregates after update
+    if (data.product_id) {
+      await updateProductRating(data.product_id)
+    }
+
     return NextResponse.json({ data }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
@@ -109,6 +115,11 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
     if (!data) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
+    }
+
+    // Update product aggregates after deletion
+    if (data.product_id) {
+      await updateProductRating(data.product_id)
     }
 
     return NextResponse.json({ message: "Review deleted successfully" }, { status: 200 });

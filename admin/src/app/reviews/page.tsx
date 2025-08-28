@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Loader2, Star, Check, X, Eye } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
 import { ColumnDef } from '@tanstack/react-table'
+import { Sheet, SheetTrigger } from '@/components/ui/sheet'
+import AddReview from '@/components/AddReview'
 
 interface Review {
   id: string
@@ -33,6 +35,7 @@ export default function ReviewsManagement() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
   
   const { toast } = useToast()
 
@@ -220,6 +223,12 @@ export default function ReviewsManagement() {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Reviews Management</h1>
+        <Sheet open={addOpen} onOpenChange={setAddOpen}>
+          <SheetTrigger asChild>
+            <Button onClick={() => setAddOpen(true)}>Add Review</Button>
+          </SheetTrigger>
+          <AddReview onCreated={() => { fetchReviews(); setAddOpen(false) }} />
+        </Sheet>
       </div>
 
       {/* Stats Cards */}
