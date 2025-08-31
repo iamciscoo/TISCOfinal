@@ -117,8 +117,48 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4rem;
+    /* Enhanced scroll performance */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    /* Prevent overscroll bounce on mobile */
+    overscroll-behavior: contain;
+    /* Optimize scroll performance */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Enhanced scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
   }
 }
 
@@ -131,4 +171,72 @@
 @keyframes brand-marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
+}
+
+/* Scroll performance optimizations */
+.scroll-container {
+  will-change: scroll-position;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-auto {
+  scroll-behavior: auto;
+}
+
+/* Enhanced parallax performance */
+.parallax-element {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimized horizontal scroll containers */
+.horizontal-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Momentum scrolling for iOS */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  
+  .scroll-smooth {
+    scroll-behavior: auto;
+  }
+  
+  .parallax-element {
+    will-change: auto;
+    transform: none !important;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

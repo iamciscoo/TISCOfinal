@@ -34,7 +34,7 @@ const faqs: FAQ[] = [
   {
     id: '2',
     question: 'What is your return policy?',
-    answer: 'We offer a 30-day return policy for most items. Items must be in original condition with tags attached. Some restrictions apply to certain categories like electronics and personal care items.',
+    answer: 'We do not offer returns unless the product arrives damaged, defective, or incorrect. If you experience an issue with your order, please contact our customer service team for assistance.',
     category: 'Returns & Exchanges'
   },
   {
@@ -46,19 +46,19 @@ const faqs: FAQ[] = [
   {
     id: '4',
     question: 'Do you ship internationally?',
-    answer: 'Yes, we ship to over 50 countries worldwide. International shipping rates and delivery times vary by destination. Please see our shipping page for detailed information.',
+    answer: 'We don’t currently ship internationally, but special arrangements can sometimes be made. Please contact us directly to discuss your order and options.',
     category: 'Orders & Shipping'
   },
   {
     id: '5',
     question: 'How can I change or cancel my order?',
-    answer: 'Orders can be modified or canceled within 1 hour of placement. After this window, please contact customer service immediately. Once an order has shipped, it cannot be canceled but can be returned.',
+    answer: 'Once an order has been paid, we do not offer refunds. If you need assistance with your order, please contact our office directly, and we will do our best to help.',
     category: 'Orders & Shipping'
   },
   {
     id: '6',
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards (Visa, MasterCard, American Express), PayPal, Apple Pay, Google Pay, and bank transfers. All payments are processed securely.',
+    answer: 'We accept a variety of payment methods for your convenience, including Mobile Money, major credit cards (Visa, MasterCard), and cash payments at our office. All online transactions are processed securely.',
     category: 'Payment'
   },
   {
@@ -76,7 +76,7 @@ const faqs: FAQ[] = [
   {
     id: '9',
     question: 'I forgot my password. How can I reset it?',
-    answer: 'Click "Sign In" and then "Forgot Password". Enter your email address and we&apos;ll send you a reset link. The link will be valid for 24 hours.',
+    answer: 'Click "Sign In" and then "Forgot Password". Enter your email address and we will send you a reset link. The link will be valid for 24 hours.',
     category: 'Account'
   },
   {
@@ -88,7 +88,7 @@ const faqs: FAQ[] = [
   {
     id: '11',
     question: 'Are your products authentic?',
-    answer: 'Yes, all our products are 100% authentic. We work directly with manufacturers and authorized distributors. Every product comes with a guarantee of authenticity.',
+    answer: 'Yes, all our products are 100% authentic. We also work directly with manufacturers and authorized distributors. Every product comes with a guarantee of authenticity.',
     category: 'Products'
   },
   {

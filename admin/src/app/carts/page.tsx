@@ -195,8 +195,8 @@ export default function CartsManagement() {
       id: 'status',
       header: 'Status',
       cell: ({ row }) => {
-        const isAbandoned = new Date(row.original.last_updated) < 
-          new Date(Date.now() - 24 * 60 * 60 * 1000)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        const isAbandoned = new Date(row.original.last_updated) < sevenDaysAgo
         
         return (
           <Badge variant={isAbandoned ? 'destructive' : 'default'}>

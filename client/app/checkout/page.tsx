@@ -65,6 +65,10 @@ export default function CheckoutPage() {
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentAttempts, setPaymentAttempts] = useState(0)
+  const [paymentTimeout, setPaymentTimeout] = useState(false)
+  const [canRetryPayment, setCanRetryPayment] = useState(false)
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null)
 
   // Avoid hydration mismatch by deferring persisted cart reads until after mount
   const [mounted, setMounted] = useState(false)
@@ -316,125 +320,344 @@ export default function CheckoutPage() {
         country: shippingData.country,
       }
 
-      // 1) Create the pending order first (we will only finalize after payment succeeds via webhook)
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      })
+      // Handle different payment methods - create order only after successful payment for mobile money
+      if (paymentData.method !== 'mobile') {
+        // Non-mobile flows (card, office payment) - create order first
+        const orderResponse = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData),
+        })
 
-      const result = await response.json()
+        const orderResult = await orderResponse.json()
+        if (!orderResponse.ok) {
+          // Order creation failed - show error and suggest payment method change
+          toast({
+            title: "Order Creation Failed",
+            description: orderResult.error || 'Failed to create order. Please try a different payment method.',
+            variant: "destructive",
+          })
+          // Don't disable retry, let user try again or change payment method
+          setCurrentStep('payment')
+          return
+        }
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to place order')
-      }
-
-      // 2) If mobile money, initiate ZenoPay mobile money collection (USSD/SIM Toolkit)
-      if (paymentData.method === 'mobile') {
+        // Non-mobile payment successful
+        toast({ title: 'Order Placed!', description: `Order #${orderResult.order.id.slice(0, 8)} created.` })
+        clearCart()
+        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+        router.push('/account/orders')
+      } else {
+        // Mobile money payment flow - initiate payment first, create order only after success
         try {
           const msisdn = normalizeTzPhoneForApi(paymentData.mobilePhone)
           if (!(msisdn.length === 12 && msisdn.startsWith('255') && (msisdn[3] === '6' || msisdn[3] === '7'))) {
             throw new Error('Invalid phone format. Use 2557XXXXXXXX (TZ)')
           }
-          const procRes = await fetch('/api/payments/process', {
+          
+          // First create a temporary payment session without order
+          const procRes = await fetch('/api/payments/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              order_id: result.order.id,
               amount: subtotal,
               currency: 'TZS',
               provider: paymentData.provider,
               phone_number: msisdn,
+              order_data: orderData, // Pass order data for creation after payment success
             }),
           })
           const procJson = await procRes.json()
-          if (!procRes.ok) throw new Error(procJson?.error || 'Failed to initiate mobile payment')
+          if (!procRes.ok) {
+            // Payment initiation failed - show error and suggest payment method change
+            toast({
+              title: "Payment Initiation Failed",
+              description: procJson?.error || 'Failed to initiate mobile payment. Please try a different payment method.',
+              variant: "destructive",
+            })
+            // Don't disable retry, let user try again or change payment method
+            setCurrentStep('payment')
+            return
+          }
 
           toast({
             title: 'Payment Initiated',
             description: 'Please approve the payment on your phone to complete the order.',
           })
 
-          // Poll our status endpoint (updated via ZenoPay webhooks) so the user sees confirmation
+          // Poll our status endpoint with 30-second timeout and retry mechanism
           const reference: string | undefined = procJson?.transaction?.transaction_reference
           if (reference) {
-            const start = Date.now()
-            const timeoutMs = 90_000
-            const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
-            while (Date.now() - start < timeoutMs) {
-              try {
-                const sres = await fetch('/api/payments/status', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ reference })
-                })
-                const sjson = await sres.json()
-                const st = String(sjson?.status || '').toUpperCase()
-
-                const successSet = new Set(['SUCCESS', 'SETTLED', 'COMPLETED', 'APPROVED', 'SUCCESSFUL'])
-                const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR'])
-
-                if (successSet.has(st)) {
-                  toast({ title: 'Payment Confirmed', description: 'Your payment was successful.' })
-                  
-                  // Immediately trigger payment completion via mock webhook
-                  try {
-                    await fetch('/api/payments/mock-webhook', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        transaction_reference: reference,
-                        status: 'COMPLETED'
-                      })
-                    })
-                  } catch (e) {
-                    console.warn('Failed to trigger payment completion:', e)
-                  }
-                  
-                  // Flag Orders page for a one-shot refresh after redirect
-                  try { sessionStorage.setItem('orders:refresh', '1') } catch {}
-                  clearCart()
-                  void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
-                  router.push('/account/orders?justPaid=1')
-                  return
-                }
-                if (failureSet.has(st)) {
-                  toast({ title: 'Payment Failed', description: 'Payment was not completed.', variant: 'destructive' })
-                  return
-                }
-              } catch {}
-              await delay(3000)
+            const success = await pollPaymentStatus(reference)
+            if (!success) {
+              // Payment timed out or failed - enable retry
+              setPaymentTimeout(true)
+              setCanRetryPayment(true)
+              setPaymentAttempts(prev => prev + 1)
+              // Payment timeout - no toast notification, just show retry UI
+              return
             }
-            toast({ title: 'Awaiting Confirmation', description: 'Payment is still processing. You can check status in Orders.' })
-            router.push('/account/orders')
+            
+            // Payment successful - now create the order
+            const orderResponse = await fetch('/api/orders', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(orderData),
+            })
+
+            const orderResult = await orderResponse.json()
+            if (!orderResponse.ok) {
+              // Order creation failed after successful payment - this is a critical error
+              toast({
+                title: "Order Creation Failed",
+                description: "Payment was successful but order creation failed. Please contact support with reference: " + reference,
+                variant: "destructive",
+              })
+              return
+            }
+
+            // Store order ID and complete the flow
+            setLastOrderId(orderResult.order.id)
+            toast({ title: 'Payment Confirmed', description: 'Your payment was successful and order created.' })
+            
+            // Immediately trigger payment completion via mock webhook
+            try {
+              await fetch('/api/payments/mock-webhook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  transaction_reference: reference,
+                  status: 'COMPLETED',
+                  order_id: orderResult.order.id
+                })
+              })
+            } catch (e) {
+              console.warn('Failed to trigger payment completion:', e)
+            }
+            
+            // Flag Orders page for a one-shot refresh after redirect
+            try { sessionStorage.setItem('orders:refresh', '1') } catch {}
+            clearCart()
+            void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+            router.push('/account/orders?justPaid=1')
             return
           }
-
-          // Fallback if no reference returned
-          router.push('/account/orders')
-          return
         } catch (err) {
           console.error('Payment processing error:', err)
-          toast({ title: 'Payment Error', description: (err as Error).message, variant: 'destructive' })
+          toast({ 
+            title: 'Payment Error', 
+            description: (err as Error).message + ' Please try again or change your payment method.', 
+            variant: 'destructive' 
+          })
+          // Return to payment step to allow method change or retry
+          setCurrentStep('payment')
           return
         }
       }
 
-      // 3) Non-mobile flows
-      toast({ title: 'Order Placed!', description: `Order #${result.order.id.slice(0, 8)} created.` })
-      clearCart()
-      void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
-      router.push('/account/orders')
-      
     } catch (error: unknown) {
       console.error('Error placing order:', error)
       toast({
         title: "Order Failed",
-        description: (error as Error).message || "There was an error placing your order. Please try again.",
+        description: (error as Error).message || "There was an error placing your order. Please try again or change your payment method.",
         variant: "destructive",
       })
+      // Return to payment step to allow method change or retry
+      setCurrentStep('payment')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Enhanced payment status polling with 30-second timeout
+  const pollPaymentStatus = async (reference: string): Promise<boolean> => {
+    const start = Date.now()
+    const timeoutMs = 30_000 // 30 seconds
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+    
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const sres = await fetch('/api/payments/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference })
+        })
+        const sjson = await sres.json()
+        const st = String(sjson?.status || '').toUpperCase()
+
+        const successSet = new Set(['SUCCESS', 'SETTLED', 'COMPLETED', 'APPROVED', 'SUCCESSFUL'])
+        const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR'])
+
+        if (successSet.has(st)) {
+          return true // Payment successful
+        }
+        if (failureSet.has(st)) {
+          toast({ title: 'Payment Failed', description: 'Payment was declined or failed.', variant: 'destructive' })
+          return false // Payment failed
+        }
+      } catch (error) {
+        console.warn('Error checking payment status:', error)
+      }
+      await delay(2000) // Check every 2 seconds
+    }
+    
+    return false // Timeout reached
+  }
+
+  // Retry payment without existing order (since we don't create orders until payment succeeds)
+  const handleRetryPayment = async () => {
+    if (paymentData.method !== 'mobile') return
+    
+    try {
+      setIsProcessing(true)
+      setPaymentTimeout(false)
+      setCanRetryPayment(false)
+      
+      const msisdn = normalizeTzPhoneForApi(paymentData.mobilePhone)
+      if (!(msisdn.length === 12 && msisdn.startsWith('255') && (msisdn[3] === '6' || msisdn[3] === '7'))) {
+        throw new Error('Invalid phone format. Use 2557XXXXXXXX (TZ)')
+      }
+      
+      // Prepare order data for retry
+      let shipping_address = ''
+      if (shippingData.deliveryMethod === 'pickup') {
+        shipping_address = `${shippingData.firstName} ${shippingData.lastName}\nPhone: ${shippingData.phone}\nPickup: Office/Warehouse\n${shippingData.country}`
+      } else {
+        shipping_address = `${shippingData.firstName} ${shippingData.lastName}\n${shippingData.address}\n${shippingData.place}\n${selectedCity || 'Tanzania'}\n${shippingData.country}\nPhone: ${shippingData.phone}`
+      }
+      
+      let payment_method = ''
+      let payment_summary = ''
+      payment_method = `Mobile Money (${paymentData.provider}) - ${maskPhone(paymentData.mobilePhone)}`
+      payment_summary = `Mobile Money (${paymentData.provider}) to ${paymentData.mobilePhone}`
+
+      const orderData = {
+        items: items.map(item => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shipping_address,
+        payment_method,
+        currency: 'TZS',
+        notes: `${shippingData.deliveryMethod === 'pickup' 
+          ? `Delivery: Pickup (Free); Location: Office/Warehouse` 
+          : `Delivery: ${hasCity ? (isDar ? 'Dar es Salaam' : 'Regional') : 'Not provided'} - ${hasCity ? (isDar ? 'TSH 5000 to 10000 (paid on delivery)' : formatPrice(15000)) : '—'}; Place: ${shippingData.place}; City: ${selectedCity || 'N/A'}`
+        }; Payment: ${payment_summary}`,
+        contact_phone: shippingData.phone,
+        address_line_1: shippingData.address,
+        city: selectedCity,
+        email: shippingData.email,
+        place: shippingData.place,
+        first_name: shippingData.firstName,
+        last_name: shippingData.lastName,
+        country: shippingData.country,
+      }
+      
+      // Retry payment initiation
+      const procRes = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: subtotal,
+          currency: 'TZS',
+          provider: paymentData.provider,
+          phone_number: msisdn,
+          order_data: orderData,
+        }),
+      })
+      
+      const procJson = await procRes.json()
+      if (!procRes.ok) {
+        // Retry payment initiation failed - show error but keep retry enabled
+        toast({
+          title: "Payment Retry Failed",
+          description: procJson?.error || 'Failed to retry mobile payment. Please try again or change your payment method.',
+          variant: "destructive",
+        })
+        // Keep retry enabled and return to payment step
+        setCanRetryPayment(true)
+        setCurrentStep('payment')
+        return
+      }
+
+      toast({
+        title: 'Payment Retry Initiated',
+        description: 'Please check your phone and approve the payment request.',
+      })
+
+      // Poll for payment status again
+      const reference: string | undefined = procJson?.transaction?.transaction_reference
+      if (reference) {
+        const success = await pollPaymentStatus(reference)
+        if (!success) {
+          // Payment timed out again - allow another retry
+          setPaymentTimeout(true)
+          setCanRetryPayment(true)
+          setPaymentAttempts(prev => prev + 1)
+          // Payment timeout again - no toast notification, just show retry UI
+          return
+        }
+        
+        // Payment successful - now create the order
+        const orderResponse = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData),
+        })
+
+        const orderResult = await orderResponse.json()
+        if (!orderResponse.ok) {
+          // Order creation failed after successful payment - this is a critical error
+          toast({
+            title: "Order Creation Failed",
+            description: "Payment was successful but order creation failed. Please contact support with reference: " + reference,
+            variant: "destructive",
+          })
+          return
+        }
+
+        // Store order ID and complete the flow
+        setLastOrderId(orderResult.order.id)
+        toast({ title: 'Payment Confirmed', description: 'Your retry payment was successful and order created!' })
+        
+        // Complete the payment
+        try {
+          await fetch('/api/payments/mock-webhook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              transaction_reference: reference,
+              status: 'COMPLETED',
+              order_id: orderResult.order.id
+            })
+          })
+        } catch (e) {
+          console.warn('Failed to trigger payment completion:', e)
+        }
+        
+        try { sessionStorage.setItem('orders:refresh', '1') } catch {}
+        clearCart()
+        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+        router.push('/account/orders?justPaid=1')
+      }
+      
+    } catch (error: unknown) {
+      console.error('Error retrying payment:', error)
+      toast({
+        title: "Payment Retry Failed",
+        description: (error as Error).message || "Failed to retry payment. Please try again or change your payment method.",
+        variant: "destructive",
+      })
+      // Keep retry enabled and return to payment step
+      setCanRetryPayment(true)
+      setCurrentStep('payment')
     } finally {
       setIsProcessing(false)
     }
@@ -586,7 +809,7 @@ export default function CheckoutPage() {
                         id="phone"
                         type="tel"
                         inputMode="numeric"
-                        placeholder="0754 123 456, 754123456, or +255 754 123 456"
+                        placeholder="7xx xxx xxx"
                         value={shippingData.phone}
                         onChange={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
                         onBlur={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
@@ -793,7 +1016,7 @@ export default function CheckoutPage() {
                           id="mobilePhone"
                           type="tel"
                           inputMode="numeric"
-                          placeholder="0754 123 456, 754123456, or +255 754 123 456"
+                          placeholder="7xx xxx xxx"
                           value={paymentData.mobilePhone}
                           onChange={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
                           onBlur={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
@@ -807,9 +1030,16 @@ export default function CheckoutPage() {
                           <p className="mt-1 text-xs text-red-600">Format must be +255 7XX XXX XXX (or +255 6XX XXX XXX)</p>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600">
-                        You will receive a prompt on your phone to authorize the payment.
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600">
+                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 30 seconds.
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          • You have 30 seconds to approve the payment on your phone<br/>
+                          • If you miss the prompt or enter an incorrect PIN, you can retry the payment<br/>
+                          • Make sure your phone is nearby and ready to receive the payment request
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -951,6 +1181,41 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
+                  {/* Payment Timeout/Retry Section */}
+                  {paymentTimeout && canRetryPayment && paymentData.method === 'mobile' && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                        <Shield className="h-5 w-5" />
+                        <span className="font-medium">Payment Timeout</span>
+                      </div>
+                      <p className="text-sm text-yellow-700 mb-3">
+                        The payment confirmation timed out. This could happen if you responded too late or entered an incorrect PIN.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          onClick={handleRetryPayment}
+                          disabled={isProcessing}
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          {isProcessing ? 'Retrying...' : 'Retry Payment'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPaymentTimeout(false)
+                            setCanRetryPayment(false)
+                            setCurrentStep('payment')
+                          }}
+                          className="w-full sm:w-auto"
+                        >
+                          Change Payment Method
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Order Items */}
                   <div>
                     <h3 className="font-semibold mb-3">Order Items ({totalItems})</h3>
@@ -988,11 +1253,11 @@ export default function CheckoutPage() {
               {currentStep === 'review' ? (
                 <Button
                   onClick={handlePlaceOrder}
-                  disabled={isProcessing}
+                  disabled={isProcessing || (paymentTimeout && !canRetryPayment)}
                   className="px-8 w-full sm:w-auto order-1 sm:order-2"
                 >
-                  {isProcessing ? 'Processing...' : 'Place Order'}
-                  {!isProcessing && <ArrowRight className="h-4 w-4 ml-2" />}
+                  {isProcessing ? 'Processing...' : (paymentTimeout ? 'Payment Pending...' : 'Place Order')}
+                  {!isProcessing && !paymentTimeout && <ArrowRight className="h-4 w-4 ml-2" />}
                 </Button>
               ) : (
                 <Button

@@ -97,7 +97,7 @@ export const ServicesPreview = () => {
         {/* Mobile Slider */}
         <div className="md:hidden mb-12">
           <div className="-mx-4 px-4">
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 horizontal-scroll scroll-container">
               {services.map((service, index) => (
                 <Link
                   key={index}

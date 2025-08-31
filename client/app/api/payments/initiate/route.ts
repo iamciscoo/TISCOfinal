@@ -1,0 +1,271 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { currentUser } from '@clerk/nextjs/server'
+import { createClient } from '@supabase/supabase-js'
+import { ZenoPayClient } from '@/lib/zenopay'
+
+function normalizeTzMsisdn(raw: string): string {
+  // ZenoPay examples use local format 0XXXXXXXXX (10 digits)
+  // Accept various inputs and normalize to 0-leading local number
+  const digits = String(raw || '').replace(/\D/g, '')
+  if (digits.length === 10 && digits.startsWith('0')) return digits
+  if (digits.length === 12 && digits.startsWith('255')) return `0${digits.slice(3)}`
+  if (digits.length === 9) return `0${digits}`
+  if (String(raw || '').startsWith('+255')) return `0${String(raw).replace(/\D/g, '').slice(3)}`
+  throw new Error('Invalid phone format. Use 0XXXXXXXXX (TZ)')
+}
+
+// Map UI/provider labels to ZenoPay channel keywords
+function mapChannel(provider?: string): string | undefined {
+  const p = (provider || '').toLowerCase().trim()
+  if (!p) return undefined
+  if (p.includes('vodacom') || p.includes('m-pesa') || p.includes('mpesa')) return 'vodacom'
+  if (p.includes('tigo') || p.includes('mixx')) return 'tigo'
+  if (p.includes('airtel')) return 'airtel'
+  // Extras (in case we add more later)
+  if (p.includes('halotel') || p.includes('halopesa')) return 'halotel'
+  if (p.includes('ttcl') || p.includes('t-pesa') || p.includes('tpesa')) return 'ttcl'
+  return undefined
+}
+
+// Convert any TZ mobile input to E.164 digits-only without plus sign (2557XXXXXXXX)
+function toE164Tz(raw: string): string {
+  const digits = String(raw || '').replace(/\D/g, '')
+  const last9 = digits.slice(-9)
+  if (last9.length !== 9) throw new Error('Invalid phone format for E.164 conversion')
+  return `255${last9}`
+}
+
+// Same as toE164Tz but with a leading plus sign (+2557XXXXXXXX)
+function toPlusE164Tz(raw: string): string {
+  return `+${toE164Tz(raw)}`
+}
+
+function generateOrderReference(): string {
+  // Alphanumeric only; used as external gateway reference
+  const ts = Date.now().toString(36).toUpperCase()
+  const rand = Math.random().toString(36).slice(2, 10).toUpperCase()
+  return `TX${ts}${rand}`.replace(/[^A-Z0-9]/g, '')
+}
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+)
+
+export async function POST(req: NextRequest) {
+  try {
+    const user = await currentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { 
+      amount, 
+      currency = 'TZS',
+      provider,
+      phone_number,
+      order_data,
+    } = await req.json()
+
+    if (!amount || !provider || !phone_number || !order_data) {
+      return NextResponse.json({ 
+        error: 'Amount, provider, phone_number, and order_data are required' 
+      }, { status: 400 })
+    }
+
+    // Create a clean, alphanumeric payment reference for the gateway and our DB
+    const cleanRef = generateOrderReference()
+
+    // Create payment session record (without order_id since order doesn't exist yet)
+    const { data: session, error: sessionError } = await supabase
+      .from('payment_sessions')
+      .insert({
+        user_id: user.id,
+        amount,
+        currency,
+        provider,
+        phone_number,
+        transaction_reference: cleanRef,
+        order_data: JSON.stringify(order_data),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (sessionError) {
+      return NextResponse.json({ error: sessionError.message }, { status: 500 })
+    }
+
+    // Derive buyer information from Clerk
+    const buyerName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Customer'
+    const buyerEmail = (user.primaryEmailAddress?.emailAddress 
+      || user.emailAddresses?.[0]?.emailAddress 
+      || '').trim() || 'no-reply@example.com'
+    const webhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/api/payments/webhooks`
+
+    // Process mobile money payment
+    try {
+      const paymentResponse = await processMobileMoneyPayment(session, { buyerName, buyerEmail, webhookUrl })
+      
+      return NextResponse.json({ 
+        transaction: {
+          transaction_reference: cleanRef,
+          status: 'processing'
+        },
+        payment_response: paymentResponse
+      }, { status: 200 })
+
+    } catch (error) {
+      // Update session as failed
+      await supabase
+        .from('payment_sessions')
+        .update({ 
+          status: 'failed', 
+          failure_reason: (error as Error).message,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id)
+
+      return NextResponse.json({ 
+        error: 'Payment processing failed: ' + (error as Error).message 
+      }, { status: 500 })
+    }
+
+  } catch (error: unknown) {
+    console.error('Payment initiation error:', error)
+    return NextResponse.json(
+      { error: (error as Error).message || 'Failed to initiate payment' },
+      { status: 500 }
+    )
+  }
+}
+
+// Payment processor for mobile money
+type PaymentSession = { 
+  id: string; 
+  user_id: string; 
+  amount: number; 
+  currency: string; 
+  provider: string;
+  phone_number: string;
+  transaction_reference: string; 
+  order_data: string;
+}
+
+interface BuyerInfo { 
+  buyerName: string; 
+  buyerEmail: string; 
+  webhookUrl: string; 
+}
+
+async function processMobileMoneyPayment(session: PaymentSession, meta: BuyerInfo) {
+  const localMsisdn = normalizeTzMsisdn(session.phone_number)
+  const e164Msisdn = toE164Tz(session.phone_number)
+  const plusE164Msisdn = toPlusE164Tz(session.phone_number)
+  const client = new ZenoPayClient()
+
+  // Many mobile money providers in TZ expect integer amounts; ensure integer payload
+  const amountInt = Math.round(Number(session.amount))
+  const channel = mapChannel(session.provider)
+
+  type ZenoCreateOrderResponse = {
+    status?: string
+    message?: string
+    data?: { order_id?: string; payment_status?: string; transaction_id?: string }
+    order_id?: string
+    transaction_id?: string
+  }
+
+  const okStatuses = new Set(['success', 'processing', 'pending', 'queued', 'initiated', 'created', 'ok'])
+
+  const tryCreate = async (buyer_phone: string, withChannel: boolean): Promise<ZenoCreateOrderResponse> => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('ZenoPay createOrder request', {
+        order_id: session.transaction_reference,
+        buyer_phone,
+        channel: withChannel && channel ? channel : undefined,
+        amount: amountInt,
+      })
+    }
+    const res = await client.createOrder({
+      buyer_name: meta.buyerName,
+      buyer_phone,
+      buyer_email: meta.buyerEmail,
+      amount: amountInt,
+      order_id: session.transaction_reference,
+      webhook_url: meta.webhookUrl,
+      ...(withChannel && channel ? { channel } : {}),
+    })
+    const resp = res as ZenoCreateOrderResponse
+    const code = String(resp?.status || '').toLowerCase()
+    if (code && !okStatuses.has(code)) {
+      throw new Error(resp?.message || `Gateway returned status=${code}`)
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('ZenoPay createOrder response', resp)
+    }
+    return resp
+  }
+
+  // Attempts: phone formats [local, 255..., +255...] and for each try with channel then without
+  const phones = [localMsisdn, e164Msisdn, plusE164Msisdn]
+  const withChannelVariants = channel ? [false, true] : [false]
+
+  let resp: ZenoCreateOrderResponse | null = null
+  let usedPhone = phones[0]
+  let usedWithChannel = Boolean(channel)
+  let lastError: unknown = null
+
+  outer: for (const phone of phones) {
+    for (const useChan of withChannelVariants) {
+      try {
+        const r = await tryCreate(phone, useChan)
+        resp = r
+        usedPhone = phone
+        usedWithChannel = useChan
+        break outer
+      } catch (e) {
+        lastError = e
+        // continue to next variant
+      }
+    }
+  }
+
+  if (!resp) {
+    throw lastError instanceof Error ? lastError : new Error('Failed to initiate mobile money payment')
+  }
+
+  const gatewayId = resp?.data?.order_id ?? resp?.order_id ?? resp?.transaction_id ?? null
+
+  await supabase
+    .from('payment_sessions')
+    .update({
+      status: 'processing',
+      gateway_transaction_id: gatewayId,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', session.id)
+
+  // Log initiation for debugging
+  await supabase
+    .from('payment_logs')
+    .insert({
+      session_id: session.id,
+      event_type: 'payment_initiated',
+      data: {
+        used_phone: usedPhone,
+        channel: usedWithChannel && channel ? channel : undefined,
+        amount: amountInt,
+        response: resp,
+      },
+      user_id: session.user_id,
+    })
+
+  return {
+    status: 'processing',
+    gateway_transaction_id: gatewayId,
+    message: `Mobile money request sent to ${usedPhone}. Please approve the prompt on your phone.`,
+    raw: resp,
+  }
+}

@@ -16,12 +16,11 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { 
   Search, 
-  Filter,
+  Filter, 
   Grid3X3, 
   List, 
-  ShoppingCart,
-  Heart,
-  Percent,
+  Percent, 
+  ShoppingCart, 
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
@@ -32,7 +31,8 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import Image from 'next/image'
 
-import { LoadingSpinner } from '@/components/shared'
+import { LoadingSpinner, VideoCard } from '@/components/shared'
+import ShopHero from '@/components/ShopHero'
 interface Deal {
   id: string
   name: string
@@ -63,7 +63,6 @@ export default function DealsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [columns, setColumns] = useState(1)
   
   const { addItem } = useCartStore()
   
@@ -89,19 +88,7 @@ export default function DealsPage() {
     fetchDeals()
   }, [])
   
-  // Track responsive columns to enforce max 3 rows per page
-  useEffect(() => {
-    const updateColumns = () => {
-      const w = typeof window !== 'undefined' ? window.innerWidth : 0
-      if (w >= 1280) setColumns(4) // xl:grid-cols-4
-      else if (w >= 1024) setColumns(3) // lg:grid-cols-3
-      else if (w >= 640) setColumns(2) // sm:grid-cols-2
-      else setColumns(1)
-    }
-    updateColumns()
-    window.addEventListener('resize', updateColumns)
-    return () => window.removeEventListener('resize', updateColumns)
-  }, [])
+  // Removed unused responsive columns tracking to reduce noise
   
   const categories = Array.from(new Set(deals.map(deal => deal.category)))
 
@@ -232,24 +219,20 @@ export default function DealsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      {/* Hero Section (match Shop page styling) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <ShopHero imageSrc="/deals-hero.png" title="Deals" ctaHref="/products" ctaLabel="Continue Shopping" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
+        <nav className="hidden md:flex items-center space-x-2 text-sm text-gray-600 mb-7">
           <Link href="/" className="hover:text-blue-600">Home</Link>
           <span>/</span>
           <span className="text-gray-900">Deals</span>
         </nav>
 
-        {/* Page Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🔥 Amazing Deals & Offers
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover incredible savings on your favorite products. Limited time offers you don&apos;t want to miss!
-          </p>
-        </div>
 
         {/* Loading State */}
         {loading && (
@@ -316,18 +299,33 @@ export default function DealsPage() {
           </div>
         )}
 
+        {/* Mobile Video Card - Positioned after header */}
+        <div className="lg:hidden mb-5">
+          <VideoCard 
+            src="/deals-hero.mp4" 
+            className="w-full aspect-video"
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar (hidden on mobile) */}
           <div className="hidden lg:block lg:col-span-1">
-            <Card className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-auto">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters
-                </h3>
-                <FiltersPanel />
-              </CardContent>
-            </Card>
+            <div className="sticky top-24 space-y-6">
+              <Card className="max-h-[calc(100vh-32rem)] overflow-auto">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters
+                  </h3>
+                  <FiltersPanel />
+                </CardContent>
+              </Card>
+              {/* Video Card - Below filters on desktop */}
+              <VideoCard 
+                src="/deals-hero.mp4" 
+                className="w-full h-80 lg:h-96"
+              />
+            </div>
           </div>
 
           {/* Deals Grid/List */}
@@ -351,8 +349,8 @@ export default function DealsPage() {
                       : 'space-y-4'
                     }>
                       {displayedDeals.map((deal) => (
-                        <Card key={deal.id} className="group hover:shadow-lg transition-shadow">
-                          <CardContent className={viewMode === 'grid' ? 'p-3' : 'p-4 flex gap-4'}>
+                        <Card key={deal.id} className="group hover:shadow-lg transition-shadow h-full">
+                          <CardContent className={viewMode === 'grid' ? 'p-3 flex h-full flex-col' : 'p-4 flex gap-4'}>
                             {/* Product Image */}
                             <Link href={`/products/${deal.id}`} className={viewMode === 'grid' 
                               ? 'aspect-square bg-gray-100 rounded-md mb-3 overflow-hidden relative block' 
@@ -373,7 +371,7 @@ export default function DealsPage() {
                               </Badge>
                             </Link>
 
-                            <div className={viewMode === 'grid' ? '' : 'flex-1'}>
+                            <div className={viewMode === 'grid' ? 'flex-1 flex flex-col' : 'flex-1 min-w-0'}>
                               {/* Product Info */}
                               <div className={viewMode === 'grid' ? 'mb-2' : 'mb-3'}>
                                 <div className="text-xs text-blue-600 font-medium mb-1">
@@ -381,7 +379,7 @@ export default function DealsPage() {
                                 </div>
                                 <Link href={`/products/${deal.id}`}>
                                   <h3 className={`font-medium text-gray-900 group-hover:text-blue-600 transition-colors ${
-                                    viewMode === 'grid' ? 'text-sm line-clamp-2' : 'text-base'
+                                    viewMode === 'grid' ? 'text-sm line-clamp-2' : 'text-base line-clamp-2'
                                   }`}>
                                     {deal.name}
                                   </h3>
@@ -394,19 +392,19 @@ export default function DealsPage() {
                               </div>
 
                               {/* Price & Actions */}
-                              <div className={viewMode === 'grid' ? 'space-y-2' : 'flex items-center justify-between'}>
-                                <div>
-                                  <div className="flex items-center gap-1">
+                              <div className={viewMode === 'grid' ? 'flex flex-col mt-auto space-y-2' : 'flex items-center justify-between gap-3 flex-wrap'}>
+                                <div className={viewMode === 'grid' ? 'min-w-0' : 'flex-1 min-w-0'}>
+                                  <div className={viewMode === 'grid' ? 'flex flex-col gap-0.5' : 'flex items-center gap-2 flex-wrap'}>
                                     <PriceDisplay 
                                       price={deal.dealPrice} 
-                                      className={`font-bold text-red-600 ${
+                                      className={`font-bold text-red-600 whitespace-normal break-words leading-tight ${
                                         viewMode === 'grid' ? 'text-sm' : 'text-lg'
                                       }`} 
                                     />
                                     {deal.discount > 0 && deal.originalPrice > deal.dealPrice && (
                                       <PriceDisplay 
                                         price={deal.originalPrice} 
-                                        className="text-xs text-gray-500 line-through" 
+                                        className="text-xs text-gray-500 line-through whitespace-normal break-words leading-tight" 
                                       />
                                     )}
                                   </div>
@@ -417,23 +415,17 @@ export default function DealsPage() {
                                   )}
                                 </div>
                                 
-                                <div className={`flex gap-1 ${
-                                  viewMode === 'grid' ? 'justify-center' : ''
+                                <div className={`flex gap-2 ${
+                                  viewMode === 'grid' ? 'justify-center' : 'shrink-0'
                                 }`}>
-                                  {viewMode === 'list' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="p-2"
-                                    >
-                                      <Heart className="h-4 w-4" />
-                                    </Button>
-                                  )}
                                   <Button
                                     size={viewMode === 'grid' ? 'sm' : 'sm'}
                                     onClick={() => handleAddToCart(deal)}
                                     disabled={deal.stock_quantity === 0}
-                                    className={viewMode === 'grid' ? 'w-full text-xs px-2' : ''}
+                                    variant={viewMode === 'grid' ? 'secondary' : 'default'}
+                                    className={viewMode === 'grid' 
+                                      ? 'w-full rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 text-xs px-2' 
+                                      : 'shrink-0 whitespace-nowrap'}
                                   >
                                     <ShoppingCart className="h-3 w-3 mr-1" />
                                     {viewMode === 'list' ? 'Add to Cart' : 'Add'}

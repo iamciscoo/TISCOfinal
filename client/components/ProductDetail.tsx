@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/store'
@@ -10,14 +11,11 @@ import { Separator } from '@/components/ui/separator'
 import { 
   Star, 
   ShoppingCart, 
-  Share2, 
   ChevronLeft,
   ChevronRight,
   Minus,
-  Plus,
-  ZoomIn
+  Plus
 } from 'lucide-react'
-import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { getImageUrl, getDealPricing } from '@/lib/shared-utils'
@@ -26,57 +24,88 @@ import { ProductCard } from '@/components/shared/ProductCard'
 import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
 import { LoadingSpinner } from '@/components/shared'
+import { useDebouncedCallback } from '@/hooks/useDebounce'
+import { useLazyLoad } from '@/hooks/useIntersectionObserver'
 
 interface ProductDetailProps {
   product: Product
 }
 
-export const ProductDetail = ({ product }: ProductDetailProps) => {
+/**
+ * ProductDetail component displays comprehensive product information
+ * 
+ * Features:
+ * - Multi-image gallery with lazy loading
+ * - Real-time reviews and ratings
+ * - Add to cart with quantity selection
+ * - Related products recommendations
+ * - Responsive design with mobile optimization
+ * - Performance optimized with memoization
+ */
+const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isBuyingNow, setIsBuyingNow] = useState(false)
-  const [imageLoading, setImageLoading] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
+  const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
   
   const { addItem, openCart } = useCartStore()
+  
+  // Lazy load related products section
+  const { shouldLoad: shouldLoadRelated, ref: relatedRef } = useLazyLoad({
+    threshold: 0.1,
+    rootMargin: '100px',
+  })
 
-  // Load related products by category
-  useEffect(() => {
-    let isMounted = true
-    const load = async () => {
-      try {
-        if (!product.category_id) {
-          if (isMounted) setRelatedProducts([])
-          return
-        }
-        const data = await getProductsByCategory(String(product.category_id))
-        if (!isMounted) return
-        const filtered = (data || []).filter(p => String(p.id) !== String(product.id))
-        setRelatedProducts(filtered.slice(0, 4))
-      } catch (e) {
-        console.error('Failed to load related products', e)
-      }
-    }
-    load()
-    return () => { isMounted = false }
-  }, [product.category_id, product.id])
-
-  // Use real product images from database, fallback to main image and placeholder
-  const productImages = product.product_images && product.product_images.length > 0
-    ? product.product_images
+  // Memoized product images with proper sorting
+  const productImages = useMemo(() => {
+    if (product.product_images && product.product_images.length > 0) {
+      return product.product_images
         .sort((a, b) => {
           if (a.is_main && !b.is_main) return -1
           if (!a.is_main && b.is_main) return 1
           return (a.sort_order || 0) - (b.sort_order || 0)
         })
         .map(img => img.url)
-    : [getImageUrl(product) || '/circular.svg']
+    }
+    return [getImageUrl(product) || '/circular.svg']
+  }, [product])
+
+  // Memoized pricing information
+  const pricingInfo = useMemo(() => getDealPricing(product), [product])
   
-  const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
-  
+  // Memoized review statistics
+  const reviewStats = useMemo(() => {
+    const reviewCount = actualReviews.length
+    const rating = reviewCount > 0 
+      ? actualReviews.reduce((sum, review) => sum + review.rating, 0) / reviewCount 
+      : 0
+    return { reviewCount, rating }
+  }, [actualReviews])
+
+  // Load related products by category (only when section becomes visible)
+  useEffect(() => {
+    if (!shouldLoadRelated || !product.category_id) return
+    
+    let isMounted = true
+    const loadRelatedProducts = async () => {
+      try {
+        const data = await getProductsByCategory(String(product.category_id))
+        if (!isMounted) return
+        const filtered = (data || []).filter(p => String(p.id) !== String(product.id))
+        setRelatedProducts(filtered.slice(0, 4))
+      } catch (error) {
+        console.error('Failed to load related products:', error)
+      }
+    }
+    
+    loadRelatedProducts()
+    return () => { isMounted = false }
+  }, [shouldLoadRelated, product.category_id, product.id])
+
   // Fetch actual reviews to calculate real rating
   useEffect(() => {
     const fetchReviews = async () => {
@@ -92,25 +121,33 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     }
     fetchReviews()
   }, [product.id])
+
+  // Memoized event handlers for performance
+  const handleQuantityChange = useCallback((change: number) => {
+    setQuantity(prev => Math.max(1, Math.min(product.stock_quantity || 999, prev + change)))
+  }, [product.stock_quantity])
   
-  const reviewCount = actualReviews.length
-  const rating = reviewCount > 0 
-    ? actualReviews.reduce((sum, review) => sum + review.rating, 0) / reviewCount 
-    : 0
-  const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
+  const handleImageSelect = useCallback((index: number) => {
+    setSelectedImageIndex(index)
+  }, [])
+  
+  const handleImageNavigation = useCallback((direction: 'prev' | 'next') => {
+    setSelectedImageIndex(prev => {
+      if (direction === 'prev') {
+        return Math.max(0, prev - 1)
+      }
+      return Math.min(productImages.length - 1, prev + 1)
+    })
+  }, [productImages.length])
 
-  const handleQuantityChange = (change: number) => {
-    setQuantity(Math.max(1, Math.min(product.stock_quantity || 999, quantity + change)))
-  }
-
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     setIsAddingToCart(true)
     
     try {
       addItem({
         id: product.id.toString(),
         name: product.name,
-        price: currentPrice,
+        price: pricingInfo.currentPrice,
         image_url: getImageUrl(product) || '/circular.svg'
       }, quantity)
       
@@ -124,9 +161,9 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     } finally {
       setIsAddingToCart(false)
     }
-  }
+  }, [product, quantity, pricingInfo.currentPrice, addItem, openCart])
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = useCallback(async () => {
     if ((product.stock_quantity || 0) <= 0) return
     setIsBuyingNow(true)
     try {
@@ -134,7 +171,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
       addItem({
         id: product.id.toString(),
         name: product.name,
-        price: currentPrice,
+        price: pricingInfo.currentPrice,
         image_url: getImageUrl(product) || '/circular.svg'
       }, quantity)
       // Navigate to checkout immediately
@@ -144,7 +181,12 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
     } finally {
       setIsBuyingNow(false)
     }
-  }
+  }, [product, quantity, pricingInfo.currentPrice, addItem, router])
+  
+  // Debounced review refresh to prevent excessive API calls
+  const debouncedRefreshReviews = useDebouncedCallback(() => {
+    setReviewRefreshTrigger(prev => prev + 1)
+  }, 500)
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 overflow-x-hidden">
@@ -166,39 +208,16 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
         <div className="space-y-3 md:space-y-4">
           {/* Main Image */}
           <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-            {productImages[selectedImageIndex] ? (
-              <Image
-                src={productImages[selectedImageIndex]}
-                alt={`${product.name} - Image ${selectedImageIndex + 1}`}
-                fill
-                className="object-cover transition-opacity duration-300"
-                onLoadingComplete={() => setImageLoading(false)}
-                onLoadStart={() => setImageLoading(true)}
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority={selectedImageIndex === 0}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <div className="text-gray-400 text-lg">No Image</div>
-              </div>
-            )}
+            <Image
+              src={productImages[selectedImageIndex] || '/circular.svg'}
+              alt={`${product.name} - Image ${selectedImageIndex + 1}`}
+              fill
+              className="object-cover rounded-lg"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority={selectedImageIndex === 0}
+              quality={85}
+            />
             
-            {/* Loading overlay */}
-            {imageLoading && (
-              <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                <LoadingSpinner size="sm" text="" />
-              </div>
-            )}
-            
-            {/* Zoom Button */}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-4 left-4 w-8 h-8 p-0 opacity-80 hover:opacity-100"
-              title="Zoom image"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
             
             {/* Image Navigation */}
             {productImages.length > 1 && (
@@ -207,8 +226,9 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   variant="secondary"
                   size="sm"
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 p-0"
-                  onClick={() => setSelectedImageIndex(Math.max(0, selectedImageIndex - 1))}
+                  onClick={() => handleImageNavigation('prev')}
                   disabled={selectedImageIndex === 0}
+                  aria-label="Previous image"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -216,23 +236,15 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   variant="secondary"
                   size="sm"
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 p-0"
-                  onClick={() => setSelectedImageIndex(Math.min(productImages.length - 1, selectedImageIndex + 1))}
+                  onClick={() => handleImageNavigation('next')}
                   disabled={selectedImageIndex === productImages.length - 1}
+                  aria-label="Next image"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </>
             )}
 
-            {/* Share Button */}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-4 right-4 w-8 h-8 p-0 opacity-80 hover:opacity-100"
-              title="Share product"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
             
             {/* Image counter */}
             {productImages.length > 1 && (
@@ -251,7 +263,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 ${
                     selectedImageIndex === index ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'
                   }`}
-                  onClick={() => setSelectedImageIndex(index)}
+                  onClick={() => handleImageSelect(index)}
                 >
                   <Image
                     src={image || '/circular.svg'}
@@ -259,6 +271,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                     fill
                     className="object-cover rounded-md"
                     sizes="(max-width: 768px) 25vw, 12vw"
+                    quality={60}
                   />
                   {/* Index indicator */}
                   <div className={`absolute top-1 right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-medium ${
@@ -290,7 +303,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                   <Star
                     key={i}
                     className={`h-4 w-4 md:h-5 md:w-5 ${
-                      i < Math.floor(rating)
+                      i < Math.floor(reviewStats.rating)
                         ? 'text-yellow-400 fill-current'
                         : 'text-gray-300'
                     }`}
@@ -298,7 +311,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
                 ))}
               </div>
               <span className="text-sm text-gray-600">
-                {rating.toFixed(1)} ({reviewCount} reviews)
+                {reviewStats.rating.toFixed(1)} ({reviewStats.reviewCount} reviews)
               </span>
             </div>
           </div>
@@ -306,21 +319,21 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
           {/* Price */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              {isDeal ? (
+              {pricingInfo.isDeal ? (
                 <>
                   <span className="text-3xl md:text-4xl font-bold text-red-600">
-                    <PriceDisplay price={currentPrice} />
+                    <PriceDisplay price={pricingInfo.currentPrice} />
                   </span>
-                  {originalPrice && originalPrice > currentPrice && (
+                  {pricingInfo.originalPrice && pricingInfo.originalPrice > pricingInfo.currentPrice && (
                     <span className="text-lg md:text-xl text-gray-500 line-through">
-                      <PriceDisplay price={originalPrice} />
+                      <PriceDisplay price={pricingInfo.originalPrice} />
                     </span>
                   )}
                   <Badge variant="destructive">Deal</Badge>
                 </>
               ) : (
                 <span className="text-3xl md:text-4xl font-bold text-gray-900">
-                  <PriceDisplay price={currentPrice} />
+                  <PriceDisplay price={pricingInfo.currentPrice} />
                 </span>
               )}
             </div>
@@ -415,7 +428,7 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
           <div>
             <ReviewForm 
               productId={String(product.id)} 
-              onReviewSubmitted={() => setReviewRefreshTrigger(prev => prev + 1)}
+              onReviewSubmitted={debouncedRefreshReviews}
             />
           </div>
 
@@ -430,37 +443,47 @@ export const ProductDetail = ({ product }: ProductDetailProps) => {
       </div>
 
       {/* Related Products Section */}
-      <div className="bg-gray-50 py-12 md:py-16">
+      <div ref={relatedRef} className="bg-gray-50 py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6 md:mb-8">Related Products</h3>
 
-          {/* Mobile Slider */}
-          <div className="md:hidden -mx-4 px-4">
-            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
-              {relatedProducts.length > 0 ? (
-                relatedProducts.map((rp) => (
-                  <div key={String(rp.id)} className="min-w-[78%] snap-start">
-                    <ProductCard product={rp} compact className="rounded-xl border border-gray-100" />
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 w-full">No related products found.</div>
-              )}
-            </div>
-          </div>
+          {shouldLoadRelated ? (
+            <>
+              {/* Mobile Slider */}
+              <div className="md:hidden -mx-4 px-4">
+                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
+                  {relatedProducts.length > 0 ? (
+                    relatedProducts.map((rp) => (
+                      <div key={String(rp.id)} className="min-w-[78%] snap-start">
+                        <ProductCard product={rp} compact className="rounded-xl border border-gray-100" />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 w-full">No related products found.</div>
+                  )}
+                </div>
+              </div>
 
-          {/* Desktop/Tablet Grid */}
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {relatedProducts.length > 0 ? (
-              relatedProducts.map((rp) => (
-                <ProductCard key={String(rp.id)} product={rp} />
-              ))
-            ) : (
-              <div className="col-span-full text-center text-gray-500">No related products found.</div>
-            )}
-          </div>
+              {/* Desktop/Tablet Grid */}
+              <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {relatedProducts.length > 0 ? (
+                  relatedProducts.map((rp) => (
+                    <ProductCard key={String(rp.id)} product={rp} />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center text-gray-500">No related products found.</div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="md" text="Loading related products..." />
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
+
+export const ProductDetail = memo(ProductDetailComponent)

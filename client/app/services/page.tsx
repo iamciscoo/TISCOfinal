@@ -123,8 +123,68 @@ export default async function ServicesPage({ searchParams }: { searchParams: { s
           </p>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16 auto-rows-fr">
+        {/* Services - Mobile Slider */}
+        <div className="lg:hidden mb-16">
+          <div className="-mx-4 px-4">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 horizontal-scroll scroll-container">
+              {services.map((service) => {
+                const IconComponent = service.icon
+                const resolvedId = dbServiceIdByTitle.get(service.title) ?? service.id
+                return (
+                  <div key={service.id} className="snap-center shrink-0 w-[85%] sm:w-[70%]">
+                    <Card className="relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
+                      {/* Service Image */}
+                      <div className="relative h-32 sm:h-40 lg:h-48 overflow-hidden">
+                        <Image
+                          src={service.image}
+                          alt={service.title}
+                          fill
+                          className="object-cover transition-transform duration-300 hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        
+                        {/* Icon Overlay */}
+                        <div className="absolute top-4 right-4">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
+                            <IconComponent className="h-6 w-6 text-gray-600" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-xl mb-2">{service.title}</CardTitle>
+                        <p className="text-gray-600 text-sm">{service.description}</p>
+                      </CardHeader>
+
+                      <CardContent className="flex-1 flex flex-col">
+                        <div className="space-y-3 mb-6 flex-1">
+                          {service.features.map((feature, index) => (
+                            <div key={index} className="flex items-start gap-3">
+                              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-gray-700">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="border-t pt-4 mt-auto">
+                          <Button asChild className="w-full bg-gray-900 hover:bg-gray-800">
+                            <Link href={`/services?service=${resolvedId}#booking-form`}>
+                              Select Service
+                              <ArrowRight className="h-4 w-4 ml-2" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Services - Desktop Grid */}
+        <div className="hidden lg:grid grid-cols-3 gap-8 mb-16 auto-rows-fr">
           {services.map((service) => {
             const IconComponent = service.icon
             const resolvedId = dbServiceIdByTitle.get(service.title) ?? service.id
@@ -139,7 +199,6 @@ export default async function ServicesPage({ searchParams }: { searchParams: { s
                     className="object-cover transition-transform duration-300 hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  {/* Removed deprecated popularity badge */}
                   
                   {/* Icon Overlay */}
                   <div className="absolute top-4 right-4">
@@ -231,7 +290,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: { s
           {/* Mobile Slider */}
           <div className="md:hidden mb-8">
             <div className="-mx-4 px-4">
-              <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 horizontal-scroll scroll-container">
                 {[
                   {
                     icon: Award,

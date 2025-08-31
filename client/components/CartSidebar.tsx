@@ -13,16 +13,16 @@ export const CartSidebar = () => {
   const { 
     items, 
     isOpen, 
-    closeCart, 
+    closeCart,
+    openCart,
     removeItem, 
     updateQuantity, 
-    getTotalItems, 
-    getTotalPrice,
     clearCart
   } = useCartStore()
 
-  const totalItems = getTotalItems()
-  const totalPrice = getTotalPrice()
+  // Derive totals directly from items so values always stay in sync
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+  const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -33,8 +33,8 @@ export const CartSidebar = () => {
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-lg overflow-x-hidden p-0">
+    <Sheet open={isOpen} onOpenChange={(open) => (open ? openCart() : closeCart())}>
+      <SheetContent className="overflow-x-hidden p-0">
         <div className="p-6 pb-0">
           <SheetHeader className="space-y-2.5">
             <SheetTitle className="flex items-center gap-2">
@@ -44,9 +44,9 @@ export const CartSidebar = () => {
           </SheetHeader>
         </div>
 
-        <div className="flex flex-col h-full px-6">
+        <div className="flex flex-col h-full min-h-0 px-6">
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto py-6">
+          <div className="flex-1 overflow-y-auto py-6 scroll-container momentum-scroll">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <ShoppingBag className="h-16 w-16 text-gray-300 mb-4" />
@@ -86,7 +86,7 @@ export const CartSidebar = () => {
                           {item.name}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1">
-                          SKU: {item.id.slice(0, 8).toUpperCase()}
+                          SKU: {item.productId.slice(0, 8).toUpperCase()}
                         </p>
                         {/* Per-item price under SKU on mobile only */}
                         <p className="text-sm text-gray-600 mt-1 sm:hidden">
@@ -107,7 +107,7 @@ export const CartSidebar = () => {
                     </div>
 
                     {/* Bottom Row: Quantity Controls and Total Price */}
-                    <div className="flex items-center justify-between gap-2 overflow-hidden flex-wrap">
+                    <div className="flex items-center justify-between gap-2 overflow-visible flex-wrap">
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <span className="text-xs text-gray-500">Qty:</span>
@@ -136,9 +136,6 @@ export const CartSidebar = () => {
                       <div className="hidden sm:block text-right">
                         <p className="text-sm font-semibold text-gray-900">
                           <PriceDisplay price={item.price * item.quantity} />
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          TSh {(item.price * item.quantity).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -208,3 +205,4 @@ export const CartSidebar = () => {
     </Sheet>
   )
 }
+

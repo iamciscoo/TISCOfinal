@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -11,68 +11,121 @@ import { Badge } from '@/components/ui/badge'
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useCartStore } from '@/lib/store'
 import { CurrencyToggle } from '@/components/CurrencyToggle'
+import { debounce } from '@/lib/shared-utils'
 
-// Sample search suggestions - in real app, this would come from API
-const sampleProducts = [
-  'Smartphone Pro Max', 'Wireless Headphones', 'Designer T-Shirt', 
-  'Running Shoes', 'Coffee Maker', 'Gaming Laptop', 'Winter Jacket',
-  'Basketball', 'Smart Watch', 'Bluetooth Speaker'
-]
+/**
+ * Maximum number of search suggestions to display
+ */
+const MAX_SUGGESTIONS = 5
 
+/**
+ * Navigation bar component with search, authentication, and cart functionality
+ * Features:
+ * - Responsive design with mobile menu
+ * - Search with autocomplete suggestions
+ * - User authentication via Clerk
+ * - Shopping cart integration
+ * - Currency toggle
+ */
 export const Navbar = () => {
+  // UI state
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mounted, setMounted] = useState(false)
+  
+  // External hooks
   const { isLoaded, isSignedIn } = useUser()
-  const searchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { getTotalItems, openCart } = useCartStore()
-  const cartCount = getTotalItems()
+  const openCart = useCartStore((s) => s.openCart)
+  const cartCount = useCartStore((s) => s.items.reduce((t, i) => t + i.quantity, 0))
+  
+  // Refs
+  const searchRef = useRef<HTMLDivElement>(null)
+  
+  // cartCount derived via selector above; remains reactive to store changes
 
-  // Handle search suggestions
+  // Debounced search suggestion handler backed by API
+  const updateSuggestions = useMemo(
+    () => debounce(async (query: string) => {
+      const q = query.trim()
+      if (q.length === 0) {
+        setShowSuggestions(false)
+        setSearchSuggestions([])
+        return
+      }
+
+      try {
+        const params = new URLSearchParams({ q, limit: String(MAX_SUGGESTIONS) })
+        const resp = await fetch(`/api/products/search?${params.toString()}`)
+        if (!resp.ok) {
+          setShowSuggestions(false)
+          setSearchSuggestions([])
+          return
+        }
+        const data = await resp.json()
+        const names = (Array.isArray(data) ? data : []).map((p: { name?: string }) => p?.name).filter(Boolean) as string[]
+        const unique = Array.from(new Set(names)).slice(0, MAX_SUGGESTIONS)
+        setSearchSuggestions(unique)
+        setShowSuggestions(unique.length > 0)
+      } catch {
+        setShowSuggestions(false)
+        setSearchSuggestions([])
+      }
+    }, 200),
+    []
+  )
+
+  // Handle search query changes
   useEffect(() => {
-    if (searchQuery.length > 0) {
-      const filtered = sampleProducts.filter(product =>
-        product.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 5)
-      setSearchSuggestions(filtered)
-      setShowSuggestions(true)
-    } else {
-      setShowSuggestions(false)
-    }
-  }, [searchQuery])
+    updateSuggestions(searchQuery)
+  }, [searchQuery, updateSuggestions])
 
-  // Close suggestions when clicking outside
+  // Close suggestions when clicking outside search area
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSuggestions(false)
       }
     }
+    
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Mark as mounted to avoid hydration mismatches for persisted cart count
+  // Prevent hydration mismatches for client-side cart state
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const handleSearch = (query: string) => {
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+  // Search handlers
+  const handleSearch = useCallback((query: string) => {
+    const trimmedQuery = query.trim()
+    if (trimmedQuery) {
+      router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`)
       setShowSuggestions(false)
       setSearchQuery('')
     }
-  }
+  }, [router])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch(searchQuery)
     }
-  }
+    if (e.key === 'Escape') {
+      setShowSuggestions(false)
+    }
+  }, [searchQuery, handleSearch])
+
+  // Menu handlers
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev)
+  }, [])
+
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -82,10 +135,8 @@ export const Navbar = () => {
           <div className="flex-shrink-0">
             <Link
               href="/"
-              aria-label="Home"
-              title="Home"
-              className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md cursor-pointer"
-              onClick={() => router.push('/')}
+              aria-label="TISCO Market Home"
+              className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md transition-all duration-200 hover:opacity-80"
             >
               <Image
                 src="/circular.svg"
@@ -93,6 +144,7 @@ export const Navbar = () => {
                 width={40}
                 height={40}
                 className="w-10 h-10"
+                priority
               />
               <span className="hidden sm:inline text-xl font-bold text-gray-900 font-chango">
                 TISCOマーケット
@@ -103,9 +155,8 @@ export const Navbar = () => {
           {/* Mobile Centered Shop link */}
           <Link
             href="/products"
-            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-900 font-medium"
-            aria-label="Shop"
-            title="Shop"
+            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-900 font-medium hover:text-blue-600 transition-colors"
+            aria-label="Shop Products"
           >
             Shop
           </Link>
@@ -122,50 +173,55 @@ export const Navbar = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="pl-10 pr-4 py-2 w-full"
+                suppressHydrationWarning
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               
-              {/* Search Suggestions */}
+              {/* Search Suggestions Dropdown */}
               {showSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 z-50">
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 z-50 animate-in fade-in-0 zoom-in-95">
                   {searchSuggestions.map((suggestion, index) => (
                     <button
-                      key={index}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm"
+                      key={`suggestion-${index}`}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm transition-colors focus:bg-gray-50 focus:outline-none"
                       onClick={() => handleSearch(suggestion)}
+                      type="button"
                     >
-                      <Search className="h-4 w-4 text-gray-400" />
-                      {suggestion}
+                      <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{suggestion}</span>
                     </button>
                   ))}
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <button
-                      className="text-blue-600 text-sm hover:underline"
-                      onClick={() => handleSearch(searchQuery)}
-                    >
-                      Search for &quot;{searchQuery}&quot;
-                    </button>
-                  </div>
+                  {searchQuery && (
+                    <div className="px-4 py-2 border-t border-gray-100">
+                      <button
+                        className="text-blue-600 text-sm hover:underline transition-colors focus:outline-none"
+                        onClick={() => handleSearch(searchQuery)}
+                        type="button"
+                      >
+                        Search for &quot;{searchQuery}&quot;
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="/products" className="text-gray-700 hover:text-blue-600 font-medium">
+          <nav className="hidden md:flex items-center space-x-8" role="navigation">
+            <Link href="/products" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               Shop
             </Link>
-            <Link href="/services" className="text-gray-700 hover:text-blue-600 font-medium">
+            <Link href="/services" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               Services
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium">
+            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium">
+            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
               Contact
             </Link>
-          </div>
+          </nav>
 
           {/* Right Side Icons */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -174,32 +230,43 @@ export const Navbar = () => {
               <CurrencyToggle />
             </div>
             
-            {/* Authentication */}
+            {/* Authentication Section */}
             {!isLoaded ? (
-              // Placeholder to prevent layout shift while Clerk loads and to avoid auth flash
+              // Prevent layout shift during Clerk initialization
               <div className="hidden sm:block h-9 w-24" aria-hidden="true" />
             ) : isSignedIn ? (
               <div className="flex items-center gap-2">
-                <Link href="/account" className="hidden sm:inline text-sm text-gray-800 hover:text-blue-600">Orders</Link>
+                <Link 
+                  href="/account" 
+                  className="hidden sm:inline text-sm text-gray-800 hover:text-blue-600 transition-colors"
+                >
+                  Orders
+                </Link>
                 <span className="hidden sm:inline-flex">
                   <UserButton afterSignOutUrl="/" />
                 </span>
               </div>
             ) : (
               <SignInButton>
-                <Button variant="ghost" size="sm" className="hidden sm:flex">
+                <Button variant="ghost" size="sm" className="hidden sm:flex transition-colors">
                   <User className="h-4 w-4 mr-2" />
                   Sign In
                 </Button>
               </SignInButton>
             )}
 
-            {/* Cart */}
-            <Button variant="ghost" size="sm" className="relative" onClick={openCart}>
+            {/* Shopping Cart */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative transition-colors" 
+              onClick={openCart}
+              aria-label={`Shopping cart ${mounted && cartCount > 0 ? `with ${cartCount} items` : ''}`}
+            >
               <ShoppingCart className="h-5 w-5" />
               {mounted && cartCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  {cartCount}
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-in zoom-in-50">
+                  {cartCount > 99 ? '99+' : cartCount}
                 </Badge>
               )}
             </Button>
@@ -219,13 +286,14 @@ export const Navbar = () => {
               )
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Toggle */}
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              className="md:hidden transition-colors"
+              onClick={toggleMenu}
+              aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMenuOpen}
             >
               {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
@@ -234,8 +302,8 @@ export const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+          <div className="md:hidden border-t border-gray-200 animate-in slide-in-from-top-2">
+            <nav className="px-2 pt-2 pb-3 space-y-1" role="navigation">
               {/* Mobile Search */}
               <div className="relative mb-3">
                 <Input
@@ -254,29 +322,29 @@ export const Navbar = () => {
               {/* Mobile Navigation Links */}
               <Link
                 href="/products"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                onClick={closeMenu}
               >
                 Shop
               </Link>
               <Link
                 href="/services"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                onClick={closeMenu}
               >
                 Services
               </Link>
               <Link
                 href="/about"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                onClick={closeMenu}
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                onClick={closeMenu}
               >
                 Contact
               </Link>
@@ -286,12 +354,12 @@ export const Navbar = () => {
                 <CurrencyToggle />
               </div>
 
-              {/* Mobile Account - visible when signed in */}
+              {/* Mobile Account Link */}
               {isLoaded && isSignedIn && (
                 <Link
                   href="/account"
-                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                  onClick={closeMenu}
                 >
                   Orders
                 </Link>
@@ -300,13 +368,16 @@ export const Navbar = () => {
               {/* Mobile Sign In */}
               {isLoaded && !isSignedIn && (
                 <SignInButton>
-                  <div className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium cursor-pointer">
+                  <button 
+                    type="button"
+                    className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                  >
                     <User className="h-4 w-4 inline mr-2" />
                     Sign In
-                  </div>
+                  </button>
                 </SignInButton>
               )}
-            </div>
+            </nav>
           </div>
         )}
       </div>

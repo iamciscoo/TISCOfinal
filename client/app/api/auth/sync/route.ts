@@ -108,15 +108,15 @@ export async function POST(req: NextRequest) {
             : []
 
         if (guestCart && guestCart.length > 0) {
-          // Use the existing guest cart conversion API
-          const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || req.nextUrl.origin
-          const url = `${base}/api/cart/guest`
+          // Use the existing guest cart conversion API - use local origin for internal calls
+          const url = `${req.nextUrl.origin}/api/cart/guest`
+          const cookieStore = await cookies()
           const conversionResponse = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               // Forward cookies to preserve Clerk auth context for currentUser()
-              Cookie: cookies().toString(),
+              Cookie: cookieStore.toString(),
             },
             body: JSON.stringify({
               guest_cart: guestCart

@@ -1,22 +1,41 @@
+/**
+ * Zustand store for shopping cart management
+ * 
+ * Features:
+ * - Persistent cart state across browser sessions
+ * - Server synchronization capabilities
+ * - Optimistic updates for better UX
+ * - Type-safe cart operations
+ */
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+/**
+ * Represents an item in the shopping cart
+ */
 export interface CartItem {
-  id: string
-  productId: string
-  name: string
-  price: number
-  quantity: number
-  image_url: string
+  id: string          // Unique cart item ID
+  productId: string   // Product ID for database operations
+  name: string        // Product name for display
+  price: number       // Price at time of adding to cart
+  quantity: number    // Quantity of this item
+  image_url: string   // Product image URL
 }
 
+/**
+ * Shopping cart store interface
+ */
 interface CartStore {
-  items: CartItem[]
-  isOpen: boolean
-  // Replace the entire items array (used for server sync)
+  // State
+  items: CartItem[]                    // Array of cart items
+  isOpen: boolean                      // Cart sidebar visibility
+  _lastServerHydrate?: number          // Timestamp of last server sync (not persisted)
+  
+  // Server synchronization
   setItemsFromServer: (items: CartItem[]) => void
-  // Timestamp of the last server-driven hydration; not persisted
-  _lastServerHydrate?: number
+  
+  // Cart operations
   addItem: (product: {
     id: string
     name: string
@@ -26,30 +45,46 @@ interface CartStore {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
+  
+  // Computed values
   getTotalItems: () => number
   getTotalPrice: () => number
+  
+  // UI controls
   openCart: () => void
   closeCart: () => void
 }
 
+/**
+ * Create the cart store with persistence
+ */
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+      // Initial state
       items: [],
       isOpen: false,
       _lastServerHydrate: 0,
 
+      /**
+       * Replace local cart items with server data (for synchronization)
+       * @param items - Cart items from server
+       */
       setItemsFromServer: (items) => {
-        // Replace the local items with the canonical server items
         set({ items, _lastServerHydrate: Date.now() })
       },
 
+      /**
+       * Add a product to the cart or update quantity if already exists
+       * @param product - Product information
+       * @param quantity - Quantity to add (default: 1)
+       */
       addItem: (product, quantity = 1) => {
-        const items = get().items
+        const { items } = get()
         const existingItem = items.find(item => item.productId === product.id)
 
         if (existingItem) {
-          // Update quantity if item already exists
+          // Update quantity for existing item
           set({
             items: items.map(item =>
               item.productId === product.id
@@ -58,9 +93,9 @@ export const useCartStore = create<CartStore>()(
             )
           })
         } else {
-          // Add new item
+          // Add new item to cart
           const newItem: CartItem = {
-            id: `cart-${Date.now()}-${product.id}`,
+            id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             productId: product.id,
             name: product.name,
             price: product.price,
@@ -71,12 +106,21 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
+      /**
+       * Remove an item completely from the cart
+       * @param productId - Product ID to remove
+       */
       removeItem: (productId) => {
         set({
           items: get().items.filter(item => item.productId !== productId)
         })
       },
 
+      /**
+       * Update the quantity of a specific cart item
+       * @param productId - Product ID to update
+       * @param quantity - New quantity (removes item if <= 0)
+       */
       updateQuantity: (productId, quantity) => {
         if (quantity <= 0) {
           get().removeItem(productId)
@@ -92,29 +136,52 @@ export const useCartStore = create<CartStore>()(
         })
       },
 
+      /**
+       * Clear all items from the cart
+       */
       clearCart: () => {
         set({ items: [] })
       },
 
+      /**
+       * Calculate total number of items in cart
+       * @returns Total quantity of all items
+       */
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0)
       },
 
+      /**
+       * Calculate total price of all items in cart
+       * @returns Total price including all quantities
+       */
       getTotalPrice: () => {
         return get().items.reduce((total, item) => total + (item.price * item.quantity), 0)
       },
 
+      /**
+       * Open the cart sidebar
+       */
       openCart: () => {
         set({ isOpen: true })
       },
 
+      /**
+       * Close the cart sidebar
+       */
       closeCart: () => {
         set({ isOpen: false })
       }
     }),
     {
       name: 'tisco-cart-storage',
-      partialize: (state) => ({ items: state.items })
+      // Only persist cart items, not UI state or server sync timestamps
+      partialize: (state) => ({ items: state.items }),
+      // Merge strategy for handling storage version changes
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as object),
+      }),
     }
   )
 )

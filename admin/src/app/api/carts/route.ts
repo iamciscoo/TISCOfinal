@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
       if (data.length < chunkSize) break
     }
 
-    // Apply status filter at the user level
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    // Apply status filter at the user level - 7 days for abandoned carts
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     let groups = Array.from(userActivity.values())
     if (status === 'abandoned') {
       groups = groups.filter(g => new Date(g.last_updated) < cutoff)

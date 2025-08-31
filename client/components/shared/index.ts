@@ -1,7 +1,11 @@
 // Shared component exports
 export { PageLayout } from './PageLayout'
 export { LoadingSpinner } from './LoadingSpinner'
-export { Breadcrumb } from './Breadcrumb'
 export { ProductCard } from './ProductCard'
+export { LazyImage } from './LazyImage'
+export { Breadcrumb } from './Breadcrumb'
+export type { Toast } from './Toast'
+export { ToastProvider, useToast } from './Toast'
 export { SearchFilters } from './SearchFilters'
 export { StatusBadge } from './StatusBadge'
+export { VideoCard } from './VideoCard'

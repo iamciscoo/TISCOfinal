@@ -69,16 +69,38 @@ export async function POST(req: NextRequest) {
     const ref: string | undefined = reference || transaction_id
     if (!ref) return NextResponse.json({ error: 'reference required' }, { status: 400 })
 
-    // Verify that the reference belongs to the current user
-    const { data: txnData, error: txnErr } = await supabase
+    // Check both payment_transactions (existing orders) and payment_sessions (new flow)
+    let txnData: any = null
+    let isSession = false
+
+    // First try payment_transactions (existing flow)
+    const { data: txnResult, error: txnErr } = await supabase
       .from('payment_transactions')
       .select('id, user_id, order_id, transaction_reference, gateway_transaction_id, status, created_at')
       .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
       .eq('user_id', user.id)
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (txnErr || !txnData) {
+    if (txnResult) {
+      txnData = txnResult
+    } else {
+      // Try payment_sessions (new flow)
+      const { data: sessionResult, error: sessionErr } = await supabase
+        .from('payment_sessions')
+        .select('id, user_id, transaction_reference, gateway_transaction_id, status, created_at')
+        .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (sessionResult) {
+        txnData = sessionResult
+        isSession = true
+      }
+    }
+
+    if (!txnData) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
@@ -110,7 +132,8 @@ export async function POST(req: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             transaction_reference: txn.transaction_reference,
-            status: 'COMPLETED'
+            status: 'COMPLETED',
+            ...(isSession ? { session_id: txn.id } : { order_id: txn.order_id })
           })
         }).catch(() => {})
         
@@ -151,7 +174,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ status: statusRaw, raw: txn })
+    return NextResponse.json({ status: statusRaw, raw: txn, is_session: isSession })
   } catch (err: unknown) {
     const message = (err as Error)?.message || 'Failed to fetch status'
     return NextResponse.json({ error: message }, { status: 500 })

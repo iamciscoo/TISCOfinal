@@ -5,10 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const limitParam = searchParams.get('limit')
     const category = searchParams.get('category')
-    const minPrice = searchParams.get('minPrice')
-    const maxPrice = searchParams.get('maxPrice')
 
     let supabaseQuery = supabase
       .from('products')
@@ -16,8 +14,7 @@ export async function GET(request: NextRequest) {
         *,
         categories (
           id,
-          name,
-          slug
+          name
         ),
         product_images (
           id,
@@ -26,11 +23,16 @@ export async function GET(request: NextRequest) {
           sort_order
         )
       `)
-      .limit(limit)
+      // limit applied conditionally below
 
-    // Search filter
+    // Search filter (tokenized OR across name/description). Sanitize commas/parentheses to avoid Postgrest .or parsing issues
     if (query) {
-      supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+      const safe = query.replace(/[(),%]/g, ' ').trim()
+      const tokens = safe.split(/\s+/).filter(Boolean).slice(0, 5)
+      const orClauses = (tokens.length > 0 ? tokens : [safe])
+        .map((t) => `name.ilike.%${t}%,description.ilike.%${t}%`)
+        .join(',')
+      supabaseQuery = supabaseQuery.or(orClauses)
     }
 
     // Category filter
@@ -38,16 +40,15 @@ export async function GET(request: NextRequest) {
       supabaseQuery = supabaseQuery.eq('category_id', category)
     }
 
-    // Price filters
-    if (minPrice) {
-      supabaseQuery = supabaseQuery.gte('price', parseFloat(minPrice))
-    }
-    if (maxPrice) {
-      supabaseQuery = supabaseQuery.lte('price', parseFloat(maxPrice))
-    }
+    // Stock filter removed to return all products
 
-    // Only show products with stock
-    supabaseQuery = supabaseQuery.gt('stock_quantity', 0)
+    // Apply limit only if provided
+    if (limitParam) {
+      const parsed = parseInt(limitParam)
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        supabaseQuery = supabaseQuery.limit(parsed)
+      }
+    }
 
     const { data: products, error } = await supabaseQuery
 

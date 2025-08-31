@@ -1,8 +1,27 @@
-// Shared utility functions used across the application
+/**
+ * Shared utility functions used across the TISCO application
+ * 
+ * This module provides reusable utility functions for:
+ * - Status management and styling
+ * - Price formatting and currency conversion
+ * - Image handling and product data processing
+ * - Form validation
+ * - Date/time formatting
+ * - Local storage operations
+ * - API error handling
+ */
 
 import { Currency, ValidationError, Product } from './types'
 
-// Status utilities
+// =============================================================================
+// STATUS UTILITIES
+// =============================================================================
+
+/**
+ * Returns appropriate Tailwind CSS classes for order/payment status badges
+ * @param status - The status string (pending, processing, shipped, etc.)
+ * @returns CSS classes for background and text color
+ */
 export const getOrderStatusColor = (status: string): string => {
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -17,6 +36,11 @@ export const getOrderStatusColor = (status: string): string => {
   return statusColors[status] || 'bg-gray-100 text-gray-800'
 }
 
+/**
+ * Maps status strings to UI badge variants for consistent styling
+ * @param status - The status to map
+ * @returns Badge variant type for the UI component
+ */
 export const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
   switch (status) {
     case 'delivered':
@@ -33,7 +57,17 @@ export const getStatusBadgeVariant = (status: string): 'default' | 'secondary' |
   }
 }
 
-// Price formatting utilities
+// =============================================================================
+// PRICE FORMATTING UTILITIES
+// =============================================================================
+
+/**
+ * Formats a price according to the specified currency
+ * Handles special formatting for TZS (no decimals) vs USD (2 decimals)
+ * @param price - The numeric price to format
+ * @param currency - Currency object with code, symbol, etc.
+ * @returns Formatted price string with currency symbol
+ */
 export const formatPrice = (
   price: number, 
   currency: Currency = { code: 'USD', symbol: '$', flag: '🇺🇸', name: 'US Dollar' }
@@ -44,6 +78,14 @@ export const formatPrice = (
   return `${currency.symbol}${price.toFixed(2)}`
 }
 
+/**
+ * Converts price between USD and TZS using exchange rate
+ * @param price - The price to convert
+ * @param fromCurrency - Source currency code (USD/TZS)
+ * @param toCurrency - Target currency code (USD/TZS)
+ * @param exchangeRate - Exchange rate (TZS per USD, default 2500)
+ * @returns Converted price
+ */
 export const convertPrice = (
   price: number, 
   fromCurrency: string, 
@@ -63,7 +105,16 @@ export const convertPrice = (
   return price
 }
 
-// Deal pricing utilities
+// =============================================================================
+// DEAL PRICING UTILITIES
+// =============================================================================
+
+/**
+ * Calculates deal pricing information for a product
+ * Determines if product is on sale and returns current/original prices
+ * @param product - Product object with pricing fields
+ * @returns Object with deal status and pricing information
+ */
 export function getDealPricing(product: Product): { isDeal: boolean; currentPrice: number; originalPrice?: number } {
   const dealPrice = typeof product.deal_price === 'number' ? product.deal_price : undefined
   const origPrice = typeof product.original_price === 'number' ? product.original_price : undefined
@@ -73,6 +124,11 @@ export function getDealPricing(product: Product): { isDeal: boolean; currentPric
   return { isDeal, currentPrice, originalPrice: origPrice }
 }
 
+/**
+ * Calculates the discount percentage for a product deal
+ * @param product - Product object to calculate discount for
+ * @returns Discount percentage as integer, or null if no discount
+ */
 export function getDiscountPercent(product: Product): number | null {
   const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
   const base = originalPrice ?? product.price
@@ -80,7 +136,16 @@ export function getDiscountPercent(product: Product): number | null {
   return Math.round(((base - currentPrice) / base) * 100)
 }
 
-// Image utilities
+// =============================================================================
+// IMAGE UTILITIES
+// =============================================================================
+
+/**
+ * Gets the primary image URL for a product with fallback logic
+ * Priority: main product_image > first product_image > legacy image_url > fallback
+ * @param product - Product object with image data
+ * @returns Image URL string
+ */
 export function getImageUrl(product: Product): string {
   // Priority order:
   // 1. Main image from product_images array
@@ -105,6 +170,11 @@ export function getImageUrl(product: Product): string {
   return '/circular.svg'
 }
 
+/**
+ * Constructs a full Supabase Storage URL from a relative path
+ * @param path - Relative path to the image in Supabase storage
+ * @returns Full URL to the image or fallback
+ */
 export function getSupabaseImageUrl(path: string): string {
   if (!path) return '/circular.svg'
   
@@ -118,6 +188,11 @@ export function getSupabaseImageUrl(path: string): string {
   return `${supabaseUrl}/storage/v1/object/public/product-images/${path}`
 }
 
+/**
+ * Gets all available images for a product in priority order
+ * @param product - Product object with image data
+ * @returns Array of image URLs sorted by priority (main first, then by sort_order)
+ */
 export function getAllProductImages(product: Product): string[] {
   const images: string[] = []
   
@@ -140,17 +215,36 @@ export function getAllProductImages(product: Product): string[] {
   return images.length > 0 ? images : ['/circular.svg']
 }
 
+/**
+ * Extracts category name from product with fallback
+ * @param product - Product object with category information
+ * @param fallback - Default category name if none found
+ * @returns Category name string
+ */
 export const getCategoryName = (product: { categories?: { name: string }; category?: string }, fallback: string = 'Uncategorized'): string => {
   return product.categories?.name || product.category || fallback
 }
 
-// Stock utilities
+// =============================================================================
+// STOCK UTILITIES
+// =============================================================================
+
+/**
+ * Checks if a product is currently in stock
+ * @param product - Product object with stock information
+ * @returns True if in stock (including unknown stock), false if out of stock
+ */
 export const isInStock = (product: { stock_quantity?: number | null }): boolean => {
   const qty = product.stock_quantity
   if (qty == null) return true // Unknown stock -> treat as available
   return qty > 0
 }
 
+/**
+ * Gets detailed stock status with user-friendly message
+ * @param product - Product object with stock information
+ * @returns Object with stock status and display message
+ */
 export const getStockStatus = (product: { stock_quantity?: number | null }): { inStock: boolean; message: string } => {
   const qty = product.stock_quantity
   if (qty == null) {
@@ -168,7 +262,15 @@ export const getStockStatus = (product: { stock_quantity?: number | null }): { i
   return { inStock: true, message: 'In Stock' }
 }
 
-// Form validation utilities
+// =============================================================================
+// FORM VALIDATION UTILITIES
+// =============================================================================
+
+/**
+ * Validates email address format
+ * @param email - Email string to validate
+ * @returns ValidationError object if invalid, null if valid
+ */
 export const validateEmail = (email: string): ValidationError | null => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!email) {
@@ -180,6 +282,11 @@ export const validateEmail = (email: string): ValidationError | null => {
   return null
 }
 
+/**
+ * Validates phone number format (supports international formats)
+ * @param phone - Phone number string to validate
+ * @returns ValidationError object if invalid, null if valid
+ */
 export const validatePhone = (phone: string): ValidationError | null => {
   const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/
   if (!phone) {
@@ -191,6 +298,12 @@ export const validatePhone = (phone: string): ValidationError | null => {
   return null
 }
 
+/**
+ * Validates that a field has a non-empty value
+ * @param value - Value to validate
+ * @param fieldName - Name of the field for error messages
+ * @returns ValidationError object if empty, null if valid
+ */
 export const validateRequired = (value: string, fieldName: string): ValidationError | null => {
   if (!value || value.trim() === '') {
     return { field: fieldName, message: `${fieldName} is required` }
@@ -198,6 +311,13 @@ export const validateRequired = (value: string, fieldName: string): ValidationEr
   return null
 }
 
+/**
+ * Validates minimum length requirement for a field
+ * @param value - Value to validate
+ * @param minLength - Minimum required length
+ * @param fieldName - Name of the field for error messages
+ * @returns ValidationError object if too short, null if valid
+ */
 export const validateMinLength = (value: string, minLength: number, fieldName: string): ValidationError | null => {
   if (value.length < minLength) {
     return { field: fieldName, message: `${fieldName} must be at least ${minLength} characters` }
@@ -205,7 +325,15 @@ export const validateMinLength = (value: string, minLength: number, fieldName: s
   return null
 }
 
-// Date utilities
+// =============================================================================
+// DATE UTILITIES
+// =============================================================================
+
+/**
+ * Formats a date to a readable string (MMM DD, YYYY)
+ * @param date - Date string or Date object
+ * @returns Formatted date string
+ */
 export const formatDate = (date: string | Date): string => {
   const d = new Date(date)
   return d.toLocaleDateString('en-US', {
@@ -215,6 +343,11 @@ export const formatDate = (date: string | Date): string => {
   })
 }
 
+/**
+ * Formats a date with time to a readable string
+ * @param date - Date string or Date object
+ * @returns Formatted date and time string
+ */
 export const formatDateTime = (date: string | Date): string => {
   const d = new Date(date)
   return d.toLocaleDateString('en-US', {
@@ -226,6 +359,11 @@ export const formatDateTime = (date: string | Date): string => {
   })
 }
 
+/**
+ * Gets relative time description (e.g., "2 days ago", "Yesterday")
+ * @param date - Date string or Date object
+ * @returns Human-readable relative time string
+ */
 export const getRelativeTime = (date: string | Date): string => {
   const now = new Date()
   const past = new Date(date)
@@ -240,7 +378,15 @@ export const getRelativeTime = (date: string | Date): string => {
   return `${Math.floor(diffInDays / 365)} years ago`
 }
 
-// URL utilities
+// =============================================================================
+// URL UTILITIES
+// =============================================================================
+
+/**
+ * Generates a URL-friendly slug from text
+ * @param text - Text to convert to slug
+ * @returns URL-safe slug string
+ */
 export const generateSlug = (text: string): string => {
   return text
     .toLowerCase()
@@ -250,6 +396,11 @@ export const generateSlug = (text: string): string => {
     .trim()
 }
 
+/**
+ * Builds a URL query string from parameters object
+ * @param params - Object with query parameters
+ * @returns URL-encoded query string
+ */
 export const buildQueryString = (params: Record<string, string | number | boolean | string[]>): string => {
   const searchParams = new URLSearchParams()
   
@@ -266,7 +417,16 @@ export const buildQueryString = (params: Record<string, string | number | boolea
   return searchParams.toString()
 }
 
-// Array utilities
+// =============================================================================
+// ARRAY UTILITIES
+// =============================================================================
+
+/**
+ * Splits an array into chunks of specified size
+ * @param array - Array to chunk
+ * @param size - Size of each chunk
+ * @returns Array of chunks
+ */
 export const chunk = <T>(array: T[], size: number): T[][] => {
   const chunks: T[][] = []
   for (let i = 0; i < array.length; i += size) {
@@ -275,6 +435,11 @@ export const chunk = <T>(array: T[], size: number): T[][] => {
   return chunks
 }
 
+/**
+ * Shuffles an array using Fisher-Yates algorithm
+ * @param array - Array to shuffle
+ * @returns New shuffled array (original unchanged)
+ */
 export const shuffle = <T>(array: T[]): T[] => {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -284,10 +449,21 @@ export const shuffle = <T>(array: T[]): T[] => {
   return shuffled
 }
 
+/**
+ * Removes duplicate values from an array
+ * @param array - Array to deduplicate
+ * @returns New array with unique values
+ */
 export const unique = <T>(array: T[]): T[] => {
   return Array.from(new Set(array))
 }
 
+/**
+ * Groups array items by a key function
+ * @param array - Array to group
+ * @param keyFn - Function to extract grouping key
+ * @returns Object with grouped items
+ */
 export const groupBy = <T>(array: T[], keyFn: (item: T) => string): Record<string, T[]> => {
   return array.reduce((groups, item) => {
     const key = keyFn(item)
@@ -299,20 +475,50 @@ export const groupBy = <T>(array: T[], keyFn: (item: T) => string): Record<strin
   }, {} as Record<string, T[]>)
 }
 
-// Number utilities
+// =============================================================================
+// NUMBER UTILITIES
+// =============================================================================
+
+/**
+ * Clamps a number between min and max values
+ * @param value - Number to clamp
+ * @param min - Minimum value
+ * @param max - Maximum value
+ * @returns Clamped number
+ */
 export const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max)
 }
 
+/**
+ * Rounds a number to specified decimal places
+ * @param value - Number to round
+ * @param decimals - Number of decimal places (default 2)
+ * @returns Rounded number
+ */
 export const roundToDecimals = (value: number, decimals: number = 2): number => {
   return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals)
 }
 
+/**
+ * Formats a decimal as a percentage string
+ * @param value - Decimal value (e.g., 0.15 for 15%)
+ * @returns Formatted percentage string
+ */
 export const formatPercentage = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`
 }
 
-// Local storage utilities with error handling
+// =============================================================================
+// LOCAL STORAGE UTILITIES
+// =============================================================================
+
+/**
+ * Safely sets a value in localStorage with error handling
+ * @param key - Storage key
+ * @param value - Value to store (will be JSON stringified)
+ * @returns True if successful, false if failed
+ */
 export const setLocalStorage = (key: string, value: unknown): boolean => {
   try {
     localStorage.setItem(key, JSON.stringify(value))
@@ -323,6 +529,12 @@ export const setLocalStorage = (key: string, value: unknown): boolean => {
   }
 }
 
+/**
+ * Safely gets a value from localStorage with error handling
+ * @param key - Storage key
+ * @param defaultValue - Default value if key not found or error
+ * @returns Parsed value or default
+ */
 export const getLocalStorage = <T>(key: string, defaultValue: T): T => {
   try {
     const item = localStorage.getItem(key)
@@ -333,6 +545,11 @@ export const getLocalStorage = <T>(key: string, defaultValue: T): T => {
   }
 }
 
+/**
+ * Safely removes a value from localStorage
+ * @param key - Storage key to remove
+ * @returns True if successful, false if failed
+ */
 export const removeLocalStorage = (key: string): boolean => {
   try {
     localStorage.removeItem(key)
@@ -343,7 +560,16 @@ export const removeLocalStorage = (key: string): boolean => {
   }
 }
 
-// Debounce utility
+// =============================================================================
+// PERFORMANCE UTILITIES
+// =============================================================================
+
+/**
+ * Creates a debounced version of a function
+ * @param func - Function to debounce
+ * @param wait - Delay in milliseconds
+ * @returns Debounced function
+ */
 export const debounce = <T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
@@ -356,7 +582,15 @@ export const debounce = <T extends (...args: never[]) => unknown>(
   }
 }
 
-// API utilities
+// =============================================================================
+// API UTILITIES
+// =============================================================================
+
+/**
+ * Extracts user-friendly error message from API error
+ * @param error - Error object from API call
+ * @returns User-friendly error message
+ */
 export const handleApiError = (error: { response?: { data?: { message?: string } }; message?: string }): string => {
   if (error?.response?.data?.message) {
     return error.response.data.message
@@ -367,6 +601,11 @@ export const handleApiError = (error: { response?: { data?: { message?: string }
   return 'An unexpected error occurred. Please try again.'
 }
 
+/**
+ * Checks if an API response indicates success
+ * @param response - API response object
+ * @returns True if response indicates success
+ */
 export const isApiSuccess = (response: { success?: boolean; status?: number }): boolean => {
   return response?.success === true || (response?.status !== undefined && response.status >= 200 && response.status < 300)
 }

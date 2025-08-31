@@ -82,19 +82,7 @@ export const columns: ColumnDef<Category>[] = [
     },
   },
   {
-    accessorKey: "isActive",
-    header: "Status",
-    cell: ({ row }) => {
-      const isActive = row.getValue("isActive") as boolean;
-      return (
-        <Badge variant={isActive ? "default" : "secondary"}>
-          {isActive ? "Active" : "Inactive"}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "createdAt",
+    accessorKey: "created_at",
     header: ({ column }) => {
       return (
         <Button
@@ -107,8 +95,13 @@ export const columns: ColumnDef<Category>[] = [
       );
     },
     cell: ({ row }) => {
-      const date = row.getValue("createdAt") as string;
-      return <div>{new Date(date).toLocaleDateString()}</div>;
+      const date = row.getValue("created_at") as string;
+      if (!date) return <div>-</div>;
+      
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) return <div>-</div>;
+      
+      return <div>{parsedDate.toLocaleDateString()}</div>;
     },
   },
   {
@@ -132,9 +125,6 @@ export const columns: ColumnDef<Category>[] = [
               Copy category ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link href={`/categories/${category.id}`}>View details</Link>
-            </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href={`/categories/${category.id}/edit`}>Edit category</Link>
             </DropdownMenuItem>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,7 @@ const heroSlides: HeroSlide[] = [
 export const ServicesHeroCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const heroRef = useRef<HTMLElement | null>(null)
 
   // Auto-play functionality
   useEffect(() => {
@@ -55,6 +56,41 @@ export const ServicesHeroCarousel = () => {
 
     return () => clearInterval(interval)
   }, [isAutoPlaying])
+
+  // Scroll-driven effect (parallax + clip), mirrors other hero implementations
+  useEffect(() => {
+    const el = heroRef.current
+    if (!el) return
+
+    let raf = 0
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const update = () => {
+      const max = Math.max(1, window.innerHeight * 0.5)
+      const y = window.scrollY
+      const p = Math.min(1, Math.max(0, y / max))
+      el.style.setProperty('--p', String(prefersReduced ? 0 : p))
+    }
+
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(update)
+    }
+    const onResize = () => update()
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize)
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index)
@@ -78,15 +114,30 @@ export const ServicesHeroCarousel = () => {
   const scrollToBooking = () => {
     const bookingSection = document.getElementById('booking-form')
     if (bookingSection) {
-      bookingSection.scrollIntoView({ behavior: 'smooth' })
+      // Enhanced smooth scrolling with offset for fixed header
+      const headerOffset = 80
+      const elementPosition = bookingSection.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
     }
   }
 
   return (
     <section
+      ref={heroRef}
       className="relative h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden bg-gray-900
                  mx-4 sm:mx-6 lg:mx-8 mt-6 md:mt-8
                  rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10"
+      style={{
+        containerType: 'inline-size',
+        clipPath: 'inset(0 0 calc(var(--p,0) * 28vh) 0 round 1.5rem)',
+        marginBottom: 'calc(var(--p,0) * -28vh)',
+        transition: 'clip-path 150ms ease-out, margin-bottom 150ms ease-out',
+      } as React.CSSProperties}
     >
       {/* Background Images */}
       {heroSlides.map((slide, index) => (
@@ -101,7 +152,11 @@ export const ServicesHeroCarousel = () => {
             alt={slide.title}
             fill
             sizes="100vw"
-            className="object-cover rounded-2xl md:rounded-3xl"
+            className="object-cover rounded-2xl md:rounded-3xl object-center pointer-events-none select-none will-change-transform"
+            style={{
+              transform: 'translateY(calc(var(--p,0) * 7vh)) scale(calc(1 + var(--p,0) * 0.04))',
+              willChange: 'transform',
+            }}
             priority={index === 0}
           />
           {/* Dark overlay for better text readability */}
@@ -110,7 +165,14 @@ export const ServicesHeroCarousel = () => {
       ))}
 
       {/* Content Overlay */}
-      <div className="relative z-10 h-full flex items-center">
+      <div 
+        className="relative z-10 h-full flex items-center"
+        style={{
+          transform: 'translateY(calc(var(--p,0) * -2vh))',
+          opacity: 'calc(1 - var(--p,0) * 0.05)',
+          willChange: 'transform, opacity',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="max-w-3xl">
             {/* Slide Content */}

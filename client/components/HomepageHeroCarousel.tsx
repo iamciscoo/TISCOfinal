@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Tag, ArrowRight, Heart } from 'lucide-react'
@@ -73,6 +73,7 @@ const heroSlides: HeroSlide[] = [
 export const HomepageHeroCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const heroRef = useRef<HTMLElement | null>(null)
 
   // Auto-play functionality
   useEffect(() => {
@@ -84,6 +85,41 @@ export const HomepageHeroCarousel = () => {
 
     return () => clearInterval(interval)
   }, [isAutoPlaying])
+
+  // Scroll-driven effect (parallax + clip), mirrors ShopHero implementation
+  useEffect(() => {
+    const el = heroRef.current
+    if (!el) return
+
+    let raf = 0
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const update = () => {
+      const max = Math.max(1, window.innerHeight * 0.5)
+      const y = window.scrollY
+      const p = Math.min(1, Math.max(0, y / max))
+      el.style.setProperty('--p', String(prefersReduced ? 0 : p))
+    }
+
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(update)
+    }
+    const onResize = () => update()
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize)
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index)
@@ -106,12 +142,20 @@ export const HomepageHeroCarousel = () => {
 
   return (
     <section
-      className="relative h-[75vh] overflow-hidden bg-gray-900
+      ref={heroRef}
+      className="relative h-[48vh] sm:h-[55vh] lg:h-[60vh] overflow-hidden bg-gray-900
                  mx-4 sm:mx-6 lg:mx-8 mt-2 md:mt-4
                  rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10"
+      style={{
+        containerType: 'inline-size',
+        clipPath: 'inset(0 0 calc(var(--p,0) * 24vh) 0 round 1.5rem)',
+        // Pull the next section upward by the same amount we clip, removing the perceived gap
+        marginBottom: 'calc(var(--p,0) * -24vh)',
+        transition: 'clip-path 150ms ease-out, margin-bottom 150ms ease-out',
+      } as React.CSSProperties}
     >
       {/* Welcome Message */}
-      <div className="absolute top-5 sm:top-4 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="absolute top-1 sm:top-4 left-1/2 transform -translate-x-1/2 z-20">
         <Link
           href="https://instagram.com"
           target="_blank"
@@ -142,7 +186,11 @@ export const HomepageHeroCarousel = () => {
             src={slide.image}
             alt={slide.title}
             fill
-            className="object-cover"
+            className="object-cover object-center pointer-events-none select-none will-change-transform"
+            style={{
+              transform: 'translateY(calc(var(--p,0) * 6vh)) scale(calc(1 + var(--p,0) * 0.04))',
+              willChange: 'transform',
+            }}
             priority={index === 0}
           />
           {/* Dark overlay for better text readability */}
@@ -151,25 +199,33 @@ export const HomepageHeroCarousel = () => {
       ))}
 
       {/* Content Overlay */}
-      <div className="relative z-10 h-full flex items-center">
+      <div
+        className="relative z-10 h-full flex items-center"
+        style={{
+          transform: 'translateY(calc(var(--p,0) * -2vh))',
+          opacity: 'calc(1 - var(--p,0) * 0.05)',
+          willChange: 'transform, opacity',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="max-w-4xl">
+
             {/* Slide Content */}
-            <div className="text-white space-y-8">
-              <div className="space-y-4">
-                <p className="text-blue-400 font-medium text-base md:text-lg tracking-wide uppercase">
+            <div className="text-white space-y-2 sm:space-y-6">
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-blue-400 font-medium text-sm sm:text-base md:text-lg tracking-wide uppercase">
                   {heroSlides[currentSlide].subtitle}
                 </p>
-                <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-7xl font-bold leading-normal font-chango">
+                <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-6xl font-bold leading-tight font-chango">
                   {heroSlides[currentSlide].title}
                 </h1>
               </div>
               
-              <p className="text-base md:text-xl text-gray-200 leading-relaxed max-w-3xl">
+              <p className="text-base sm:text-lg md:text-xl text-gray-200 leading-relaxed max-w-2xl">
                 {heroSlides[currentSlide].description}
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button 
                   size="lg" 
                   className="text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700 font-semibold"
@@ -195,21 +251,21 @@ export const HomepageHeroCarousel = () => {
                 )}
               </div>
 
-              {/* Brand Message for Main Slide */}
+              {/* Brand Message for Main Slide - Hidden on mobile */}
               {currentSlide === 0 && (
-                <div className="pt-4 md:pt-8 border-t border-white/20">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center md:text-left">
+                <div className="hidden md:block pt-3 md:pt-4 border-t border-white/20">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 text-center md:text-left">
                     <div>
-                      <div className="text-lg md:text-2xl font-bold text-white">No BS</div>
-                      <div className="text-sm text-gray-300">Straight talk, honest pricing</div>
+                      <div className="text-base md:text-xl font-bold text-white">No BS</div>
+                      <div className="text-xs md:text-sm text-gray-300">Straight talk, honest pricing</div>
                     </div>
                     <div>
-                      <div className="text-lg md:text-2xl font-bold text-white">Fast</div>
-                      <div className="text-sm text-gray-300">Quick delivery, no delays</div>
+                      <div className="text-base md:text-xl font-bold text-white">Fast</div>
+                      <div className="text-xs md:text-sm text-gray-300">Quick delivery, no delays</div>
                     </div>
                     <div>
-                      <div className="text-lg md:text-2xl font-bold text-white">Simple</div>
-                      <div className="text-sm text-gray-300">Easy shopping, no hassle</div>
+                      <div className="text-base md:text-xl font-bold text-white">Simple</div>
+                      <div className="text-xs md:text-sm text-gray-300">Easy shopping, no hassle</div>
                     </div>
                   </div>
                 </div>
@@ -237,7 +293,7 @@ export const HomepageHeroCarousel = () => {
       </button>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
         <div className="flex space-x-3">
           {heroSlides.map((_, index) => (
             <button

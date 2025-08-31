@@ -59,7 +59,11 @@ export async function POST(req: NextRequest) {
     const ref = String(refCandidates[0] || '')
     const gw = String(gwCandidates[0] || '')
 
-    // Find the transaction using our reference (preferred) or the gateway id
+    // Check both payment_transactions (existing orders) and payment_sessions (new flow)
+    let transaction: any = null
+    let isSession = false
+
+    // First try payment_transactions (existing flow)
     let query = supabase
       .from('payment_transactions')
       .select(`
@@ -76,10 +80,35 @@ export async function POST(req: NextRequest) {
       query = query.eq('gateway_transaction_id', gw)
     }
 
-    const { data: transaction, error: findError } = await query.single()
+    const { data: txnResult, error: findError } = await query.maybeSingle()
 
-    if (findError || !transaction) {
-      console.error('Transaction not found:', ref, gw)
+    if (txnResult) {
+      transaction = txnResult
+    } else {
+      // Try payment_sessions (new flow)
+      let sessionQuery = supabase
+        .from('payment_sessions')
+        .select('*')
+        .limit(1)
+
+      if (ref && gw) {
+        sessionQuery = sessionQuery.or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${gw}`)
+      } else if (ref) {
+        sessionQuery = sessionQuery.eq('transaction_reference', ref)
+      } else if (gw) {
+        sessionQuery = sessionQuery.eq('gateway_transaction_id', gw)
+      }
+
+      const { data: sessionResult, error: sessionError } = await sessionQuery.maybeSingle()
+      
+      if (sessionResult) {
+        transaction = sessionResult
+        isSession = true
+      }
+    }
+
+    if (!transaction) {
+      console.error('Transaction/Session not found:', ref, gw)
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
@@ -104,13 +133,29 @@ export async function POST(req: NextRequest) {
     const normalizedBody = { ...body, gateway_transaction_id: gw || body?.gateway_transaction_id || data?.transaction_id }
 
     if (successSet.has(statusRaw)) {
-      await handlePaymentSuccess(transaction, normalizedBody)
+      if (isSession) {
+        await handleSessionPaymentSuccess(transaction, normalizedBody)
+      } else {
+        await handlePaymentSuccess(transaction, normalizedBody)
+      }
     } else if (pendingSet.has(statusRaw)) {
-      await handlePaymentPending(transaction)
+      if (isSession) {
+        await handleSessionPaymentPending(transaction)
+      } else {
+        await handlePaymentPending(transaction)
+      }
     } else if (cancelSet.has(statusRaw)) {
-      await handlePaymentCancellation(transaction)
+      if (isSession) {
+        await handleSessionPaymentCancellation(transaction)
+      } else {
+        await handlePaymentCancellation(transaction)
+      }
     } else if (failSet.has(statusRaw)) {
-      await handlePaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+      if (isSession) {
+        await handleSessionPaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+      } else {
+        await handlePaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+      }
     } else {
       console.log('Unhandled webhook status/event:', statusRaw || '(empty)')
     }
@@ -452,4 +497,248 @@ function timingSafeEqualLenient(a: Buffer, b: Buffer): boolean {
   // Buffers must be same length for timingSafeEqual
   if (a.length !== b.length) return false
   return crypto.timingSafeEqual(a, b)
+}
+
+// Session-based payment handlers (new flow)
+type PaymentSession = { 
+  id: string; 
+  user_id: string; 
+  transaction_reference: string; 
+  gateway_transaction_id?: string;
+  order_data: string;
+  amount: number;
+  currency: string;
+}
+
+async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
+  try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
+
+    // Parse order data from session
+    let orderData: any
+    try {
+      orderData = JSON.parse(session.order_data)
+    } catch (e) {
+      console.error('Failed to parse order data from session:', e)
+      return
+    }
+
+    // Create the order now that payment is successful
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: session.user_id,
+        total_amount: session.amount,
+        currency: session.currency,
+        payment_method: orderData.payment_method,
+        shipping_address: orderData.shipping_address,
+        notes: orderData.notes,
+        status: 'processing',
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        // Structured delivery fields for admin visibility
+        contact_phone: orderData.contact_phone,
+        address_line_1: orderData.address_line_1,
+        city: orderData.city,
+        email: orderData.email,
+        place: orderData.place,
+        first_name: orderData.first_name,
+        last_name: orderData.last_name,
+        country: orderData.country,
+      })
+      .select()
+      .single()
+
+    if (orderError || !order) {
+      console.error('Failed to create order after successful payment:', orderError)
+      // Update session as failed
+      await supabase
+        .from('payment_sessions')
+        .update({
+          status: 'failed',
+          failure_reason: 'Order creation failed after payment success',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id)
+      return
+    }
+
+    // Create order items
+    if (orderData.items && Array.isArray(orderData.items)) {
+      const orderItems = orderData.items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems)
+
+      if (itemsError) {
+        console.error('Failed to create order items:', itemsError)
+        // Rollback order
+        await supabase.from('orders').delete().eq('id', order.id)
+        await supabase
+          .from('payment_sessions')
+          .update({
+            status: 'failed',
+            failure_reason: 'Order items creation failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session.id)
+        return
+      }
+    }
+
+    // Create payment transaction record for the completed order
+    const { data: transaction, error: txError } = await supabase
+      .from('payment_transactions')
+      .insert({
+        order_id: order.id,
+        user_id: session.user_id,
+        amount: session.amount,
+        currency: session.currency,
+        status: 'completed',
+        payment_type: 'mobile_money',
+        transaction_reference: session.transaction_reference,
+        gateway_transaction_id: webhookData.gateway_transaction_id || session.gateway_transaction_id,
+        completed_at: new Date().toISOString(),
+        webhook_data: webhookData
+      })
+      .select()
+      .single()
+
+    if (txError) {
+      console.warn('Failed to create payment transaction record:', txError)
+    }
+
+    // Update session as completed
+    await supabase
+      .from('payment_sessions')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', session.id)
+
+    // Log payment completion
+    await supabase
+      .from('payment_logs')
+      .insert({
+        session_id: session.id,
+        transaction_id: transaction?.id,
+        event_type: 'payment_completed',
+        data: webhookData,
+        user_id: session.user_id
+      })
+
+    console.log('Session payment completed successfully, order created:', session.transaction_reference)
+    
+    // Invalidate caches
+    try {
+      revalidateTag('orders')
+      revalidateTag(`order:${order.id}`)
+      revalidateTag(`user-orders:${session.user_id}`)
+    } catch (e) {
+      console.warn('Revalidation error (non-fatal):', e)
+    }
+  } catch (error) {
+    console.error('Error handling session payment success:', error)
+  }
+}
+
+async function handleSessionPaymentFailure(session: PaymentSession, reason: string) {
+  try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
+
+    // Update session status
+    await supabase
+      .from('payment_sessions')
+      .update({
+        status: 'failed',
+        failure_reason: reason,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', session.id)
+
+    // Log payment failure
+    await supabase
+      .from('payment_logs')
+      .insert({
+        session_id: session.id,
+        event_type: 'payment_failed',
+        data: { reason },
+        user_id: session.user_id
+      })
+
+    console.log('Session payment failed:', session.transaction_reference, reason)
+  } catch (error) {
+    console.error('Error handling session payment failure:', error)
+  }
+}
+
+async function handleSessionPaymentPending(session: PaymentSession) {
+  try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
+
+    // Update session status if not already pending
+    if (session.status !== 'pending') {
+      await supabase
+        .from('payment_sessions')
+        .update({
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id)
+    }
+
+    // Log pending status
+    await supabase
+      .from('payment_logs')
+      .insert({
+        session_id: session.id,
+        event_type: 'payment_pending',
+        data: { message: 'Payment is pending confirmation' },
+        user_id: session.user_id
+      })
+
+    console.log('Session payment pending:', session.transaction_reference)
+  } catch (error) {
+    console.error('Error handling session payment pending:', error)
+  }
+}
+
+async function handleSessionPaymentCancellation(session: PaymentSession) {
+  try {
+    const supabase = getAdminSupabase()
+    if (!supabase) return
+
+    // Update session status
+    await supabase
+      .from('payment_sessions')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', session.id)
+
+    // Log cancellation
+    await supabase
+      .from('payment_logs')
+      .insert({
+        session_id: session.id,
+        event_type: 'payment_cancelled',
+        data: { message: 'Payment was cancelled' },
+        user_id: session.user_id
+      })
+
+    console.log('Session payment cancelled:', session.transaction_reference)
+  } catch (error) {
+    console.error('Error handling session payment cancellation:', error)
+  }
 }

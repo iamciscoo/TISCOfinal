@@ -30,7 +30,8 @@ import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
-import { LoadingSpinner } from '@/components/shared'
+import { LoadingSpinner, VideoCard } from '@/components/shared'
+import ShopHero from '@/components/ShopHero'
 
 // Helper: create URL-friendly slug from a string
 const slugify = (s: string = '') =>
@@ -52,7 +53,6 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState('name')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' })
 
   // Fetch data
   useEffect(() => {
@@ -195,13 +195,7 @@ export default function ProductsPage() {
       )
     }
 
-    // Price filter
-    if (priceRange.min) {
-      filtered = filtered.filter(product => product.price >= parseFloat(priceRange.min))
-    }
-    if (priceRange.max) {
-      filtered = filtered.filter(product => product.price <= parseFloat(priceRange.max))
-    }
+    // Price filter removed
 
     // Sort
     filtered.sort((a, b) => {
@@ -219,7 +213,7 @@ export default function ProductsPage() {
 
     setFilteredProducts(filtered)
     setCurrentPage(1)
-  }, [products, searchTerm, selectedCategory, sortBy, priceRange])
+  }, [products, searchTerm, selectedCategory, sortBy])
 
   // Add to cart handled inside ProductCard
 
@@ -229,7 +223,7 @@ export default function ProductsPage() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
-  const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (priceRange.min ? 1 : 0) + (priceRange.max ? 1 : 0)
+  const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
 
   const FiltersPanel = () => (
     <>
@@ -265,24 +259,7 @@ export default function ProductsPage() {
         </Select>
       </div>
 
-      {/* Price Range */}
-      <div className="mb-6">
-        <label className="text-sm font-medium mb-2 block">Price Range</label>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            placeholder="Min"
-            type="number"
-            value={priceRange.min}
-            onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-          />
-          <Input
-            placeholder="Max"
-            type="number"
-            value={priceRange.max}
-            onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-          />
-        </div>
-      </div>
+      {/* Price Range removed */}
 
       {/* Sort By */}
       <div className="mb-6">
@@ -306,7 +283,6 @@ export default function ProductsPage() {
         onClick={() => {
           setSearchTerm('')
           setSelectedCategory('all')
-          setPriceRange({ min: '', max: '' })
           setSortBy('name')
         }}
       >
@@ -327,10 +303,14 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <ShopHero imageSrc="/officespace.png" title="Shop" />
+      </div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
+        <nav className="hidden md:flex items-center space-x-2 text-sm text-gray-600 mb-7">
           <Link href="/" className="hover:text-blue-600">Home</Link>
           <span>/</span>
           <span className="text-gray-900">Products</span>
@@ -338,8 +318,8 @@ export default function ProductsPage() {
 
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">All Products</h1>
+          <div className="hidden md:block">
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">All Products</h1>
             <p className="text-gray-600">
               Showing {displayedProducts.length} of {filteredProducts.length} products
             </p>
@@ -394,15 +374,31 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar (hidden on mobile) */}
           <div className="hidden lg:block lg:col-span-1">
-            <Card className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-auto">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters
-                </h3>
-                <FiltersPanel />
-              </CardContent>
-            </Card>
+            <div className="sticky top-24 space-y-6">
+              <Card className="max-h-[calc(100vh-32rem)] overflow-auto">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters
+                  </h3>
+                  <FiltersPanel />
+                </CardContent>
+              </Card>
+              
+              {/* Video Card - Below filters on desktop */}
+              <VideoCard 
+                src="/officetour.mp4" 
+                className="w-full h-80 lg:h-96"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Video Card - Positioned after header */}
+          <div className="lg:hidden ">
+            <VideoCard 
+              src="/officetour.mp4" 
+              className="w-full aspect-video"
+            />
           </div>
 
           {/* Products Grid/List */}

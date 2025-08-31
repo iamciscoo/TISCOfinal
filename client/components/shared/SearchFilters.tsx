@@ -19,8 +19,6 @@ interface SearchFiltersProps {
   onCategoryChange: (value: string) => void
   sortBy: string
   onSortChange: (value: string) => void
-  priceRange: string
-  onPriceRangeChange: (value: string) => void
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
   categories: Array<{ id: string; name: string }>
@@ -36,8 +34,6 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onCategoryChange,
   sortBy,
   onSortChange,
-  priceRange,
-  onPriceRangeChange,
   viewMode,
   onViewModeChange,
   categories,
@@ -78,20 +74,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </SelectContent>
         </Select>
 
-        {/* Price Range Filter */}
-        <Select value={priceRange} onValueChange={onPriceRangeChange}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Price Range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Prices</SelectItem>
-            <SelectItem value="0-50000">Under TSh 50,000</SelectItem>
-            <SelectItem value="50000-100000">TSh 50,000 - 100,000</SelectItem>
-            <SelectItem value="100000-500000">TSh 100,000 - 500,000</SelectItem>
-            <SelectItem value="500000-1000000">TSh 500,000 - 1,000,000</SelectItem>
-            <SelectItem value="1000000+">Over TSh 1,000,000</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Price Range Filter removed */}
 
         {/* Sort By */}
         <Select value={sortBy} onValueChange={onSortChange}>

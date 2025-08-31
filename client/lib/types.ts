@@ -164,8 +164,6 @@ export interface ErrorState {
 // Filter and search types
 export interface ProductFilters {
   category?: string
-  min_price?: number
-  max_price?: number
   rating?: number
   in_stock?: boolean
   is_featured?: boolean

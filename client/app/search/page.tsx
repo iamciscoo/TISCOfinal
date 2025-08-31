@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,10 +29,12 @@ import { ProductCard } from '@/components/shared/ProductCard'
 
 import { Product } from '@/lib/types'
 import { LoadingSpinner } from '@/components/shared'
+import { debounce } from '@/lib/shared-utils'
 
 function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
+  const router = useRouter()
   
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
@@ -42,9 +44,32 @@ function SearchResults() {
   const [sortBy, setSortBy] = useState('relevance')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' })
   
   const productsPerPage = 12
+
+  // Debounced URL sync for refine input
+  const updateUrlDebounced = useMemo(
+    () => debounce((next: string) => {
+      const trimmed = (next || '').trim()
+      if (trimmed && trimmed !== query) {
+        router.replace(`/search?q=${encodeURIComponent(trimmed)}`)
+      }
+      if (!trimmed && query) {
+        router.replace('/search')
+      }
+    }, 350),
+    [query, router]
+  )
+
+  // Keep input in sync with URL query param
+  useEffect(() => {
+    setSearchTerm(query)
+  }, [query])
+
+  // Debounce URL updates as user refines search
+  useEffect(() => {
+    updateUrlDebounced(searchTerm)
+  }, [searchTerm, updateUrlDebounced])
 
   // Fetch real search results from database
   useEffect(() => {
@@ -52,10 +77,11 @@ function SearchResults() {
       setLoading(true)
       
       try {
-        const response = await fetch('/api/products/search?' + new URLSearchParams({
-          q: query || '',
-          limit: '50'
-        }))
+        const qs = new URLSearchParams({ q: query || '' })
+        if (selectedCategory && selectedCategory !== 'all') {
+          qs.set('category', selectedCategory)
+        }
+        const response = await fetch('/api/products/search?' + qs.toString())
         
         if (!response.ok) {
           throw new Error('Failed to fetch search results')
@@ -74,7 +100,7 @@ function SearchResults() {
     }
     
     fetchSearchResults()
-  }, [query])
+  }, [query, selectedCategory])
 
   // Filter and sort products
   useEffect(() => {
@@ -88,18 +114,12 @@ function SearchResults() {
       )
     }
 
-    // Category filter
+    // Category filter (by category ID)
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category_id === selectedCategory)
+      filtered = filtered.filter(product => String(product.categories?.id ?? product.category_id ?? '') === selectedCategory)
     }
 
-    // Price filter
-    if (priceRange.min) {
-      filtered = filtered.filter(product => product.price >= parseFloat(priceRange.min))
-    }
-    if (priceRange.max) {
-      filtered = filtered.filter(product => product.price <= parseFloat(priceRange.max))
-    }
+    // Price filter removed
 
     // Sort
     filtered.sort((a, b) => {
@@ -121,14 +141,21 @@ function SearchResults() {
 
     setFilteredProducts(filtered)
     setCurrentPage(1)
-  }, [products, searchTerm, selectedCategory, sortBy, priceRange, query])
+  }, [products, searchTerm, selectedCategory, sortBy, query])
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
   const startIndex = (currentPage - 1) * productsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage)
 
-  const categories = Array.from(new Set(products.map(p => p.categories?.name).filter(Boolean)))
+  // Unique categories derived from results (by ID)
+  const categories = Array.from(
+    new Map(
+      products
+        .map((p) => p.categories ? [String(p.categories.id), p.categories.name] as [string, string] : null)
+        .filter((entry): entry is [string, string] => Boolean(entry))
+    )
+  ).map(([id, name]) => ({ id, name }))
 
   if (loading) {
     return (
@@ -183,6 +210,16 @@ function SearchResults() {
                 placeholder="Refine your search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const next = (searchTerm || '').trim()
+                    if (next) {
+                      router.push(`/search?q=${encodeURIComponent(next)}`)
+                    } else {
+                      router.push('/search')
+                    }
+                  }
+                }}
                 className="pl-10"
               />
             </div>
@@ -237,9 +274,9 @@ function SearchResults() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category?.toLowerCase().replace(/\s+/g, '') || ''}>
-                            {category}
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -247,24 +284,7 @@ function SearchResults() {
                   </div>
                 )}
 
-                {/* Price Range */}
-                <div className="mb-6">
-                  <label className="text-sm font-medium mb-2 block">Price Range</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      placeholder="Min"
-                      type="number"
-                      value={priceRange.min}
-                      onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Max"
-                      type="number"
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                    />
-                  </div>
-                </div>
+                {/* Price Range removed */}
 
                 {/* Clear Filters */}
                 <Button
@@ -273,7 +293,6 @@ function SearchResults() {
                   onClick={() => {
                     setSearchTerm(query)
                     setSelectedCategory('all')
-                    setPriceRange({ min: '', max: '' })
                     setSortBy('relevance')
                   }}
                 >

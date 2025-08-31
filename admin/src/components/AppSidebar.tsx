@@ -17,6 +17,7 @@ import {
   Wrench,
   DollarSign,
   CalendarCheck,
+  Mail,
 } from "lucide-react";
 import {
   Sidebar,
@@ -268,6 +269,14 @@ const AppSidebar = () => {
                   <Link href="/reviews">
                     <Star />
                     Reviews
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/messages">
+                    <Mail />
+                    Messages
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

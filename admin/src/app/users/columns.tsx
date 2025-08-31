@@ -75,25 +75,6 @@ export const columns: ColumnDef<User>[] = [
     },
   },
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status");
-
-      return (
-        <div
-          className={cn(
-            `p-1 rounded-md w-max text-xs`,
-            status === "active" && "bg-green-500/40",
-            status === "inactive" && "bg-red-500/40"
-          )}
-        >
-          {status as string}
-        </div>
-      );
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       const user = row.original;
