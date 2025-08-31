@@ -28,7 +28,6 @@ export function ScrollOptimizer({
   onScroll
 }: ScrollOptimizerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { scrollTo } = useSmoothScroll()
 
   useEffect(() => {
     if (!onScroll) return

@@ -187,7 +187,7 @@ export function useScrollAnimation(
   const { throttle = 16 } = options // ~60fps by default
   const lastScrollY = useRef(0)
   const lastCallTime = useRef(0)
-  const rafRef = useRef<number>()
+  const rafRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     const handleScroll = () => {

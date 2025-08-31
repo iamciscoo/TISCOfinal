@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const gw = String(gwCandidates[0] || '')
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
-    let transaction: any = null
+    let transaction: Record<string, unknown> | null = null
     let isSession = false
 
     // First try payment_transactions (existing flow)
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       query = query.eq('gateway_transaction_id', gw)
     }
 
-    const { data: txnResult, error: findError } = await query.maybeSingle()
+    const { data: txnResult } = await query.maybeSingle()
 
     if (txnResult) {
       transaction = txnResult
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         sessionQuery = sessionQuery.eq('gateway_transaction_id', gw)
       }
 
-      const { data: sessionResult, error: sessionError } = await sessionQuery.maybeSingle()
+      const { data: sessionResult } = await sessionQuery.maybeSingle()
       
       if (sessionResult) {
         transaction = sessionResult
@@ -134,27 +134,27 @@ export async function POST(req: NextRequest) {
 
     if (successSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentSuccess(transaction, normalizedBody)
+        await handleSessionPaymentSuccess(transaction as PaymentSession, normalizedBody)
       } else {
-        await handlePaymentSuccess(transaction, normalizedBody)
+        await handlePaymentSuccess(transaction as TransactionRow, normalizedBody)
       }
     } else if (pendingSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentPending(transaction)
+        await handleSessionPaymentPending(transaction as PaymentSession)
       } else {
-        await handlePaymentPending(transaction)
+        await handlePaymentPending(transaction as TransactionRow)
       }
     } else if (cancelSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentCancellation(transaction)
+        await handleSessionPaymentCancellation(transaction as PaymentSession)
       } else {
-        await handlePaymentCancellation(transaction)
+        await handlePaymentCancellation(transaction as TransactionRow)
       }
     } else if (failSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+        await handleSessionPaymentFailure(transaction as PaymentSession, body?.failure_reason || 'Payment failed')
       } else {
-        await handlePaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+        await handlePaymentFailure(transaction as TransactionRow, body?.failure_reason || 'Payment failed')
       }
     } else {
       console.log('Unhandled webhook status/event:', statusRaw || '(empty)')
@@ -508,6 +508,7 @@ type PaymentSession = {
   order_data: string;
   amount: number;
   currency: string;
+  status?: string;
 }
 
 async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
@@ -516,9 +517,9 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     if (!supabase) return
 
     // Parse order data from session
-    let orderData: any
+    let orderData: Record<string, unknown>
     try {
-      orderData = JSON.parse(session.order_data)
+      orderData = JSON.parse(session.order_data) as Record<string, unknown>
     } catch (e) {
       console.error('Failed to parse order data from session:', e)
       return
@@ -566,7 +567,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
 
     // Create order items
     if (orderData.items && Array.isArray(orderData.items)) {
-      const orderItems = orderData.items.map((item: any) => ({
+      const orderItems = orderData.items.map((item: Record<string, unknown>) => ({
         order_id: order.id,
         product_id: item.product_id,
         quantity: item.quantity,

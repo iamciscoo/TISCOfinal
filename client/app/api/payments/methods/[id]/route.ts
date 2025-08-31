@@ -7,11 +7,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
-interface Params {
-  params: { id: string }
-}
-
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
     const user = await currentUser()
     if (!user) {
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { data: paymentMethod, error } = await supabase
       .from('payment_methods')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
@@ -43,7 +43,11 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: Params) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
     const user = await currentUser()
     if (!user) {
@@ -56,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { data: existingMethod, error: fetchError } = await supabase
       .from('payment_methods')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
@@ -70,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         .from('payment_methods')
         .update({ is_default: false })
         .eq('user_id', user.id)
-        .neq('id', params.id)
+        .neq('id', id)
     }
 
     const { data: paymentMethod, error } = await supabase
@@ -79,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         ...updates,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .select()
       .single()
@@ -98,7 +102,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
     const user = await currentUser()
     if (!user) {
@@ -109,7 +117,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const { data: existingMethod, error: fetchError } = await supabase
       .from('payment_methods')
       .select('id, is_default')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
@@ -120,7 +128,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const { error } = await supabase
       .from('payment_methods')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
 
     if (error) {

@@ -31,6 +31,9 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { LoadingSpinner } from '@/components/shared'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 type ServiceBooking = {
   id: string
   created_at: string

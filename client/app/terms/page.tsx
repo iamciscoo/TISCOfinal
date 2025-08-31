@@ -22,7 +22,7 @@ export default function TermsOfServicePage() {
           <CardContent className="prose prose-gray max-w-none p-6">
             <p>
               Welcome to TISCO Market. By accessing or using our website and
-              services (the "Services"), you agree to be bound by these Terms of Service (the "Terms").
+              services (the &quot;Services&quot;), you agree to be bound by these Terms of Service (the &quot;Terms&quot;).
               If you do not agree to these Terms, please do not use the Services.
             </p>
             <p className="text-sm text-gray-500">
@@ -127,7 +127,7 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="text-gray-700 space-y-3">
             <p>
-              The Services are provided on an "as is" and "as available" basis. To the fullest extent
+              The Services are provided on an &quot;as is&quot; and &quot;as available&quot; basis. To the fullest extent
               permitted by law, we disclaim all warranties, express or implied, including merchantability,
               fitness for a particular purpose, and non‑infringement.
             </p>

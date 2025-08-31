@@ -7,11 +7,11 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 
 interface ProductPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { id } = params
+  const { id } = await params
   const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
   if (!UUID_REGEX.test(id)) {
     // Guard against invalid IDs like numeric strings to prevent failed Supabase queries
@@ -41,7 +41,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: ProductPageProps) {
-  const { id } = params
+  const { id } = await params
   const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
   if (!UUID_REGEX.test(id)) {
     return {

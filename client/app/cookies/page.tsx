@@ -20,7 +20,7 @@ export default function CookiePolicyPage() {
         <Card className="mb-6">
           <CardContent className="prose prose-gray max-w-none p-6">
             <p>
-              TISCO Market ("we", "us") uses cookies and similar technologies to operate, protect, and
+              TISCO Market (&quot;we&quot;, &quot;us&quot;) uses cookies and similar technologies to operate, protect, and
               improve our services. This Cookie Policy explains what cookies are, which types we use, and
               how you can manage your preferences.
             </p>

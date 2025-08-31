@@ -8,13 +8,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
-type Params = {
-  params: {
-    id: string
-  }
-}
-
-export async function PATCH(req: NextRequest, { params }: Params) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
     const user = await currentUser()
     if (!user) {
@@ -37,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
       .select('user_id, status, order_items(*)')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !currentOrder) {
@@ -85,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         ...(reason && { notes: reason }),
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -100,7 +98,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     try {
       revalidateTag('orders')
       revalidateTag('admin:orders')
-      revalidateTag(`order:${params.id}`)
+      revalidateTag(`order:${id}`)
       revalidateTag(`user-orders:${user.id}`)
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e)

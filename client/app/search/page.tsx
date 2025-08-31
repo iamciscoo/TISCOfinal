@@ -31,6 +31,9 @@ import { Product } from '@/lib/types'
 import { LoadingSpinner } from '@/components/shared'
 import { debounce } from '@/lib/shared-utils'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''

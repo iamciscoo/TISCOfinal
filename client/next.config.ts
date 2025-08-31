@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns,
   },
+  // Disable static generation for dynamic routes
+  trailingSlash: false,
+  // Output configuration
+  output: 'standalone',
+  // Disable static optimization for pages with auth
+  staticPageGenerationTimeout: 120,
 };
 
 export default nextConfig;

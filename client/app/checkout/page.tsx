@@ -26,6 +26,9 @@ import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { useUser } from '@clerk/nextjs'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 type CheckoutStep = 'shipping' | 'payment' | 'review'
 
 type PaymentMethod = 'mobile' | 'card' | 'office'
