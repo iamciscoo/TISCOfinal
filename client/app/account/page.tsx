@@ -26,6 +26,9 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { LoadingSpinner, StatusBadge } from '@/components/shared'
 import { useCurrency } from '@/lib/currency-context'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 type OrderItem = {
   quantity: number
   products?: {

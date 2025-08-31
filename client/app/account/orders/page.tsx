@@ -32,6 +32,9 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { useCurrency } from '@/lib/currency-context'
 import { LoadingSpinner } from '@/components/shared'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 type OrderItem = {
   quantity: number
   products?: {

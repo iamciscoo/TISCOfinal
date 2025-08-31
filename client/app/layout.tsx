@@ -10,18 +10,21 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: 'swap',
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   preload: false,
+  display: 'swap',
 });
 
 const chango = Chango({
   variable: "--font-chango",
   subsets: ["latin"],
   weight: "400",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -40,20 +43,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  const isValidKey = publishableKey && !publishableKey.includes('placeholder')
+  
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} ${chango.variable} antialiased overflow-x-hidden`}
-        >
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${chango.variable} antialiased overflow-x-hidden`}
+      >
+        {isValidKey ? (
+          <ClerkProvider>
+            <CurrencyProvider>
+              <AuthSync />
+              <CartRealtime />
+              {children}
+            </CurrencyProvider>
+            <Toaster />
+          </ClerkProvider>
+        ) : (
           <CurrencyProvider>
-            <AuthSync />
-            <CartRealtime />
             {children}
           </CurrencyProvider>
-          <Toaster />
-        </body>
-      </html>
-    </ClerkProvider>
+        )}
+      </body>
+    </html>
   );
 }

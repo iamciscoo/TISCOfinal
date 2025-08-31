@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navbar } from '@/components/Navbar'
+import { NavbarWrapper } from '@/components/NavbarWrapper'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 
@@ -18,7 +18,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 }) => {
   return (
     <div className={className}>
-      <Navbar />
+      <NavbarWrapper />
       
       {showBreadcrumb && breadcrumbItems.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

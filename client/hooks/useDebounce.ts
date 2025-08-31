@@ -42,7 +42,7 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const callbackRef = useRef(callback)
 
   // Update callback ref when callback changes
@@ -89,7 +89,7 @@ export function useDebouncedAsync<T extends (...args: unknown[]) => Promise<unkn
   const [error, setError] = useState<Error | null>(null)
   
   const debouncedFn = useDebouncedCallback(
-    async (...args: Parameters<T>) => {
+    async (...args: unknown[]) => {
       setIsLoading(true)
       setError(null)
       

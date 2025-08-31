@@ -33,6 +33,9 @@ import Image from 'next/image'
 
 import { LoadingSpinner, VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
 interface Deal {
   id: string
   name: string

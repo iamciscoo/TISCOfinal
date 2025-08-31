@@ -17,6 +17,9 @@ import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 interface FAQ {
   id: string
   question: string

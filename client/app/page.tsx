@@ -7,6 +7,9 @@ import { BrandSlider } from "@/components/BrandSlider"
 import { Footer } from "@/components/Footer"
 import { CartSidebar } from "@/components/CartSidebar"
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 export default function Home() {
   return (
     <div className="min-h-screen">

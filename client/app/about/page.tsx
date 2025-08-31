@@ -13,6 +13,9 @@ import {
 } from 'lucide-react'
 import { PageLayout, Breadcrumb } from '@/components/shared'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 export default function AboutPage() {
   const breadcrumbItems = [
     { label: 'Home', href: '/' },

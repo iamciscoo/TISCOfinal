@@ -33,6 +33,9 @@ import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
 import { LoadingSpinner, VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 // Helper: create URL-friendly slug from a string
 const slugify = (s: string = '') =>
   s

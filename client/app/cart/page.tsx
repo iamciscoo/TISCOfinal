@@ -23,6 +23,9 @@ import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { PriceDisplay } from '@/components/PriceDisplay'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 export default function CartPage() {
   const { 
     items, 

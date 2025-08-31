@@ -20,10 +20,10 @@ export default function PrivacyPolicyPage() {
         <Card className="mb-6">
           <CardContent className="prose prose-gray max-w-none p-6">
             <p>
-              TISCO Market ("we", "us", or "our") is committed to protecting your privacy. This
+              TISCO Market (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your privacy. This
               Privacy Policy explains how we collect, use, disclose, and safeguard your personal data
               when you use our website, mobile experiences, and related services (collectively, the
-              "Services").
+              &quot;Services&quot;).
             </p>
             <p className="text-sm text-gray-500">
               This Policy is intended to align with applicable data protection laws in the United Republic

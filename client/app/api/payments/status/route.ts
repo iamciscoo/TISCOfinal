@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
     if (!ref) return NextResponse.json({ error: 'reference required' }, { status: 400 })
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
-    let txnData: any = null
+    let txnData: Record<string, unknown> | null = null
     let isSession = false
 
     // First try payment_transactions (existing flow)
-    const { data: txnResult, error: txnErr } = await supabase
+    const { data: txnResult } = await supabase
       .from('payment_transactions')
       .select('id, user_id, order_id, transaction_reference, gateway_transaction_id, status, created_at')
       .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       txnData = txnResult
     } else {
       // Try payment_sessions (new flow)
-      const { data: sessionResult, error: sessionErr } = await supabase
+      const { data: sessionResult } = await supabase
         .from('payment_sessions')
         .select('id, user_id, transaction_reference, gateway_transaction_id, status, created_at')
         .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     let statusRaw = map[txn.status as keyof typeof map] || 'PENDING'
 
     // Auto-complete stuck payments after 5 minutes
-    const createdAt = new Date(txn.created_at)
+    const createdAt = new Date(txn.created_at as string)
     const now = new Date()
     const minutesElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60)
     
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
         const client = new ZenoPayClient()
         type ZenoOrderStatusItem = { payment_status?: string; status?: string; result?: string }
         type ZenoOrderStatusResponse = { data?: ZenoOrderStatusItem[]; payment_status?: string; status?: string; result?: string }
-        const remote = (await client.getOrderStatus(txn.transaction_reference)) as ZenoOrderStatusResponse
+        const remote = (await client.getOrderStatus(txn.transaction_reference as string)) as ZenoOrderStatusResponse
 
         const dataArr = Array.isArray(remote?.data) ? remote.data : []
         const candidate = dataArr[0] || remote
