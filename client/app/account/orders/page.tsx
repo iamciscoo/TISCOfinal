@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { redirect, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -52,7 +52,7 @@ type Order = {
   order_items?: OrderItem[]
 }
 
-export default function OrdersPage() {
+function OrdersContent() {
   const { user, isLoaded } = useUser()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -349,5 +349,18 @@ export default function OrdersPage() {
       <Footer />
       <CartSidebar />
     </div>
+  )
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <LoadingSpinner text="Loading orders..." fullScreen />
+      </div>
+    }>
+      <OrdersContent />
+    </Suspense>
   )
 }

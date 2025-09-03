@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
 
 // Cache interface
 interface CacheEntry<T> {
@@ -9,7 +8,7 @@ interface CacheEntry<T> {
 
 // In-memory cache implementation
 class MemoryCache {
-  private cache = new Map<string, CacheEntry<any>>()
+  private cache = new Map<string, CacheEntry<unknown>>()
 
   set<T>(key: string, data: T, ttlSeconds: number = 300): void {
     this.cache.set(key, {
@@ -29,7 +28,7 @@ class MemoryCache {
       return null
     }
 
-    return entry.data
+    return entry.data as T
   }
 
   delete(key: string): void {

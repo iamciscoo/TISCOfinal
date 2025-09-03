@@ -1,5 +1,5 @@
 import { ApiResponse } from './middleware'
-import { cache, cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
+import { cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
 
 // Base API client configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
@@ -36,7 +36,7 @@ class ApiClient {
     return data.data!
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<T> {
     const url = new URL(`${this.baseUrl}/api${endpoint}`)
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -49,21 +49,21 @@ class ApiClient {
     return this.request<T>(endpoint + url.search, { method: 'GET' })
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
@@ -72,6 +72,13 @@ class ApiClient {
 
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' })
+  }
+
+  async applyDiscount(userId: string, code: string): Promise<{ discount: number; message: string }> {
+    return this.request<{ discount: number; message: string }>('/discounts', {
+      method: 'POST',
+      body: JSON.stringify({ userId, code }),
+    })
   }
 }
 
@@ -84,7 +91,7 @@ export const api = {
   async getProducts(limit?: number) {
     return withCache(
       cacheKeys.products(limit),
-      () => apiClient.get('/products', { limit }),
+      () => apiClient.get('/products', limit ? { limit } : undefined),
       cacheTTL.products
     )
   },
@@ -92,7 +99,7 @@ export const api = {
   async getFeaturedProducts(limit?: number) {
     return withCache(
       cacheKeys.featuredProducts(limit),
-      () => apiClient.get('/products/featured', { limit }),
+      () => apiClient.get('/products/featured', limit ? { limit } : undefined),
       cacheTTL.products
     )
   },
@@ -105,16 +112,9 @@ export const api = {
     )
   },
 
-  async searchProducts(params: {
-    q?: string
-    category?: string
-    minPrice?: number
-    maxPrice?: number
-    limit?: number
-    offset?: number
-  }) {
+  async searchProducts(query: string, filters?: { category?: string; minPrice?: number; maxPrice?: number; limit?: number; offset?: number }) {
     // Don't cache search results as they're dynamic
-    return apiClient.get('/products/search', params)
+    return apiClient.get('/products/search', { query, ...filters })
   },
 
   async getProductsByCategory(categoryId: string) {
@@ -168,6 +168,12 @@ export const api = {
     return result
   },
 
+  async updateCart(userId: string, items: Array<{ productId: string; quantity: number }>) {
+    const result = await apiClient.put('/cart', { userId, items })
+    cacheInvalidation.invalidateCart('current-user')
+    return result
+  },
+
   // Orders
   async getUserOrders(userId: string) {
     return withCache(
@@ -179,7 +185,13 @@ export const api = {
 
   async createOrder(data: {
     items: Array<{ productId: string; quantity: number }>
-    shippingAddress: any
+    shippingAddress: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    }
     paymentMethod: string
   }) {
     const result = await apiClient.post('/orders', data)
@@ -192,8 +204,8 @@ export const api = {
     return apiClient.get(`/orders/${orderId}`)
   },
 
-  async updateOrder(orderId: string, data: any) {
-    const result = await apiClient.patch(`/orders/${orderId}`, data)
+  async updateOrder(id: string, data: { status?: string; shippingAddress?: object; notes?: string }) {
+    const result = await apiClient.patch(`/orders/${id}`, data)
     cacheInvalidation.invalidateOrders('current-user')
     return result
   },
@@ -249,13 +261,27 @@ export const api = {
     )
   },
 
-  async createAddress(data: any) {
+  async createAddress(data: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    isDefault?: boolean;
+  }) {
     const result = await apiClient.post('/addresses', data)
     cacheInvalidation.invalidateUser('current-user')
     return result
   },
 
-  async updateAddress(addressId: string, data: any) {
+  async updateAddress(addressId: string, data: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    isDefault?: boolean;
+  }) {
     const result = await apiClient.patch(`/addresses/${addressId}`, data)
     cacheInvalidation.invalidateUser('current-user')
     return result

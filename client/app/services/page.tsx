@@ -90,7 +90,8 @@ interface DbService {
   gallery?: string[]
 }
 
-export default async function ServicesPage({ searchParams }: { searchParams: { service?: string } }) {
+export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ service?: string }> }) {
+  const resolvedSearchParams = await searchParams
   // Fetch real services from DB to ensure we have valid UUID ids
   const dbServices = (await getServices()) as DbService[]
   const dbServiceIdByTitle = new Map<string, string>(
@@ -275,7 +276,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: { s
             </div>
 
             <ServiceBookingForm 
-              defaultServiceId={searchParams?.service}
+              defaultServiceId={resolvedSearchParams?.service}
               services={(dbServices || []).map((s) => ({ id: s.id, title: s.title }))}
             />
           </div>

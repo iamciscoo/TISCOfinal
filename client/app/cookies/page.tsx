@@ -20,13 +20,13 @@ export default function CookiePolicyPage() {
         <Card className="mb-6">
           <CardContent className="prose prose-gray max-w-none p-6">
             <p>
-              TISCO Market ("we", "us") uses cookies and similar technologies to operate, protect, and
+              TISCO Market (&quot;we&quot;, &quot;us&quot;) uses cookies and similar technologies to operate, protect, and
               improve our services. This Cookie Policy explains what cookies are, which types we use, and
               how you can manage your preferences.
             </p>
             <p className="text-sm text-gray-500">
               We aim to align with applicable requirements in the United Republic of Tanzania and relevant
-              African data protection frameworks. Where consent is required for non‑essential cookies, we
+              African data protection frameworks. Where consent is required for non-essential cookies, we
               will seek it via our site interfaces.
             </p>
           </CardContent>

@@ -90,11 +90,11 @@ class RealtimeManager {
         },
         (payload) => {
           // Invalidate product caches when changes occur
-          if (payload.new?.id) {
-            cacheInvalidation.invalidateProduct(payload.new.id)
+          if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
+            cacheInvalidation.invalidateProduct((payload.new as { id: string }).id)
           }
-          if (payload.old?.id) {
-            cacheInvalidation.invalidateProduct(payload.old.id)
+          if (payload.old && typeof payload.old === 'object' && 'id' in payload.old) {
+            cacheInvalidation.invalidateProduct((payload.old as { id: string }).id)
           }
           callback(payload)
         }

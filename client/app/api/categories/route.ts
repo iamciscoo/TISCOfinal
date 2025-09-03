@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { withMiddleware, withErrorHandler, createSuccessResponse } from '@/lib/middleware'
 
@@ -10,7 +9,7 @@ const supabase = createClient(
 // GET /api/categories
 export const GET = withMiddleware(
   withErrorHandler
-)(async (req: NextRequest) => {
+)(async () => {
   const { data, error } = await supabase
     .from('categories')
     .select('*')

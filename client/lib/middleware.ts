@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -97,7 +97,7 @@ export function withValidation<T>(schema: z.ZodSchema<T>) {
             createErrorResponse(
               API_ERROR_CODES.VALIDATION_ERROR,
               'Validation failed',
-              error.errors
+              error.issues
             ),
             { status: 400 }
           )
@@ -167,7 +167,7 @@ export function withRateLimit(
 ) {
   return function (handler: (req: NextRequest) => Promise<NextResponse>) {
     return async function (req: NextRequest): Promise<NextResponse> {
-      const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown'
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
       const now = Date.now()
       const windowStart = now - windowMs
 
