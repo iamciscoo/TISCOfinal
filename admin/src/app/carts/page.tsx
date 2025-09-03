@@ -53,7 +53,22 @@ export default function CartsManagement() {
     page: 1,
     limit: 20
   })
-  const [analytics, setAnalytics] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<{ 
+    totalCarts: number; 
+    totalValue: number; 
+    avgCartValue: number;
+    summary?: { 
+      active: number; 
+      abandoned: number; 
+      converted: number; 
+      total_value: number;
+      active_carts: number;
+      average_cart_value: number;
+      abandonment_rate: number;
+      conversion_rate: number;
+    };
+    top_abandoned_products?: Array<{ name: string; count: number; value: number }>;
+  } | null>(null)
   
   const { toast } = useToast()
 
@@ -141,7 +156,7 @@ export default function CartsManagement() {
       })
       
       fetchCarts()
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Action failed',
@@ -259,7 +274,7 @@ export default function CartsManagement() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.summary.active_carts}</div>
+              <div className="text-2xl font-bold">{analytics.summary?.active_carts || 0}</div>
               <p className="text-xs text-muted-foreground">Last 24 hours</p>
             </CardContent>
           </Card>
@@ -269,7 +284,7 @@ export default function CartsManagement() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">TZS {analytics.summary.average_cart_value}</div>
+              <div className="text-2xl font-bold">TZS {analytics.summary?.average_cart_value || 0}</div>
               <p className="text-xs text-muted-foreground">Average value</p>
             </CardContent>
           </Card>
@@ -279,7 +294,7 @@ export default function CartsManagement() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.summary.abandonment_rate}%</div>
+              <div className="text-2xl font-bold">{analytics.summary?.abandonment_rate || 0}%</div>
               <p className="text-xs text-muted-foreground">Cart abandonment</p>
             </CardContent>
           </Card>
@@ -289,7 +304,7 @@ export default function CartsManagement() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.summary.conversion_rate}%</div>
+              <div className="text-2xl font-bold">{analytics.summary?.conversion_rate || 0}%</div>
               <p className="text-xs text-muted-foreground">Guest to user</p>
             </CardContent>
           </Card>

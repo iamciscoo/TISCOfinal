@@ -3,9 +3,6 @@ import { supabase } from "@/lib/supabase";
 import { updateProductRating } from "@/lib/reviews";
 export const runtime = 'nodejs';
 
-interface Params {
-  params: { id: string }
-}
 
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {

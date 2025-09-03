@@ -17,11 +17,14 @@ const formSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters."),
 });
 
-export default function EditCategoryPage() {
+export default function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const params = useParams();
-  const { id } = params;
+  const [id, setId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    params.then(({ id }) => setId(id))
+  }, [params]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

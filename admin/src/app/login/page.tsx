@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, accessKey: string) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
@@ -28,7 +28,8 @@ export default function LoginPage() {
         const ct = res.headers.get('content-type') || ''
         if (ct.includes('application/json')) {
           const data = await res.json().catch(() => ({}))
-          setError((data as any)?.error || (data as any)?.message || 'Invalid access key. Please check your credentials.')
+          const errorData = data as { error?: string; message?: string }
+          setError(errorData?.error || errorData?.message || 'Invalid access key. Please check your credentials.')
         } else {
           const text = await res.text().catch(() => '')
           setError(text || 'Invalid access key. Please check your credentials.')
@@ -36,7 +37,7 @@ export default function LoginPage() {
         return
       }
       router.push('/')
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -66,7 +67,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={(e) => handleSubmit(e, accessKey)} className="space-y-6">
               <div>
                 <label htmlFor="access-key" className="sr-only">
                   Access Key

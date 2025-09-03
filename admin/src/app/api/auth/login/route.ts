@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { createHmac } from 'node:crypto'
 
 function toBase64Url(input: Buffer | string) {
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24,
     })
     return res
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }

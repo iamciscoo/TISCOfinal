@@ -20,8 +20,8 @@ const formSchema = z.object({
   price: z.coerce.number().min(0.01, { message: "Price must be greater than 0" }),
   category_id: z.string().min(1, { message: "Category is required!" }),
   stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
-  is_featured: z.boolean().default(false),
-  is_deal: z.boolean().default(false),
+  is_featured: z.boolean(),
+  is_deal: z.boolean(),
   original_price: z.coerce.number().min(0.01).optional(),
   deal_price: z.coerce.number().min(0.01).optional(),
   images: z.any().optional(),
@@ -35,7 +35,18 @@ const formSchema = z.object({
   path: ["deal_price"],
 });
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = {
+  name: string;
+  description: string;
+  price: number;
+  category_id: string;
+  stock_quantity: number;
+  is_featured: boolean;
+  is_deal: boolean;
+  original_price?: number;
+  deal_price?: number;
+  images?: any;
+};
 
 const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);

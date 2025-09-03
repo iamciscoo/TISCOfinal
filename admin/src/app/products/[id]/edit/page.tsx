@@ -37,15 +37,18 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const EditProductPage = () => {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<ProductImage[]>([]);
+  const [id, setId] = useState<string>('');
   const { toast } = useToast();
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
+
+  useEffect(() => {
+    params.then(({ id }) => setId(id));
+  }, [params]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -479,4 +482,3 @@ const EditProductPage = () => {
   );
 };
 
-export default EditProductPage;

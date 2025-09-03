@@ -4,7 +4,6 @@ import { revalidateTag } from "next/cache";
 
 export const runtime = 'nodejs';
 
-type Params = { params: { id: string } };
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -41,8 +40,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       revalidateTag('orders');
       revalidateTag('admin:orders');
       revalidateTag(`order:${id}`);
-      if ((data as any)?.user_id) {
-        revalidateTag(`user-orders:${(data as any).user_id}`);
+      const orderData = data as Record<string, unknown> & { user_id?: string }
+      if (orderData?.user_id) {
+        revalidateTag(`user-orders:${orderData.user_id}`);
       }
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e);

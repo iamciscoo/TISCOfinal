@@ -64,7 +64,6 @@ export default function MessagesPage() {
 
   useEffect(() => {
     fetchMessages()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, status])
 
   const handleSearch = () => {

@@ -29,8 +29,8 @@ function formatAddress(addr?: string | Address): string {
   return parts.join(', ')
 }
 
-export default async function OrderDetailsPage({ params }: { params: { id: string } }) {
-  const id = params?.id
+export default async function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   let order: DbOrder | null = null
   let customer: User | null = null
 
@@ -156,7 +156,6 @@ export default async function OrderDetailsPage({ params }: { params: { id: strin
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {it.product?.image_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={it.product.image_url} alt={it.product.name} className="w-12 h-12 object-cover rounded" />
                           ) : (
                             <div className="w-12 h-12 bg-muted rounded" />

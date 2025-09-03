@@ -16,8 +16,8 @@ const formSchema = z.object({
   email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
   phone: z.string().optional(),
-  is_admin: z.boolean().default(false),
-  is_active: z.boolean().default(true),
+  is_admin: z.boolean(),
+  is_active: z.boolean(),
 });
 
 export default function AddUserPage() {

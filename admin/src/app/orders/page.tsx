@@ -17,7 +17,7 @@ const getData = async (): Promise<Order[]> => {
       customerEmail: order.user?.email || 'No email',
       total: Number((order as any).total_amount ?? 0),
       status: order.status,
-      paymentStatus: order.payment_status,
+      paymentStatus: order.payment_status === 'cancelled' ? 'failed' : order.payment_status,
       items: order.order_items?.length || 0,
       shippingAddress:
         order.shipping_address

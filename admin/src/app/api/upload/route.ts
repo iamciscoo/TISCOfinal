@@ -105,8 +105,7 @@ export async function POST(req: Request) {
         }
       } catch (e) {
         // Swallow DB errors and still return uploaded URLs
-        // eslint-disable-next-line no-console
-        console.error('Upload DB insert error:', e instanceof Error ? e.message : e);
+            console.error('Upload DB insert error:', e instanceof Error ? e.message : e);
       }
     }
 

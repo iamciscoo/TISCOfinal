@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 import { revalidateTag } from 'next/cache';
 export const runtime = 'nodejs';
 
-type Params = { params: { id: string } };
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -64,10 +63,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         // Auto-promote order status to processing if not explicitly provided (canonical post-payment state)
         if (!('status' in updates)) updates['status'] = 'processing'
         // Ensure paid_at is set when marking as paid
-        ;(updates as any)['paid_at'] = (updates as any)['paid_at'] ?? nowIso
+        const updatesWithPaidAt = updates as Record<string, unknown> & { paid_at?: string }
+        updatesWithPaidAt['paid_at'] = updatesWithPaidAt['paid_at'] ?? nowIso
       } else if (ps === 'failed' || ps === 'cancelled') {
         // Clear paid_at for non-successful states unless explicitly set
-        ;(updates as any)['paid_at'] = null
+        const updatesWithPaidAt = updates as Record<string, unknown> & { paid_at?: string | null }
+        updatesWithPaidAt['paid_at'] = null
       }
     }
 
@@ -101,7 +102,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       const paymentStatusEnumInvalid = code === '22P02' || /invalid input value for enum/i.test(message)
       if (missingPaidAt) {
         const updatesRetry: Record<string, unknown> = { ...updates }
-        delete (updatesRetry as any)['paid_at']
+        delete updatesRetry['paid_at']
         const retry = await supabase
           .from('orders')
           .update(updatesRetry)
@@ -140,7 +141,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
               revalidateTag('admin:orders');
               revalidateTag('orders');
               revalidateTag(`order:${id}`);
-              if ((data as any)?.user_id) revalidateTag(`user-orders:${(data as any).user_id}`);
+              const orderData = data as Record<string, unknown> & { user_id?: string }
+              if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`);
               revalidateTag('payments');
             } catch {}
             return NextResponse.json({ data, warning: "orders.payment_status issue (missing/constraint/enum). Only order status was updated. Please run the migration 2025-08-27_orders_payment_status_unify.sql to add/align 'payment_status' and 'paid_at'." }, { status: 200 })
@@ -179,7 +181,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       revalidateTag('admin:orders');
       revalidateTag('orders');
       revalidateTag(`order:${id}`);
-      if ((data as any)?.user_id) revalidateTag(`user-orders:${(data as any).user_id}`);
+      const orderData = data as Record<string, unknown> & { user_id?: string }
+      if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`);
       // Payments caches
       revalidateTag('payments');
     } catch (e) {

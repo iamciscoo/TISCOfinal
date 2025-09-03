@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
       const lastUpdated = item.updated_at || item.created_at
       cart?.items.push({
         id: item.id,
-        product: item.products,
+        product: item.products || null,
         quantity: item.quantity,
         unit_price: unitPrice,
         total_price: item.quantity * unitPrice,

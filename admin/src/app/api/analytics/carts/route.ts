@@ -52,10 +52,10 @@ export async function GET(req: NextRequest) {
             created_at
           `)
           .gte('created_at', startDateISO)
-        abandonedRaw = dataFallback
+        abandonedRaw = dataFallback as any
         productsError = errorFallback
       } else {
-        abandonedRaw = data
+        abandonedRaw = data as any
         productsError = error
       }
     }
@@ -131,10 +131,10 @@ export async function GET(req: NextRequest) {
             products(price)
           `)
           .gte('created_at', startDateISO)
-        activeItems = dataFallback
+        activeItems = dataFallback as any
         activeError = errorFallback
       } else {
-        activeItems = data
+        activeItems = data as any
         activeError = error
       }
     }

@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 
 export const runtime = 'nodejs';
 
-type Params = { params: { id: string } };
 
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {

@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 
 export const runtime = 'nodejs';
 
-type Params = { params: { id: string } };
 
 type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';

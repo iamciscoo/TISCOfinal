@@ -46,7 +46,7 @@ function getClientIp(req: NextRequest): string | undefined {
   const fwd = req.headers.get('x-forwarded-for')
   if (fwd) return fwd.split(',')[0]?.trim()
   // In some environments NextRequest.ip is available
-  // @ts-ignore
+  // @ts-expect-error
   return req.ip || undefined
 }
 

@@ -9,8 +9,8 @@ function formatTZS(value: number | string | null | undefined): string {
   return `TZS ${n.toLocaleString()}`
 }
 
-export default async function PaymentDetailsPage({ params }: { params: { id: string } }) {
-  const id = params?.id
+export default async function PaymentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
 
   const order = await getOrderById(id)
   if (!order) {

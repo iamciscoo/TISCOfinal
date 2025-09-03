@@ -39,12 +39,15 @@ interface Cart {
   created_at: string
 }
 
-export default function CartDetailsPage() {
-  const params = useParams<{ user_id: string }>()
+export default function CartDetailsPage({ params }: { params: Promise<{ user_id: string }> }) {
   const router = useRouter()
   const { toast } = useToast()
 
-  const userId = params?.user_id
+  const [userId, setUserId] = useState<string>('')
+
+  useEffect(() => {
+    params.then(({ user_id }) => setUserId(user_id))
+  }, [params])
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -107,7 +110,7 @@ export default function CartDetailsPage() {
       const data = await res.json()
       toast({ title: 'Success', description: data?.message || 'Action completed' })
       if (action === 'clear_cart') fetchCart()
-    } catch (e) {
+    } catch {
       toast({ title: 'Error', description: 'Action failed', variant: 'destructive' })
     } finally {
       setActionLoading(null)
@@ -242,7 +245,6 @@ export default function CartDetailsPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {it.product?.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={it.product.image_url} alt={it.product.name} className="w-12 h-12 object-cover rounded" />
                         ) : (
                           <div className="w-12 h-12 bg-muted rounded" />

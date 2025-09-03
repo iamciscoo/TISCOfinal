@@ -15,8 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
 import { getUserById, getUserMonthlyOrderActivity } from "@/lib/database";
 
-const SingleUserPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+export default async function UserDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const user = await getUserById(id).catch(() => null);
   const activity = user ? await getUserMonthlyOrderActivity(id, 6).catch(() => []) : [];
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
@@ -140,4 +140,3 @@ const SingleUserPage = async ({ params }: { params: { id: string } }) => {
   );
 };
 
-export default SingleUserPage;

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 export const runtime = 'nodejs';
 
-type Params = { params: { id: string } }
 
 type MessageUpdate = {
   status?: 'new' | 'read' | 'responded' | 'closed'
@@ -81,14 +80,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     // If a response was provided, queue an email notification to the customer (best-effort)
     try {
-      if (updates.response && data && (data as any).email) {
-        const recipient = (data as any).email as string
-        const subj = `Re: ${(data as any).subject ?? 'Your inquiry'}`
+      if (updates.response && data && 'email' in data) {
+        const messageData = data as { email: string; subject?: string; name?: string; message?: string; response?: string; id: string }
+        const recipient = messageData.email
+        const subj = `Re: ${messageData.subject ?? 'Your inquiry'}`
         const templatePayload = {
-          customer_name: (data as any).name ?? null,
-          original_message: (data as any).message ?? null,
-          admin_response: (data as any).response ?? updates.response,
-          message_id: (data as any).id ?? id,
+          customer_name: messageData.name ?? null,
+          original_message: messageData.message ?? null,
+          admin_response: messageData.response ?? updates.response,
+          message_id: messageData.id ?? id,
         }
         // Insert into email_notifications if available
         await supabase
