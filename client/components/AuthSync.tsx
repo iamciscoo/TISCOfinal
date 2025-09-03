@@ -23,12 +23,12 @@ type ServerCartItem = {
 // Automatically sync Clerk user to local DB on login and merge guest cart
 export default function AuthSync() {
   const { isLoaded, isSignedIn } = useUser()
-  const items = useCartStore((state) => state.items)
   const setItemsFromServer = useCartStore((state) => state.setItemsFromServer)
+  const hasHydrated = useCartStore((state) => state.hasHydrated)
   const hasSyncedRef = useRef(false)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || hasSyncedRef.current) return
+    if (!isLoaded || !isSignedIn || !hasHydrated || hasSyncedRef.current) return
     hasSyncedRef.current = true
 
     const run = async () => {
@@ -45,7 +45,7 @@ export default function AuthSync() {
 
       try {
         // 2) Merge guest cart data if any
-        let guestItems = items
+        let guestItems = useCartStore.getState().items
         if (!guestItems || guestItems.length === 0) {
           // Fallback to persisted storage in case zustand state not hydrated yet
           try {
@@ -87,7 +87,14 @@ export default function AuthSync() {
                     image_url: main,
                   }
                 })
-                setItemsFromServer(mapped)
+                // Protection: if server cart is empty but local has items (e.g., first load),
+                // keep local cart and let outbound sync handle pushing to server.
+                const currentLocalCount = useCartStore.getState().items.length
+                if (mapped.length === 0 && currentLocalCount > 0) {
+                  // skip overwriting local cart with empty server state
+                } else {
+                  setItemsFromServer(mapped)
+                }
               }
             } catch {}
           } else {
@@ -100,7 +107,7 @@ export default function AuthSync() {
     }
 
     run()
-  }, [isLoaded, isSignedIn, items, setItemsFromServer])
+  }, [isLoaded, isSignedIn, hasHydrated, setItemsFromServer])
 
   // Reset one-time guard on sign-out so next login merges again
   useEffect(() => {

@@ -28,16 +28,11 @@ import { useUser } from '@clerk/nextjs'
 
 type CheckoutStep = 'shipping' | 'payment' | 'review'
 
-type PaymentMethod = 'mobile' | 'card' | 'office'
+type PaymentMethod = 'mobile' | 'office'
 type PaymentData = {
   method: PaymentMethod
   provider: string
   mobilePhone: string
-  cardNumber: string
-  expiryDate: string
-  cvv: string
-  nameOnCard: string
-  billingAddressSame: boolean
 }
 
 // Top cities in Tanzania for quick selection
@@ -65,10 +60,8 @@ export default function CheckoutPage() {
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentAttempts, setPaymentAttempts] = useState(0)
   const [paymentTimeout, setPaymentTimeout] = useState(false)
   const [canRetryPayment, setCanRetryPayment] = useState(false)
-  const [lastOrderId, setLastOrderId] = useState<string | null>(null)
 
   // Avoid hydration mismatch by deferring persisted cart reads until after mount
   const [mounted, setMounted] = useState(false)
@@ -91,12 +84,7 @@ export default function CheckoutPage() {
   const [paymentData, setPaymentData] = useState<PaymentData>({
     method: 'mobile',
     provider: '',
-    mobilePhone: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    nameOnCard: '',
-    billingAddressSame: true
+    mobilePhone: ''
   })
 
   // Normalize legacy provider value if it was previously set to 'MixxByYas'
@@ -251,16 +239,7 @@ export default function CheckoutPage() {
     }
 
     // Validate payment by method
-    if (paymentData.method === 'card') {
-      if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.nameOnCard) {
-        toast({
-          title: "Missing Information", 
-          description: "Please fill in all required card details.",
-          variant: "destructive",
-        })
-        return
-      }
-    } else if (paymentData.method === 'mobile') {
+    if (paymentData.method === 'mobile') {
       if (!paymentData.provider || !paymentData.mobilePhone) {
         toast({
           title: "Missing Information", 
@@ -285,10 +264,7 @@ export default function CheckoutPage() {
       // Build payment summary
       let payment_method = ''
       let payment_summary = ''
-      if (paymentData.method === 'card') {
-        payment_method = `Card **** **** **** ${paymentData.cardNumber.slice(-4)}`
-        payment_summary = `${paymentData.nameOnCard}`
-      } else if (paymentData.method === 'mobile') {
+      if (paymentData.method === 'mobile') {
         payment_method = `Mobile Money (${paymentData.provider}) - ${maskPhone(paymentData.mobilePhone)}`
         payment_summary = `Mobile Money (${paymentData.provider}) to ${paymentData.mobilePhone}`
       } else {
@@ -321,7 +297,7 @@ export default function CheckoutPage() {
       }
 
       // Handle different payment methods - create order only after successful payment for mobile money
-      if (paymentData.method !== 'mobile') {
+      if (paymentData.method === 'office') {
         // Non-mobile flows (card, office payment) - create order first
         const orderResponse = await fetch('/api/orders', {
           method: 'POST',
@@ -344,7 +320,7 @@ export default function CheckoutPage() {
           return
         }
 
-        // Non-mobile payment successful
+        // Office payment successful
         toast({ title: 'Order Placed!', description: `Order #${orderResult.order.id.slice(0, 8)} created.` })
         clearCart()
         void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
@@ -395,7 +371,6 @@ export default function CheckoutPage() {
               // Payment timed out or failed - enable retry
               setPaymentTimeout(true)
               setCanRetryPayment(true)
-              setPaymentAttempts(prev => prev + 1)
               // Payment timeout - no toast notification, just show retry UI
               return
             }
@@ -420,8 +395,7 @@ export default function CheckoutPage() {
               return
             }
 
-            // Store order ID and complete the flow
-            setLastOrderId(orderResult.order.id)
+            // Complete the flow
             toast({ title: 'Payment Confirmed', description: 'Your payment was successful and order created.' })
             
             // Immediately trigger payment completion via mock webhook
@@ -598,7 +572,6 @@ export default function CheckoutPage() {
           // Payment timed out again - allow another retry
           setPaymentTimeout(true)
           setCanRetryPayment(true)
-          setPaymentAttempts(prev => prev + 1)
           // Payment timeout again - no toast notification, just show retry UI
           return
         }
@@ -623,8 +596,7 @@ export default function CheckoutPage() {
           return
         }
 
-        // Store order ID and complete the flow
-        setLastOrderId(orderResult.order.id)
+        // Complete the flow
         toast({ title: 'Payment Confirmed', description: 'Your retry payment was successful and order created!' })
         
         // Complete the payment
@@ -678,9 +650,6 @@ export default function CheckoutPage() {
           ))
         )
       case 'payment':
-        if (paymentData.method === 'card') {
-          return !!(paymentData.cardNumber && paymentData.expiryDate && paymentData.cvv && paymentData.nameOnCard)
-        }
         if (paymentData.method === 'mobile') {
           return !!(paymentData.provider && isValidTzPhone(paymentData.mobilePhone))
         }
@@ -951,7 +920,7 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Method selector */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button
                       type="button"
                       variant={paymentData.method === 'mobile' ? 'default' : 'outline'}
@@ -960,15 +929,6 @@ export default function CheckoutPage() {
                       className="w-full"
                     >
                       Mobile Money
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={paymentData.method === 'card' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPaymentData(prev => ({ ...prev, method: 'card' }))}
-                      className="w-full text-xs sm:text-sm"
-                    >
-                      Card (Visa/Mastercard)
                     </Button>
                     <Button
                       type="button"
@@ -1043,62 +1003,6 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  {/* Card */}
-                  {paymentData.method === 'card' && (
-                    <div className="space-y-4">
-                      <div className="w-full rounded-lg overflow-hidden border bg-white">
-                        <Image
-                          src="/images/visamastercard.png"
-                          alt="Visa and Mastercard"
-                          width={1200}
-                          height={200}
-                          className="w-full h-20 sm:h-24 object-contain bg-white"
-                          priority
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cardNumber">Card Number *</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="1234 5678 9012 3456"
-                          value={paymentData.cardNumber}
-                          onChange={(e) => setPaymentData(prev => ({ ...prev, cardNumber: e.target.value }))}
-                          autoComplete="cc-number"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="expiryDate">Expiry Date *</Label>
-                          <Input
-                            id="expiryDate"
-                            placeholder="MM/YY"
-                            value={paymentData.expiryDate}
-                            onChange={(e) => setPaymentData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                            autoComplete="cc-exp"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvv">CVV *</Label>
-                          <Input
-                            id="cvv"
-                            placeholder="123"
-                            value={paymentData.cvv}
-                            onChange={(e) => setPaymentData(prev => ({ ...prev, cvv: e.target.value }))}
-                            autoComplete="cc-csc"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="nameOnCard">Name on Card *</Label>
-                        <Input
-                          id="nameOnCard"
-                          value={paymentData.nameOnCard}
-                          onChange={(e) => setPaymentData(prev => ({ ...prev, nameOnCard: e.target.value }))}
-                          autoComplete="cc-name"
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   {/* Pay at Office */}
                   {paymentData.method === 'office' && (
@@ -1161,12 +1065,6 @@ export default function CheckoutPage() {
                   <div>
                     <h3 className="font-semibold mb-3">Payment Method</h3>
                     <div className="p-4 bg-gray-50 rounded-lg space-y-1">
-                      {paymentData.method === 'card' && (
-                        <>
-                          <p>Card ending in {paymentData.cardNumber.slice(-4)}</p>
-                          <p>{paymentData.nameOnCard}</p>
-                        </>
-                      )}
                       {paymentData.method === 'mobile' && (
                         <>
                           <p>Mobile Money: {paymentData.provider}</p>

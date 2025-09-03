@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
     if (!ref) return NextResponse.json({ error: 'reference required' }, { status: 400 })
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
-    let txnData: any = null
+    let txnData: { id: string; user_id: string; transaction_reference: string; gateway_transaction_id?: string; status: string; created_at: string; order_id?: string } | null = null
     let isSession = false
 
     // First try payment_transactions (existing flow)
-    const { data: txnResult, error: txnErr } = await supabase
+    const { data: txnResult } = await supabase
       .from('payment_transactions')
       .select('id, user_id, order_id, transaction_reference, gateway_transaction_id, status, created_at')
       .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       txnData = txnResult
     } else {
       // Try payment_sessions (new flow)
-      const { data: sessionResult, error: sessionErr } = await supabase
+      const { data: sessionResult } = await supabase
         .from('payment_sessions')
         .select('id, user_id, transaction_reference, gateway_transaction_id, status, created_at')
         .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)

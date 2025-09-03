@@ -21,7 +21,7 @@ import {
 import { DataTablePagination } from "@/components/TablePagination";
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useAdminActions } from "@/lib/admin-utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -39,7 +39,7 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [deleting, setDeleting] = useState(false);
-  const { toast } = useToast();
+  const { handleDelete } = useAdminActions();
 
   const table = useReactTable({
     data,
@@ -63,7 +63,6 @@ export function DataTable<TData, TValue>({
       .filter((v) => v !== undefined && v !== null);
 
     if (ids.length === 0) {
-      toast({ title: `No ${entityName.toLowerCase()} selected`, variant: "destructive" });
       return;
     }
 
@@ -72,16 +71,15 @@ export function DataTable<TData, TValue>({
 
     setDeleting(true);
     try {
-      const results = await Promise.all(
-        ids.map((id) => fetch(`${deleteApiBase}/${id}`, { method: "DELETE" }))
+      // Use the standardized delete handler for bulk operations
+      const results = await Promise.allSettled(
+        ids.map((id) => handleDelete(`${deleteApiBase}/${id}`, entityName))
       );
-      const ok = results.every((r) => r.ok);
-      if (!ok) throw new Error("One or more deletions failed");
-      toast({ title: `${entityName}(s) deleted` });
-      window.location.reload();
-    } catch (e) {
-      console.error("Bulk delete failed", e);
-      toast({ title: "Failed to delete", variant: "destructive" });
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      if (successful === ids.length) {
+        setRowSelection({}); // Clear selection after successful deletion
+      }
     } finally {
       setDeleting(false);
     }

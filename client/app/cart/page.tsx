@@ -294,17 +294,6 @@ export default function CartPage() {
                           priority={false}
                         />
                       </div>
-                      <div className="w-full aspect-[6/1] rounded-lg overflow-hidden border bg-white p-2">
-                        <Image
-                          src="/images/visamastercard.png"
-                          alt="Visa and Mastercard"
-                          width={1200}
-                          height={200}
-                          className="w-full h-full object-contain"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-                          priority={false}
-                        />
-                      </div>
                     </div>
                   </div>
                 </CardContent>

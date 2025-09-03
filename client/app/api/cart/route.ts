@@ -1,159 +1,201 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { createSuccessResponse, createErrorResponse, API_ERROR_CODES } from '@/lib/middleware'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
-export async function GET() {
+// GET /api/cart
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const GET = async (_req: NextRequest) => {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.AUTHENTICATION_ERROR, 'Authentication required'),
+        { status: 401 }
+      )
     }
 
+    // Fetch cart items with product details and images
     const { data: cartItems, error } = await supabase
       .from('cart_items')
       .select(`
-        *,
-        products(
+        id,
+        product_id,
+        quantity,
+        products (
           id,
           name,
           price,
           image_url,
-          stock_quantity,
-          product_images(url, is_main, sort_order)
+          product_images (
+            url,
+            is_main
+          )
         )
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.DATABASE_ERROR, 'Failed to fetch cart items'),
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ items: cartItems || [] }, { status: 200 })
-  } catch (error: unknown) {
-    console.error('Cart fetch error:', error)
+    return NextResponse.json(createSuccessResponse({ items: cartItems || [] }))
+  } catch (error) {
+    console.error('Cart GET error:', error)
     return NextResponse.json(
-      { error: (error as Error).message || 'Failed to fetch cart' },
+      createErrorResponse(API_ERROR_CODES.INTERNAL_ERROR, 'Internal server error'),
       { status: 500 }
     )
   }
 }
 
-export async function POST(req: NextRequest) {
+const addToCartSchema = z.object({
+  product_id: z.string().uuid(),
+  quantity: z.number().min(1).max(99)
+})
+
+// POST /api/cart
+export const POST = async (req: NextRequest) => {
   try {
+    // Parse and validate request body
+    const body = await req.json()
+    const validatedData = addToCartSchema.parse(body)
+    
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.AUTHENTICATION_ERROR, 'Authentication required'),
+        { status: 401 }
+      )
     }
 
-    const { product_id, quantity } = await req.json()
-
-    if (!product_id || !quantity || quantity < 1) {
-      return NextResponse.json({ error: 'Invalid product or quantity' }, { status: 400 })
-    }
+    const { product_id, quantity } = validatedData
 
     // Check if product exists and has stock
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select('id, stock_quantity, price')
+      .select('id, name, price, stock_quantity')
       .eq('id', product_id)
       .single()
 
     if (productError || !product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.NOT_FOUND, 'Product not found'),
+        { status: 404 }
+      )
     }
 
     if (product.stock_quantity < quantity) {
-      return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.VALIDATION_ERROR, 'Insufficient stock'),
+        { status: 400 }
+      )
     }
 
     // Check if item already exists in cart
-    const { data: existingItem, error: checkError } = await supabase
+    const { data: existingItem } = await supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('user_id', user.id)
       .eq('product_id', product_id)
       .single()
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      return NextResponse.json({ error: checkError.message }, { status: 500 })
-    }
-
     if (existingItem) {
       // Update existing item
       const newQuantity = existingItem.quantity + quantity
-      
       if (newQuantity > product.stock_quantity) {
-        return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 })
+        return NextResponse.json(
+          createErrorResponse(API_ERROR_CODES.VALIDATION_ERROR, 'Total quantity exceeds stock'),
+          { status: 400 }
+        )
       }
 
-      const { data: updatedItem, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('cart_items')
-        .update({
-          quantity: newQuantity
-        })
+        .update({ quantity: newQuantity })
         .eq('id', existingItem.id)
-        .select()
-        .single()
 
       if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 })
+        return NextResponse.json(
+          createErrorResponse(API_ERROR_CODES.INTERNAL_ERROR, 'Failed to update cart item'),
+          { status: 500 }
+        )
       }
-
-      return NextResponse.json({ item: updatedItem }, { status: 200 })
     } else {
-      // Create new cart item
-      const { data: newItem, error: insertError } = await supabase
+      // Add new item
+      const { error: insertError } = await supabase
         .from('cart_items')
         .insert({
           user_id: user.id,
           product_id,
           quantity
         })
-        .select()
-        .single()
 
       if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 })
+        return NextResponse.json(
+          createErrorResponse(API_ERROR_CODES.INTERNAL_ERROR, 'Failed to add item to cart'),
+          { status: 500 }
+        )
       }
-
-      return NextResponse.json({ item: newItem }, { status: 201 })
     }
-  } catch (error: unknown) {
-    console.error('Cart add error:', error)
+
+    return NextResponse.json(createSuccessResponse({ message: 'Item added to cart' }))
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.VALIDATION_ERROR, 'Validation failed', error.issues),
+        { status: 400 }
+      )
+    }
+
+    console.error('Cart POST error:', error)
     return NextResponse.json(
-      { error: (error as Error).message || 'Failed to add to cart' },
+      createErrorResponse(API_ERROR_CODES.INTERNAL_ERROR, 'Internal server error'),
       { status: 500 }
     )
   }
 }
 
-export async function DELETE() {
+// DELETE /api/cart
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const DELETE = async (_req: NextRequest) => {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.AUTHENTICATION_ERROR, 'Authentication required'),
+        { status: 401 }
+      )
     }
 
+    // Clear all cart items for the user
     const { error } = await supabase
       .from('cart_items')
       .delete()
       .eq('user_id', user.id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        createErrorResponse(API_ERROR_CODES.DATABASE_ERROR, 'Failed to clear cart'),
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ message: 'Cart cleared' }, { status: 200 })
-  } catch (error: unknown) {
-    console.error('Cart clear error:', error)
+    return NextResponse.json(createSuccessResponse({ message: 'Cart cleared successfully' }))
+  } catch (error) {
+    console.error('Cart DELETE error:', error)
     return NextResponse.json(
-      { error: (error as Error).message || 'Failed to clear cart' },
+      createErrorResponse(API_ERROR_CODES.INTERNAL_ERROR, 'Internal server error'),
       { status: 500 }
     )
   }

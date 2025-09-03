@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
     const orderIndex = new Map<string, number>()
     pageGroups.forEach((g, idx) => orderIndex.set(g.user_id, idx))
 
-    cartItems?.forEach((item: { id: string; user_id: string; quantity: number; unit_price?: number; created_at: string; updated_at?: string; products?: { id: string; name: string; price: number; image_url?: string } | null }) => {
+    cartItems?.forEach((item: { id: string; user_id: string; quantity: number; created_at: string; updated_at?: string; products?: { id: string; name: string; price: number; image_url?: string } | null }) => {
       const uid = item.user_id
       if (!cartsByUser.has(uid)) {
         cartsByUser.set(uid, {
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
         })
       }
       const cart = cartsByUser.get(uid)
-      const unitPrice = item.unit_price ?? item.products?.price ?? 0
+      const unitPrice = item.products?.price ?? 0
       const lastUpdated = item.updated_at || item.created_at
       cart?.items.push({
         id: item.id,

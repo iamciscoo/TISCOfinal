@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const gw = String(gwCandidates[0] || '')
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
-    let transaction: any = null
+    let txnData: { id: string; user_id: string; order_id?: string; transaction_reference: string; status: string } | null = null
     let isSession = false
 
     // First try payment_transactions (existing flow)
@@ -80,10 +80,10 @@ export async function POST(req: NextRequest) {
       query = query.eq('gateway_transaction_id', gw)
     }
 
-    const { data: txnResult, error: findError } = await query.maybeSingle()
+    const { data: findResult } = await query.maybeSingle()
 
-    if (txnResult) {
-      transaction = txnResult
+    if (findResult) {
+      txnData = findResult
     } else {
       // Try payment_sessions (new flow)
       let sessionQuery = supabase
@@ -99,15 +99,15 @@ export async function POST(req: NextRequest) {
         sessionQuery = sessionQuery.eq('gateway_transaction_id', gw)
       }
 
-      const { data: sessionResult, error: sessionError } = await sessionQuery.maybeSingle()
+      const { data: sessionResult } = await sessionQuery.maybeSingle()
       
       if (sessionResult) {
-        transaction = sessionResult
+        txnData = sessionResult
         isSession = true
       }
     }
 
-    if (!transaction) {
+    if (!txnData) {
       console.error('Transaction/Session not found:', ref, gw)
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
@@ -134,27 +134,27 @@ export async function POST(req: NextRequest) {
 
     if (successSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentSuccess(transaction, normalizedBody)
+        await handleSessionPaymentSuccess(txnData, normalizedBody)
       } else {
-        await handlePaymentSuccess(transaction, normalizedBody)
+        await handlePaymentSuccess(txnData, normalizedBody)
       }
     } else if (pendingSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentPending(transaction)
+        await handleSessionPaymentPending(txnData)
       } else {
-        await handlePaymentPending(transaction)
+        await handlePaymentPending(txnData)
       }
     } else if (cancelSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentCancellation(transaction)
+        await handleSessionPaymentCancellation(txnData)
       } else {
-        await handlePaymentCancellation(transaction)
+        await handlePaymentCancellation(txnData)
       }
     } else if (failSet.has(statusRaw)) {
       if (isSession) {
-        await handleSessionPaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+        await handleSessionPaymentFailure(txnData, body?.failure_reason || 'Payment failed')
       } else {
-        await handlePaymentFailure(transaction, body?.failure_reason || 'Payment failed')
+        await handlePaymentFailure(txnData, body?.failure_reason || 'Payment failed')
       }
     } else {
       console.log('Unhandled webhook status/event:', statusRaw || '(empty)')

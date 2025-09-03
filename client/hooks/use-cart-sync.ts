@@ -10,6 +10,7 @@ export function useCartSync() {
   const { isLoaded, isSignedIn } = useUser()
   const items = useCartStore((s) => s.items)
   const lastServerHydrate = useCartStore((s) => s._lastServerHydrate)
+  const hasHydrated = useCartStore((s) => s.hasHydrated)
 
   // Map of productId -> { id: server cart row id, quantity }
   const serverMapRef = useRef<Map<string, { id: string; quantity: number }>>(new Map())
@@ -57,6 +58,8 @@ export function useCartSync() {
   // Main sync effect: watch local items and push diffs
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
+    // Wait until local storage has hydrated to avoid pushing empty local state
+    if (!hasHydrated) return
 
     // If this change was triggered by server hydration, skip outbound sync
     if (lastServerHydrate && lastServerHydrate > (lastHydrateTsRef.current || 0)) {
@@ -185,5 +188,5 @@ export function useCartSync() {
         debounceRef.current = null
       }
     }
-  }, [isLoaded, isSignedIn, items, lastServerHydrate])
+  }, [isLoaded, isSignedIn, hasHydrated, items, lastServerHydrate])
 }

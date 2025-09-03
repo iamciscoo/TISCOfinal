@@ -22,7 +22,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useAdminActions } from "@/lib/admin-utils";
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Category name is required!" }),
@@ -31,7 +31,7 @@ const formSchema = z.object({
 
 const AddCategory = () => {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const { handleCreate } = useAdminActions();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,27 +44,8 @@ const AddCategory = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json?.error || "Failed to create category");
-      }
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
-      form.reset();
-      window.location.reload(); // Refresh to show new category
-    } catch (error) {
-      console.error('Error creating category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create category",
-        variant: "destructive",
+      await handleCreate("/api/categories", values, "Category", () => {
+        form.reset();
       });
     } finally {
       setLoading(false);

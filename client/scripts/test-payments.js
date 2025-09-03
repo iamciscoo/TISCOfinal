@@ -52,18 +52,17 @@ async function testMobileMoneyPayment(orderId, phoneNumber, provider = 'vodacom'
   return result;
 }
 
-async function testCardPayment(orderId) {
-  console.log(`\n💳 Testing Card Payment`);
+async function testBankTransferPayment(orderId) {
+  console.log(`\n🏦 Testing Bank Transfer Payment`);
   console.log(`Order ID: ${orderId}`);
   
   const result = await makeRequest('/api/payments/process', {
     method: 'POST',
     body: JSON.stringify({
       order_id: orderId,
-      payment_method_id: 'mock_card_method',
+      payment_method_id: 'mock_bank_method',
       amount: testData.testAmount,
-      currency: 'TZS',
-      return_url: `${BASE_URL}/checkout/success`
+      currency: 'TZS'
     })
   });
   
@@ -120,8 +119,8 @@ async function runTests() {
     // Test 2: Invalid phone number
     await testMobileMoneyPayment(testOrderId, testData.invalidPhone, 'vodacom');
     
-    // Test 3: Card payment
-    await testCardPayment(testOrderId);
+    // Test 3: Bank transfer payment
+    await testBankTransferPayment(testOrderId);
     
     // Test 4: Webhook simulation
     await testWebhook(testOrderId, 'completed');
@@ -174,7 +173,7 @@ if (require.main === module) {
 
 module.exports = {
   testMobileMoneyPayment,
-  testCardPayment,
+  testBankTransferPayment,
   testPaymentStatus,
   testWebhook,
   testPhoneNormalization

@@ -46,7 +46,7 @@ import AddOrder from "./AddOrder";
 import AddUser from "./AddUser";
 import AddCategory from "./AddCategory";
 import AddReview from "./AddReview";
-// Removed unused AddProduct import
+import AddProductForm from "./AddProductForm";
 
 const items = [
   {
@@ -124,19 +124,15 @@ const AppSidebar = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
-                        <Link href="#">
-                          <Plus />
-                          Add Category
-                        </Link>
-                      </SidebarMenuButton>
-                    </SheetTrigger>
-                    <AddCategory />
-                  </Sheet>
-                </SidebarMenuButton>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <SidebarMenuButton>
+                      <Plus />
+                      Add Category
+                    </SidebarMenuButton>
+                  </SheetTrigger>
+                  <AddCategory />
+                </Sheet>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -157,19 +153,15 @@ const AppSidebar = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
-                        <Link href="#">
-                          <Plus />
-                          Add Customer
-                        </Link>
-                      </SidebarMenuButton>
-                    </SheetTrigger>
-                    <AddUser />
-                  </Sheet>
-                </SidebarMenuButton>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <SidebarMenuButton>
+                      <Plus />
+                      Add Customer
+                    </SidebarMenuButton>
+                  </SheetTrigger>
+                  <AddUser />
+                </Sheet>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -206,19 +198,15 @@ const AppSidebar = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
-                        <Link href="#">
-                          <Plus />
-                          Add Order
-                        </Link>
-                      </SidebarMenuButton>
-                    </SheetTrigger>
-                    <AddOrder />
-                  </Sheet>
-                </SidebarMenuButton>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <SidebarMenuButton>
+                      <Plus />
+                      Add Order
+                    </SidebarMenuButton>
+                  </SheetTrigger>
+                  <AddOrder />
+                </Sheet>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -281,19 +269,15 @@ const AppSidebar = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <SidebarMenuButton asChild>
-                        <Link href="#">
-                          <Plus />
-                          Add Review
-                        </Link>
-                      </SidebarMenuButton>
-                    </SheetTrigger>
-                    <AddReview onCreated={() => { router.push('/reviews'); (router as any).refresh?.() }} />
-                  </Sheet>
-                </SidebarMenuButton>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <SidebarMenuButton>
+                      <Plus />
+                      Add Review
+                    </SidebarMenuButton>
+                  </SheetTrigger>
+                  <AddReview onCreated={() => { router.push('/reviews'); (router as any).refresh?.() }} />
+                </Sheet>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -309,8 +293,6 @@ const AppSidebar = () => {
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Account</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out

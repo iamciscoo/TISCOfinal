@@ -31,6 +31,8 @@ interface CartStore {
   items: CartItem[]                    // Array of cart items
   isOpen: boolean                      // Cart sidebar visibility
   _lastServerHydrate?: number          // Timestamp of last server sync (not persisted)
+  hasHydrated: boolean                 // True when persisted state has been loaded
+  setHasHydrated: (v: boolean) => void // Setter for hydration flag
   
   // Server synchronization
   setItemsFromServer: (items: CartItem[]) => void
@@ -65,6 +67,10 @@ export const useCartStore = create<CartStore>()(
       items: [],
       isOpen: false,
       _lastServerHydrate: 0,
+      hasHydrated: false,
+
+      // Internal: mark store as hydrated from persistence
+      setHasHydrated: (v) => set({ hasHydrated: v }),
 
       /**
        * Replace local cart items with server data (for synchronization)
@@ -182,6 +188,14 @@ export const useCartStore = create<CartStore>()(
         ...currentState,
         ...(persistedState as object),
       }),
+      // Signal when rehydration from storage has completed
+      onRehydrateStorage: () => (state) => {
+        try {
+          state?.setHasHydrated?.(true)
+        } catch {
+          // no-op
+        }
+      },
     }
   )
 )

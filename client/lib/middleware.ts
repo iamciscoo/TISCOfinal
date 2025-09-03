@@ -1,0 +1,242 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+// API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+  timestamp: string
+}
+
+export interface ApiError {
+  code: string
+  message: string
+  details?: any
+  timestamp: string
+}
+
+// Standard API Error Codes
+export const API_ERROR_CODES = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR: 'AUTHORIZATION_ERROR',
+  NOT_FOUND: 'NOT_FOUND',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  DATABASE_ERROR: 'DATABASE_ERROR',
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR'
+} as const
+
+// API Response Helpers
+export function createSuccessResponse<T>(data: T, message?: string): ApiResponse<T> {
+  return {
+    success: true,
+    data,
+    message,
+    timestamp: new Date().toISOString()
+  }
+}
+
+export function createErrorResponse(
+  code: string,
+  message: string,
+  details?: any
+): ApiResponse {
+  return {
+    success: false,
+    error: code,
+    message,
+    timestamp: new Date().toISOString()
+  }
+}
+
+// Custom API Error Class
+export class ApiError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public statusCode: number = 500,
+    public details?: any
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+// Validation Middleware
+export function withValidation<T>(schema: z.ZodSchema<T>) {
+  return function (handler: (req: NextRequest, validatedData: T) => Promise<NextResponse>) {
+    return async function (req: NextRequest): Promise<NextResponse> {
+      try {
+        let data: any
+
+        if (req.method === 'GET') {
+          // Parse URL search params for GET requests
+          const url = new URL(req.url)
+          const params: Record<string, any> = {}
+          url.searchParams.forEach((value, key) => {
+            // Try to parse numbers and booleans
+            if (value === 'true') params[key] = true
+            else if (value === 'false') params[key] = false
+            else if (!isNaN(Number(value)) && value !== '') params[key] = Number(value)
+            else params[key] = value
+          })
+          data = params
+        } else {
+          // Parse JSON body for other methods
+          data = await req.json()
+        }
+
+        const validatedData = schema.parse(data)
+        return await handler(req, validatedData)
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return NextResponse.json(
+            createErrorResponse(
+              API_ERROR_CODES.VALIDATION_ERROR,
+              'Validation failed',
+              error.errors
+            ),
+            { status: 400 }
+          )
+        }
+
+        console.error('Validation middleware error:', error)
+        return NextResponse.json(
+          createErrorResponse(
+            API_ERROR_CODES.INTERNAL_ERROR,
+            'Internal server error'
+          ),
+          { status: 500 }
+        )
+      }
+    }
+  }
+}
+
+// Error Handler Middleware
+export function withErrorHandler(
+  handler: (req: NextRequest) => Promise<NextResponse>
+) {
+  return async function (req: NextRequest): Promise<NextResponse> {
+    try {
+      return await handler(req)
+    } catch (error) {
+      console.error('API Error:', error)
+
+      if (error instanceof ApiError) {
+        return NextResponse.json(
+          createErrorResponse(error.code, error.message, error.details),
+          { status: error.statusCode }
+        )
+      }
+
+      // Handle Supabase errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        const supabaseError = error as any
+        return NextResponse.json(
+          createErrorResponse(
+            API_ERROR_CODES.DATABASE_ERROR,
+            supabaseError.message || 'Database operation failed',
+            { code: supabaseError.code }
+          ),
+          { status: 500 }
+        )
+      }
+
+      // Generic error fallback
+      return NextResponse.json(
+        createErrorResponse(
+          API_ERROR_CODES.INTERNAL_ERROR,
+          'An unexpected error occurred'
+        ),
+        { status: 500 }
+      )
+    }
+  }
+}
+
+// Rate Limiting (Simple in-memory implementation)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+export function withRateLimit(
+  maxRequests: number = 100,
+  windowMs: number = 60000 // 1 minute
+) {
+  return function (handler: (req: NextRequest) => Promise<NextResponse>) {
+    return async function (req: NextRequest): Promise<NextResponse> {
+      const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown'
+      const now = Date.now()
+      const windowStart = now - windowMs
+
+      // Clean up old entries
+      for (const [key, value] of rateLimitMap.entries()) {
+        if (value.resetTime < windowStart) {
+          rateLimitMap.delete(key)
+        }
+      }
+
+      const current = rateLimitMap.get(ip) || { count: 0, resetTime: now + windowMs }
+
+      if (current.count >= maxRequests && current.resetTime > now) {
+        return NextResponse.json(
+          createErrorResponse(
+            API_ERROR_CODES.RATE_LIMIT_EXCEEDED,
+            'Too many requests'
+          ),
+          { status: 429 }
+        )
+      }
+
+      current.count++
+      rateLimitMap.set(ip, current)
+
+      return await handler(req)
+    }
+  }
+}
+
+// Authentication Middleware
+export function withAuth(
+  handler: (req: NextRequest, userId: string) => Promise<NextResponse>
+) {
+  return async function (req: NextRequest): Promise<NextResponse> {
+    try {
+      // Extract user ID from Clerk session or headers
+      const authHeader = req.headers.get('authorization')
+      const userId = req.headers.get('x-user-id') // Set by Clerk middleware
+
+      if (!userId && !authHeader) {
+        return NextResponse.json(
+          createErrorResponse(
+            API_ERROR_CODES.AUTHENTICATION_ERROR,
+            'Authentication required'
+          ),
+          { status: 401 }
+        )
+      }
+
+      return await handler(req, userId || 'anonymous')
+    } catch (error) {
+      console.error('Auth middleware error:', error)
+      return NextResponse.json(
+        createErrorResponse(
+          API_ERROR_CODES.AUTHENTICATION_ERROR,
+          'Authentication failed'
+        ),
+        { status: 401 }
+      )
+    }
+  }
+}
+
+// Combine multiple middlewares
+export function withMiddleware(
+  ...middlewares: Array<(handler: any) => any>
+) {
+  return function (handler: any) {
+    return middlewares.reduceRight((acc, middleware) => middleware(acc), handler)
+  }
+}

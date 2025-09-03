@@ -44,9 +44,11 @@ function mapServerItemsToLocal(items: ServerCartItem[]): CartItem[] {
 export function useRealtimeCart() {
   const { isLoaded, isSignedIn, user } = useUser()
   const setItemsFromServer = useCartStore((s) => s.setItemsFromServer)
+  const hasHydrated = useCartStore((s) => s.hasHydrated)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const isHydratingRef = useRef(false)
+  const didInitialHydrateRef = useRef(false)
   const log = (...args: unknown[]) => {
     if (process.env.NODE_ENV !== 'production') {
       console.debug('[cart-rt]', ...args)
@@ -55,6 +57,8 @@ export function useRealtimeCart() {
 
   useEffect(() => {
     if (!isLoaded) return
+    // Wait for local persisted cart to hydrate before any server hydration
+    if (!hasHydrated) return
 
     // Helper to load server cart and hydrate local store
     const hydrateFromServer = async () => {
@@ -66,8 +70,17 @@ export function useRealtimeCart() {
         if (res.ok) {
           const data = await res.json()
           const mapped = mapServerItemsToLocal(data.items || [])
-          setItemsFromServer(mapped)
-          log('hydrated from server', { count: mapped.length })
+          // On the very first hydration after page load, if server is empty but local has items,
+          // keep local state and let useCartSync push to server instead of overwriting to empty.
+          const currentLocalCount = useCartStore.getState().items.length
+          if (!didInitialHydrateRef.current && mapped.length === 0 && currentLocalCount > 0) {
+            didInitialHydrateRef.current = true
+            log('skip initial server hydrate (server empty, local has items)')
+          } else {
+            setItemsFromServer(mapped)
+            didInitialHydrateRef.current = true
+            log('hydrated from server', { count: mapped.length })
+          }
         }
       } catch {
         // no-op; UI will continue using local state
@@ -164,5 +177,5 @@ export function useRealtimeCart() {
       try { supabase.removeChannel(channelRef.current) } catch {}
       channelRef.current = null
     }
-  }, [isLoaded, isSignedIn, user?.id, setItemsFromServer])
+  }, [isLoaded, hasHydrated, isSignedIn, user?.id, setItemsFromServer])
 }

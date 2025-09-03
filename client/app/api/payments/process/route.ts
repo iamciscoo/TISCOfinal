@@ -65,7 +65,6 @@ export async function POST(req: NextRequest) {
       payment_method_id, 
       amount, 
       currency = 'TZS',
-      return_url,
       provider,
       phone_number,
     } = await req.json()
@@ -162,9 +161,6 @@ export async function POST(req: NextRequest) {
     let paymentResponse: unknown
     try {
       switch (paymentMethod!.type) {
-        case 'card':
-          paymentResponse = await processCardPayment(transaction, paymentMethod!, return_url)
-          break
         case 'mobile_money':
           paymentResponse = await processMobileMoneyPayment(transaction, paymentMethod!, { buyerName, buyerEmail, webhookUrl })
           break
@@ -220,34 +216,8 @@ export async function POST(req: NextRequest) {
 }
 
 // Payment processor implementations
-type PaymentMethod = { id: string; type: 'card' | 'mobile_money' | 'bank_transfer' | 'cash_on_delivery'; provider?: string; account_number?: string }
+type PaymentMethod = { id: string; type: 'mobile_money' | 'bank_transfer' | 'cash_on_delivery'; provider?: string; account_number?: string }
 type PaymentTransaction = { id: string; order_id: string; user_id: string; amount: number; currency: string; status: string; payment_type?: string; provider?: string; transaction_reference: string; gateway_transaction_id?: string }
-
-async function processCardPayment(transaction: PaymentTransaction, paymentMethod: PaymentMethod, returnUrl?: string) {
-  // Mock card payment processing - integrate with actual payment gateway
-  const mockSuccess = Math.random() > 0.1 // 90% success rate for demo
-
-  if (mockSuccess) {
-    const gwId = `card_${Date.now()}`
-    await supabase
-      .from('payment_transactions')
-      .update({
-        status: 'processing',
-        gateway_transaction_id: gwId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', transaction.id)
-
-    return {
-      status: 'processing',
-      redirect_url: returnUrl || '/checkout/success',
-      gateway_transaction_id: gwId,
-      message: 'Card payment initiated successfully'
-    }
-  } else {
-    throw new Error('Card payment declined')
-  }
-}
 
 interface BuyerInfo { buyerName: string; buyerEmail: string; webhookUrl: string }
 

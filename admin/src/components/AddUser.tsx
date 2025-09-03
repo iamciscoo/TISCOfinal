@@ -21,7 +21,7 @@ import {
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useAdminActions } from "@/lib/admin-utils";
 
 const formSchema = z.object({
   full_name: z
@@ -36,7 +36,7 @@ const formSchema = z.object({
 
 const AddUser = () => {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const { handleCreate } = useAdminActions();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,29 +52,13 @@ const AddUser = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: values.full_name,
-          email: values.email,
-          phone: values.phone,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to create user");
-
-      toast({
-        title: "Success",
-        description: "User created successfully",
-      });
-      form.reset();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create user",
-        variant: "destructive",
+      const userData = {
+        full_name: values.full_name,
+        email: values.email,
+        phone: values.phone,
+      };
+      await handleCreate("/api/users", userData, "User", () => {
+        form.reset();
       });
     } finally {
       setLoading(false);

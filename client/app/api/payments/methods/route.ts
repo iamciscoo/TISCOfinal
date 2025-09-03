@@ -29,7 +29,6 @@ export async function GET() {
     return NextResponse.json({ 
       payment_methods: paymentMethods || [],
       available_methods: [
-        { type: 'card', name: 'Credit/Debit Card', icon: 'credit-card' },
         { type: 'mobile_money', name: 'Mobile Money', icon: 'smartphone' },
         { type: 'bank_transfer', name: 'Bank Transfer', icon: 'building' },
         { type: 'cash_on_delivery', name: 'Cash on Delivery', icon: 'banknote' }
@@ -71,9 +70,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate based on payment type
-    if (type === 'card' && (!last_four_digits || !expiry_month || !expiry_year)) {
+    if (type === 'mobile_money' && !account_number) {
       return NextResponse.json({ 
-        error: 'Card details incomplete' 
+        error: 'Phone number required for mobile money' 
       }, { status: 400 })
     }
 
