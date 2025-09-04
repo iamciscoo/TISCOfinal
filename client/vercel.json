@@ -8,8 +8,6 @@
       "runtime": "nodejs18.x"
     }
   },
-  "public": {
-    "cleanUrls": true,
-    "trailingSlash": false
-  }
+  "cleanUrls": true,
+  "trailingSlash": false
 }
