@@ -20,7 +20,7 @@ const heroSlides: HeroSlide[] = [
     title: 'Custom PC Building',
     subtitle: 'Build Your Dream Machine',
     description: 'Professional custom PC assembly and configuration tailored to your specific needs and budget. From gaming rigs to workstations, we bring your vision to life.',
-    image: '/services/pcbuildupdate.jpeg',
+    image: '/services/pcbuild.jpeg',
     cta: 'Book PC Build'
   },
   {
@@ -28,7 +28,7 @@ const heroSlides: HeroSlide[] = [
     title: 'Desktop/Office Space Setup',
     subtitle: 'Transform Your Workspace',
     description: 'Complete workstation and office space configuration for optimal productivity and ergonomics. Multi-monitor setups, cable management, and more.',
-    image: '/services/desksetuphero.jpg',
+    image: '/services/desksetup.jpeg',
     cta: 'Book Office Setup'
   },
   {
@@ -36,7 +36,7 @@ const heroSlides: HeroSlide[] = [
     title: 'Computer/Software Installation',
     subtitle: 'Professional Setup & Configuration',
     description: 'Expert installation and configuration of operating systems, software suites, and system optimization. Get your computer running at peak performance.',
-    image: '/services/softwareheroupdate.jpeg',
+    image: '/services/software.jpeg',
     cta: 'Book Installation'
   }
 ]
