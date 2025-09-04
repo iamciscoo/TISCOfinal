@@ -46,7 +46,7 @@ import AddOrder from "./AddOrder";
 import AddUser from "./AddUser";
 import AddCategory from "./AddCategory";
 import AddReview from "./AddReview";
-import AddProductForm from "./AddProductForm";
+ 
 
 const items = [
   {
@@ -64,10 +64,12 @@ const items = [
 const AppSidebar = () => {
   const router = useRouter()
 
-  const handleLogout = () => {
-    // Clear the admin token cookie
-    document.cookie = 'admin-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    router.push('/login')
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } finally {
+      router.push('/login')
+    }
   }
 
   return (

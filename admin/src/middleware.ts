@@ -103,8 +103,14 @@ export async function middleware(request: NextRequest) {
     return rl ?? NextResponse.next()
   }
 
-  // Allow login page
+  // Login page: if already authenticated, redirect to home
   if (request.nextUrl.pathname === '/login') {
+    const token = request.cookies.get('admin-session')?.value
+    const secret = process.env.ADMIN_SESSION_SECRET
+    const ok = await verifySignedSession(token, secret)
+    if (ok) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
     return NextResponse.next()
   }
 

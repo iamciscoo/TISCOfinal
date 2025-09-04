@@ -447,10 +447,10 @@ export default function CheckoutPage() {
     }
   }
 
-  // Enhanced payment status polling with 30-second timeout
+  // Enhanced payment status polling with 15-second timeout
   const pollPaymentStatus = async (reference: string): Promise<boolean> => {
     const start = Date.now()
-    const timeoutMs = 30_000 // 30 seconds
+    const timeoutMs = 20_000 // 20 seconds
     const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
     
     while (Date.now() - start < timeoutMs) {
@@ -992,10 +992,10 @@ export default function CheckoutPage() {
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 30 seconds.
+                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 15 seconds.
                         </p>
                         <p className="text-xs text-gray-500">
-                          • You have 30 seconds to approve the payment on your phone<br/>
+                          • You have 15 seconds to approve the payment on your phone<br/>
                           • If you miss the prompt or enter an incorrect PIN, you can retry the payment<br/>
                           • Make sure your phone is nearby and ready to receive the payment request
                         </p>
