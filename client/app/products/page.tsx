@@ -388,6 +388,7 @@ function ProductsContent() {
               {/* Video Card - Below filters on desktop */}
               <VideoCard 
                 src="/officetour.mp4" 
+                poster="/officespace.png"
                 className="w-full h-80 lg:h-96"
               />
             </div>
@@ -397,6 +398,7 @@ function ProductsContent() {
           <div className="lg:hidden ">
             <VideoCard 
               src="/officetour.mp4" 
+              poster="/officespace.png"
               className="w-full aspect-video"
             />
           </div>

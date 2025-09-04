@@ -303,6 +303,7 @@ export default function DealsPage() {
         <div className="lg:hidden mb-5">
           <VideoCard 
             src="/deals-hero.mp4" 
+            poster="/deals-hero.png"
             className="w-full aspect-video"
           />
         </div>
@@ -323,6 +324,7 @@ export default function DealsPage() {
               {/* Video Card - Below filters on desktop */}
               <VideoCard 
                 src="/deals-hero.mp4" 
+                poster="/deals-hero.png"
                 className="w-full h-80 lg:h-96"
               />
             </div>

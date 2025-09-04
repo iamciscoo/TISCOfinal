@@ -1,50 +1,95 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
 interface VideoCardProps {
   src: string
+  poster?: string
   className?: string
+  preload?: 'none' | 'metadata' | 'auto'
+  lazy?: boolean
+  muted?: boolean
+  loop?: boolean
+  autoPlay?: boolean // Autoplay when in view
 }
 
 export const VideoCard: React.FC<VideoCardProps> = ({ 
-  src, 
-  className = '' 
+  src,
+  poster,
+  className = '',
+  preload = 'none',
+  lazy = true,
+  muted = true,
+  loop = true,
+  autoPlay = true,
 }) => {
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [inView, setInView] = useState(false)
+
+  useEffect(() => {
+    const node = wrapperRef.current
+    if (!node) return
+
+    // Use IntersectionObserver to lazy-load and control playback
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0
+        setInView(visible)
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+      }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const video = videoRef.current
-    if (video) {
-      // Ensure video plays automatically and loops
-      video.muted = true
-      video.loop = true
-      video.playsInline = true
-      
-      // Attempt to play the video
+    if (!video) return
+
+    // Ensure desired attributes
+    video.muted = muted
+    video.loop = loop
+    video.playsInline = true
+
+    const shouldLoad = !lazy || inView
+    if (!shouldLoad) {
+      // Pause when out of view
+      try { video.pause() } catch {}
+      return
+    }
+
+    if (autoPlay) {
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // Auto-play was prevented, video will play when user interacts
-          console.log('Video autoplay prevented by browser')
+          // Autoplay might be blocked; it will play on user interaction
         })
       }
     }
-  }, [])
+  }, [inView, lazy, muted, loop, autoPlay])
+
+  const shouldLoad = !lazy || inView
 
   return (
-    <div className={`relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl ${className}`}>
+    <div ref={wrapperRef} className={`relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl ${className}`}>
       <video
         ref={videoRef}
-        src={src}
         className="w-full h-full object-cover rounded-xl"
-        muted
-        loop
+        muted={muted}
+        loop={loop}
         playsInline
-        autoPlay
-        preload="metadata"
+        autoPlay={autoPlay && shouldLoad}
+        preload={shouldLoad ? preload : 'none'}
+        poster={poster}
       >
-        <source src={src} type="video/mp4" />
+        {shouldLoad ? <source src={src} type="video/mp4" /> : null}
         Your browser does not support the video tag.
       </video>
       
