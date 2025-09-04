@@ -158,6 +158,11 @@ export const ServicesHeroCarousel = () => {
               willChange: 'transform',
             }}
             priority={index === 0}
+            unoptimized={true}
+            onError={(e) => {
+              console.error(`Failed to load image: ${slide.image}`)
+              e.currentTarget.style.display = 'none'
+            }}
           />
           {/* Dark overlay for better text readability */}
           <div className="absolute inset-0 bg-black/50 rounded-2xl md:rounded-3xl" />

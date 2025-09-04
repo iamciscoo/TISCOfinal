@@ -31,6 +31,19 @@ const nextConfig: NextConfig = {
   },
   trailingSlash: false,
   output: 'standalone',
+  async headers() {
+    return [
+      {
+        source: '/services/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ]
+  },
 };
 
 export default nextConfig;
