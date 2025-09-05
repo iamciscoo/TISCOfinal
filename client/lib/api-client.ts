@@ -298,7 +298,7 @@ export const api = {
 export class RealtimeClient {
   private eventSource: EventSource | null = null
 
-  subscribe(channel: string, callback: (data: any) => void) {
+  subscribe(channel: string, callback: (data: unknown) => void) {
     if (typeof window === 'undefined') return
 
     this.eventSource = new EventSource(`${API_BASE_URL}/api/realtime/${channel}`)

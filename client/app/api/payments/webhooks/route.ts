@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     const statusRaw = String(rawStatusCandidates[0] || '').toUpperCase()
     const successSet = new Set(['SUCCESS', 'SUCCEEDED', 'COMPLETED', 'APPROVED', 'PAID', 'SETTLED', 'SUCCESSFUL'])
     const pendingSet = new Set(['PENDING', 'PROCESSING', 'AWAITING', 'QUEUED'])
-    const cancelSet = new Set(['CANCELLED', 'CANCELED'])
+    // const cancelSet = new Set(['CANCELLED', 'CANCELED'])
     const failSet = new Set(['FAILED', 'DECLINED', 'ERROR', 'REJECTED', 'TIMEOUT'])
 
     // Normalize body to ensure we persist the gateway transaction id when available
@@ -360,53 +360,54 @@ async function handlePaymentPending(transaction: TransactionRow) {
   }
 }
 
-async function handlePaymentCancellation(transaction: TransactionRow) {
-  try {
-    const supabase = getAdminSupabase()
-    if (!supabase) return
-    // Update transaction status
-    await supabase
-      .from('payment_transactions')
-      .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', transaction.id)
+// Commented out unused function to fix build warnings
+// async function handlePaymentCancellation(transaction: TransactionRow) {
+//   try {
+//     const supabase = getAdminSupabase()
+//     if (!supabase) return
+//     // Update transaction status
+//     await supabase
+//       .from('payment_transactions')
+//       .update({
+//         status: 'cancelled',
+//         cancelled_at: new Date().toISOString(),
+//         updated_at: new Date().toISOString()
+//       })
+//       .eq('id', transaction.id)
 
-    // Update order status if no other successful payments
-    const { data: otherPayments } = await supabase
-      .from('payment_transactions')
-      .select('status')
-      .eq('order_id', transaction.order_id)
-      .in('status', ['completed', 'processing'])
+//     // Update order status if no other successful payments
+//     const { data: otherPayments } = await supabase
+//       .from('payment_transactions')
+//       .select('status')
+//       .eq('order_id', transaction.order_id)
+//       .in('status', ['completed', 'processing'])
 
-    if (!otherPayments || otherPayments.length === 0) {
-      await supabase
-        .from('orders')
-        .update({
-          payment_status: 'cancelled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', transaction.order_id)
-    }
+//     if (!otherPayments || otherPayments.length === 0) {
+//       await supabase
+//         .from('orders')
+//         .update({
+//           payment_status: 'cancelled',
+//           updated_at: new Date().toISOString()
+//         })
+//         .eq('id', transaction.order_id)
+//     }
 
-    // Log cancellation
-    await supabase
-      .from('payment_logs')
-      .insert({
-        transaction_id: transaction.id,
-        event_type: 'payment_cancelled',
-        data: { message: 'Payment was cancelled' },
-        user_id: transaction.user_id
-      })
+//     // Log cancellation
+//     await supabase
+//       .from('payment_logs')
+//       .insert({
+//         transaction_id: transaction.id,
+//         event_type: 'payment_cancelled',
+//         data: { message: 'Payment was cancelled' },
+//         user_id: transaction.user_id
+//       })
 
-    console.log('Payment cancelled:', transaction.transaction_reference)
-    invalidateOrderCaches(transaction)
-  } catch (error) {
-    console.error('Error handling payment cancellation:', error)
-  }
-}
+//     console.log('Payment cancelled:', transaction.transaction_reference)
+//     invalidateOrderCaches(transaction)
+//   } catch (error) {
+//     console.error('Error handling payment cancellation:', error)
+//   }
+// }
 
 function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
   if (!signature) return false
@@ -527,7 +528,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // If webhook included a specific order_id (e.g., from client mock webhook), link to that order instead of creating a new one
-    const linkOrderId = (webhookData as any)?.order_id || (webhookData?.data as any)?.order_id
+    const linkOrderId = (webhookData as Record<string, unknown>)?.order_id || (webhookData?.data as Record<string, unknown>)?.order_id
     if (typeof linkOrderId === 'string' && linkOrderId.length > 0) {
       const { data: existingOrder } = await supabase
         .from('orders')
@@ -602,7 +603,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // Parse order data from session (client-provided); we will recompute totals and prices server-side
-    let orderData: any = {}
+    let orderData: Record<string, unknown> = {}
     try {
       orderData = JSON.parse(session.order_data)
     } catch (e) {
@@ -635,7 +636,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       productMap.set(p.id as string, {
         id: p.id as string,
         price: Number(p.price) || 0,
-        stock_quantity: (p as any)?.stock_quantity ?? null,
+        stock_quantity: (p as Record<string, unknown>)?.stock_quantity as number ?? null,
       })
     }
 
@@ -842,32 +843,33 @@ async function handleSessionPaymentPending(session: PaymentSession) {
   }
 }
 
-async function handleSessionPaymentCancellation(session: PaymentSession) {
-  try {
-    const supabase = getAdminSupabase()
-    if (!supabase) return
+// Commented out unused function to fix build warnings
+// async function handleSessionPaymentCancellation(session: PaymentSession) {
+//   try {
+//     const supabase = getAdminSupabase()
+//     if (!supabase) return
 
-    // Update session status
-    await supabase
-      .from('payment_sessions')
-      .update({
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', session.id)
+//     // Update session status
+//     await supabase
+//       .from('payment_sessions')
+//       .update({
+//         status: 'cancelled',
+//         updated_at: new Date().toISOString()
+//       })
+//       .eq('id', session.id)
 
-    // Log cancellation
-    await supabase
-      .from('payment_logs')
-      .insert({
-        session_id: session.id,
-        event_type: 'payment_cancelled',
-        data: { message: 'Payment was cancelled' },
-        user_id: session.user_id
-      })
+//     // Log cancellation
+//     await supabase
+//       .from('payment_logs')
+//       .insert({
+//         session_id: session.id,
+//         event_type: 'payment_cancelled',
+//         data: { message: 'Payment was cancelled' },
+//         user_id: session.user_id
+//       })
 
-    console.log('Session payment cancelled:', session.transaction_reference)
-  } catch (error) {
-    console.error('Error handling session payment cancellation:', error)
-  }
-}
+//     console.log('Session payment cancelled:', session.transaction_reference)
+//   } catch (error) {
+//     console.error('Error handling session payment cancellation:', error)
+//   }
+// }
