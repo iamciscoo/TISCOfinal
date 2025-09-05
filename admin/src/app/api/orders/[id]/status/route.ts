@@ -17,15 +17,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     const body = await req.json().catch(() => ({} as Partial<{ status: OrderStatus; reason?: string } >));
     const status = body.status;
 
-    const allowed: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!status || !allowed.includes(status)) {
+    const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!status || !allowedStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid or missing 'status'" }, { status: 400 });
     }
 
     // Fetch current order to validate transition and handle inventory
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
-      .select('user_id, status, order_items(*)')
+      .select('user_id, status, notes, order_items(*)')
       .eq('id', id)
       .single();
 
@@ -33,43 +33,56 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Validate status transitions for admin to prevent impossible states
+    // Validate status transitions for admin: allow forward-only transitions and cancel from any non-final state
     const currentStatus = (currentOrder as { status: OrderStatus }).status;
-    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-      pending: ['confirmed', 'processing', 'cancelled'],
-      confirmed: ['processing', 'cancelled'],
-      processing: ['shipped', 'cancelled'],
-      shipped: ['delivered', 'cancelled'],
-      delivered: [],
-      cancelled: [],
-    };
+    const orderRank: Record<OrderStatus, number> = {
+      pending: 0,
+      confirmed: 1,
+      processing: 2,
+      shipped: 3,
+      delivered: 4,
+      cancelled: 5, // treat cancelled as terminal
+    }
+    const isForward = (a: OrderStatus, b: OrderStatus) => orderRank[b] >= orderRank[a]
+    const isTerminal = (s: OrderStatus) => s === 'delivered' || s === 'cancelled'
 
-    if (!allowedTransitions[currentStatus]?.includes(status)) {
+    const canTransition = (
+      (status === 'cancelled' && !isTerminal(currentStatus)) ||
+      (!isTerminal(currentStatus) && status !== 'cancelled' && isForward(currentStatus, status))
+    )
+
+    if (!canTransition) {
       return NextResponse.json(
         { error: `Cannot change status from ${currentStatus} to ${status}` },
         { status: 400 }
       );
     }
 
-    // Restore stock when cancelling an order
-    if (status === 'cancelled' && currentStatus !== 'cancelled' && Array.isArray((currentOrder as any).order_items)) {
-      for (const item of (currentOrder as any).order_items as Array<{ product_id: string | number; quantity: number }>) {
-        try {
-          await supabase.rpc('restore_product_stock', {
-            product_id: item.product_id,
-            quantity: item.quantity,
-          });
-        } catch (e) {
-          console.warn('Stock restore rpc failed:', e);
-        }
+    // Inventory policy: decrement stock and set delivered atomically via RPC
+    let deliveredViaRpc = false
+    if (status === 'delivered' && !isTerminal(currentStatus)) {
+      const { error: deliverErr } = await supabase.rpc('deliver_order', { p_order_id: id })
+      if (deliverErr) {
+        return NextResponse.json({ error: `Failed to deliver order: ${deliverErr.message}` }, { status: 500 });
       }
+      deliveredViaRpc = true
     }
 
-    const updates: Record<string, unknown> = {
-      status,
-      ...(body.reason ? { notes: body.reason } : {}),
-      updated_at: new Date().toISOString(),
-    };
+    // Compose notes: preserve existing notes, append admin reason and any stock warnings
+    const existingNotes = (currentOrder as any)?.notes as string | null | undefined
+    const reasonText = body.reason ? String(body.reason) : ''
+    const combinedNotes = `${(existingNotes || '').trim()}${existingNotes ? '\n' : ''}${reasonText}`.trim()
+
+    const updates: Record<string, unknown> = deliveredViaRpc
+      ? {
+          ...(combinedNotes ? { notes: combinedNotes } : {}),
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          status,
+          ...(combinedNotes ? { notes: combinedNotes } : {}),
+          updated_at: new Date().toISOString(),
+        };
 
     const { data, error } = await supabase
       .from('orders')

@@ -510,30 +510,163 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     const supabase = getAdminSupabase()
     if (!supabase) return
 
-    // Parse order data from session
-    let orderData: {
-      items?: Array<{
-        product_id: string;
-        quantity: number;
-        price: number;
-      }>;
-      shipping_address?: object;
-      payment_method?: string;
-      total?: number;
+    // Idempotency: if we already recorded a completed/processing transaction for this session reference, skip
+    const { data: existingTx } = await supabase
+      .from('payment_transactions')
+      .select('id, order_id, status')
+      .eq('transaction_reference', session.transaction_reference)
+      .in('status', ['completed', 'processing'])
+      .maybeSingle()
+    if (existingTx?.id) {
+      // Ensure session marked completed
+      await supabase
+        .from('payment_sessions')
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', session.id)
+      return
     }
+
+    // If webhook included a specific order_id (e.g., from client mock webhook), link to that order instead of creating a new one
+    const linkOrderId = (webhookData as any)?.order_id || (webhookData?.data as any)?.order_id
+    if (typeof linkOrderId === 'string' && linkOrderId.length > 0) {
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id, user_id, status, payment_status')
+        .eq('id', linkOrderId)
+        .maybeSingle()
+      if (existingOrder && existingOrder.user_id === session.user_id) {
+        // Upsert payment transaction for this order reference
+        const { data: txExists } = await supabase
+          .from('payment_transactions')
+          .select('id')
+          .eq('transaction_reference', session.transaction_reference)
+          .maybeSingle()
+        if (!txExists?.id) {
+          await supabase
+            .from('payment_transactions')
+            .insert({
+              order_id: existingOrder.id,
+              user_id: session.user_id,
+              amount: session.amount,
+              currency: session.currency,
+              status: 'completed',
+              payment_type: 'mobile_money',
+              transaction_reference: session.transaction_reference,
+              gateway_transaction_id: webhookData.gateway_transaction_id || session.gateway_transaction_id,
+              completed_at: new Date().toISOString(),
+              webhook_data: webhookData
+            })
+        }
+
+        // Update order status to paid/processing if needed
+        await supabase
+          .from('orders')
+          .update({
+            status: 'processing',
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingOrder.id)
+
+        // Complete the session and clear cart
+        await supabase
+          .from('payment_sessions')
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
+          .eq('id', session.id)
+
+        await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', session.user_id)
+
+        // Log and revalidate
+        await supabase
+          .from('payment_logs')
+          .insert({
+            session_id: session.id,
+            event_type: 'payment_completed',
+            data: webhookData,
+            user_id: session.user_id
+          })
+
+        try {
+          revalidateTag('orders')
+          revalidateTag(`order:${existingOrder.id}`)
+          revalidateTag(`user-orders:${session.user_id}`)
+        } catch (e) {
+          console.warn('Revalidation error (non-fatal):', e)
+        }
+        return
+      }
+    }
+
+    // Parse order data from session (client-provided); we will recompute totals and prices server-side
+    let orderData: any = {}
     try {
       orderData = JSON.parse(session.order_data)
     } catch (e) {
       console.error('Failed to parse order data from session:', e)
+      orderData = {}
+    }
+
+    const items = Array.isArray(orderData?.items) ? orderData.items as Array<{ product_id: string; quantity: number; price?: number }> : []
+    if (items.length === 0) {
+      console.error('Session has no order items; aborting order creation')
+      await supabase
+        .from('payment_sessions')
+        .update({ status: 'failed', failure_reason: 'No items in session', updated_at: new Date().toISOString() })
+        .eq('id', session.id)
       return
     }
 
-    // Create the order now that payment is successful
+    // Fetch current product prices and basic availability
+    const productIds = items.map(i => i.product_id)
+    const { data: productsData, error: productsErr } = await supabase
+      .from('products')
+      .select('id, price, stock_quantity')
+      .in('id', productIds)
+    if (productsErr) {
+      console.error('Products fetch failed for session order:', productsErr)
+      return
+    }
+    const productMap = new Map<string, { id: string; price: number; stock_quantity?: number | null }>()
+    for (const p of productsData || []) {
+      productMap.set(p.id as string, {
+        id: p.id as string,
+        price: Number(p.price) || 0,
+        stock_quantity: (p as any)?.stock_quantity ?? null,
+      })
+    }
+
+    let total_amount = 0
+    const orderItems = [] as Array<{ order_id?: string; product_id: string; quantity: number; price: number }>
+    for (const it of items) {
+      const prod = productMap.get(it.product_id)
+      if (!prod) {
+        console.error('Product not found during session order creation:', it.product_id)
+        continue
+      }
+      // Note: is_active column doesn't exist in current schema, so we skip this validation
+      const serverPrice = prod.price
+      orderItems.push({ product_id: it.product_id, quantity: it.quantity, price: serverPrice })
+      total_amount += serverPrice * it.quantity
+    }
+
+    if (orderItems.length === 0) {
+      await supabase
+        .from('payment_sessions')
+        .update({ status: 'failed', failure_reason: 'No valid items after validation', updated_at: new Date().toISOString() })
+        .eq('id', session.id)
+      return
+    }
+
+    // Create the order using server-computed total
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: session.user_id,
-        total_amount: session.amount,
+        total_amount,
         currency: session.currency,
         payment_method: orderData.payment_method,
         shipping_address: orderData.shipping_address,
@@ -556,7 +689,6 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
 
     if (orderError || !order) {
       console.error('Failed to create order after successful payment:', orderError)
-      // Update session as failed
       await supabase
         .from('payment_sessions')
         .update({
@@ -568,34 +700,27 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       return
     }
 
-    // Create order items
-    if (orderData.items && Array.isArray(orderData.items)) {
-      const orderItems = orderData.items.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.price
-      }))
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems)
-
-      if (itemsError) {
-        console.error('Failed to create order items:', itemsError)
-        // Rollback order
-        await supabase.from('orders').delete().eq('id', order.id)
-        await supabase
-          .from('payment_sessions')
-          .update({
-            status: 'failed',
-            failure_reason: 'Order items creation failed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', session.id)
-        return
-      }
+    // Insert order items (server-verified prices)
+    const insertItems = orderItems.map(oi => ({ ...oi, order_id: order.id }))
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(insertItems)
+    if (itemsError) {
+      console.error('Failed to create order items:', itemsError)
+      await supabase.from('orders').delete().eq('id', order.id)
+      await supabase
+        .from('payment_sessions')
+        .update({
+          status: 'failed',
+          failure_reason: 'Order items creation failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.id)
+      return
     }
+
+    // Inventory policy: do not decrement stock at payment time.
+    // Stock will be decremented when the order is marked as 'delivered'.
 
     // Create payment transaction record for the completed order
     const { data: transaction, error: txError } = await supabase
@@ -603,7 +728,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       .insert({
         order_id: order.id,
         user_id: session.user_id,
-        amount: session.amount,
+        amount: total_amount,
         currency: session.currency,
         status: 'completed',
         payment_type: 'mobile_money',
@@ -614,7 +739,6 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       })
       .select()
       .single()
-
     if (txError) {
       console.warn('Failed to create payment transaction record:', txError)
     }
@@ -622,11 +746,14 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     // Update session as completed
     await supabase
       .from('payment_sessions')
-      .update({
-        status: 'completed',
-        updated_at: new Date().toISOString()
-      })
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
       .eq('id', session.id)
+
+    // Clear user's cart after successful paid order (server-side for mobile flow)
+    await supabase
+      .from('cart_items')
+      .delete()
+      .eq('user_id', session.user_id)
 
     // Log payment completion
     await supabase
@@ -640,8 +767,6 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       })
 
     console.log('Session payment completed successfully, order created:', session.transaction_reference)
-    
-    // Invalidate caches
     try {
       revalidateTag('orders')
       revalidateTag(`order:${order.id}`)

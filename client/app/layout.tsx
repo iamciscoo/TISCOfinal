@@ -5,6 +5,7 @@ import { CurrencyProvider } from '@/lib/currency-context'
 import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
 import CartRealtime from '@/components/CartRealtime'
+import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +51,7 @@ export default async function RootLayout({
             <AuthSync />
             <CartRealtime />
             {children}
+            <WhatsAppFloat />
           </CurrencyProvider>
           <Toaster />
         </body>

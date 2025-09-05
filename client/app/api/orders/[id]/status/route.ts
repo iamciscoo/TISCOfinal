@@ -8,6 +8,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+type CurrentOrderRow = {
+  user_id: string
+  status: OrderStatus
+  notes?: string | null
+  order_items?: Array<{ product_id: string | number; quantity: number }>
+}
+
 export async function PATCH(
   req: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
@@ -34,7 +42,7 @@ export async function PATCH(
     // First, get the current order to check ownership and current status
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
-      .select('user_id, status, order_items(*)')
+      .select('user_id, status, notes, order_items(*)')
       .eq('id', id)
       .single()
 
@@ -43,14 +51,15 @@ export async function PATCH(
     }
 
     // Check if user owns the order (for customer updates) or skip for admin
-    if (currentOrder.user_id !== user.id) {
+    const orderRow = currentOrder as CurrentOrderRow
+    if (orderRow.user_id !== user.id) {
       // For now, only allow users to update their own orders
       // TODO: Add admin role checking here
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
     }
 
     // Validate status transitions (customer cannot mark as paid; that is done via webhook)
-    const currentStatus = currentOrder.status
+    const currentStatus = orderRow.status
     const allowedTransitions: Record<string, string[]> = {
       'pending': ['processing', 'cancelled'],
       'processing': ['shipped', 'cancelled'],
@@ -65,24 +74,29 @@ export async function PATCH(
       }, { status: 400 })
     }
 
-    // Handle stock restoration for cancelled orders
-    if (status === 'cancelled' && currentStatus !== 'cancelled') {
-      for (const item of currentOrder.order_items) {
-        await supabase.rpc('restore_product_stock', {
-          product_id: item.product_id,
-          quantity: item.quantity
-        })
+    // Inventory policy: decrement stock and set delivered atomically via RPC
+    let deliveredViaRpc = false
+    if (status === 'delivered' && currentStatus !== 'delivered') {
+      const { error: deliverErr } = await supabase.rpc('deliver_order', { p_order_id: id })
+      if (deliverErr) {
+        return NextResponse.json({ error: `Failed to deliver order: ${deliverErr.message}` }, { status: 500 })
       }
+      deliveredViaRpc = true
     }
 
-    // Update order status
+    // Compose notes and update accordingly. If delivered via RPC, do not update status again.
+    const existingNotes = orderRow.notes
+    const combinedNotes = reason
+      ? `${(existingNotes || '').trim()}${existingNotes ? '\n' : ''}${String(reason)}`.trim()
+      : (existingNotes || '')
+
+    const updatePayload = deliveredViaRpc
+      ? { ...(combinedNotes ? { notes: combinedNotes } : {}), updated_at: new Date().toISOString() }
+      : { status, ...(combinedNotes ? { notes: combinedNotes } : {}), updated_at: new Date().toISOString() }
+
     const { data: order, error: updateError } = await supabase
       .from('orders')
-      .update({ 
-        status,
-        ...(reason && { notes: reason }),
-        updated_at: new Date().toISOString()
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single()

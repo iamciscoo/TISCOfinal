@@ -81,7 +81,7 @@ export const HomepageHeroCarousel = () => {
 
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
-    }, 6000) // Change slide every 6 seconds
+    }, 4000) // Change slide every 4 seconds
 
     return () => clearInterval(interval)
   }, [isAutoPlaying])

@@ -39,13 +39,13 @@ const faqs: FAQ[] = [
   },
   {
     id: '3',
-    question: 'How long does shipping take?',
-    answer: 'Standard shipping takes 3-7 business days. Express shipping (1-3 business days) is available for an additional fee.',
+    question: 'How long does delivery take?',
+    answer: 'Standard delivery takes 3-7 business days. Express delivery (1-3 business days) is available for an additional fee.',
     category: 'Orders & Shipping'
   },
   {
     id: '4',
-    question: 'Do you ship internationally?',
+    question: 'Do you delivery internationally?',
     answer: 'We don’t currently ship internationally, but special arrangements can sometimes be made. Please contact us directly to discuss your order and options.',
     category: 'Orders & Shipping'
   },

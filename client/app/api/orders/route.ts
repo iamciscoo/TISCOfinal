@@ -105,11 +105,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 })
     }
 
-    // Calculate total amount
+    // Calculate total amount using current product prices from DB and validate stock/availability
     const typedItems: OrderItemInput[] = items
-    const total_amount = typedItems.reduce((sum, item) => 
-      sum + (item.price * item.quantity), 0
-    )
+    const allHaveIds = typedItems.every(i => Boolean(i.product_id || i.productId))
+    if (!allHaveIds) {
+      return NextResponse.json({ error: 'Invalid order items' }, { status: 400 })
+    }
+    const productIds = Array.from(new Set(
+      typedItems.map(i => (i.product_id ?? i.productId) as string)
+    ))
+      .filter(Boolean)
+
+    const { data: productsData, error: productsErr } = await supabase
+      .from('products')
+      .select('id, price, stock_quantity')
+      .in('id', productIds)
+
+    if (productsErr) {
+      return NextResponse.json({ error: productsErr.message }, { status: 500 })
+    }
+
+    type ProductRow = { id: string; price: number; stock_quantity: number | null }
+    const productsDataTyped = (productsData || []) as ProductRow[]
+    const productMap = new Map<string, { id: string; price: number; stock_quantity?: number | null }>()
+    for (const p of productsDataTyped) {
+      productMap.set(p.id, {
+        id: p.id,
+        price: Number(p.price) || 0,
+        stock_quantity: p.stock_quantity ?? null,
+      })
+    }
+
+    // Validate each item, compute server-side totals, and prepare order_items payload with server price
+    const validatedItems = [] as Array<{ order_id?: string; product_id: string; quantity: number; price: number }>
+    let total_amount = 0
+    for (const it of typedItems) {
+      const pid = (it.product_id ?? it.productId) as string
+      const prod = productMap.get(pid)
+      if (!prod) {
+        return NextResponse.json({ error: 'One or more products not found' }, { status: 409 })
+      }
+      // Note: is_active column doesn't exist in current schema, so we skip this validation
+      if (typeof prod.stock_quantity === 'number' && prod.stock_quantity < it.quantity) {
+        return NextResponse.json({ error: 'Insufficient stock for one or more items' }, { status: 409 })
+      }
+      const serverPrice = prod.price
+      total_amount += serverPrice * it.quantity
+      validatedItems.push({ product_id: pid, quantity: it.quantity, price: serverPrice })
+    }
 
     // Ensure user exists in users table (FK safety) and sync address fields for admin visibility
     const clerkEmail = user.emailAddresses?.[0]?.emailAddress || undefined
@@ -225,12 +268,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: orderError.message }, { status: 500 })
     }
 
-    // Create order items
-    const orderItems = typedItems.map((item) => ({
+    // Create order items with server-verified prices
+    const orderItems = validatedItems.map((item) => ({
       order_id: order.id,
-      product_id: item.product_id ?? item.productId,
+      product_id: item.product_id,
       quantity: item.quantity,
-      price: item.price
+      price: item.price,
     }))
 
     const { error: itemsError } = await supabase
@@ -242,6 +285,9 @@ export async function POST(req: Request) {
       await supabase.from('orders').delete().eq('id', order.id)
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
+
+    // Inventory policy: do not decrement stock at order creation.
+    // Stock will be decremented when the order is marked as 'delivered'.
 
     // Invalidate caches for this user's orders and this order
     try {

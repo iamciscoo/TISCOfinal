@@ -96,7 +96,7 @@ export function useLazyLoad(options: UseIntersectionObserverOptions = {}) {
     ...options,
   })
 
-  return { shouldLoad: true, ref }
+  return { shouldLoad: isIntersecting, ref }
 }
 
 /**

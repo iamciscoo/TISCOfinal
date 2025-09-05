@@ -375,48 +375,10 @@ export default function CheckoutPage() {
               return
             }
             
-            // Payment successful - now create the order
-            const orderResponse = await fetch('/api/orders', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(orderData),
-            })
-
-            const orderResult = await orderResponse.json()
-            if (!orderResponse.ok) {
-              // Order creation failed after successful payment - this is a critical error
-              toast({
-                title: "Order Creation Failed",
-                description: "Payment was successful but order creation failed. Please contact support with reference: " + reference,
-                variant: "destructive",
-              })
-              return
-            }
-
-            // Complete the flow
-            toast({ title: 'Payment Confirmed', description: 'Your payment was successful and order created.' })
-            
-            // Immediately trigger payment completion via mock webhook
-            try {
-              await fetch('/api/payments/mock-webhook', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  transaction_reference: reference,
-                  status: 'COMPLETED',
-                  order_id: orderResult.order.id
-                })
-              })
-            } catch (e) {
-              console.warn('Failed to trigger payment completion:', e)
-            }
-            
-            // Flag Orders page for a one-shot refresh after redirect
+            // Payment successful - do NOT create the order client-side.
+            // The server webhook will create the order and clear the cart.
+            toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
             try { sessionStorage.setItem('orders:refresh', '1') } catch {}
-            clearCart()
-            void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
             router.push('/account/orders?justPaid=1')
             return
           }
@@ -576,47 +538,9 @@ export default function CheckoutPage() {
           return
         }
         
-        // Payment successful - now create the order
-        const orderResponse = await fetch('/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData),
-        })
-
-        const orderResult = await orderResponse.json()
-        if (!orderResponse.ok) {
-          // Order creation failed after successful payment - this is a critical error
-          toast({
-            title: "Order Creation Failed",
-            description: "Payment was successful but order creation failed. Please contact support with reference: " + reference,
-            variant: "destructive",
-          })
-          return
-        }
-
-        // Complete the flow
-        toast({ title: 'Payment Confirmed', description: 'Your retry payment was successful and order created!' })
-        
-        // Complete the payment
-        try {
-          await fetch('/api/payments/mock-webhook', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              transaction_reference: reference,
-              status: 'COMPLETED',
-              order_id: orderResult.order.id
-            })
-          })
-        } catch (e) {
-          console.warn('Failed to trigger payment completion:', e)
-        }
-        
+        // Payment successful - rely on webhook to create the order and clear cart.
+        toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
         try { sessionStorage.setItem('orders:refresh', '1') } catch {}
-        clearCart()
-        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
         router.push('/account/orders?justPaid=1')
       }
       
