@@ -185,24 +185,24 @@ export const ServicesHeroCarousel = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="max-w-3xl">
             {/* Slide Content */}
-            <div className="text-white space-y-6">
-              <div className="space-y-2">
-                <p className="text-blue-400 font-medium text-lg">
+            <div className="text-white space-y-2 sm:space-y-6">
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-blue-400 font-medium text-sm sm:text-base md:text-lg tracking-wide uppercase">
                   {heroSlides[currentSlide].subtitle}
                 </p>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight font-chango">
+                <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-6xl font-bold leading-tight font-chango">
                   {heroSlides[currentSlide].title}
                 </h1>
               </div>
               
-              <p className="text-xl md:text-2xl text-gray-200 leading-relaxed max-w-2xl">
+              <p className="text-base sm:text-lg md:text-xl text-gray-200 leading-relaxed max-w-2xl">
                 {heroSlides[currentSlide].description}
               </p>
 
-              <div className="pt-4">
+              <div className="pt-2 sm:pt-4">
                 <Button 
                   size="lg" 
-                  className="text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700"
+                  className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-blue-600 hover:bg-blue-700"
                   onClick={scrollToBooking}
                 >
                   {heroSlides[currentSlide].cta}
