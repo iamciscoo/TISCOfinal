@@ -46,6 +46,7 @@ const ProductsPage = async () => {
       columns={columns}
       data={data}
       entityName="Product"
+      deleteApiBase="/api/products"
     />
   );
 };

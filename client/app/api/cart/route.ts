@@ -111,7 +111,7 @@ export const POST = async (req: NextRequest) => {
       .single()
 
     if (existingItem) {
-      // Update existing item
+      // Update existing item and return the updated row
       const newQuantity = existingItem.quantity + quantity
       if (newQuantity > product.stock_quantity) {
         return NextResponse.json(
@@ -120,10 +120,12 @@ export const POST = async (req: NextRequest) => {
         )
       }
 
-      const { error: updateError } = await supabase
+      const { data: updatedItem, error: updateError } = await supabase
         .from('cart_items')
         .update({ quantity: newQuantity })
         .eq('id', existingItem.id)
+        .select('id, product_id, quantity')
+        .single()
 
       if (updateError) {
         return NextResponse.json(
@@ -131,15 +133,19 @@ export const POST = async (req: NextRequest) => {
           { status: 500 }
         )
       }
+
+      return NextResponse.json(createSuccessResponse({ item: updatedItem }))
     } else {
-      // Add new item
-      const { error: insertError } = await supabase
+      // Add new item and return the inserted row
+      const { data: insertedItem, error: insertError } = await supabase
         .from('cart_items')
         .insert({
           user_id: user.id,
           product_id,
           quantity
         })
+        .select('id, product_id, quantity')
+        .single()
 
       if (insertError) {
         return NextResponse.json(
@@ -147,9 +153,9 @@ export const POST = async (req: NextRequest) => {
           { status: 500 }
         )
       }
-    }
 
-    return NextResponse.json(createSuccessResponse({ message: 'Item added to cart' }))
+      return NextResponse.json(createSuccessResponse({ item: insertedItem }))
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

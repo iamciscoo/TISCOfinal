@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)!,
-  process.env.SUPABASE_SERVICE_ROLE!
-)
+import { supabase } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
   try {
@@ -155,7 +150,7 @@ export async function GET(req: NextRequest) {
       const cart = activeCartsByUser.get(userId)
       if (cart) {
         cart.items += item.quantity
-        const price = item.unit_price ?? item.products?.price ?? 0
+        const price = item.products?.price ?? 0
         cart.value += item.quantity * price
       }
     })

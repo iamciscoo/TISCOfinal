@@ -3,6 +3,7 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,24 @@ const ActionsCell = ({ service }: { service: Service }) => {
 }
 
 export const columns: ColumnDef<Service>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        checked={row.getIsSelected()}
+      />
+    ),
+  },
   {
     accessorKey: 'title',
     header: 'Title',

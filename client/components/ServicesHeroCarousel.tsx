@@ -129,13 +129,13 @@ export const ServicesHeroCarousel = () => {
   return (
     <section
       ref={heroRef}
-      className="relative h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden bg-gray-900
-                 mx-4 sm:mx-6 lg:mx-8 mt-6 md:mt-8
+      className="relative h-[48vh] sm:h-[55vh] lg:h-[60vh] overflow-hidden bg-gray-900
+                 mx-4 sm:mx-6 lg:mx-8 mt-2 md:mt-4
                  rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10"
       style={{
         containerType: 'inline-size',
-        clipPath: 'inset(0 0 calc(var(--p,0) * 28vh) 0 round 1.5rem)',
-        marginBottom: 'calc(var(--p,0) * -28vh)',
+        clipPath: 'inset(0 0 calc(var(--p,0) * 24vh) 0 round 1.5rem)',
+        marginBottom: 'calc(var(--p,0) * -24vh)',
         transition: 'clip-path 150ms ease-out, margin-bottom 150ms ease-out',
       } as React.CSSProperties}
     >

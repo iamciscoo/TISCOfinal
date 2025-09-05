@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { revalidateTag } from "next/cache";
 
 export const runtime = "nodejs";
 
@@ -203,6 +204,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .eq("id", costId)
       .single();
     if (retErr) return NextResponse.json({ error: retErr.message }, { status: 500 });
+
+    // Revalidate booking-related caches to sync list and edit pages
+    try {
+      revalidateTag('service-bookings');
+      revalidateTag('admin:service-bookings');
+      revalidateTag(`service-booking:${bookingId}`);
+    } catch {}
 
     return NextResponse.json({ data: cost }, { status: 200 });
   } catch (e) {

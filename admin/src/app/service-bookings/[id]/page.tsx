@@ -101,7 +101,7 @@ export default function EditServiceBookingPage() {
           customerEmail: b?.user?.email ?? b?.contact_email ?? '-',
           status: b?.status ?? 'pending',
           scheduledDate: toLocalInputValue(b?.preferred_date, b?.preferred_time),
-          totalAmount: '0', // No total_amount in current schema
+          totalAmount: String((b as any)?.total_amount ?? 0),
           notes: b?.notes ?? '',
           createdAt: b?.created_at ?? ''
         }))
@@ -122,10 +122,7 @@ export default function EditServiceBookingPage() {
       const body: Record<string, unknown> = {}
       // Normalize and include editable fields
       if (form.scheduledDate !== undefined) body.scheduled_date = form.scheduledDate || null
-      if (form.totalAmount !== undefined) {
-        const n = Number(form.totalAmount)
-        if (!Number.isNaN(n)) body.total_amount = n
-      }
+      // total_amount is managed via Manage Costs; do not patch from Edit Booking
       if (form.notes !== undefined) body.notes = form.notes
 
       const res = await fetch(`/api/service-bookings/${id}`, {
@@ -217,7 +214,12 @@ export default function EditServiceBookingPage() {
                   inputMode="numeric"
                   value={form.totalAmount}
                   onChange={(e) => setForm(prev => ({ ...prev, totalAmount: e.target.value }))}
+                  readOnly
+                  disabled
                 />
+                <div className="text-xs text-muted-foreground mt-1">
+                  Total is calculated from <span className="font-medium">Manage costs</span>.
+                </div>
               </div>
 
               <div>

@@ -13,13 +13,50 @@ import { Button } from "@/components/ui/button";
 import EditUser from "@/components/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
-import { getUserById, getUserMonthlyOrderActivity } from "@/lib/database";
+import { DataTable } from "@/components/shared/DataTable";
+import { columns as orderColumns } from "@/app/orders/columns";
+import type { OrderColumn as OrderUI } from "@/lib/ui-types";
+import { getUserById, getUserMonthlyOrderActivity, getOrdersByUser } from "@/lib/database";
+
+export const dynamic = 'force-dynamic'
 
 export default async function UserDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUserById(id).catch(() => null);
   const activity = user ? await getUserMonthlyOrderActivity(id, 6).catch(() => []) : [];
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
+
+  // Fetch user's orders for the Order History section
+  const userOrders = await getOrdersByUser(id).catch(() => []);
+  const ordersTableData: OrderUI[] = (userOrders || []).map((order) => ({
+    id: String(order.id),
+    customerId: order.user_id,
+    customerName: fullName || 'Unknown User',
+    customerEmail: user?.email || 'No email',
+    total: Number((order as any).total_amount ?? 0),
+    status: order.status as OrderUI['status'],
+    paymentStatus: (order.payment_status === 'cancelled' ? 'failed' : order.payment_status) as OrderUI['paymentStatus'],
+    items: order.order_items?.length || 0,
+    shippingAddress:
+      (order as any).shipping_address
+        ? (typeof (order as any).shipping_address === 'string'
+            ? (order as any).shipping_address
+            : [
+                (order as any).shipping_address?.address_line_1,
+                (order as any).shipping_address?.city,
+                `${(order as any).shipping_address?.state ?? ''} ${(order as any).shipping_address?.postal_code ?? ''}`.trim()
+              ]
+              .filter(Boolean)
+              .join(', ') || 'No shipping address')
+        : 'No shipping address',
+    createdAt: (order as any).created_at,
+    updatedAt: (order as any).updated_at,
+    currency: (order as any).currency,
+    shipping_amount: Number((order as any).shipping_amount ?? 0),
+    tax_amount: Number((order as any).tax_amount ?? 0),
+    tracking_number: (order as any).tracking_number,
+    notes: (order as any).notes
+  }));
 
   // Address fallbacks: prefer user columns, then default shipping address if present
   const addressLine1 = (user && (user as { address_line_1?: string; default_shipping_address?: { address_line_1?: string } }).address_line_1) ||
@@ -128,7 +165,18 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ id
         </div>
         {/* RIGHT */}
         <div className="w-full xl:w-2/3 space-y-6">
-          
+          {/* ORDER HISTORY */}
+          <div className="bg-primary-foreground p-4 rounded-lg">
+            <h1 className="text-xl font-semibold mb-4">Order History</h1>
+            <DataTable 
+              columns={orderColumns}
+              data={ordersTableData}
+              entityName="Order"
+              // Hide bulk-select and customer column since we're viewing a single user
+              columnVisibility={{ select: false, customerName: false }}
+            />
+          </div>
+
           {/* CHART CONTAINER */}
           <div className="bg-primary-foreground p-4 rounded-lg">
             <h1 className="text-xl font-semibold">User Activity</h1>

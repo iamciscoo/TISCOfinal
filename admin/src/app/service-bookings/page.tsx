@@ -40,6 +40,7 @@ const ServiceBookingsPage = async () => {
       columns={columns}
       data={data}
       entityName="Booking"
+      deleteApiBase="/api/service-bookings"
     />
   );
 };

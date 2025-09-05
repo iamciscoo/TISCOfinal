@@ -239,6 +239,32 @@ export async function getOrders(limit?: number): Promise<Order[]> {
   return orders.map(o => ({ ...o, user: usersById[String(o.user_id)] })) as unknown as Order[]
 }
 
+export async function getOrdersByUser(userId: string): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items:order_items(
+        *,
+        product:products(*)
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('getOrdersByUser: Supabase error', {
+      message: error.message,
+      code: (error as any).code,
+      details: (error as any).details,
+      hint: (error as any).hint,
+    })
+    throw error
+  }
+
+  return (data || []) as unknown as Order[]
+}
+
 export async function getOrderById(id: string | number): Promise<Order | null> {
   const { data, error } = await supabase
     .from('orders')

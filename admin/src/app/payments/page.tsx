@@ -40,6 +40,7 @@ const PaymentsPage = async () => {
       columns={columns}
       data={data}
       entityName="Payment"
+      deleteApiBase="/api/orders"
     />
   );
 };

@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)!,
-  process.env.SUPABASE_SERVICE_ROLE!
-)
+import { supabase } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,54 +10,27 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('user_id')
     
     const offset = (page - 1) * limit
-
-    // Compute distinct carts (users) with last activity in chunks
-    const chunkSize = 500
-    let position = 0
-    const userActivity = new Map<string, { user_id: string; last_updated: string; created_at: string }>()
-    while (true) {
-      let base = supabase
-        .from('cart_items')
-        .select('user_id, created_at')
-        .order('created_at', { ascending: false })
-        .range(position, position + chunkSize - 1)
-      if (userId) base = base.eq('user_id', userId)
-      const { data, error } = await base
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
-      if (!data || data.length === 0) break
-      for (const row of data as Array<{ user_id: string; created_at: string }>) {
-        const uid = row.user_id
-        if (!uid) continue
-        const last = row.created_at
-        const existing = userActivity.get(uid)
-        if (!existing) {
-          userActivity.set(uid, { user_id: uid, last_updated: last, created_at: row.created_at })
-        } else {
-          if (new Date(last) > new Date(existing.last_updated)) {
-            existing.last_updated = last
-          }
-        }
-      }
-      position += data.length
-      if (data.length < chunkSize) break
-    }
-
-    // Apply status filter at the user level - 7 days for abandoned carts
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    let groups = Array.from(userActivity.values())
-    if (status === 'abandoned') {
-      groups = groups.filter(g => new Date(g.last_updated) < cutoff)
-    } else if (status === 'active') {
-      groups = groups.filter(g => new Date(g.last_updated) >= cutoff)
-    }
-    // Sort by last activity desc
-    groups.sort((a, b) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())
+    const cutoffISO = cutoff.toISOString()
 
-    const totalDistinct = groups.length
-    const pageGroups = groups.slice(offset, offset + limit)
-    const pageUserIds = pageGroups.map(g => g.user_id)
+    // SQL-first: query cart_user_activity view with filters and pagination
+    let activityQuery = supabase
+      .from('cart_user_activity')
+      .select('user_id, last_activity, created_first_at', { count: 'exact' })
+      .order('last_activity', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (userId) activityQuery = activityQuery.eq('user_id', userId)
+    if (status === 'abandoned') activityQuery = activityQuery.lt('last_activity', cutoffISO)
+    else if (status === 'active') activityQuery = activityQuery.gte('last_activity', cutoffISO)
+
+    const { data: pageGroups, error: groupsError, count } = await activityQuery
+    if (groupsError) {
+      return NextResponse.json({ error: groupsError.message }, { status: 500 })
+    }
+
+    const totalDistinct = count ?? (pageGroups?.length ?? 0)
+    const pageUserIds = (pageGroups ?? []).map(g => g.user_id)
 
     if (pageUserIds.length === 0) {
       return NextResponse.json({
@@ -105,9 +73,9 @@ export async function GET(req: NextRequest) {
     // Build carts for the paginated users
     const cartsByUser = new Map<string, { user_id: string; user: { id: string; first_name: string | null; last_name: string | null; email: string | null }; items: Array<{ id: string; product: { id: string; name: string; price: number; image_url?: string } | null; quantity: number; unit_price: number; total_price: number; created_at: string; updated_at: string }>; total_items: number; total_value: number; last_updated: string; created_at: string }>()
     const orderIndex = new Map<string, number>()
-    pageGroups.forEach((g, idx) => orderIndex.set(g.user_id, idx))
+    ;(pageGroups ?? []).forEach((g: any, idx: number) => orderIndex.set(g.user_id, idx))
 
-    cartItems?.forEach((item: { id: string; user_id: string; quantity: number; created_at: string; updated_at?: string; products?: { id: string; name: string; price: number; image_url?: string } | null }) => {
+    ;(cartItems as any[])?.forEach((item: any) => {
       const uid = item.user_id
       if (!cartsByUser.has(uid)) {
         cartsByUser.set(uid, {

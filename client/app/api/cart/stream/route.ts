@@ -25,6 +25,9 @@ export async function GET(req: Request) {
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
+      try {
+        console.log('[cart-sse] start: user', user.id)
+      } catch {}
       controller.enqueue(sseEncode({ type: 'ready' }))
 
       channel = supabase
@@ -33,10 +36,16 @@ export async function GET(req: Request) {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'cart_items', filter: `user_id=eq.${user.id}` },
           (payload) => {
+            try {
+              console.log('[cart-sse] change', { userId: user.id, event: payload.eventType })
+            } catch {}
             controller.enqueue(sseEncode({ type: 'cart_change', event: payload.eventType }))
           }
         )
         .subscribe((status) => {
+          try {
+            console.log('[cart-sse] channel status', { userId: user.id, status })
+          } catch {}
           if (status === 'SUBSCRIBED') {
             controller.enqueue(sseEncode({ type: 'subscribed' }))
           }
@@ -47,6 +56,9 @@ export async function GET(req: Request) {
       }, 25000)
     },
     cancel() {
+      try {
+        console.log('[cart-sse] cancel: user', user.id)
+      } catch {}
       if (keepAlive) clearInterval(keepAlive)
       if (channel) supabase.removeChannel(channel)
       channel = null
@@ -56,6 +68,9 @@ export async function GET(req: Request) {
 
   // Cleanup on client abort
   req.signal.addEventListener('abort', () => {
+    try {
+      console.log('[cart-sse] abort: user', user.id)
+    } catch {}
     if (channel) supabase.removeChannel(channel)
     if (keepAlive) clearInterval(keepAlive)
   })

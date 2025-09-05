@@ -7,6 +7,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
+  VisibilityState,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -28,6 +29,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   entityName?: string; // e.g., "User", "Product", "Payment"
   deleteApiBase?: string; // e.g., "/api/orders" — DELETE {base}/{id}
+  columnVisibility?: VisibilityState; // optional visibility control per consumer
 }
 
 export function DataTable<TData, TValue>({
@@ -35,11 +37,13 @@ export function DataTable<TData, TValue>({
   data,
   entityName = "Item",
   deleteApiBase,
+  columnVisibility: initialColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [deleting, setDeleting] = useState(false);
   const { handleDelete } = useAdminActions();
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialColumnVisibility || {});
 
   const table = useReactTable({
     data,
@@ -49,9 +53,11 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       rowSelection,
+      columnVisibility,
     },
   });
 

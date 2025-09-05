@@ -46,6 +46,8 @@ export default async function ServicesPage() {
           columns={columns} 
           data={data.services || []} 
           searchKey="title"
+          entityName="Service"
+          deleteApiBase="/api/services"
         />
       </Suspense>
     </div>

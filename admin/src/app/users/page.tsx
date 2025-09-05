@@ -38,6 +38,7 @@ const UsersPage = async () => {
       columns={columns}
       data={data}
       entityName="User"
+      deleteApiBase="/api/users"
       addEntityButton={
         <Button asChild>
           <Link href="/users/new">Add User</Link>

@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Loader2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -31,24 +31,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useAdminActions } from '@/lib/admin-utils'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   searchKey?: string
   searchPlaceholder?: string
+  entityName?: string
+  deleteApiBase?: string // if provided, enables bulk delete using DELETE {base}/{id}
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = 'Search...'
+  searchPlaceholder = 'Search...',
+  entityName = 'Item',
+  deleteApiBase,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [deleting, setDeleting] = React.useState(false)
+  const { handleDelete } = useAdminActions()
 
   const table = useReactTable({
     data,
@@ -69,9 +76,33 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  const handleDeleteSelected = async () => {
+    if (!deleteApiBase) return
+    const selected = table.getSelectedRowModel().rows
+    const ids = selected
+      .map((r) => (r.original as any)?.id)
+      .filter((v) => v !== undefined && v !== null)
+
+    if (ids.length === 0) return
+
+    const confirmed = window.confirm(`Delete ${ids.length} ${entityName}(s)? This cannot be undone.`)
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => handleDelete(`${deleteApiBase}/${id}`, entityName))
+      )
+      const successful = results.filter((r) => r.status === 'fulfilled').length
+      if (successful === ids.length) setRowSelection({})
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 gap-2">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -108,6 +139,21 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+        {deleteApiBase && Object.keys(rowSelection).length > 0 && (
+          <Button
+            variant="destructive"
+            className="ml-2"
+            onClick={handleDeleteSelected}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
+            Delete {entityName}(s)
+          </Button>
+        )}
       </div>
       <div className="rounded-md border">
         <Table>

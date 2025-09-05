@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { revalidateTag } from "next/cache";
 
 export const runtime = 'nodejs';
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     const { data, error } = await supabase
       .from('service_bookings')
       .select(`
-        id, status, payment_status, preferred_date, preferred_time, notes, created_at, updated_at,
+        id, status, payment_status, preferred_date, preferred_time, notes, created_at, updated_at, total_amount,
         service_id, user_id, service_type, description, contact_email, contact_phone, customer_name,
         service:services(id, title),
         user:users(id, first_name, last_name, email)
@@ -97,6 +98,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    // Revalidate caches for service bookings
+    try {
+      revalidateTag('service-bookings');
+      revalidateTag('admin:service-bookings');
+      revalidateTag(`service-booking:${id}`);
+      if ((data as any)?.user_id) {
+        revalidateTag(`user-service-bookings:${(data as any).user_id}`);
+      }
+    } catch {}
     return NextResponse.json({ data }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';
@@ -111,12 +121,34 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
+    // Best-effort cleanup of related cost records (if feature enabled)
+    try {
+      const { data: costs } = await supabase
+        .from('service_booking_costs')
+        .select('id')
+        .eq('booking_id', id)
+      const costIds = (costs || []).map((c: any) => c.id).filter(Boolean)
+      if (costIds.length > 0) {
+        await supabase.from('service_booking_cost_items').delete().in('cost_id', costIds)
+        await supabase.from('service_booking_costs').delete().eq('booking_id', id)
+      }
+    } catch (e) {
+      // Swallow errors if tables do not exist or cleanup fails; deletion of booking proceeds
+      // Console only (non-fatal)
+      console.warn('Service booking cost cleanup warning:', e)
+    }
+
     const { error } = await supabase
       .from('service_bookings')
       .delete()
       .eq('id', id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+      revalidateTag('service-bookings');
+      revalidateTag('admin:service-bookings');
+      revalidateTag(`service-booking:${id}`);
+    } catch {}
     return new Response(null, { status: 204 });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';

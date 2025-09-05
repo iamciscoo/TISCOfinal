@@ -23,6 +23,7 @@ const CategoriesPage = async () => {
       columns={columns}
       data={data}
       entityName="Category"
+      deleteApiBase="/api/categories"
       addEntityButton={
         <Button asChild>
           <Link href="/categories/new">Add Category</Link>

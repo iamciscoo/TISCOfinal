@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -38,6 +39,24 @@ function formatTZS(value: number) {
 }
 
 export const columns: ColumnDef<ServiceBookingRow>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        checked={row.getIsSelected()}
+      />
+    ),
+  },
   {
     accessorKey: "serviceTitle",
     header: "Service",
@@ -217,6 +236,24 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
                 <Link href={`/service-bookings/${booking.id}`}>Edit booking</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={clearSchedule}>Clear schedule</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={async () => {
+                  const confirmed = window.confirm(`Delete booking ${booking.id}? This cannot be undone.`)
+                  if (!confirmed) return
+                  const response = await fetch(`/api/service-bookings/${booking.id}`, { method: 'DELETE' })
+                  if (response.status === 204) {
+                    toast({ title: 'Booking deleted' })
+                    window.location.reload()
+                  } else {
+                    const msg = await response.json().catch(() => ({}))
+                    toast({ title: msg?.error || 'Failed to delete booking', variant: 'destructive' })
+                  }
+                }}
+              >
+                Delete booking
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {/* Sheet content lives alongside the trigger */}

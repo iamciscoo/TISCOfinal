@@ -61,19 +61,20 @@ export function useRealtimeCart() {
     if (!hasHydrated) return
 
     // Helper to load server cart and hydrate local store
-    const hydrateFromServer = async () => {
+    const hydrateFromServer = async (isRealtime = false) => {
       if (!isSignedIn) return
       if (isHydratingRef.current) return
       isHydratingRef.current = true
       try {
         const res = await fetch('/api/cart', { cache: 'no-store' })
         if (res.ok) {
-          const data = await res.json()
-          const mapped = mapServerItemsToLocal(data.items || [])
+          const payload = await res.json()
+          const items = (payload?.data?.items ?? payload?.items ?? []) as ServerCartItem[]
+          const mapped = mapServerItemsToLocal(items)
           // On the very first hydration after page load, if server is empty but local has items,
           // keep local state and let useCartSync push to server instead of overwriting to empty.
           const currentLocalCount = useCartStore.getState().items.length
-          if (!didInitialHydrateRef.current && mapped.length === 0 && currentLocalCount > 0) {
+          if (!didInitialHydrateRef.current && mapped.length === 0 && currentLocalCount > 0 && !isRealtime) {
             didInitialHydrateRef.current = true
             log('skip initial server hydrate (server empty, local has items)')
           } else {
@@ -92,7 +93,7 @@ export function useRealtimeCart() {
     // Subscribe to realtime changes for this user
     if (isSignedIn && user?.id) {
       // Initial hydration
-      hydrateFromServer()
+      hydrateFromServer(false)
 
       // Close previous listeners
       if (eventSourceRef.current) {
@@ -118,7 +119,7 @@ export function useRealtimeCart() {
             const data = JSON.parse(e.data)
             if (data?.type === 'cart_change') {
               log('SSE cart_change received')
-              hydrateFromServer()
+              hydrateFromServer(true)
             }
           } catch {}
         }
@@ -134,7 +135,7 @@ export function useRealtimeCart() {
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'cart_items', filter: `user_id=eq.${user.id}` },
-              () => hydrateFromServer()
+              () => hydrateFromServer(true)
             )
             .subscribe()
           channelRef.current = channel
@@ -147,7 +148,7 @@ export function useRealtimeCart() {
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'cart_items', filter: `user_id=eq.${user.id}` },
-            () => hydrateFromServer()
+            () => hydrateFromServer(true)
           )
           .subscribe()
         channelRef.current = channel

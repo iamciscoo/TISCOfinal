@@ -40,9 +40,9 @@ export function useCartSync() {
       try {
         const res = await fetch('/api/cart', { cache: 'no-store' })
         if (!res.ok) return
-        const data = await res.json()
+        const payload = await res.json()
         const map = new Map<string, { id: string; quantity: number }>()
-        const arr: Array<{ id: string; product_id: string; quantity: number }> = data.items || []
+        const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])
         for (const it of arr) {
           map.set(String(it.product_id), { id: String(it.id), quantity: Number(it.quantity) || 0 })
         }
@@ -69,9 +69,9 @@ export function useCartSync() {
         try {
           const res = await fetch('/api/cart', { cache: 'no-store' })
           if (!res.ok) return
-          const data = await res.json()
+          const payload = await res.json()
           const map = new Map<string, { id: string; quantity: number }>()
-          const arr: Array<{ id: string; product_id: string; quantity: number }> = data.items || []
+          const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])
           for (const it of arr) {
             map.set(String(it.product_id), { id: String(it.id), quantity: Number(it.quantity) || 0 })
           }
@@ -127,9 +127,13 @@ export function useCartSync() {
               body: JSON.stringify({ product_id: a.productId, quantity: a.quantity })
             })
             if (res.ok) {
-              const out = await res.json()
-              const newItem = out.item as { id: string; product_id: string; quantity: number }
-              serverMap.set(String(newItem.product_id), { id: String(newItem.id), quantity: Number(newItem.quantity) || 0 })
+              const payload = await res.json()
+              const newItem = (payload?.data?.item ?? payload?.item) as { id: string; product_id: string; quantity: number } | undefined
+              if (newItem) {
+                serverMap.set(String(newItem.product_id), { id: String(newItem.id), quantity: Number(newItem.quantity) || 0 })
+              } else {
+                console.warn('[cart-sync] POST succeeded but response shape missing item', payload)
+              }
             } else if (res.status === 401) {
               break
             } else {
