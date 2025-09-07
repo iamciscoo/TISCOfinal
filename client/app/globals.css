@@ -1,8 +1,8 @@
+/* Import Google Fonts first - must be at the very top */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* Import Google Fonts at the top level - this is the proper way for Next.js */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
