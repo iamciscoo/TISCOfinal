@@ -7,13 +7,6 @@ import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 import "./globals.css";
 
-// Using system fonts for now due to Google Fonts connectivity issues
-const fontVariables = {
-  '--font-geist-sans': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  '--font-geist-mono': 'ui-monospace, SFMono-Regular, "SF Mono", monospace',
-  '--font-chango': 'Georgia, "Times New Roman", serif'
-};
-
 export const metadata: Metadata = {
   title: "TISCOマーケット - Online Shop",
   description: "Your trusted online marketplace for quality products",
@@ -33,10 +26,14 @@ export default async function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body
-          className="antialiased overflow-x-hidden"
-          style={fontVariables as React.CSSProperties}
-        >
+        <head>
+          {/* Load Google Fonts via CSS - this won't block the build */}
+          <link 
+            href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap" 
+            rel="stylesheet"
+          />
+        </head>
+        <body className="antialiased overflow-x-hidden">
           <CurrencyProvider>
             <AuthSync />
             <CartRealtime />
