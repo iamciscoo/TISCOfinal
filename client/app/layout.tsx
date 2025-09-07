@@ -26,13 +26,6 @@ export default async function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <head>
-          {/* Load Google Fonts via CSS - this won't block the build */}
-          <link 
-            href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap" 
-            rel="stylesheet"
-          />
-        </head>
         <body className="antialiased overflow-x-hidden">
           <CurrencyProvider>
             <AuthSync />

@@ -1,9 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Import Google Fonts at the top level - this is the proper way for Next.js */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap');
+
 @custom-variant dark (&:is(.dark *));
 
-/* Font definitions - fonts will be loaded via link tag in layout */
+/* Font definitions with Google Fonts as primary, system fonts as fallbacks */
 :root {
   --font-geist-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-geist-mono: 'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;

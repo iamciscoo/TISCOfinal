@@ -1,5 +1,15 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, RealtimeChannel } from '@supabase/supabase-js'
 import { cacheInvalidation } from './cache'
+
+// Type for Supabase realtime payload
+interface RealtimePayload {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+  new: Record<string, unknown>
+  old: Record<string, unknown>
+  schema: string
+  table: string
+  commit_timestamp: string
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -9,10 +19,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Real-time subscription manager
 class RealtimeManager {
-  private subscriptions = new Map<string, any>()
+  private subscriptions = new Map<string, RealtimeChannel>()
 
   // Subscribe to cart changes
-  subscribeToCart(userId: string, callback: (payload: any) => void) {
+  subscribeToCart(userId: string, callback: (payload: RealtimePayload) => void) {
     const channelName = `cart:${userId}`
     
     if (this.subscriptions.has(channelName)) {
@@ -42,7 +52,7 @@ class RealtimeManager {
   }
 
   // Subscribe to order changes
-  subscribeToOrders(userId: string, callback: (payload: any) => void) {
+  subscribeToOrders(userId: string, callback: (payload: RealtimePayload) => void) {
     const channelName = `orders:${userId}`
     
     if (this.subscriptions.has(channelName)) {
@@ -72,7 +82,7 @@ class RealtimeManager {
   }
 
   // Subscribe to product changes (for inventory updates)
-  subscribeToProducts(callback: (payload: any) => void) {
+  subscribeToProducts(callback: (payload: RealtimePayload) => void) {
     const channelName = 'products'
     
     if (this.subscriptions.has(channelName)) {
@@ -106,7 +116,7 @@ class RealtimeManager {
   }
 
   // Subscribe to review changes
-  subscribeToReviews(productId: string, callback: (payload: any) => void) {
+  subscribeToReviews(productId: string, callback: (payload: RealtimePayload) => void) {
     const channelName = `reviews:${productId}`
     
     if (this.subscriptions.has(channelName)) {
@@ -146,7 +156,7 @@ class RealtimeManager {
 
   // Unsubscribe from all channels
   unsubscribeAll() {
-    for (const [channelName, channel] of this.subscriptions.entries()) {
+    for (const [, channel] of this.subscriptions.entries()) {
       supabase.removeChannel(channel)
     }
     this.subscriptions.clear()
@@ -163,16 +173,16 @@ class RealtimeManager {
 export const realtimeManager = new RealtimeManager()
 
 // React hooks for real-time subscriptions
-export function useCartRealtime(userId: string, onUpdate?: (payload: any) => void) {
+export function useCartRealtime(userId: string, onUpdate?: (payload: RealtimePayload) => void) {
   if (typeof window === 'undefined') return
 
-  const handleUpdate = (payload: any) => {
+  const handleUpdate = (payload: RealtimePayload) => {
     console.log('Cart updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 
   // Subscribe on mount
-  const channel = realtimeManager.subscribeToCart(userId, handleUpdate)
+  realtimeManager.subscribeToCart(userId, handleUpdate)
 
   // Return cleanup function
   return () => {
@@ -180,16 +190,16 @@ export function useCartRealtime(userId: string, onUpdate?: (payload: any) => voi
   }
 }
 
-export function useOrdersRealtime(userId: string, onUpdate?: (payload: any) => void) {
+export function useOrdersRealtime(userId: string, onUpdate?: (payload: RealtimePayload) => void) {
   if (typeof window === 'undefined') return
 
-  const handleUpdate = (payload: any) => {
+  const handleUpdate = (payload: RealtimePayload) => {
     console.log('Orders updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 
   // Subscribe on mount
-  const channel = realtimeManager.subscribeToOrders(userId, handleUpdate)
+  realtimeManager.subscribeToOrders(userId, handleUpdate)
 
   // Return cleanup function
   return () => {
@@ -197,16 +207,16 @@ export function useOrdersRealtime(userId: string, onUpdate?: (payload: any) => v
   }
 }
 
-export function useProductsRealtime(onUpdate?: (payload: any) => void) {
+export function useProductsRealtime(onUpdate?: (payload: RealtimePayload) => void) {
   if (typeof window === 'undefined') return
 
-  const handleUpdate = (payload: any) => {
+  const handleUpdate = (payload: RealtimePayload) => {
     console.log('Products updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 
   // Subscribe on mount
-  const channel = realtimeManager.subscribeToProducts(handleUpdate)
+  realtimeManager.subscribeToProducts(handleUpdate)
 
   // Return cleanup function
   return () => {

@@ -13,7 +13,7 @@ export interface ApiResponse<T = unknown> {
 export interface ApiError {
   code: string
   message: string
-  details?: any
+  details?: Record<string, unknown> | unknown[]
   timestamp: string
 }
 
@@ -42,14 +42,21 @@ export function createSuccessResponse<T>(data: T, message?: string): ApiResponse
 export function createErrorResponse(
   code: string,
   message: string,
-  details?: any
+  details?: Record<string, unknown> | unknown[]
 ): ApiResponse {
-  return {
+  const response: ApiResponse = {
     success: false,
     error: code,
     message,
     timestamp: new Date().toISOString()
   }
+  
+  // Add details to the error message if provided
+  if (details) {
+    response.message = `${message}: ${JSON.stringify(details)}`
+  }
+  
+  return response
 }
 
 // Custom API Error Class
@@ -58,7 +65,7 @@ export class ApiError extends Error {
     public code: string,
     message: string,
     public statusCode: number = 500,
-    public details?: any
+    public details?: Record<string, unknown> | unknown[]
   ) {
     super(message)
     this.name = 'ApiError'
@@ -70,12 +77,12 @@ export function withValidation<T>(schema: z.ZodSchema<T>) {
   return function (handler: (req: NextRequest, validatedData: T) => Promise<NextResponse>) {
     return async function (req: NextRequest): Promise<NextResponse> {
       try {
-        let data: any
+        let data: unknown
 
         if (req.method === 'GET') {
           // Parse URL search params for GET requests
           const url = new URL(req.url)
-          const params: Record<string, any> = {}
+          const params: Record<string, unknown> = {}
           url.searchParams.forEach((value, key) => {
             // Try to parse numbers and booleans
             if (value === 'true') params[key] = true
@@ -135,7 +142,7 @@ export function withErrorHandler(
 
       // Handle Supabase errors
       if (error && typeof error === 'object' && 'code' in error) {
-        const supabaseError = error as any
+        const supabaseError = error as { code: string; message?: string }
         return NextResponse.json(
           createErrorResponse(
             API_ERROR_CODES.DATABASE_ERROR,
@@ -233,9 +240,9 @@ export function withAuth(
 }
 
 // Combine multiple middlewares
-export function withMiddleware(
-  ...middlewares: Array<(handler: any) => any>
-) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function withMiddleware(...middlewares: Array<(handler: any) => any>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function (handler: any) {
     return middlewares.reduceRight((acc, middleware) => middleware(acc), handler)
   }
