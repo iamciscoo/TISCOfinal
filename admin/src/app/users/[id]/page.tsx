@@ -172,8 +172,6 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ id
               columns={orderColumns}
               data={ordersTableData}
               entityName="Order"
-              // Hide bulk-select and customer column since we're viewing a single user
-              columnVisibility={{ select: false, customerName: false }}
             />
           </div>
 

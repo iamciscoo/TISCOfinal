@@ -305,15 +305,40 @@ export const emailTemplates = {
       <p>WhatsApp: <strong>+255748624684</strong></p>
     `
     return baseTemplate(content, data)
+  },
+
+  password_reset: (data: BaseEmailData & { reset_link: string, expires_at?: string }) => {
+    const content = `
+      <h2>Password Reset Request</h2>
+      <p>Dear ${data.customer_name || 'Customer'},</p>
+      <p>We received a request to reset the password for your TISCO Market account.</p>
+      
+      <div style="background-color: #fff3cd; padding: 20px; margin: 20px 0; border-radius: 4px; border: 1px solid #ffeaa7;">
+        <p><strong>⚠️ Security Notice:</strong></p>
+        <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+      </div>
+      
+      <p>To reset your password, click the button below:</p>
+      
+      <a href="${data.reset_link}" class="button" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0;">Reset Password</a>
+      
+      ${data.expires_at ? `<p><small>This link expires at: ${data.expires_at}</small></p>` : ''}
+      
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #666; font-size: 14px;">${data.reset_link}</p>
+      
+      <p>For security reasons, this link will expire in 24 hours.</p>
+    `
+    return baseTemplate(content, data)
   }
 }
 
 // Helper function to render email templates
 export async function renderEmailTemplate(
   templateType: TemplateType,
-  data: any
+  data: Record<string, unknown>
 ): Promise<string> {
-  const template = emailTemplates[templateType]
+  const template = emailTemplates[templateType as keyof typeof emailTemplates]
   if (!template) {
     throw new Error(`Unknown email template: ${templateType}`)
   }

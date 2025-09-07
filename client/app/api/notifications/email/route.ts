@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
-import { renderEmailTemplate, getDefaultSubject } from '@/lib/email-templates'
+import { getDefaultSubject } from '@/lib/email-templates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
