@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Chango } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs'
 import { CurrencyProvider } from '@/lib/currency-context'
 import { Toaster } from '@/components/ui/toaster'
@@ -8,22 +7,12 @@ import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  preload: false,
-});
-
-const chango = Chango({
-  variable: "--font-chango",
-  subsets: ["latin"],
-  weight: "400",
-});
+// Using system fonts for now due to Google Fonts connectivity issues
+const fontVariables = {
+  '--font-geist-sans': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  '--font-geist-mono': 'ui-monospace, SFMono-Regular, "SF Mono", monospace',
+  '--font-chango': 'Georgia, "Times New Roman", serif'
+};
 
 export const metadata: Metadata = {
   title: "TISCOマーケット - Online Shop",
@@ -45,7 +34,8 @@ export default async function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} ${chango.variable} antialiased overflow-x-hidden`}
+          className="antialiased overflow-x-hidden"
+          style={fontVariables as React.CSSProperties}
         >
           <CurrencyProvider>
             <AuthSync />

@@ -338,11 +338,6 @@ export async function renderEmailTemplate(
   templateType: TemplateType,
   data: Record<string, unknown>
 ): Promise<string> {
-  const template = emailTemplates[templateType as keyof typeof emailTemplates]
-  if (!template) {
-    throw new Error(`Unknown email template: ${templateType}`)
-  }
-  
   // Add default values
   const defaultData = {
     company_name: 'TISCO Market',
@@ -351,7 +346,33 @@ export async function renderEmailTemplate(
     ...data
   }
   
-  return template(defaultData)
+  // Handle each template type explicitly to satisfy TypeScript
+  switch (templateType) {
+    case 'order_confirmation':
+      return emailTemplates.order_confirmation(defaultData as OrderEmailData)
+    case 'order_status_update':
+      return emailTemplates.order_status_update(defaultData as OrderEmailData & { status: string, reason?: string })
+    case 'payment_success':
+      return emailTemplates.payment_success(defaultData as PaymentEmailData)
+    case 'payment_failed':
+      return emailTemplates.payment_failed(defaultData as PaymentEmailData)
+    case 'cart_abandonment':
+      return emailTemplates.cart_abandonment(defaultData as BaseEmailData & { cart_url: string })
+    case 'welcome_email':
+      return emailTemplates.welcome_email(defaultData as BaseEmailData)
+    case 'password_reset':
+      return emailTemplates.password_reset(defaultData as BaseEmailData & { reset_link: string, expires_at?: string })
+    case 'shipping_notification':
+      return emailTemplates.shipping_notification(defaultData as OrderEmailData)
+    case 'delivery_confirmation':
+      return emailTemplates.delivery_confirmation(defaultData as OrderEmailData)
+    case 'review_request':
+      return emailTemplates.review_request(defaultData as OrderEmailData)
+    case 'contact_reply':
+      return emailTemplates.contact_reply(defaultData as ContactReplyData)
+    default:
+      throw new Error(`Unknown email template: ${templateType}`)
+  }
 }
 
 // Get default subject lines for email types
