@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { renderEmailTemplate, getDefaultSubject } from '@/lib/email-templates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -144,22 +145,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function getDefaultSubject(template_type: string): string {
-  const subjects = {
-    order_confirmation: 'Order Confirmation - TISCO Market',
-    order_status_update: 'Order Status Update - TISCO Market',
-    payment_success: 'Payment Successful - TISCO Market',
-    payment_failed: 'Payment Failed - TISCO Market',
-    cart_abandonment: 'Complete Your Purchase - TISCO Market',
-    welcome_email: 'Welcome to TISCO Market!',
-    password_reset: 'Reset Your Password - TISCO Market',
-    shipping_notification: 'Your Order Has Shipped - TISCO Market',
-    delivery_confirmation: 'Order Delivered - TISCO Market',
-    review_request: 'Review Your Recent Purchase - TISCO Market'
-  }
-  
-  return subjects[template_type as keyof typeof subjects] || 'Notification - TISCO Market'
-}
+// getDefaultSubject is now imported from @/lib/email-templates
 
 interface NotificationRequest {
   id?: string
@@ -173,14 +159,61 @@ interface NotificationRequest {
 }
 
 async function sendEmail(notification: NotificationRequest): Promise<void> {
-  // Mock email sending implementation
-  // In production, integrate with services like:
-  // - SendGrid
-  // - AWS SES
-  // - Mailgun
-  // - Postmark
+  // Email Service Implementation Guide
+  // ==================================
+  // Replace this mock implementation with one of the following services:
   
-  console.log('Sending email:', {
+  // Option 1: SendGrid (Recommended for reliability)
+  // ------------------------------------------------
+  // 1. Install: npm install @sendgrid/mail
+  // 2. Set environment variable: SENDGRID_API_KEY
+  // 
+  // import sgMail from '@sendgrid/mail'
+  // sgMail.setApiKey(process.env.SENDGRID_API_KEY!)
+  // 
+  // const msg = {
+  //   to: notification.recipient_email,
+  //   from: process.env.FROM_EMAIL!,
+  //   subject: notification.subject,
+  //   html: await renderEmailTemplate(notification.template_type, notification.template_data),
+  // }
+  // await sgMail.send(msg)
+
+  // Option 2: Resend (Modern, developer-friendly)
+  // ----------------------------------------------
+  // 1. Install: npm install resend
+  // 2. Set environment variable: RESEND_API_KEY
+  //
+  // import { Resend } from 'resend'
+  // const resend = new Resend(process.env.RESEND_API_KEY)
+  // 
+  // await resend.emails.send({
+  //   from: process.env.FROM_EMAIL!,
+  //   to: notification.recipient_email,
+  //   subject: notification.subject,
+  //   html: await renderEmailTemplate(notification.template_type, notification.template_data),
+  // })
+
+  // Option 3: AWS SES (Cost-effective at scale)
+  // --------------------------------------------
+  // 1. Install: npm install @aws-sdk/client-ses
+  // 2. Set AWS credentials
+  //
+  // import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+  // const client = new SESClient({ region: "us-east-1" })
+  // 
+  // const command = new SendEmailCommand({
+  //   Source: process.env.FROM_EMAIL!,
+  //   Destination: { ToAddresses: [notification.recipient_email] },
+  //   Message: {
+  //     Subject: { Data: notification.subject },
+  //     Body: { Html: { Data: await renderEmailTemplate(...) } }
+  //   }
+  // })
+  // await client.send(command)
+
+  // Current: Mock implementation for testing
+  console.log('MOCK EMAIL - Replace with real service:', {
     to: notification.recipient_email,
     subject: notification.subject,
     template: notification.template_type,

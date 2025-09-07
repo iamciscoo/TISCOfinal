@@ -260,7 +260,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               {productImages.map((image, index) => (
                 <div
                   key={index}
-                  className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 ${
+                  className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 hover:shadow-md ${
                     selectedImageIndex === index ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'
                   }`}
                   onClick={() => handleImageSelect(index)}

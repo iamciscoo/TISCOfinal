@@ -9,6 +9,8 @@ This guide provides step-by-step instructions for deploying TISCO Market to prod
 - Supabase project (for database and storage)
 - Clerk account (for authentication)
 - Domain name (optional, Vercel provides free subdomains)
+- Email service provider account (SendGrid, Resend, or AWS SES)
+- Payment provider account (Stripe or local provider for Tanzania)
 
 ## Repository Structure
 ```
@@ -71,9 +73,21 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 
-# Optional: Email Service
+# Email Service (Required for notifications)
 SENDGRID_API_KEY=your_sendgrid_key
 FROM_EMAIL=noreply@your-domain.com
+FROM_NAME=TISCO Market
+
+# Internal API Security
+INTERNAL_API_SECRET=generate_a_secure_random_string
+CRON_SECRET=generate_another_secure_random_string
+
+# Payment Provider (Already Integrated)
+# The platform includes comprehensive payment processing
+# Only production credentials needed:
+PAYMENT_PROVIDER_API_KEY=your_production_key
+PAYMENT_PROVIDER_SECRET=your_production_secret
+PAYMENT_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ### 2.2 Admin Application Environment Variables
@@ -103,10 +117,18 @@ GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID
 3. Run the database migrations:
 
 ```sql
--- Run the SQL files in this order:
--- 1. client/database_setup.sql
--- 2. client/database_update.sql (if exists)
+-- Run the SQL files in this order from docs/resources/sql/:
+-- 1. 01_initial_schema.sql
+-- 2. 02_comprehensive_updates.sql
+-- 3. 03_stock_functions.sql
+-- 4. 04_deals_migration.sql
+-- 5. 05_performance_optimization.sql
+-- 6. 06_cart_analytics_updates.sql
+-- 7. 07_realtime_enable_cart_items.sql
+-- 8. 08_email_notifications.sql
 ```
+
+**Important**: Run each file completely before proceeding to the next.
 
 ### 3.2 Row Level Security (RLS) Policies
 The database includes comprehensive RLS policies. Ensure they're enabled:
@@ -190,14 +212,33 @@ Vercel automatically provides SSL certificates for all deployments.
 
 ### 5.3 Clerk Configuration
 Update Clerk dashboard with production URLs:
-- Authorized redirect URLs
-- Webhook endpoints
-- CORS origins
+- Authorized redirect URLs:
+  - `https://your-domain.com/*`
+  - `https://your-domain.com/sign-in`
+  - `https://your-domain.com/sign-up`
+- Webhook endpoints:
+  - `https://your-domain.com/api/webhooks/clerk`
+- CORS origins:
+  - `https://your-domain.com`
+  - `https://admin.your-domain.com`
+- Enable webhook events:
+  - user.created
+  - user.updated
+  - user.deleted
 
 ### 5.4 Supabase Configuration
 Update Supabase project settings:
 - Site URL: `https://your-domain.com`
-- Additional redirect URLs for auth
+- Additional redirect URLs:
+  - `https://your-domain.com`
+  - `https://admin.your-domain.com`
+- Enable Row Level Security (RLS) on all tables
+- Configure storage buckets:
+  - `product-images` (public)
+  - `user-avatars` (public)
+- Set up database backups:
+  - Enable Point-in-time Recovery
+  - Daily backups at 2 AM EAT
 
 ## Step 6: Monitoring and Analytics
 
@@ -275,6 +316,61 @@ Supabase provides:
 - Vercel maintains deployment history
 - Consider additional backup strategies
 
+## Step 10.5: Email Service Setup
+
+### Configure Email Provider
+1. Follow the [Email Setup Guide](EMAIL_SETUP_GUIDE.md)
+2. Set up domain authentication (SPF, DKIM, DMARC)
+3. Configure email templates
+4. Test email delivery
+5. Set up email worker/cron job
+
+## Step 10.6: Payment Integration
+
+### Payment Service Integration (Already Configured)
+The platform already includes a comprehensive payment system with the following features:
+
+**Supported Payment Methods:**
+- Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, Halo Pesa)
+- Bank Transfer
+- Office Payment
+- Cash on Delivery
+
+**Payment Flow:**
+1. Session-based payment processing
+2. Real-time payment confirmation via webhooks
+3. Automatic order creation after successful payment
+4. Email notifications for payment status
+
+**Configuration Status:**
+- ✅ Payment API endpoints implemented
+- ✅ Webhook handling configured
+- ✅ Database schema for payments ready
+- ⚠️ Production credentials needed from payment provider
+
+## Step 10.7: Real-time Features Configuration
+
+### Enable Supabase Realtime
+1. Go to Supabase Dashboard > Database > Replication
+2. Enable replication for:
+   - `cart_items` table
+   - `orders` table
+   - `products` table (for inventory updates)
+3. Verify realtime subscriptions are working
+
+## Step 10.8: Performance Optimization
+
+### Vercel Configuration
+1. Enable Edge Runtime for API routes where applicable
+2. Configure caching headers
+3. Set up ISR (Incremental Static Regeneration) for product pages
+4. Enable image optimization
+
+### Database Optimization
+1. Create indexes (already in migrations)
+2. Enable connection pooling in Supabase
+3. Set up query performance monitoring
+
 ## Troubleshooting
 
 ### Common Issues
@@ -346,5 +442,79 @@ npm run build
 
 ---
 
-*Last Updated: January 3, 2025*
-*Version: 1.0*
+## Production Launch Checklist
+
+### Pre-Launch (1 Week Before)
+- [ ] All database migrations applied successfully
+- [ ] Email service configured and tested
+- [ ] Payment gateway integrated and tested
+- [ ] Domain DNS configured
+- [ ] SSL certificates active
+- [ ] Backup strategy implemented
+- [ ] Monitoring tools configured
+- [ ] Load testing completed
+- [ ] Security audit performed
+- [ ] Legal pages updated (Terms, Privacy, etc.)
+
+### Launch Day
+- [ ] Deploy client application to production
+- [ ] Deploy admin application to production
+- [ ] Verify all environment variables
+- [ ] Test critical user flows
+- [ ] Enable email notifications
+- [ ] Enable payment processing
+- [ ] Monitor error logs
+- [ ] Verify real-time features
+- [ ] Test mobile responsiveness
+- [ ] Announce launch
+
+### Post-Launch (First Week)
+- [ ] Monitor performance metrics
+- [ ] Review error logs daily
+- [ ] Check email delivery rates
+- [ ] Monitor payment success rates
+- [ ] Gather user feedback
+- [ ] Fix critical bugs immediately
+- [ ] Update documentation
+- [ ] Plan first feature updates
+
+## Rollback Plan
+
+If critical issues occur:
+
+1. **Immediate Actions**
+   ```bash
+   # Revert to previous deployment in Vercel
+   # Go to Vercel Dashboard > Deployments > Select previous working deployment > Promote to Production
+   ```
+
+2. **Database Rollback**
+   - Use Supabase point-in-time recovery
+   - Restore to pre-deployment backup
+
+3. **Communication**
+   - Update status page
+   - Notify users via email/social media
+   - Document issues for post-mortem
+
+## Support & Resources
+
+### Platform Support
+- **WhatsApp Business**: +255748624684
+- **Email**: support@tiscomarket.com
+- **Admin Access**: https://admin.your-domain.com
+
+### Technical Resources
+- **Vercel Status**: [status.vercel.com](https://status.vercel.com)
+- **Supabase Status**: [status.supabase.com](https://status.supabase.com)
+- **Clerk Status**: [status.clerk.com](https://status.clerk.com)
+
+### Documentation
+- [Email Setup Guide](EMAIL_SETUP_GUIDE.md)
+- [Testing Guide](TESTING_GUIDE.md)
+- [Payment Flow Documentation](PAYMENT_FLOW_DOCUMENTATION.md)
+
+---
+
+*Last Updated: January 2025*
+*Version: 2.0*

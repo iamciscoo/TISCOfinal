@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "./DataTable";
+import { DataTable } from "../ui/data-table";
 import { ReactNode } from "react";
 
 interface PageLayoutProps<TData, TValue> {

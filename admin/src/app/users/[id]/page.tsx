@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import EditUser from "@/components/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/AppLineChart";
-import { DataTable } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/ui/data-table";
 import { columns as orderColumns } from "@/app/orders/columns";
 import type { OrderColumn as OrderUI } from "@/lib/ui-types";
 import { getUserById, getUserMonthlyOrderActivity, getOrdersByUser } from "@/lib/database";

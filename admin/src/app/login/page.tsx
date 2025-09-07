@@ -10,6 +10,7 @@ import { Lock, Shield } from 'lucide-react'
 export default function LoginPage() {
   const [accessKey, setAccessKey] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -17,6 +18,7 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -29,16 +31,21 @@ export default function LoginPage() {
         if (ct.includes('application/json')) {
           const data = await res.json().catch(() => ({}))
           const errorData = data as { error?: string; message?: string }
-          setError(errorData?.error || errorData?.message || 'Invalid access key. Please check your credentials.')
+          setError(errorData?.error || errorData?.message || 'Incorrect access key. Please check your credentials and try again.')
         } else {
           const text = await res.text().catch(() => '')
-          setError(text || 'Invalid access key. Please check your credentials.')
+          setError(text || 'Incorrect access key. Please check your credentials and try again.')
         }
         return
       }
-      router.push('/')
+      
+      // Success - show success message and redirect
+      setSuccess('You have successfully logged in! Redirecting to dashboard...')
+      setTimeout(() => {
+        router.push('/')
+      }, 1500)
     } catch {
-      setError('An error occurred. Please try again.')
+      setError('An error occurred during authentication. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -93,6 +100,12 @@ export default function LoginPage() {
               {error && (
                 <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                   {error}
+                </div>
+              )}
+
+              {success && (
+                <div role="alert" className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                  {success}
                 </div>
               )}
 
