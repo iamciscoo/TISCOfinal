@@ -1,8 +1,7 @@
-/* Import Google Fonts first - must be at the very top */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Chango&display=swap');
-
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* Google Fonts are now loaded via Next.js font optimization in layout.tsx */
 
 @custom-variant dark (&:is(.dark *));
 

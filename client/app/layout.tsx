@@ -5,7 +5,21 @@ import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
 import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
+import { Geist, Geist_Mono } from 'next/font/google'
 import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Note: Chango font will be loaded via CSS fallback since it's not available in next/font/google
+// The CSS variables are maintained for compatibility
 
 export const metadata: Metadata = {
   title: "TISCOマーケット - Online Shop",
@@ -26,7 +40,13 @@ export default async function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className="antialiased overflow-x-hidden">
+        <head>
+          <link 
+            href="https://fonts.googleapis.com/css2?family=Chango&display=swap" 
+            rel="stylesheet"
+          />
+        </head>
+        <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`}>
           <CurrencyProvider>
             <AuthSync />
             <CartRealtime />
