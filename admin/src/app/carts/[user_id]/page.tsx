@@ -39,15 +39,18 @@ interface Cart {
   created_at: string
 }
 
-export default function CartDetailsPage({ params }: { params: Promise<{ user_id: string }> }) {
+export default function CartDetailsPage() {
   const router = useRouter()
   const { toast } = useToast()
 
   const [userId, setUserId] = useState<string>('')
-
+  const routeParams = useParams() as { user_id?: string | string[] }
   useEffect(() => {
-    params.then(({ user_id }) => setUserId(user_id))
-  }, [params])
+    const id = Array.isArray(routeParams?.user_id)
+      ? routeParams.user_id[0]
+      : routeParams?.user_id
+    if (typeof id === 'string') setUserId(id)
+  }, [routeParams])
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
