@@ -20,17 +20,19 @@ export function PageLayout<TData, TValue>({
   deleteApiBase,
 }: PageLayoutProps<TData, TValue>) {
   return (
-    <div className="">
-      <div className="mb-8 px-4 py-2 bg-secondary rounded-md flex items-center justify-between">
-        <h1 className="font-semibold">{title}</h1>
+    <div className="p-4 sm:p-6">
+      <div className="mb-6 sm:mb-8 px-4 py-3 bg-secondary rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-lg sm:text-xl font-semibold">{title}</h1>
         {addEntityButton}
       </div>
-      <DataTable 
-        columns={columns} 
-        data={data} 
-        entityName={entityName}
-        deleteApiBase={deleteApiBase}
-      />
+      <div className="overflow-x-auto">
+        <DataTable 
+          columns={columns} 
+          data={data} 
+          entityName={entityName}
+          deleteApiBase={deleteApiBase}
+        />
+      </div>
     </div>
   );
 }

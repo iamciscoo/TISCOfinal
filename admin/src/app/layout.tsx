@@ -4,7 +4,7 @@ import "./globals.css";
 import AppSidebar from "@/components/AppSidebar";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { cookies } from "next/headers";
 
@@ -49,16 +49,18 @@ export default async function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
           <SidebarProvider defaultOpen={defaultOpen}>
             <AppSidebar />
-            <main className="w-full">
+            <SidebarInset>
               <Navbar />
-              <div className="px-4">{children}</div>
-            </main>
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </SidebarInset>
           </SidebarProvider>
           <Toaster />
         </ThemeProvider>

@@ -8,11 +8,11 @@ type RevenuePoint = { month: string; total: number; successful: number };
 const chartConfig = {
   total: {
     label: "Total",
-    color: "var(--chart-1)",
+    color: "#ef4444", // red-500
   },
   successful: {
     label: "Successful",
-    color: "var(--chart-4)",
+    color: "#f97316", // orange-500
   },
 } satisfies ChartConfig;
 

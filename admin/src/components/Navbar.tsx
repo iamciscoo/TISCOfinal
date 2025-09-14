@@ -2,7 +2,6 @@
 
 import { LogOut, Moon, Settings, Sun, User } from "lucide-react";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,14 +15,16 @@ import { SidebarTrigger } from "./ui/sidebar";
 const Navbar = () => {
   const { setTheme } = useTheme();
   return (
-    <nav className="p-4 flex items-center justify-between sticky top-0 bg-background z-10">
+    <nav className="px-6 py-4 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border z-50">
       {/* LEFT */}
       <div className="flex items-center gap-3">
-        <SidebarTrigger />
+        <SidebarTrigger className="h-9 w-9" />
       </div>
       {/* RIGHT */}
       <div className="flex items-center gap-4">
-        <Link href="/">Dashboard</Link>
+        <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Dashboard
+        </Link>
         {/* THEME MENU */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

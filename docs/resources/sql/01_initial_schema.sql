@@ -26,17 +26,17 @@ CREATE TABLE products (
 -- Cart Items Table
 CREATE TABLE cart_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT NOT NULL, -- Clerk user ID
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, product_id)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Orders Table
 CREATE TABLE orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT NOT NULL, -- Clerk user ID
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
   shipping_address TEXT NOT NULL,

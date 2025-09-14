@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import path from "node:path";
+import path from "path";
 
 const nextConfig: NextConfig = {
   images: {

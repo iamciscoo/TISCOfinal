@@ -33,6 +33,7 @@ import {
   SidebarMenuItem,
 
   SidebarSeparator,
+  useSidebar,
 } from "./ui/sidebar";
 import Link from "next/link";
 import {
@@ -63,6 +64,8 @@ const items = [
 
 const AppSidebar = () => {
   const router = useRouter()
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
 
   const handleLogout = async () => {
     try {
@@ -73,20 +76,27 @@ const AppSidebar = () => {
   }
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader />
+    <Sidebar variant="inset" collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-2 px-4 py-3">
+          <img src="/logo.svg" alt="Admin" className="h-8 w-8" />
+          <span data-collapse-hide className="font-chango text-xl font-bold text-sidebar-foreground">
+            Admin
+          </span>
+        </div>
+      </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     <Link href={item.url}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      {!isCollapsed && <span data-collapse-hide>{item.title}</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -95,42 +105,42 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Catalog</SidebarGroupLabel>
-          <SidebarGroupAction>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Catalog</SidebarGroupLabel>
+          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
             <Plus /> <span className="sr-only">Add Product</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Products">
                   <Link href="/products">
                     <Shirt />
-                    All Products
+                    {!isCollapsed && <span data-collapse-hide>All Products</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Categories">
                   <Link href="/categories">
                     <FolderOpen />
-                    All Categories
+                    {!isCollapsed && <span data-collapse-hide>All Categories</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="Add Product">
                   <Link href="/products/new">
                     <Plus />
-                    Add Product
+                    {!isCollapsed && <span data-collapse-hide>Add Product</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <Sheet>
                   <SheetTrigger asChild>
-                    <SidebarMenuButton>
+                    <SidebarMenuButton tooltip="Add Category">
                       <Plus />
-                      Add Category
+                      {!isCollapsed && <span data-collapse-hide>Add Category</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddCategory />
@@ -140,26 +150,26 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Customers</SidebarGroupLabel>
-          <SidebarGroupAction>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Customers</SidebarGroupLabel>
+          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
             <Plus /> <span className="sr-only">Add Customer</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Customers">
                   <Link href="/users">
                     <User />
-                    All Customers
+                    {!isCollapsed && <span data-collapse-hide>All Customers</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <Sheet>
                   <SheetTrigger asChild>
-                    <SidebarMenuButton>
+                    <SidebarMenuButton tooltip="Add Customer">
                       <Plus />
-                      Add Customer
+                      {!isCollapsed && <span data-collapse-hide>Add Customer</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddUser />
@@ -169,42 +179,42 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Orders & Payments</SidebarGroupLabel>
-          <SidebarGroupAction>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Orders & Payments</SidebarGroupLabel>
+          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
             <Plus /> <span className="sr-only">Add Order</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Orders">
                   <Link href="/orders">
                     <Package />
-                    All Orders
+                    {!isCollapsed && <span data-collapse-hide>All Orders</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Payments">
                   <Link href="/payments">
                     <CreditCard />
-                    All Payments
+                    {!isCollapsed && <span data-collapse-hide>All Payments</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/carts">
+                <SidebarMenuButton asChild tooltip="Cart Management">
+                  <Link href="/cart">
                     <ShoppingCart />
-                    Cart Management
+                    {!isCollapsed && <span data-collapse-hide>Cart Management</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <Sheet>
                   <SheetTrigger asChild>
-                    <SidebarMenuButton>
+                    <SidebarMenuButton tooltip="Add Order">
                       <Plus />
-                      Add Order
+                      {!isCollapsed && <span data-collapse-hide>Add Order</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddOrder />
@@ -214,33 +224,33 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Services</SidebarGroupLabel>
-          <SidebarGroupAction>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Services</SidebarGroupLabel>
+          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
             <Plus /> <span className="sr-only">Add Service</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="All Services">
                   <Link href="/services">
                     <Wrench />
-                    All Services
+                    {!isCollapsed && <span data-collapse-hide>All Services</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="Service Bookings">
                   <Link href="/service-bookings">
                     <CalendarCheck />
-                    Service Bookings
+                    {!isCollapsed && <span data-collapse-hide>Service Bookings</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="Add Service">
                   <Link href="/services/new">
                     <Plus />
-                    Add Service
+                    {!isCollapsed && <span data-collapse-hide>Add Service</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -248,34 +258,42 @@ const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Content & Reviews</SidebarGroupLabel>
-          <SidebarGroupAction>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Content & Reviews</SidebarGroupLabel>
+          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
             <Plus /> <span className="sr-only">Add Review</span>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="Reviews">
                   <Link href="/reviews">
                     <Star />
-                    Reviews
+                    {!isCollapsed && <span data-collapse-hide>Reviews</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild tooltip="Newsletter">
+                  <Link href="/newsletter">
+                    <Mail />
+                    {!isCollapsed && <span data-collapse-hide>Newsletter</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Messages">
                   <Link href="/messages">
                     <Mail />
-                    Messages
+                    {!isCollapsed && <span data-collapse-hide>Messages</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <Sheet>
                   <SheetTrigger asChild>
-                    <SidebarMenuButton>
+                    <SidebarMenuButton tooltip="Add Review">
                       <Plus />
-                      Add Review
+                      {!isCollapsed && <span data-collapse-hide>Add Review</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddReview onCreated={() => { router.push('/reviews'); (router as any).refresh?.() }} />
@@ -290,8 +308,10 @@ const AppSidebar = () => {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User2 /> Admin User <ChevronUp className="ml-auto" />
+                <SidebarMenuButton tooltip="Admin">
+                  <User2 />
+                  {!isCollapsed && <span data-collapse-hide>Admin User</span>}
+                  <ChevronUp className="ml-auto" data-collapse-hide />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

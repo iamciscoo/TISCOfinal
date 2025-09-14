@@ -21,11 +21,11 @@ next-env.d.ts
 .vscode/
 .idea/
 .cursor/
-.windsurf/
 
 # Env files (keep examples tracked)
 .env
 .env.*
--lc cd
-
-.gitignore
+**/.env
+**/.env.*
+!.env.example
+!**/*.example

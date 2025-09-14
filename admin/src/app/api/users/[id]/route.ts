@@ -136,29 +136,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    // 1) Delete from Clerk (user id equals Clerk user ID)
-    const clerkSecret = process.env.CLERK_SECRET_KEY;
-    if (!clerkSecret) {
-      return NextResponse.json({ error: "Server misconfiguration: CLERK_SECRET_KEY is not set" }, { status: 500 });
-    }
-
-    const clerkRes = await fetch(`https://api.clerk.com/v1/users/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${clerkSecret}`,
-      },
-    });
-
-    // If the user doesn't exist in Clerk, treat as success and continue to DB delete
-    if (!clerkRes.ok && clerkRes.status !== 404) {
-      const details = await clerkRes.text().catch(() => '');
-      return NextResponse.json(
-        { error: 'Failed to delete user in Clerk', details: details || undefined },
-        { status: clerkRes.status || 500 }
-      );
-    }
-
-    // 2) Delete from our database
+    // Delete user from database
     const { error } = await supabase
       .from("users")
       .delete()

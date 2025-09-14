@@ -224,35 +224,41 @@ export default function CartsManagement() {
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => { router.push(`/carts/${row.original.user_id}`) }}
+            className="w-full sm:w-auto"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-4 h-4 sm:mr-0 mr-2" />
+            <span className="sm:hidden">View</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleCartAction('send_abandonment_email', row.original.user_id)}
             disabled={actionLoading === `send_abandonment_email-${row.original.user_id}`}
+            className="w-full sm:w-auto"
           >
             {actionLoading === `send_abandonment_email-${row.original.user_id}` ? 
-              <Loader2 className="w-4 h-4 animate-spin" /> : 
-              <Mail className="w-4 h-4" />
+              <Loader2 className="w-4 h-4 animate-spin sm:mr-0 mr-2" /> : 
+              <Mail className="w-4 h-4 sm:mr-0 mr-2" />
             }
+            <span className="sm:hidden">Email</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleCartAction('clear_cart', row.original.user_id)}
             disabled={actionLoading === `clear_cart-${row.original.user_id}`}
+            className="w-full sm:w-auto"
           >
             {actionLoading === `clear_cart-${row.original.user_id}` ? 
-              <Loader2 className="w-4 h-4 animate-spin" /> : 
-              <Trash2 className="w-4 h-4" />
+              <Loader2 className="w-4 h-4 animate-spin sm:mr-0 mr-2" /> : 
+              <Trash2 className="w-4 h-4 sm:mr-0 mr-2" />
             }
+            <span className="sm:hidden">Clear</span>
           </Button>
         </div>
       )
@@ -260,14 +266,14 @@ export default function CartsManagement() {
   ]
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Cart Management</h1>
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Cart Management</h1>
       </div>
 
       {/* Analytics Cards */}
       {analytics && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Carts</CardTitle>
@@ -317,7 +323,7 @@ export default function CartsManagement() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <Input
                 placeholder="Search by user ID or email..."

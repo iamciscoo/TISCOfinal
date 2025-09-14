@@ -17,7 +17,15 @@ export async function GET(req: Request) {
       .from("products")
       .select(`
         *,
-        product_images(*)
+        product_images(
+          url,
+          is_main,
+          sort_order
+        ),
+        categories(
+          id,
+          name
+        )
       `);
 
     if (q) {
@@ -27,6 +35,7 @@ export async function GET(req: Request) {
 
     query = query
       .order("created_at", { ascending: false })
+      .order('is_main', { ascending: false, foreignTable: 'product_images' })
       .order('sort_order', { ascending: true, foreignTable: 'product_images' })
       .order('created_at', { ascending: true, foreignTable: 'product_images' });
 
@@ -47,7 +56,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
+    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price, is_active } = body ?? {};
 
     if (!name || !description || typeof price !== "number" || !category_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -61,6 +70,8 @@ export async function POST(req: Request) {
       stock_quantity: typeof stock_quantity === "number" ? stock_quantity : 0,
       is_featured: !!is_featured,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
+      // visibility
+      is_active: is_active === false ? false : true,
       // deal/sale fields
       is_deal: !!is_deal,
       original_price: typeof original_price === 'number' ? original_price : null,
