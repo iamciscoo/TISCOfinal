@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase'
 import { useCartStore } from '@/lib/store'
 import type { CartItem } from '@/lib/store'
@@ -42,7 +42,9 @@ function mapServerItemsToLocal(items: ServerCartItem[]): CartItem[] {
 }
 
 export function useRealtimeCart() {
-  const { isLoaded, isSignedIn, user } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const isSignedIn = !!user
   const setItemsFromServer = useCartStore((s) => s.setItemsFromServer)
   const hasHydrated = useCartStore((s) => s.hasHydrated)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -71,12 +73,12 @@ export function useRealtimeCart() {
           const payload = await res.json()
           const items = (payload?.data?.items ?? payload?.items ?? []) as ServerCartItem[]
           const mapped = mapServerItemsToLocal(items)
-          // On the very first hydration after page load, if server is empty but local has items,
-          // keep local state and let useCartSync push to server instead of overwriting to empty.
+          // On the very first hydration after page load, if server is empty or has fewer items than local,
+          // keep local state and let useCartSync push to server instead of overwriting.
           const currentLocalCount = useCartStore.getState().items.length
-          if (!didInitialHydrateRef.current && mapped.length === 0 && currentLocalCount > 0 && !isRealtime) {
+          if (!didInitialHydrateRef.current && !isRealtime && currentLocalCount > 0 && mapped.length <= currentLocalCount) {
             didInitialHydrateRef.current = true
-            log('skip initial server hydrate (server empty, local has items)')
+            log('skip initial server hydrate (server <= local items)', { server: mapped.length, local: currentLocalCount })
           } else {
             setItemsFromServer(mapped)
             didInitialHydrateRef.current = true

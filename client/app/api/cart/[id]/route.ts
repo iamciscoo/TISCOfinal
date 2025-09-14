@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { createSuccessResponse, createErrorResponse, API_ERROR_CODES } from '@/lib/middleware'
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json(
         createErrorResponse(API_ERROR_CODES.AUTHENTICATION_ERROR, 'Authentication required'),
@@ -99,7 +99,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json(
         createErrorResponse(API_ERROR_CODES.AUTHENTICATION_ERROR, 'Authentication required'),

@@ -19,7 +19,7 @@ import {
 import { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { getImageUrl, getDealPricing } from '@/lib/shared-utils'
-import { getProductsByCategory } from '@/lib/database'
+import { api } from '@/lib/api-client'
 import { ProductCard } from '@/components/shared/ProductCard'
 import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
@@ -93,9 +93,9 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     let isMounted = true
     const loadRelatedProducts = async () => {
       try {
-        const data = await getProductsByCategory(String(product.category_id))
+        const data = await api.getProductsByCategory(String(product.category_id))
         if (!isMounted) return
-        const filtered = (data || []).filter(p => String(p.id) !== String(product.id))
+        const filtered = Array.isArray(data) ? data.filter((p: Product) => String(p.id) !== String(product.id)) : []
         setRelatedProducts(filtered.slice(0, 4))
       } catch (error) {
         console.error('Failed to load related products:', error)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -9,7 +9,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -52,15 +52,15 @@ export async function POST(req: NextRequest) {
       // Verify product exists and get current price
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, price, stock_quantity, is_active')
+        .select('id, price, stock_quantity')
         .eq('id', product_id)
         .single()
 
-      if (productError || !product || !product.is_active) {
+      if (productError || !product) {
         mergeResults.push({
           product_id,
           action: 'skipped',
-          reason: 'Product not found or inactive'
+          reason: 'Product not found'
         })
         itemsSkipped++
         continue
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
 // Get abandoned carts for recovery
 export async function GET() {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

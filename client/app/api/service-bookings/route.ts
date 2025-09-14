@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { getUser } from '@/lib/supabase-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.SUPABASE_SERVICE_ROLE!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -39,7 +45,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -58,9 +64,11 @@ export async function POST(req: NextRequest) {
     const description = String(body.description || '').trim()
     const preferred_date = String(body.preferred_date || '').trim()
     const preferred_time = String(body.preferred_time || '').trim()
-    const contact_email = String(body.contact_email || user.emailAddresses?.[0]?.emailAddress || '').trim()
-    const contact_phone = String(body.contact_phone || '').trim() || null
-    const customer_name = String(body.customer_name || [user.firstName, user.lastName].filter(Boolean).join(' ')).trim()
+    const contact_email = String(body.contact_email || user.email || '').trim()
+    const customer_name = String(body.customer_name || body.full_name || '').trim() 
+      || user.user_metadata?.full_name 
+      || user.user_metadata?.name 
+      || 'Customer'
 
     if (!service_id) {
       return NextResponse.json({ error: 'service_id is required' }, { status: 400 })
@@ -79,18 +87,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Service not found' }, { status: 404 })
     }
 
+    const contact_phone = String(body.contact_phone || '').trim()
+
     const { data, error } = await supabase
       .from('service_bookings')
       .insert({
-        service_id,
         user_id: user.id,
+        service_id,
         service_type,
         description,
         preferred_date,
         preferred_time,
+        customer_name,
         contact_email,
         contact_phone,
-        customer_name,
         status: 'pending'
       })
       .select()

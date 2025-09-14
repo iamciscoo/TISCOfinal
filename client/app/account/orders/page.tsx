@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useUser } from '@clerk/nextjs'
-import { redirect, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -53,7 +53,9 @@ type Order = {
 }
 
 function OrdersContent() {
-  const { user, isLoaded } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [orders, setOrders] = useState<Order[]>([])
@@ -103,6 +105,13 @@ function OrdersContent() {
     }
   }, [searchParams])
 
+  // Client-side redirect to sign-in when not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.replace('/sign-in?redirect_url=/account/orders')
+    }
+  }, [isLoaded, user, router])
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -112,8 +121,8 @@ function OrdersContent() {
     )
   }
 
-  if (!user) {
-    redirect('/sign-in?redirect_url=/account/orders')
+  if (isLoaded && !user) {
+    return null
   }
 
   // Filter and sort orders

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
-import { getDefaultSubject } from '@/lib/email-templates'
+import { getDefaultSubject, renderEmailTemplate, type TemplateType } from '@/lib/email-templates'
+import { sendEmailViaSendPulse } from '@/lib/notifications/sendpulse'
+import { getUser } from '@/lib/supabase-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -159,73 +160,36 @@ interface NotificationRequest {
 }
 
 async function sendEmail(notification: NotificationRequest): Promise<void> {
-  // Email Service Implementation Guide
-  // ==================================
-  // Replace this mock implementation with one of the following services:
-  
-  // Option 1: SendGrid (Recommended for reliability)
-  // ------------------------------------------------
-  // 1. Install: npm install @sendgrid/mail
-  // 2. Set environment variable: SENDGRID_API_KEY
-  // 
-  // import sgMail from '@sendgrid/mail'
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY!)
-  // 
-  // const msg = {
-  //   to: notification.recipient_email,
-  //   from: process.env.FROM_EMAIL!,
-  //   subject: notification.subject,
-  //   html: await renderEmailTemplate(notification.template_type, notification.template_data),
-  // }
-  // await sgMail.send(msg)
+  // Prefer SendPulse if credentials are configured; otherwise use mock
+  const hasSendPulse =
+    !!process.env.SENDPULSE_CLIENT_ID &&
+    !!process.env.SENDPULSE_CLIENT_SECRET &&
+    !!process.env.SENDPULSE_SENDER_EMAIL
 
-  // Option 2: Resend (Modern, developer-friendly)
-  // ----------------------------------------------
-  // 1. Install: npm install resend
-  // 2. Set environment variable: RESEND_API_KEY
-  //
-  // import { Resend } from 'resend'
-  // const resend = new Resend(process.env.RESEND_API_KEY)
-  // 
-  // await resend.emails.send({
-  //   from: process.env.FROM_EMAIL!,
-  //   to: notification.recipient_email,
-  //   subject: notification.subject,
-  //   html: await renderEmailTemplate(notification.template_type, notification.template_data),
-  // })
-
-  // Option 3: AWS SES (Cost-effective at scale)
-  // --------------------------------------------
-  // 1. Install: npm install @aws-sdk/client-ses
-  // 2. Set AWS credentials
-  //
-  // import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
-  // const client = new SESClient({ region: "us-east-1" })
-  // 
-  // const command = new SendEmailCommand({
-  //   Source: process.env.FROM_EMAIL!,
-  //   Destination: { ToAddresses: [notification.recipient_email] },
-  //   Message: {
-  //     Subject: { Data: notification.subject },
-  //     Body: { Html: { Data: await renderEmailTemplate(...) } }
-  //   }
-  // })
-  // await client.send(command)
-
-  // Current: Mock implementation for testing
-  console.log('MOCK EMAIL - Replace with real service:', {
-    to: notification.recipient_email,
-    subject: notification.subject,
-    template: notification.template_type,
-    data: notification.template_data
-  })
-
-  // Simulate email sending delay
-  await new Promise(resolve => setTimeout(resolve, 100))
-
-  // Mock success/failure (90% success rate)
-  if (Math.random() > 0.9) {
-    throw new Error('Email service temporarily unavailable')
+  if (hasSendPulse) {
+    const html = await renderEmailTemplate(notification.template_type as TemplateType, (notification.template_data || {}) as Record<string, unknown>)
+    await sendEmailViaSendPulse(
+      {
+        clientId: process.env.SENDPULSE_CLIENT_ID!,
+        clientSecret: process.env.SENDPULSE_CLIENT_SECRET!,
+        senderEmail: process.env.SENDPULSE_SENDER_EMAIL!,
+        senderName: process.env.SENDPULSE_SENDER_NAME || 'TISCO',
+      },
+      {
+        to: notification.recipient_email,
+        subject: notification.subject || getDefaultSubject(notification.template_type as TemplateType),
+        html,
+      }
+    )
+  } else {
+    // Mock for local/dev when SendPulse is not configured
+    console.log('MOCK EMAIL - Replace with real service:', {
+      to: notification.recipient_email,
+      subject: notification.subject,
+      template: notification.template_type,
+      data: notification.template_data
+    })
+    await new Promise(resolve => setTimeout(resolve, 50))
   }
 
   // Update notification status to sent

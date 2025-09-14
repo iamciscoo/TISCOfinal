@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-// Use anon key; RLS allows INSERT for public as per migration policy
+// Use service role on server to avoid RLS insert failures and standardize server-side writes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE!
 )
 
 type ContactMessageInput = {

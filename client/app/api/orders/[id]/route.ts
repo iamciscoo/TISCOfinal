@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag, unstable_cache } from 'next/cache'
 
@@ -14,7 +14,7 @@ type Params = { params: Promise<{ id: string }> }
 export async function GET(req: Request, { params }: Params) {
   const resolvedParams = await params
   try {
-    const user = await currentUser()
+    const user = await getUser()
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -83,7 +83,7 @@ export async function GET(req: Request, { params }: Params) {
 export async function PATCH(req: Request, { params }: Params) {
   const resolvedParams = await params
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

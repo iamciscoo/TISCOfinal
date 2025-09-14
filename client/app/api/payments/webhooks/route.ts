@@ -30,6 +30,7 @@ function getAdminSupabase() {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('=== WEBHOOK RECEIVED ===')
   try {
     const supabase = getAdminSupabase()
     if (!supabase) {
@@ -37,18 +38,37 @@ export async function POST(req: NextRequest) {
     }
     // Read raw body for signature verification
     const rawBody = await req.text()
-    const signature = req.headers.get('x-signature') || req.headers.get('x-webhook-signature')
-    const xApiKey = req.headers.get('x-api-key')
-
-    // Primary: verify HMAC signature with WEBHOOK_SECRET.
-    // Fallback: accept requests carrying ZenoPay API key via x-api-key header (per ZenoPay docs).
+    const signature = req.headers.get('x-signature') || req.headers.get('x-api-key') || req.headers.get('authorization')
+    
+    console.log('Webhook headers:', {
+      signature: signature ? 'present' : 'missing',
+      contentType: req.headers.get('content-type'),
+      userAgent: req.headers.get('user-agent')
+    })
+    console.log('Webhook raw body:', rawBody)
+    
+    // Verify authentication:
+    // - Primary: HMAC signature with WEBHOOK_SECRET
+    // - Fallback: API key provided via x-api-key or Authorization: Bearer <key>
     const hmacOk = verifyWebhookSignature(rawBody, signature)
     const apiKey = process.env.ZENOPAY_API_KEY
-    const apiKeyOk = Boolean(xApiKey && apiKey && xApiKey === apiKey)
+    const xApiKey = req.headers.get('x-api-key')
+    const authHeader = req.headers.get('authorization')
+    const bearer = authHeader && authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.slice(7)
+      : authHeader || undefined
+    const apiKeyOk = Boolean(
+      (xApiKey && apiKey && xApiKey === apiKey) ||
+      (bearer && apiKey && bearer === apiKey)
+    )
+
+    console.log('Authentication check:', { hmacOk, apiKeyOk })
 
     if (!hmacOk && !apiKeyOk) {
+      console.log('Webhook authentication failed')
       return NextResponse.json({ error: 'Invalid webhook authentication' }, { status: 401 })
     }
+    console.log('Webhook authentication passed')
     const body = JSON.parse(rawBody) as WebhookPayload
 
     // ZenoPay payloads typically include order_id (we sent our transaction_reference),
@@ -59,6 +79,18 @@ export async function POST(req: NextRequest) {
 
     const ref = String(refCandidates[0] || '')
     const gw = String(gwCandidates[0] || '')
+
+    console.log('Webhook payload parsed:', { 
+      ref, 
+      gw, 
+      payment_status: body?.payment_status || data?.payment_status,
+      status: body?.status || data?.status 
+    })
+
+    if (!ref && !gw) {
+      console.error('No transaction reference found in webhook payload')
+      return NextResponse.json({ error: 'No transaction reference found' }, { status: 400 })
+    }
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
     let txnData: { id: string; user_id: string; order_id?: string; transaction_reference: string; status: string } | null = null
@@ -73,38 +105,45 @@ export async function POST(req: NextRequest) {
       `)
       .limit(1)
 
-    if (ref && gw) {
-      query = query.or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${gw}`)
-    } else if (ref) {
-      query = query.eq('transaction_reference', ref)
+    if (ref) {
+      console.log('Looking up transaction/session for ref:', ref)
+      const { data: txnResult } = await query.or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`).maybeSingle()
+      if (txnResult) {
+        console.log('Found payment transaction:', txnResult.id)
+        txnData = txnResult
+      } else {
+        // Try payment_sessions (new flow)
+        console.log('No payment transaction found, checking payment sessions')
+        const { data: sessionResult } = await supabase
+          .from('payment_sessions')
+          .select('*')
+          .or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`)
+          .maybeSingle()
+        if (sessionResult) {
+          console.log('Found payment session:', sessionResult.id)
+          txnData = sessionResult
+          isSession = true
+        } else {
+          console.log('No payment session found for ref:', ref)
+        }
+      }
     } else if (gw) {
       query = query.eq('gateway_transaction_id', gw)
-    }
-
-    const { data: findResult } = await query.maybeSingle()
-
-    if (findResult) {
-      txnData = findResult
-    } else {
-      // Try payment_sessions (new flow)
-      let sessionQuery = supabase
-        .from('payment_sessions')
-        .select('*')
-        .limit(1)
-
-      if (ref && gw) {
-        sessionQuery = sessionQuery.or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${gw}`)
-      } else if (ref) {
-        sessionQuery = sessionQuery.eq('transaction_reference', ref)
-      } else if (gw) {
+      const { data: txnResult } = await query.maybeSingle()
+      if (txnResult) {
+        txnData = txnResult
+      } else {
+        // Try payment_sessions (new flow)
+        let sessionQuery = supabase
+          .from('payment_sessions')
+          .select('*')
+          .limit(1)
         sessionQuery = sessionQuery.eq('gateway_transaction_id', gw)
-      }
-
-      const { data: sessionResult } = await sessionQuery.maybeSingle()
-      
-      if (sessionResult) {
-        txnData = sessionResult
-        isSession = true
+        const { data: sessionResult } = await sessionQuery.maybeSingle()
+        if (sessionResult) {
+          txnData = sessionResult
+          isSession = true
+        }
       }
     }
 
@@ -113,46 +152,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
+    console.log('Processing webhook for:', { 
+      type: isSession ? 'session' : 'transaction',
+      id: txnData.id,
+      user_id: txnData.user_id,
+      current_status: txnData.status 
+    })
+
     // Process webhook by normalized status/event
     const rawStatusCandidates = [
       body?.status,
       data?.status,
       body?.payment_status,
       data?.payment_status,
+      // Some providers use `result` to indicate status
+      (data as any)?.result,
+      (body as any)?.result,
       body?.event_type,
       body?.event,
       body?.type,
     ].filter(Boolean)
 
-    const statusRaw = String(rawStatusCandidates[0] || '').toUpperCase()
-    const successSet = new Set(['SUCCESS', 'SUCCEEDED', 'COMPLETED', 'APPROVED', 'PAID', 'SETTLED', 'SUCCESSFUL'])
-    const pendingSet = new Set(['PENDING', 'PROCESSING', 'AWAITING', 'QUEUED'])
-    // const cancelSet = new Set(['CANCELLED', 'CANCELED'])
-    const failSet = new Set(['FAILED', 'DECLINED', 'ERROR', 'REJECTED', 'TIMEOUT'])
+    const rawStatus = String(rawStatusCandidates[0] || '').toUpperCase()
 
-    // Normalize body to ensure we persist the gateway transaction id when available
-    const normalizedBody = { ...body, gateway_transaction_id: gw || body?.gateway_transaction_id || data?.transaction_id }
+    console.log('Webhook status processing:', { rawStatus, rawStatusCandidates })
 
-    if (successSet.has(statusRaw)) {
-      if (isSession) {
-        await handleSessionPaymentSuccess(txnData as PaymentSession, normalizedBody)
+    // Normalize status to standard values
+    const successSet = new Set(['SUCCESS', 'SUCCESSFUL', 'SUCCEEDED', 'COMPLETED', 'PAID', 'APPROVED', 'SETTLED', 'CONFIRMED'])
+    const failSet = new Set(['FAILED', 'FAILURE', 'DECLINED', 'REJECTED', 'ERROR', 'CANCELLED', 'CANCELED', 'TIMEOUT'])
+    const pendingSet = new Set(['PENDING', 'PROCESSING', 'AWAITING', 'INITIATED', 'QUEUED'])
+
+    let normalizedStatus = 'unknown'
+    if (successSet.has(rawStatus)) normalizedStatus = 'success'
+    else if (failSet.has(rawStatus)) normalizedStatus = 'failed'
+    else if (pendingSet.has(rawStatus)) normalizedStatus = 'pending'
+
+    console.log('Normalized status:', normalizedStatus)
+
+    // Handle webhook events
+    if (isSession) {
+      console.log('Processing session webhook')
+      if (normalizedStatus === 'success') {
+        console.log('Handling session payment success')
+        await handleSessionPaymentSuccess(txnData as PaymentSession, body)
+      } else if (normalizedStatus === 'failed') {
+        console.log('Handling session payment failure')
+        await handleSessionPaymentFailure(txnData as PaymentSession, rawStatus)
       } else {
-        await handlePaymentSuccess(txnData, normalizedBody)
-      }
-    } else if (pendingSet.has(statusRaw)) {
-      if (isSession) {
-        await handleSessionPaymentPending(txnData as PaymentSession)
-      } else {
-        await handlePaymentPending(txnData)
-      }
-    } else if (failSet.has(statusRaw)) {
-      if (isSession) {
-        await handleSessionPaymentFailure(txnData as PaymentSession)
-      } else {
-        await handlePaymentFailure(txnData, body?.failure_reason || 'Payment failed')
+        console.log('Session status not actionable:', normalizedStatus)
       }
     } else {
-      console.log('Unhandled webhook status/event:', statusRaw || '(empty)')
+      console.log('Processing transaction webhook')
+      // Legacy transaction handling
+      if (normalizedStatus === 'success') {
+        console.log('Handling transaction success')
+        await handlePaymentSuccess(txnData as TransactionRow, body)
+      } else if (normalizedStatus === 'failed') {
+        console.log('Handling transaction failure')
+        await handlePaymentFailure(txnData as TransactionRow, rawStatus)
+      } else {
+        console.log('Transaction status not actionable:', normalizedStatus)
+      }
     }
 
     return NextResponse.json({ received: true }, { status: 200 })
@@ -507,9 +567,13 @@ type PaymentSession = {
 }
 
 async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
+  console.log('=== HANDLING SESSION PAYMENT SUCCESS ===', session.id)
   try {
     const supabase = getAdminSupabase()
-    if (!supabase) return
+    if (!supabase) {
+      console.error('No supabase client available for session success')
+      return
+    }
 
     // Idempotency: if we already recorded a completed/processing transaction for this session reference, skip
     const { data: existingTx } = await supabase
@@ -519,6 +583,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       .in('status', ['completed', 'processing'])
       .maybeSingle()
     if (existingTx?.id) {
+      console.log('Transaction already exists for session, skipping order creation:', existingTx.id)
       // Ensure session marked completed
       await supabase
         .from('payment_sessions')
@@ -526,6 +591,8 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         .eq('id', session.id)
       return
     }
+
+    console.log('No existing transaction found, proceeding with order creation')
 
     // If webhook included a specific order_id (e.g., from client mock webhook), link to that order instead of creating a new one
     const linkOrderId = (webhookData as Record<string, unknown>)?.order_id || (webhookData?.data as Record<string, unknown>)?.order_id
@@ -603,15 +670,32 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // Parse order data from session (client-provided); we will recompute totals and prices server-side
+    console.log('Parsing order data from session:', session.order_data)
     let orderData: Record<string, unknown> = {}
     try {
-      orderData = JSON.parse(session.order_data)
+      const raw = (session as unknown as { order_data?: unknown }).order_data
+      if (raw && typeof raw === 'string') {
+        orderData = JSON.parse(raw)
+      } else if (raw && typeof raw === 'object') {
+        orderData = raw as Record<string, unknown>
+      } else {
+        orderData = {}
+      }
+      console.log('Parsed order data:', orderData)
     } catch (e) {
       console.error('Failed to parse order data from session:', e)
       orderData = {}
     }
 
-    const items = Array.isArray(orderData?.items) ? orderData.items as Array<{ product_id: string; quantity: number; price?: number }> : []
+    // Normalize items from orderData; support product_id or productId
+    const itemsRaw = Array.isArray((orderData as any)?.items) ? (orderData as any).items : []
+    const items = (itemsRaw as Array<Record<string, unknown>>)
+      .map((it) => {
+        const pid = String((it as any).product_id || (it as any).productId || (it as any).id || '')
+        const qty = Number((it as any).quantity || 0)
+        return { product_id: pid, quantity: qty }
+      })
+      .filter((it) => it.product_id && it.quantity > 0)
     if (items.length === 0) {
       console.error('Session has no order items; aborting order creation')
       await supabase
@@ -663,28 +747,20 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // Create the order using server-computed total
+    const insertOrderPayload: Record<string, unknown> = {
+      user_id: session.user_id,
+      total_amount,
+      currency: session.currency,
+      payment_method: orderData.payment_method,
+      shipping_address: orderData.shipping_address,
+      notes: orderData.notes,
+      status: 'processing',
+      payment_status: 'paid',
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        user_id: session.user_id,
-        total_amount,
-        currency: session.currency,
-        payment_method: orderData.payment_method,
-        shipping_address: orderData.shipping_address,
-        notes: orderData.notes,
-        status: 'processing',
-        payment_status: 'paid',
-        paid_at: new Date().toISOString(),
-        // Structured delivery fields for admin visibility
-        contact_phone: orderData.contact_phone,
-        address_line_1: orderData.address_line_1,
-        city: orderData.city,
-        email: orderData.email,
-        place: orderData.place,
-        first_name: orderData.first_name,
-        last_name: orderData.last_name,
-        country: orderData.country,
-      })
+      .insert(insertOrderPayload)
       .select()
       .single()
 
@@ -770,6 +846,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     console.log('Session payment completed successfully, order created:', session.transaction_reference)
     try {
       revalidateTag('orders')
+      revalidateTag('admin:orders')
       revalidateTag(`order:${order.id}`)
       revalidateTag(`user-orders:${session.user_id}`)
     } catch (e) {

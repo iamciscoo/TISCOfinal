@@ -124,12 +124,13 @@ export function withValidation<T>(schema: z.ZodSchema<T>) {
 }
 
 // Error Handler Middleware
-export function withErrorHandler(
-  handler: (req: NextRequest) => Promise<NextResponse>
+export function withErrorHandler<T extends (...args: never[]) => Promise<NextResponse>>(
+  handler: T
 ) {
-  return async function (req: NextRequest): Promise<NextResponse> {
+  return async function (...args: Parameters<T>): Promise<NextResponse> {
     try {
-      return await handler(req)
+      // Forward all arguments to preserve data passed by previous middlewares
+      return await handler(...args)
     } catch (error) {
       console.error('API Error:', error)
 
@@ -211,9 +212,9 @@ export function withAuth(
 ) {
   return async function (req: NextRequest): Promise<NextResponse> {
     try {
-      // Extract user ID from Clerk session or headers
+      // Extract user ID from Supabase session or headers
       const authHeader = req.headers.get('authorization')
-      const userId = req.headers.get('x-user-id') // Set by Clerk middleware
+      const userId = req.headers.get('x-user-id') // Set by auth middleware
 
       if (!userId && !authHeader) {
         return NextResponse.json(

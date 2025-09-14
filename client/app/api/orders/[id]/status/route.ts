@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
 
@@ -22,7 +22,7 @@ export async function PATCH(
 ) {
   const { id } = await params
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, use } from 'react'
-import { useUser } from '@clerk/nextjs'
-import { redirect } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Navbar } from '@/components/Navbar'
@@ -73,7 +73,9 @@ function statusColor(status: string) {
 
 export default function OrderDetailsPage({ params }: PageProps) {
   const resolvedParams = use(params)
-  const { user, isLoaded } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -116,6 +118,13 @@ export default function OrderDetailsPage({ params }: PageProps) {
     }
   }, [isLoaded, user, fetchOrder])
 
+  // Client-side redirect to avoid hook-order mismatch
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.replace('/sign-in?redirect_url=/account/orders')
+    }
+  }, [isLoaded, user, router])
+
   // Poll for updates while order is pending/processing or payment not finalized
   useEffect(() => {
     if (!order) return
@@ -140,8 +149,8 @@ export default function OrderDetailsPage({ params }: PageProps) {
     )
   }
 
-  if (!user) {
-    redirect('/sign-in?redirect_url=/account/orders')
+  if (isLoaded && !user) {
+    return null
   }
 
   if (error || !order) {

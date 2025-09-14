@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 import { useCartStore, type CartItem } from '@/lib/store'
+import { createClient } from '@/lib/supabase-auth'
 
 // Minimal server payload types for mapping
 type ServerProductImage = { url: string; is_main?: boolean; sort_order?: number }
@@ -20,9 +21,11 @@ type ServerCartItem = {
   products?: ServerProduct
 }
 
-// Automatically sync Clerk user to local DB on login and merge guest cart
+// Automatically sync authenticated user to local DB on login and merge guest cart
 export default function AuthSync() {
-  const { isLoaded, isSignedIn } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const isSignedIn = !!user
   const setItemsFromServer = useCartStore((state) => state.setItemsFromServer)
   const hasHydrated = useCartStore((state) => state.hasHydrated)
   const hasSyncedRef = useRef(false)
@@ -34,11 +37,31 @@ export default function AuthSync() {
     const run = async () => {
       try {
         // 1) Ensure profile exists/updated in local DB
-        await fetch('/api/auth/sync', {
+        const syncRes = await fetch('/api/auth/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'sync_profile' })
         })
+        // If API returned normalized names, propagate to client auth session for immediate UI
+        if (syncRes.ok) {
+          try {
+            const payload = await syncRes.json().catch(() => ({}))
+            const profile = payload?.user || {}
+            const first_name = profile?.first_name || ''
+            const last_name = profile?.last_name || ''
+            const avatar_url = profile?.avatar_url || ''
+            if (first_name || last_name || avatar_url) {
+              const supabase = createClient()
+              await supabase.auth.updateUser({
+                data: {
+                  ...(first_name ? { first_name } : {}),
+                  ...(last_name ? { last_name } : {}),
+                  ...(avatar_url ? { avatar_url } : {}),
+                }
+              })
+            }
+          } catch {}
+        }
       } catch (e) {
         console.warn('Profile sync failed', e)
       }
@@ -73,8 +96,9 @@ export default function AuthSync() {
             try {
               const cartRes = await fetch('/api/cart', { cache: 'no-store' })
               if (cartRes.ok) {
-                const data = await cartRes.json()
-                const mapped: CartItem[] = (data.items || []).map((it: ServerCartItem) => {
+                const payload = await cartRes.json()
+                const arr: ServerCartItem[] = (payload?.data?.items ?? payload?.items ?? [])
+                const mapped: CartItem[] = arr.map((it: ServerCartItem) => {
                   const p = it.products || {}
                   const imgs = Array.isArray(p.product_images) ? p.product_images : []
                   const main = (imgs.find((img: ServerProductImage) => img?.is_main)?.url) || p.image_url || ''

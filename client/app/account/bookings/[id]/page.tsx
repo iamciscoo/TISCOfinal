@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser } from '@/lib/supabase-server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -114,10 +114,10 @@ const getPaymentStatusBadgeVariant = (status: string) => {
 }
 
 const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const user = await currentUser()
+  const user = await getUser()
   const { id } = await params
   
-  if (!user?.id) {
+  if (!user) {
     notFound()
   }
 

@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
-import { redirect } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ProfileDialog } from '@/components/auth/ProfileDialog'
 
 import Image from 'next/image'
 import { 
@@ -62,12 +63,15 @@ type ServiceBooking = {
   } | null
 }
 export default function AccountDashboard() {
-  const { user, isLoaded } = useUser()
+  const { user, loading: authLoading } = useAuth()
+  const isLoaded = !authLoading
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [bookings, setBookings] = useState<ServiceBooking[]>([])
   const [bookingsLoading, setBookingsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const { formatPrice } = useCurrency()
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
     fetchOrders()
@@ -76,6 +80,13 @@ export default function AccountDashboard() {
   useEffect(() => {
     fetchBookings()
   }, [])
+
+  // Client-side redirect to avoid hook-order mismatches in client components
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.replace('/sign-in?redirect_url=/account')
+    }
+  }, [isLoaded, user, router])
 
   const fetchOrders = async () => {
     try {
@@ -122,8 +133,8 @@ export default function AccountDashboard() {
     )
   }
 
-  if (!user) {
-    redirect('/sign-in?redirect_url=/account')
+  if (isLoaded && !user) {
+    return null
   }
 
   const getStatusIcon = (status: string) => {
@@ -167,9 +178,7 @@ export default function AccountDashboard() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Account</h1>
-          <p className="text-gray-600">
-            Welcome back, {user.firstName || user.emailAddresses[0].emailAddress}!
-          </p>
+          <h1 className="text-2xl font-bold">Welcome back, {user?.user_metadata?.first_name || user?.email || 'User'}!</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -179,33 +188,40 @@ export default function AccountDashboard() {
               <CardContent className="p-6">
                 {/* User Info */}
                 <div className="flex items-center gap-4 mb-6 pb-6 border-b">
-                  {user.imageUrl ? (
-                    <Image 
-                      src={user.imageUrl} 
-                      alt="Profile picture" 
-                      width={48} 
-                      height={48} 
-                      className="rounded-full" 
+                  {user?.user_metadata?.avatar_url ? (
+                    <Image
+                      src={user.user_metadata.avatar_url}
+                      alt="Profile"
+                      width={64}
+                      height={64}
+                      className="rounded-full"
                     />
                   ) : (
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium text-lg">
-                        {user.firstName?.charAt(0) || user.emailAddresses[0].emailAddress.charAt(0).toUpperCase()}
-                      </span>
+                    <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center">
+                      <User className="h-8 w-8 text-gray-600" />
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-gray-900 truncate">
-                      {user.fullName || user.emailAddresses[0].emailAddress}
-                    </div>
-                    <div className="text-sm text-gray-500 truncate">
-                      {user.emailAddresses[0].emailAddress}
-                    </div>
+                    <h3 className="font-semibold text-lg">{user?.user_metadata?.first_name || user?.email}</h3>
+                    <p className="text-gray-600 text-sm">Member since 2024</p>
                   </div>
                 </div>
+                <div className="mb-6">
+                  <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+                    Edit Profile
+                  </Button>
+                </div>
 
-                <div className="space-y-6">
-                  {/* Navigation to Orders */}
+                {/* Quick Stats */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Name</span>
+                    <span className="font-medium">{`${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim() || user?.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Email</span>
+                    <span className="font-medium">{user?.email}</span>
+                  </div>
                   <Link href="/account/orders" className="w-full">
                     <Button
                       variant="outline"
@@ -409,6 +425,7 @@ export default function AccountDashboard() {
 
       <Footer />
       <CartSidebar />
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   )
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
-import { redirect } from 'next/navigation'
+import { useAuth } from '@/hooks/use-auth'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -53,7 +53,9 @@ type ServiceBooking = {
 }
 
 export default function BookingsPage() {
-  const { user, isLoaded } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [bookings, setBookings] = useState<ServiceBooking[]>([])
@@ -84,6 +86,13 @@ export default function BookingsPage() {
     }
   }
 
+  // Client-side redirect when not signed in to prevent hook-order mismatch
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.replace('/sign-in?redirect_url=/account/bookings')
+    }
+  }, [isLoaded, user, router])
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -93,8 +102,8 @@ export default function BookingsPage() {
     )
   }
 
-  if (!user) {
-    redirect('/sign-in?redirect_url=/account/bookings')
+  if (isLoaded && !user) {
+    return null
   }
 
   const getStatusIcon = (status: string) => {

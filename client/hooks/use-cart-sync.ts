@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 import { useCartStore, type CartItem } from '@/lib/store'
 
 // Sync local cart changes to server for signed-in users.
 // Avoid loops by skipping immediately after server-driven hydrations.
 export function useCartSync() {
-  const { isLoaded, isSignedIn } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const isSignedIn = !!user
   const items = useCartStore((s) => s.items)
   const lastServerHydrate = useCartStore((s) => s._lastServerHydrate)
   const hasHydrated = useCartStore((s) => s.hasHydrated)
@@ -22,9 +24,8 @@ export function useCartSync() {
 
   // Initialize baseline from server
   useEffect(() => {
-    if (!isLoaded) return
-    if (!isSignedIn) {
-      // Clear baseline when signed out
+    if (!isLoaded || !isSignedIn) {
+      // Clear baseline when signed out or not loaded
       serverMapRef.current.clear()
       lastHydrateTsRef.current = 0
       signInAtRef.current = 0
@@ -39,7 +40,13 @@ export function useCartSync() {
     const init = async () => {
       try {
         const res = await fetch('/api/cart', { cache: 'no-store' })
-        if (!res.ok) return
+        if (!res.ok) {
+          if (res.status === 401) {
+            console.debug('[cart-sync] not authenticated, skipping cart sync')
+            return
+          }
+          return
+        }
         const payload = await res.json()
         const map = new Map<string, { id: string; quantity: number }>()
         const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])
@@ -68,7 +75,13 @@ export function useCartSync() {
       ;(async () => {
         try {
           const res = await fetch('/api/cart', { cache: 'no-store' })
-          if (!res.ok) return
+          if (!res.ok) {
+            if (res.status === 401) {
+              console.debug('[cart-sync] not authenticated, skipping baseline refresh')
+              return
+            }
+            return
+          }
           const payload = await res.json()
           const map = new Map<string, { id: string; quantity: number }>()
           const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])

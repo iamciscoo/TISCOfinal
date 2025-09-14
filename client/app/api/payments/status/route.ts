@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { ZenoPayClient } from '@/lib/zenopay'
+import { getUser } from '@/lib/supabase-server'
+export const runtime = 'nodejs'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +43,7 @@ function getClientIp(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
     const { data: txnResult } = await supabase
       .from('payment_transactions')
       .select('id, user_id, order_id, transaction_reference, gateway_transaction_id, status, created_at')
-      .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
+      .or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`)
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
       const { data: sessionResult } = await supabase
         .from('payment_sessions')
         .select('id, user_id, transaction_reference, gateway_transaction_id, status, created_at')
-        .or(`transaction_reference.eq.${reference},gateway_transaction_id.eq.${reference}`)
+        .or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`)
         .eq('user_id', user.id)
         .limit(1)
         .maybeSingle()
@@ -126,7 +127,8 @@ export async function POST(req: NextRequest) {
       // Auto-complete stuck payments
       try {
         // Trigger mock webhook for auto-completion
-        const mockWebhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/mock-webhook`
+        const base = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
+        const mockWebhookUrl = `${base}/api/payments/mock-webhook`
         await fetch(mockWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -168,6 +170,22 @@ export async function POST(req: NextRequest) {
           else if (pendingSet.has(raw)) statusRaw = 'PENDING'
           else if (cancelSet.has(raw)) statusRaw = 'CANCELLED'
           else if (failSet.has(raw)) statusRaw = 'FAILED'
+        }
+
+        // If remote indicates success for a session-based transaction, proactively trigger our internal webhook
+        // to finalize the order and clear the cart without waiting for external webhook delivery.
+        if (statusRaw === 'COMPLETED' && isSession) {
+          try {
+            const base = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
+            const url = `${base}/api/payments/mock-webhook`
+            await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transaction_reference: txn.transaction_reference, status: 'COMPLETED' }),
+            })
+          } catch {
+            // best-effort
+          }
         }
       } catch {
         // Ignore remote errors; fall back to DB status

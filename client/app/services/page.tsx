@@ -15,7 +15,6 @@ import {
   Zap
 } from 'lucide-react'
 import { PageLayout, Breadcrumb } from '@/components/shared'
-import { getServices } from '@/lib/database'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
 
 interface Service {
@@ -90,10 +89,20 @@ interface DbService {
   gallery?: string[]
 }
 
+async function getDbServices(): Promise<DbService[]> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  const res = await fetch(`${baseUrl}/api/services?fresh=${Date.now()}`, { cache: 'no-store' })
+  if (!res.ok) return []
+  const j = await res.json().catch(() => ({ services: [] }))
+  return (j?.services || []) as DbService[]
+}
+
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ service?: string }> }) {
   const resolvedSearchParams = await searchParams
-  // Fetch real services from DB to ensure we have valid UUID ids
-  const dbServices = (await getServices()) as DbService[]
+  // Fetch real services from API (server role) to ensure we have valid UUID ids
+  const dbServices = await getDbServices()
   const dbServiceIdByTitle = new Map<string, string>(
     (dbServices || []).map((s) => [s.title, s.id])
   )

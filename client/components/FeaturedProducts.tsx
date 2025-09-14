@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { getFeaturedProducts } from '@/lib/database'
+import { api } from '@/lib/api-client'
 import type { Product } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
 
@@ -13,8 +13,8 @@ export const FeaturedProducts = () => {
     let isMounted = true
     ;(async () => {
       try {
-        const data = await getFeaturedProducts(9)
-        if (isMounted) setProducts(data || [])
+        const data = await api.getFeaturedProducts(9)
+        if (isMounted) setProducts(Array.isArray(data) ? data : [])
       } catch (e) {
         console.error('Failed to load featured products', e)
       }

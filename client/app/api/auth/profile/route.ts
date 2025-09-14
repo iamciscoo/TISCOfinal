@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { getUser } from '@/lib/supabase-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +9,7 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -29,55 +29,75 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // If no profile exists, create one
-    if (!profile) {
-      const isVerified = (
-        user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
-        user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
-      ) ?? false
+    // Extract user information from Supabase for profile sync
+    const userEmail = user.email || ''
+    const userPhone = user.user_metadata?.phone || ''
 
+    if (!profile) {
+      // Normalize names from social metadata
+      const meta = user.user_metadata || {}
+      const fullName: string = meta.full_name || meta.name || ''
+      const given: string = meta.given_name || ''
+      const family: string = meta.family_name || ''
+      let firstName: string = meta.first_name || given || ''
+      let lastName: string = meta.last_name || family || ''
+      if (!firstName && fullName) {
+        const parts = fullName.trim().split(/\s+/)
+        firstName = parts[0] || ''
+        lastName = parts.slice(1).join(' ') || ''
+      }
+      const avatarUrl: string = meta.avatar_url || meta.picture || ''
+
+      // Create profile if it doesn't exist
       const { data: newProfile, error: createError } = await supabase
         .from('users')
         .insert({
           id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          first_name: user.firstName,
-          last_name: user.lastName,
-          phone: user.phoneNumbers[0]?.phoneNumber,
-          avatar_url: user.imageUrl,
-          is_verified: isVerified
+          auth_user_id: user.id,
+          email: userEmail,
+          first_name: firstName,
+          last_name: lastName,
+          phone: userPhone,
+          avatar_url: avatarUrl,
+          created_at: new Date().toISOString()
         })
         .select(`
           *,
           addresses(*),
-          orders(id, status, total_amount, created_at)
+          payment_methods(*)
         `)
         .single()
 
       if (createError) {
+        console.error('Profile creation error:', createError)
         return NextResponse.json({ error: createError.message }, { status: 500 })
       }
 
-      return NextResponse.json({ 
-        user: newProfile,
-        clerk_user: {
+      // Return the newly created profile with Supabase user data
+      return NextResponse.json({
+        profile: newProfile,
+        auth_user: {
           id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          emailAddresses: user.emailAddresses,
-          imageUrl: user.imageUrl
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          email: userEmail,
+          avatar_url: user.user_metadata?.avatar_url || '',
+          phone: userPhone,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'User'
         }
       }, { status: 201 })
     }
 
     return NextResponse.json({ 
-      user: profile,
-      clerk_user: {
+      profile,
+      auth_user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailAddresses: user.emailAddresses,
-        imageUrl: user.imageUrl
+        first_name: user.user_metadata?.first_name || '',
+        last_name: user.user_metadata?.last_name || '',
+        email: userEmail,
+        avatar_url: user.user_metadata?.avatar_url || '',
+        phone: userPhone,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'User'
       }
     }, { status: 200 })
 
@@ -92,7 +112,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

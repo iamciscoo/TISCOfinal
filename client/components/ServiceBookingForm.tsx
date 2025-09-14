@@ -13,6 +13,7 @@ type Service = { id: string; title: string }
 export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }: { defaultServiceId?: string; services?: Service[] }) => {
   const { toast } = useToast()
   const [services, setServices] = useState<Service[]>(servicesProp ?? [])
+  const [servicesLoading, setServicesLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [today] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedService, setSelectedService] = useState<string | undefined>(defaultServiceId)
@@ -28,6 +29,37 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
   useEffect(() => {
     setServices(servicesProp ?? [])
   }, [servicesProp])
+
+  // Fallback: if no services are passed from the page, fetch from API to ensure dropdown is populated
+  useEffect(() => {
+    const shouldFetch = !servicesProp || servicesProp.length === 0
+    if (!shouldFetch) return
+
+    let isMounted = true
+    setServicesLoading(true)
+    ;(async () => {
+      try {
+        const res = await fetch('/api/services', { cache: 'no-store' })
+        if (!res.ok) throw new Error('Failed to load services')
+        const j = await res.json()
+        const apiServices: Service[] = (Array.isArray(j?.services) ? j.services : []).map(
+          (s: { id: string; title: string }) => ({ id: s.id, title: s.title })
+        )
+        if (isMounted) setServices(apiServices)
+      } catch (err) {
+        console.error('[ServiceBookingForm] failed to fetch services', err)
+        if (isMounted) {
+          toast({ title: 'Unable to load services', description: 'Please refresh the page.', variant: 'destructive' })
+        }
+      } finally {
+        if (isMounted) setServicesLoading(false)
+      }
+    })()
+
+    return () => {
+      isMounted = false
+    }
+  }, [servicesProp, toast])
 
   useEffect(() => {
     const list = servicesProp ?? services
@@ -89,8 +121,13 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Ideally map services from DB; keeping minimal for now */}
-                  {services.map((s) => (
+                  {servicesLoading && (
+                    <SelectItem value="__loading__" disabled>Loading services…</SelectItem>
+                  )}
+                  {!servicesLoading && services.length === 0 && (
+                    <SelectItem value="__empty__" disabled>No services available</SelectItem>
+                  )}
+                  {!servicesLoading && services.length > 0 && services.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
                   ))}
                 </SelectContent>

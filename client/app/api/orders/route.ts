@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { getUser, getUserProfile } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import type { Address } from '@/lib/types'
 import { revalidateTag, unstable_cache } from 'next/cache'
+export const runtime = 'nodejs'
 
 type SupabaseErrorLike = {
   message?: string
@@ -24,7 +25,7 @@ function errInfo(err: unknown): SupabaseErrorLike {
   return { message: String(err) }
 }
 
-// Server-side Supabase client using service role (RLS bypass is acceptable here as we enforce Clerk auth and explicit filters)
+// Server-side Supabase client using service role (RLS bypass is acceptable here as we enforce Supabase auth and explicit filters)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
@@ -38,9 +39,12 @@ type OrderItemInput = {
 }
 
 export async function POST(req: Request) {
+  console.log('=== ORDER CREATION START ===')
   try {
-    const user = await currentUser()
+    const user = await getUser()
+    console.log('User authentication result:', user ? `User ID: ${user.id}` : 'No user found')
     if (!user) {
+      console.log('Order creation failed: Unauthorized')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -64,7 +68,16 @@ export async function POST(req: Request) {
     const country_input: string | undefined = typeof body?.country === 'string' ? body.country.trim() : undefined
     const address_line_1_value = address_line_1_input || place_input
 
+    console.log('Order request body:', { 
+      items: items?.length, 
+      payment_method, 
+      currency, 
+      shipping_address,
+      user_id: user.id 
+    })
+    
     if (!items || !Array.isArray(items) || items.length === 0) {
+      console.log('Order creation failed: No items provided')
       return NextResponse.json({ error: 'Items are required' }, { status: 400 })
     }
 
@@ -154,16 +167,16 @@ export async function POST(req: Request) {
       validatedItems.push({ product_id: pid, quantity: it.quantity, price: serverPrice })
     }
 
-    // Ensure user exists in users table (FK safety) and sync address fields for admin visibility
-    const clerkEmail = user.emailAddresses?.[0]?.emailAddress || undefined
-    const emailValue = clerkEmail || email_input
+    // Get user profile from our database for proper user data
+    const userProfile = await getUserProfile(user.id)
+    const emailValue = userProfile?.email || user.email || email_input
     
     console.log('DEBUG - User sync data:', {
       user_id: user.id,
       email: emailValue,
-      first_name: user.firstName ?? first_name_input ?? null,
-      last_name: user.lastName ?? last_name_input ?? null,
-      phone: contact_phone ?? user.phoneNumbers?.[0]?.phoneNumber ?? null,
+      first_name: userProfile?.first_name ?? first_name_input ?? null,
+      last_name: userProfile?.last_name ?? last_name_input ?? null,
+      phone: contact_phone ?? userProfile?.phone ?? null,
       address_line_1: address_line_1_value ?? null,
       city: city_input ?? null,
       country: country_input ?? null,
@@ -174,11 +187,12 @@ export async function POST(req: Request) {
         .from('users')
         .upsert({
           id: user.id,
+          auth_user_id: user.id,
           email: emailValue,
-          first_name: user.firstName ?? first_name_input ?? null,
-          last_name: user.lastName ?? last_name_input ?? null,
-          phone: contact_phone ?? user.phoneNumbers?.[0]?.phoneNumber ?? null,
-          avatar_url: user.imageUrl ?? null,
+          first_name: userProfile?.first_name ?? first_name_input ?? null,
+          last_name: userProfile?.last_name ?? last_name_input ?? null,
+          phone: contact_phone ?? userProfile?.phone ?? null,
+          avatar_url: userProfile?.avatar_url ?? null,
           // Sync address fields for admin visibility
           address_line_1: address_line_1_value ?? null,
           city: city_input ?? null,
@@ -191,7 +205,7 @@ export async function POST(req: Request) {
         console.log('User upserted successfully')
       }
     } else {
-      console.warn('Skipping users upsert: missing email from Clerk and request body')
+      console.warn('Skipping users upsert: missing email from user and request body')
     }
 
     // Sync user's default shipping address for admin visibility
@@ -249,6 +263,15 @@ export async function POST(req: Request) {
     }
 
     // Create order
+    console.log('Creating order with data:', {
+      user_id: user.id,
+      total_amount,
+      currency,
+      payment_method,
+      shipping_address: shippingAddressStr,
+      items_count: validatedItems.length
+    })
+    
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -265,8 +288,11 @@ export async function POST(req: Request) {
       .single()
 
     if (orderError) {
+      console.error('Order creation failed:', errInfo(orderError))
       return NextResponse.json({ error: orderError.message }, { status: 500 })
     }
+    
+    console.log('Order created successfully:', order.id)
 
     // Create order items with server-verified prices
     const orderItems = validatedItems.map((item) => ({
@@ -276,14 +302,28 @@ export async function POST(req: Request) {
       price: item.price,
     }))
 
+    console.log('Creating order items:', orderItems.length)
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems)
 
     if (itemsError) {
+      console.error('Order items creation failed:', errInfo(itemsError))
       // Rollback order if order items creation fails
       await supabase.from('orders').delete().eq('id', order.id)
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
+    }
+    
+    console.log('Order items created successfully')
+
+    // Clear user's cart in the database to keep client and server in sync
+    try {
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id)
+    } catch (e) {
+      console.warn('Non-fatal: failed to clear user cart after order creation', errInfo(e))
     }
 
     // Inventory policy: do not decrement stock at order creation.
@@ -298,15 +338,19 @@ export async function POST(req: Request) {
       console.warn('Revalidation error (non-fatal):', e)
     }
 
-    return NextResponse.json({ 
-      order: {
-        ...order,
-        items: orderItems
-      }
-    }, { status: 201 })
+    // Return the created order with items
+    const orderWithItems = {
+      ...order,
+      order_items: orderItems.map((item, index) => ({
+        ...item,
+        product: validatedItems[index]
+      }))
+    }
 
+    console.log('=== ORDER CREATION SUCCESS ===', order.id)
+    return NextResponse.json({ order: orderWithItems }, { status: 201 })
   } catch (error: unknown) {
-    console.error('Order creation error:', error)
+    console.error('=== ORDER CREATION ERROR ===', error)
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to create order' },
       { status: 500 }
@@ -316,7 +360,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

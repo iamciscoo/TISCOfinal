@@ -15,11 +15,11 @@ try {
   }
 } catch {}
 
-// Allow Clerk avatar images
-remotePatterns.push(
-  { protocol: 'https', hostname: 'img.clerk.com', pathname: '/**' },
-  { protocol: 'https', hostname: 'images.clerk.dev', pathname: '/**' }
-)
+// Allow Google profile images (e.g., Google OAuth avatars)
+remotePatterns.push({
+  protocol: 'https',
+  hostname: 'lh3.googleusercontent.com',
+})
 
 const nextConfig: NextConfig = {
   images: {

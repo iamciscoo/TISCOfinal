@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { ZenoPayClient } from '@/lib/zenopay'
+import { getUser } from '@/lib/supabase-server'
+export const runtime = 'nodejs'
 
 function normalizeTzMsisdn(raw: string): string {
   // ZenoPay examples use local format 0XXXXXXXXX (10 digits)
@@ -54,7 +55,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
         provider,
         phone_number,
         transaction_reference: cleanRef,
-        order_data: JSON.stringify(order_data),
+        order_data,
         status: 'pending',
         created_at: new Date().toISOString()
       })
@@ -97,11 +98,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: sessionError.message }, { status: 500 })
     }
 
-    // Derive buyer information from Clerk
-    const buyerName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Customer'
-    const buyerEmail = (user.primaryEmailAddress?.emailAddress 
-      || user.emailAddresses?.[0]?.emailAddress 
-      || '').trim() || 'no-reply@example.com'
+    // Derive buyer information from Supabase user
+    const buyerName = user.user_metadata?.full_name || user.user_metadata?.name || 'Customer'
+    const buyerEmail = user.email || 'no-reply@example.com'
     const webhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/api/payments/webhooks`
 
     // Process mobile money payment
@@ -150,7 +149,7 @@ type PaymentSession = {
   provider: string;
   phone_number: string;
   transaction_reference: string; 
-  order_data: string;
+  order_data: unknown;
 }
 
 interface BuyerInfo { 

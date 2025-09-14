@@ -92,6 +92,9 @@ const baseTemplate = (content: string, data: BaseEmailData) => `
 </html>
 `
 
+// Resolve base URL for links inside emails
+const appBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '')
+
 // Template functions for each email type
 export const emailTemplates = {
   order_confirmation: (data: OrderEmailData) => {
@@ -121,7 +124,7 @@ export const emailTemplates = {
       <p>We'll send you another email when your order ships.</p>
       <p>If you have any questions, please don't hesitate to contact us.</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${data.order_id}" class="button">View Order</a>
+      <a href="${appBaseUrl}/account/orders/${data.order_id}" class="button">View Order</a>
     `
     return baseTemplate(content, data)
   },
@@ -147,7 +150,7 @@ export const emailTemplates = {
         </div>
       ` : ''}
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${data.order_id}" class="button">Track Order</a>
+      <a href="${appBaseUrl}/account/orders/${data.order_id}" class="button">Track Order</a>
     `
     return baseTemplate(content, data)
   },
@@ -185,7 +188,7 @@ export const emailTemplates = {
       
       <p>Please try again or use a different payment method. Your items are still reserved in your cart.</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/checkout" class="button">Complete Payment</a>
+      <a href="${appBaseUrl}/checkout" class="button">Complete Payment</a>
     `
     return baseTemplate(content, data)
   },
@@ -206,7 +209,7 @@ export const emailTemplates = {
       
       <p>Start shopping today and enjoy exclusive deals!</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/products" class="button">Shop Now</a>
+      <a href="${appBaseUrl}/products" class="button">Shop Now</a>
       
       <p>Need help? Contact us on WhatsApp: <strong>+255748624684</strong></p>
     `
@@ -226,7 +229,7 @@ export const emailTemplates = {
         <li>✓ Fast delivery</li>
       </ul>
       
-      <a href="${data.cart_url || process.env.NEXT_PUBLIC_APP_URL + '/cart'}" class="button">Complete Your Order</a>
+      <a href="${data.cart_url || appBaseUrl + '/cart'}" class="button">Complete Your Order</a>
       
       <p>Need assistance? We're here to help on WhatsApp: <strong>+255748624684</strong></p>
     `
@@ -247,7 +250,7 @@ export const emailTemplates = {
       
       <p>You can track your order status anytime.</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${data.order_id}" class="button">Track Package</a>
+      <a href="${appBaseUrl}/account/orders/${data.order_id}" class="button">Track Package</a>
     `
     return baseTemplate(content, data)
   },
@@ -262,7 +265,7 @@ export const emailTemplates = {
       
       <p>Would you like to share your experience? Your feedback helps us improve.</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${data.order_id}/review" class="button">Leave a Review</a>
+      <a href="${appBaseUrl}/account/orders/${data.order_id}/review" class="button">Leave a Review</a>
     `
     return baseTemplate(content, data)
   },
@@ -275,7 +278,7 @@ export const emailTemplates = {
       
       <p>Your opinion matters to us! Please take a moment to review the products you purchased. Your feedback helps other customers make informed decisions.</p>
       
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${data.order_id}/review" class="button">Write a Review</a>
+      <a href="${appBaseUrl}/account/orders/${data.order_id}/review" class="button">Write a Review</a>
       
       <p>Thank you for choosing TISCO Market!</p>
     `

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 
 type CheckoutStep = 'shipping' | 'payment' | 'review'
 
@@ -55,7 +55,7 @@ const TOP_TZ_CITIES = [
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user } = useUser()
+  const { user } = useAuth()
   const { items, clearCart, getTotalPrice, getTotalItems } = useCartStore()
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
@@ -69,9 +69,9 @@ export default function CheckoutPage() {
 
   // Form data
   const [shippingData, setShippingData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.emailAddresses[0]?.emailAddress || '',
+    firstName: user?.user_metadata?.first_name || '',
+    lastName: user?.user_metadata?.last_name || '',
+    email: user?.email || '',
     phone: '',
     address: '',
     city: '', // Selected from dropdown, can be 'Other'
@@ -375,9 +375,11 @@ export default function CheckoutPage() {
               return
             }
             
-            // Payment successful - do NOT create the order client-side.
-            // The server webhook will create the order and clear the cart.
+            // Payment successful - rely on server webhook to create the order and clear server cart.
+            // Clear local cart to avoid client/server cart divergence and re-syncs.
             toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
+            clearCart()
+            void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
             try { sessionStorage.setItem('orders:refresh', '1') } catch {}
             router.push('/account/orders?justPaid=1')
             return
@@ -538,8 +540,11 @@ export default function CheckoutPage() {
           return
         }
         
-        // Payment successful - rely on webhook to create the order and clear cart.
+        // Payment successful - rely on server webhook to create the order and clear server cart.
+        // Clear local cart to prevent stale local items from re-syncing.
         toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
+        clearCart()
+        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
         try { sessionStorage.setItem('orders:refresh', '1') } catch {}
         router.push('/account/orders?justPaid=1')
       }

@@ -45,9 +45,17 @@ export const trackPerformance = () => {
   if (typeof window !== 'undefined' && 'performance' in window) {
     // Basic performance tracking
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-    if (navigation) {
-      console.log('Page Load Time:', navigation.loadEventEnd - navigation.fetchStart)
-      console.log('DOM Content Loaded:', navigation.domContentLoadedEventEnd - navigation.fetchStart)
+    if (navigation && process.env.NODE_ENV === 'development') {
+      // Only log performance metrics in development
+      const pageLoadTime = navigation.loadEventEnd - navigation.fetchStart
+      const domContentLoaded = navigation.domContentLoadedEventEnd - navigation.fetchStart
+      
+      if (pageLoadTime > 0) {
+        console.info(`Page Load Time: ${pageLoadTime}ms`)
+      }
+      if (domContentLoaded > 0) {
+        console.info(`DOM Content Loaded: ${domContentLoaded}ms`)
+      }
     }
   }
 }

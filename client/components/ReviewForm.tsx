@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,7 +16,8 @@ interface ReviewFormProps {
 }
 
 export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
-  const { isSignedIn } = useUser()
+  const { user } = useAuth()
+  const isSignedIn = !!user
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({

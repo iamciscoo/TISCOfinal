@@ -3,8 +3,10 @@ import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { withMiddleware, withValidation, withErrorHandler, createSuccessResponse } from '@/lib/middleware'
 
+export const runtime = 'nodejs'
+
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
@@ -17,39 +19,48 @@ export const GET = withMiddleware(
   withValidation(getFeaturedProductsSchema),
   withErrorHandler
 )(async (req: NextRequest, validatedData: z.infer<typeof getFeaturedProductsSchema>) => {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      id,
-      name,
-      description,
-      price,
-      stock_quantity,
-      is_featured,
-      is_on_sale,
-      sale_price,
-      is_deal,
-      deal_price,
-      original_price,
-      rating,
-      reviews_count,
-      slug,
-      created_at,
-      product_images (
-        url,
-        is_main,
-        sort_order
-      ),
-      categories (
+  const buildQuery = (withSlug: boolean) =>
+    supabase
+      .from('products')
+      .select(`
         id,
-        name
-      )
-    `)
-    .eq('is_featured', true)
-    .limit(validatedData.limit)
-    .order('created_at', { ascending: false })
-    .order('is_main', { foreignTable: 'product_images', ascending: false })
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+        name,
+        description,
+        price,
+        image_url,
+        stock_quantity,
+        is_featured,
+        is_on_sale,
+        sale_price,
+        is_deal,
+        deal_price,
+        original_price,
+        rating,
+        reviews_count,
+        slug,
+        created_at,
+        product_images (
+          url,
+          is_main,
+          sort_order
+        ),
+        categories (
+          id,
+          name${withSlug ? ', slug' : ''}
+        )
+      `)
+      .eq('is_featured', true)
+      .limit(validatedData.limit)
+      .order('created_at', { ascending: false })
+      .order('is_main', { foreignTable: 'product_images', ascending: false })
+      .order('sort_order', { foreignTable: 'product_images', ascending: true })
+
+  let { data, error } = await buildQuery(true)
+  if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {
+    const fallback = await buildQuery(false)
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) throw error
 

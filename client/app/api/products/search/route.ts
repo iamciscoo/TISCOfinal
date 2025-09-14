@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+export const runtime = 'nodejs'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+)
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,49 +15,55 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get('limit')
     const category = searchParams.get('category')
 
-    let supabaseQuery = supabase
-      .from('products')
-      .select(`
-        *,
-        categories (
-          id,
-          name
-        ),
-        product_images (
-          id,
-          url,
-          is_main,
-          sort_order
-        )
-      `)
-      // limit applied conditionally below
+    const buildQuery = (withSlug: boolean) => {
+      let q = supabase
+        .from('products')
+        .select(`
+          *,
+          categories (
+            id,
+            name${withSlug ? ', slug' : ''}
+          ),
+          product_images (
+            id,
+            url,
+            is_main,
+            sort_order
+          )
+        `)
 
-    // Search filter (tokenized OR across name/description). Sanitize commas/parentheses to avoid Postgrest .or parsing issues
-    if (query) {
-      const safe = query.replace(/[(),%]/g, ' ').trim()
-      const tokens = safe.split(/\s+/).filter(Boolean).slice(0, 5)
-      const orClauses = (tokens.length > 0 ? tokens : [safe])
-        .map((t) => `name.ilike.%${t}%,description.ilike.%${t}%`)
-        .join(',')
-      supabaseQuery = supabaseQuery.or(orClauses)
-    }
-
-    // Category filter
-    if (category && category !== 'all') {
-      supabaseQuery = supabaseQuery.eq('category_id', category)
-    }
-
-    // Stock filter removed to return all products
-
-    // Apply limit only if provided
-    if (limitParam) {
-      const parsed = parseInt(limitParam)
-      if (!Number.isNaN(parsed) && parsed > 0) {
-        supabaseQuery = supabaseQuery.limit(parsed)
+      // Search filter (tokenized OR across name/description). Sanitize commas/parentheses to avoid Postgrest .or parsing issues
+      if (query) {
+        const safe = query.replace(/[(),%]/g, ' ').trim()
+        const tokens = safe.split(/\s+/).filter(Boolean).slice(0, 5)
+        const orClauses = (tokens.length > 0 ? tokens : [safe])
+          .map((t) => `name.ilike.%${t}%,description.ilike.%${t}%`)
+          .join(',')
+        q = q.or(orClauses)
       }
+
+      // Category filter
+      if (category && category !== 'all') {
+        q = q.eq('category_id', category)
+      }
+
+      // Apply limit only if provided
+      if (limitParam) {
+        const parsed = parseInt(limitParam)
+        if (!Number.isNaN(parsed) && parsed > 0) {
+          q = q.limit(parsed)
+        }
+      }
+
+      return q
     }
 
-    const { data: products, error } = await supabaseQuery
+    let { data: products, error } = await buildQuery(true)
+    if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {
+      const fallback = await buildQuery(false)
+      products = fallback.data
+      error = fallback.error
+    }
 
     if (error) {
       console.error('Search error:', error)

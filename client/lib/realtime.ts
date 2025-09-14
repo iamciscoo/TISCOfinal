@@ -177,7 +177,6 @@ export function useCartRealtime(userId: string, onUpdate?: (payload: RealtimePay
   if (typeof window === 'undefined') return
 
   const handleUpdate = (payload: RealtimePayload) => {
-    console.log('Cart updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 
@@ -194,7 +193,6 @@ export function useOrdersRealtime(userId: string, onUpdate?: (payload: RealtimeP
   if (typeof window === 'undefined') return
 
   const handleUpdate = (payload: RealtimePayload) => {
-    console.log('Orders updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 
@@ -211,7 +209,6 @@ export function useProductsRealtime(onUpdate?: (payload: RealtimePayload) => voi
   if (typeof window === 'undefined') return
 
   const handleUpdate = (payload: RealtimePayload) => {
-    console.log('Products updated:', payload)
     if (onUpdate) onUpdate(payload)
   }
 

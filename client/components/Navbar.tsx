@@ -8,7 +8,9 @@ import { ShoppingCart, Search, Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
+import { SignInButton } from '@/components/auth/SignInButton'
+import { UserButton } from '@/components/auth/UserButton'
 import { useCartStore } from '@/lib/store'
 import { CurrencyToggle } from '@/components/CurrencyToggle'
 import { debounce } from '@/lib/shared-utils'
@@ -23,7 +25,7 @@ const MAX_SUGGESTIONS = 5
  * Features:
  * - Responsive design with mobile menu
  * - Search with autocomplete suggestions
- * - User authentication via Clerk
+ * - User authentication via Supabase
  * - Shopping cart integration
  * - Currency toggle
  */
@@ -36,7 +38,9 @@ export const Navbar = () => {
   const [mounted, setMounted] = useState(false)
   
   // External hooks
-  const { isLoaded, isSignedIn } = useUser()
+  const { user, loading } = useAuth()
+  const isLoaded = !loading
+  const isSignedIn = !!user
   const router = useRouter()
   const openCart = useCartStore((s) => s.openCart)
   const cartCount = useCartStore((s) => s.items.reduce((t, i) => t + i.quantity, 0))
@@ -232,7 +236,7 @@ export const Navbar = () => {
             
             {/* Authentication Section */}
             {!isLoaded ? (
-              // Prevent layout shift during Clerk initialization
+              // Prevent layout shift during authentication initialization
               <div className="hidden sm:block h-9 w-24" aria-hidden="true" />
             ) : isSignedIn ? (
               <div className="flex items-center gap-2">
@@ -247,12 +251,11 @@ export const Navbar = () => {
                 </span>
               </div>
             ) : (
-              <SignInButton>
-                <Button variant="ghost" size="sm" className="hidden sm:flex transition-colors">
-                  <User className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-              </SignInButton>
+              <SignInButton 
+                variant="ghost" 
+                size="sm" 
+                className="hidden sm:flex transition-colors"
+              />
             )}
 
             {/* Shopping Cart */}
@@ -278,10 +281,12 @@ export const Navbar = () => {
                   <UserButton afterSignOutUrl="/" />
                 </span>
               ) : (
-                <SignInButton>
-                  <Button variant="ghost" size="sm" className="inline-flex sm:hidden" aria-label="Sign in">
-                    <User className="h-5 w-5" />
-                  </Button>
+                <SignInButton 
+                  variant="ghost" 
+                  size="sm" 
+                  className="inline-flex sm:hidden"
+                >
+                  <User className="h-5 w-5" />
                 </SignInButton>
               )
             )}

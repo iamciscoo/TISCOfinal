@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { getUser } from '@/lib/supabase-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +10,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -27,77 +27,71 @@ export async function POST(req: NextRequest) {
 
     switch (action) {
       case 'sync_profile':
-        // Sync Clerk user data to Supabase users table
-        const { data: existingUser, error: fetchError } = await supabase
+        // Normalize names from social login metadata
+        const meta = user.user_metadata || {}
+        const fullName: string = meta.full_name || meta.name || ''
+        const given: string = meta.given_name || ''
+        const family: string = meta.family_name || ''
+        let firstName: string = meta.first_name || given || ''
+        let lastName: string = meta.last_name || family || ''
+        if (!firstName && fullName) {
+          const parts = fullName.trim().split(/\s+/)
+          firstName = parts[0] || ''
+          lastName = parts.slice(1).join(' ') || ''
+        }
+        const avatarUrl: string | null = meta.avatar_url || meta.picture || null
+
+        // If auth metadata lacks normalized names, update via Admin API (service role)
+        try {
+          const needFirst = !!firstName && meta.first_name !== firstName
+          const needLast = !!lastName && meta.last_name !== lastName
+          const needAvatar = !!avatarUrl && meta.avatar_url !== avatarUrl
+          if (needFirst || needLast || needAvatar) {
+            const { error: adminErr } = await supabase.auth.admin.updateUserById(user.id, {
+              user_metadata: {
+                ...meta,
+                ...(needFirst ? { first_name: firstName } : {}),
+                ...(needLast ? { last_name: lastName } : {}),
+                ...(needAvatar ? { avatar_url: avatarUrl } : {}),
+              }
+            })
+            if (adminErr) {
+              console.warn('Auth admin metadata update failed:', adminErr)
+            }
+          }
+        } catch (e) {
+          console.warn('Auth admin update exception:', e)
+        }
+
+        // Sync Supabase user data to users table with normalized names
+        const { data: userProfile, error } = await supabase
           .from('users')
-          .select('id')
-          .eq('id', user.id)
+          .upsert({
+            id: user.id,
+            auth_user_id: user.id,
+            email: user.email,
+            first_name: firstName,
+            last_name: lastName,
+            avatar_url: avatarUrl,
+            is_verified: user.email_confirmed_at ? true : false,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'auth_user_id' })
+          .select()
           .single()
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          return NextResponse.json({ error: fetchError.message }, { status: 500 })
+        
+        if (error) {
+          console.error('Error upserting user profile:', error)
+          return NextResponse.json({ error: 'Failed to sync user profile' }, { status: 500 })
+        }
+        
+        if (!userProfile) {
+          return NextResponse.json({ error: 'Failed to sync user profile' }, { status: 500 })
         }
 
-        if (!existingUser) {
-          // Create new user record
-          const isVerified = (
-            user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
-            user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
-          ) ?? false
-
-          const { data: newUser, error: createError } = await supabase
-            .from('users')
-            .insert({
-              id: user.id,
-              email: user.emailAddresses[0]?.emailAddress,
-              first_name: user.firstName,
-              last_name: user.lastName,
-              phone: user.phoneNumbers[0]?.phoneNumber,
-              avatar_url: user.imageUrl,
-              is_verified: isVerified
-            })
-            .select()
-            .single()
-
-          if (createError) {
-            return NextResponse.json({ error: createError.message }, { status: 500 })
-          }
-
-          return NextResponse.json({ 
-            message: 'User profile created',
-            user: newUser 
-          }, { status: 201 })
-        } else {
-          // Update existing user record
-          const isVerified = (
-            user.emailAddresses?.some((e) => e?.verification?.status === 'verified') ||
-            user.phoneNumbers?.some((p) => p?.verification?.status === 'verified')
-          ) ?? false
-
-          const { data: updatedUser, error: updateError } = await supabase
-            .from('users')
-            .update({
-              email: user.emailAddresses[0]?.emailAddress,
-              first_name: user.firstName,
-              last_name: user.lastName,
-              phone: user.phoneNumbers[0]?.phoneNumber,
-              avatar_url: user.imageUrl,
-              is_verified: isVerified,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id)
-            .select()
-            .single()
-
-          if (updateError) {
-            return NextResponse.json({ error: updateError.message }, { status: 500 })
-          }
-
-          return NextResponse.json({ 
-            message: 'User profile updated',
-            user: updatedUser 
-          }, { status: 200 })
-        }
+        return NextResponse.json({ 
+          message: 'User profile synced',
+          user: userProfile 
+        }, { status: 200 })
 
       case 'merge_guest_data':
         // Merge guest cart and other data when user logs in
@@ -115,7 +109,7 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // Forward cookies to preserve Clerk auth context for currentUser()
+              // Forward cookies to preserve auth context
               Cookie: cookieStore.toString(),
             },
             body: JSON.stringify({

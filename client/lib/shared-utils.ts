@@ -141,30 +141,38 @@ export function getDiscountPercent(product: Product): number | null {
 // =============================================================================
 
 /**
- * Gets the primary image URL for a product with fallback logic
+ * Gets the primary image URL for a product with clear fallback hierarchy
  * Priority: main product_image > first product_image > legacy image_url > fallback
  * @param product - Product object with image data
  * @returns Image URL string
  */
 export function getImageUrl(product: Product): string {
-  // Priority order:
-  // 1. Main image from product_images array
-  // 2. First image from product_images array
-  // 3. Legacy image_url field
-  // 4. Fallback image
+  // CLEAR FALLBACK HIERARCHY:
+  // 1. Main image from product_images table (is_main = true)
+  // 2. First image from product_images table (sorted by sort_order)
+  // 3. Legacy image_url field (for backward compatibility)
+  // 4. Default fallback image
   
   if (product.product_images && product.product_images.length > 0) {
-    // Find main image first
-    const mainImage = product.product_images.find(img => img.is_main)
-    if (mainImage?.url) return mainImage.url
+    // Sort images: main first, then by sort_order
+    const sortedImages = [...product.product_images].sort((a, b) => {
+      if (a.is_main && !b.is_main) return -1
+      if (!a.is_main && b.is_main) return 1
+      return (a.sort_order || 0) - (b.sort_order || 0)
+    })
     
-    // Fall back to first image
-    const firstImage = product.product_images[0]
-    if (firstImage?.url) return firstImage.url
+    // Return first valid URL from sorted images
+    for (const image of sortedImages) {
+      if (image.url && image.url.trim()) {
+        return getSupabaseImageUrl(image.url)
+      }
+    }
   }
   
-  // Legacy fallback
-  if (product.image_url) return product.image_url
+  // Legacy fallback for products without product_images
+  if (product.image_url && product.image_url.trim()) {
+    return getSupabaseImageUrl(product.image_url)
+  }
   
   // Final fallback
   return '/circular.svg'

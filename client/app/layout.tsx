@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from '@clerk/nextjs'
+import { AuthProvider } from '@/hooks/use-auth'
 import { CurrencyProvider } from '@/lib/currency-context'
 import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
@@ -38,7 +38,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <AuthProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
           <link 
@@ -56,6 +56,6 @@ export default async function RootLayout({
           <Toaster />
         </body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient, type SupabaseClient, type PostgrestError } from '@supabase/supabase-js'
+import { getUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await currentUser()
+    const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -81,23 +81,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 })
     }
 
-    // Use service role client to bypass RLS (Clerk is our auth source)
+    // Use service role client to bypass RLS (Supabase is our auth source)
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE!
     )
 
     // Ensure user exists in users table to satisfy FK constraint
+    const userEmail = user.email || ''
+    const userFirstName = user.user_metadata?.first_name || ''
+    const userLastName = user.user_metadata?.last_name || ''
+    const userPhone = user.user_metadata?.phone || ''
+    const userAvatar = user.user_metadata?.avatar_url || ''
+
+    // Migration safety: if a legacy users row exists without auth_user_id, set it now
+    await service
+      .from('users')
+      .update({ auth_user_id: user.id })
+      .eq('id', user.id)
+      .is('auth_user_id', null)
+
     const { error: upsertErr } = await service
       .from('users')
       .upsert(
         {
           id: user.id,
-          email: user.emailAddresses?.[0]?.emailAddress ?? null,
-          first_name: user.firstName ?? null,
-          last_name: user.lastName ?? null,
-          phone: user.phoneNumbers?.[0]?.phoneNumber ?? null,
-          avatar_url: user.imageUrl ?? null,
+          auth_user_id: user.id,
+          email: userEmail,
+          first_name: userFirstName,
+          last_name: userLastName,
+          phone: userPhone,
+          avatar_url: userAvatar,
         },
         { onConflict: 'id' }
       )

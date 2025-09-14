@@ -2,7 +2,9 @@ import { ApiResponse } from './middleware'
 import { cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
 
 // Base API client configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+// Use relative URL in the browser to avoid cross-origin/port issues
+const isBrowser = typeof window !== 'undefined'
+const API_BASE_URL = isBrowser ? '' : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000')
 
 // Generic API client
 class ApiClient {
@@ -16,8 +18,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}/api${endpoint}`
-    
+    // If baseUrl is empty (browser), use relative path. Otherwise use absolute baseUrl.
+    const url = `${this.baseUrl ? this.baseUrl : ''}/api${endpoint}`
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -27,9 +30,17 @@ class ApiClient {
     }
 
     const response = await fetch(url, config)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[ApiClient] HTTP ${response.status} ${response.statusText} for ${url}:`, errorText)
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
     const data: ApiResponse<T> = await response.json()
 
     if (!data.success) {
+      console.error('[ApiClient] API error response for', url, ':', data)
       throw new Error(data.message || 'API request failed')
     }
 
@@ -37,16 +48,19 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<T> {
-    const url = new URL(`${this.baseUrl}/api${endpoint}`)
+    let search = ''
     if (params) {
+      const sp = new URLSearchParams()
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value))
+          sp.append(key, String(value))
         }
       })
+      const s = sp.toString()
+      search = s ? `?${s}` : ''
     }
 
-    return this.request<T>(endpoint + url.search, { method: 'GET' })
+    return this.request<T>(`${endpoint}${search}`, { method: 'GET' })
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {

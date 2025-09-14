@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
 import { createClient, type RealtimeChannel } from '@supabase/supabase-js'
+import { getUser } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,13 +10,13 @@ function sseEncode(obj: unknown) {
 }
 
 export async function GET(req: Request) {
-  const user = await currentUser()
+  const user = await getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE!
   )
 

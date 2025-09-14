@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ZENOPAY_API_KEY || '',
+        'x-signature': 'mock-signature-for-testing',
       },
       body: JSON.stringify(mockPayload)
     })

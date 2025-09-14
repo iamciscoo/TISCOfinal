@@ -1,111 +1,58 @@
 import { supabase } from './supabase'
-import type { Address, User } from './types'
+import { api } from './api-client'
+import type { Address, User, Product, Category } from './types'
 
 // Product Functions
-export async function getProducts(limit: number = 20) {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      product_images (
-        url,
-        is_main,
-        sort_order
-      ),
-      categories (
-        id,
-        name
-      )
-    `)
-    .limit(limit)
-    .order('is_main', { foreignTable: 'product_images', ascending: false })
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
-  
-  if (error) throw error
-  return data
+export async function getProducts(limit: number = 20): Promise<Product[]> {
+  try {
+    // Use server API (service role) to avoid RLS issues and keep data in sync with admin
+    const products = await api.getProducts(limit)
+    return products as Product[]
+  } catch (error) {
+    console.error('[database.getProducts] Failed to fetch via API:', error)
+    return []
+  }
 }
 
 export async function getFeaturedProducts(limit: number = 9) {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      product_images (
-        url,
-        is_main,
-        sort_order
-      ),
-      categories (
-        id,
-        name
-      )
-    `)
-    .eq('is_featured', true)
-    .limit(limit)
-    .order('created_at', { ascending: false })
-    .order('is_main', { foreignTable: 'product_images', ascending: false })
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
-  
-  if (error) throw error
-  return data
+  try {
+    const products = await api.getFeaturedProducts(limit)
+    return products as unknown
+  } catch (error) {
+    console.error('[database.getFeaturedProducts] Failed to fetch via API:', error)
+    throw error
+  }
 }
 
-export async function getProductById(id: string) {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      product_images (
-        url,
-        is_main,
-        sort_order
-      ),
-      categories (
-        id,
-        name
-      )
-    `)
-    .eq('id', id)
-    .order('is_main', { foreignTable: 'product_images', ascending: false })
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
-    .single()
-  
-  if (error) throw error
-  return data
+export async function getProductById(id: string): Promise<Product | null> {
+  try {
+    const product = await api.getProduct(id)
+    return product as Product
+  } catch (error) {
+    console.error('[database.getProductById] Failed to fetch via API:', error)
+    return null
+  }
 }
 
 export async function getProductsByCategory(categoryId: string) {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      product_images (
-        url,
-        is_main,
-        sort_order
-      ),
-      categories (
-        id,
-        name
-      )
-    `)
-    .eq('category_id', categoryId)
-    .order('is_main', { foreignTable: 'product_images', ascending: false })
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
-  
-  if (error) throw error
-  return data
+  try {
+    const products = await api.getProductsByCategory(categoryId)
+    return products as unknown
+  } catch (error) {
+    console.error('[database.getProductsByCategory] Failed to fetch via API:', error)
+    throw error
+  }
 }
 
 // Category Functions
-export async function getCategories() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .order('name')
-  
-  if (error) throw error
-  return data
+export async function getCategories(): Promise<Category[]> {
+  try {
+    const categories = await api.getCategories()
+    return categories as Category[]
+  } catch (error) {
+    console.error('[database.getCategories] Failed to fetch via API:', error)
+    return []
+  }
 }
 
 // Cart Functions
@@ -149,10 +96,19 @@ export async function getCartItems(userId: string) {
         id,
         name,
         price,
-        image_url
+        image_url,
+        product_images (
+          url,
+          is_main,
+          sort_order
+        ),
+        stock_quantity,
+        is_active
       )
     `)
     .eq('user_id', userId)
+    .order('is_main', { ascending: false, foreignTable: 'products.product_images' })
+    .order('sort_order', { ascending: true, foreignTable: 'products.product_images' })
   
   if (error) throw error
   return data
@@ -205,12 +161,19 @@ export async function getUserOrders(userId: string) {
         products (
           id,
           name,
-          image_url
+          image_url,
+          product_images (
+            url,
+            is_main,
+            sort_order
+          )
         )
       )
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
+    .order('is_main', { ascending: false, foreignTable: 'order_items.products.product_images' })
+    .order('sort_order', { ascending: true, foreignTable: 'order_items.products.product_images' })
   
   if (error) throw error
   return data
@@ -300,13 +263,21 @@ export async function createReview(reviewData: {
 
 // Services Functions
 export async function getServices() {
-  const { data, error } = await supabase
-    .from('services')
-    .select('*')
-    .order('created_at', { ascending: false })
-  
-  if (error) throw error
-  return data
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('[database.getServices] Supabase error:', error)
+      return []
+    }
+    return data || []
+  } catch (error) {
+    console.error('[database.getServices] Failed to fetch services:', error)
+    return []
+  }
 }
 
 export async function createServiceBooking(bookingData: {
