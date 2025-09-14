@@ -1,27 +1,32 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  images:{
-    remotePatterns:[
+  images: {
+    remotePatterns: [
       {
-        protocol:"https",
-        hostname:"images.pexels.com",
+        protocol: "https",
+        hostname: "images.pexels.com",
       },
       {
-        protocol:"https",
-        hostname:"hgxvlbpvxbliefqlxzak.supabase.co",
+        protocol: "https",
+        hostname: "hgxvlbpvxbliefqlxzak.supabase.co",
       },
       {
-        protocol:"https",
-        hostname:"img.clerk.com",
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
       },
-      {
-        protocol:"https",
-        hostname:"images.clerk.dev",
-      }
-    ]
-  }
+    ],
+  },
+  webpack: (config) => {
+    // Ensure the '@' alias resolves to the src directory in all environments
+    config.resolve = config.resolve || {}
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@": path.resolve(__dirname, "src"),
+    }
+    return config
+  },
 };
 
 export default nextConfig;
