@@ -187,16 +187,21 @@ export const columns: ColumnDef<Order>[] = [
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={async () => {
-                const response = await fetch(`/api/orders/${order.id}`, {
-                  method: 'PATCH',
+                // Use admin's own mark-paid endpoint with direct database access
+                const response = await fetch(`/api/orders/${order.id}/mark-paid`, {
+                  method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ payment_status: 'paid' })
                 })
+                
                 if (response.ok) {
-                  toast({ title: "Marked as paid" })
+                  const result = await response.json()
+                  toast({ title: "Order marked as paid - Customer notification sent" })
+                  console.log('Payment success notification sent:', result)
                   window.location.reload()
                 } else {
-                  toast({ title: "Failed to update payment", variant: "destructive" })
+                  const error = await response.json()
+                  toast({ title: `Failed to mark as paid: ${error.error}`, variant: "destructive" })
+                  console.error('Mark paid error:', error)
                 }
               }}
             >

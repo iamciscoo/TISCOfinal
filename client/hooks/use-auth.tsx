@@ -1,124 +1,314 @@
+/**
+ * Authentication Context and Hooks for TISCO E-commerce Platform
+ * 
+ * This module provides a comprehensive authentication system built on Supabase Auth,
+ * offering both email/password and social authentication (Google OAuth). It manages
+ * user sessions, authentication state, and provides hooks for components to interact
+ * with the authentication system.
+ * 
+ * Key Features:
+ * - Email/password authentication with secure password reset
+ * - Google OAuth integration for social login
+ * - Persistent session management across browser sessions
+ * - Real-time authentication state updates
+ * - Welcome email notifications for new users
+ * - Type-safe authentication context and hooks
+ * - Automatic user profile synchronization
+ * 
+ * The system follows React context patterns to provide authentication state
+ * throughout the application while maintaining optimal performance through
+ * selective re-renders.
+ */
+
 'use client'
 
+// Import React hooks and context utilities for state management
 import React, { createContext, useContext, useEffect, useState } from 'react'
+// Import configured Supabase client and social authentication functions
 import { createClient, signInWithGoogle } from '@/lib/supabase-auth'
-import { type User as AuthUser, type Session as AuthSession } from '@supabase/supabase-js'
-import { type AuthChangeEvent, type Session } from '@supabase/supabase-js'
+// Import Supabase TypeScript types for type safety
+import { 
+  type User as AuthUser, 
+  type Session as AuthSession,
+  type AuthChangeEvent, 
+  type Session,
+  type AuthResponse,
+  type AuthError,
+  type UserResponse,
+  type OAuthResponse
+} from '@supabase/supabase-js'
 
-// Auth state interface
+/**
+ * Authentication State Interface
+ * 
+ * Defines the structure of the authentication state that will be provided
+ * to all components through the React context. This ensures type safety
+ * and consistent state management across the application.
+ */
 interface AuthState {
-  user: AuthUser | null
-  session: AuthSession | null
-  loading: boolean
+  user: AuthUser | null      // Current authenticated user or null if not logged in
+  session: AuthSession | null // Current session data with tokens and metadata
+  loading: boolean            // Loading state for authentication operations
 }
 
-// Create auth context
+/**
+ * Authentication Context Definition
+ * 
+ * Creates a React context that combines authentication state with action methods.
+ * This context will be provided at the app level and consumed by components
+ * that need authentication functionality.
+ * 
+ * The context includes both state (user, session, loading) and actions
+ * (signIn, signUp, signOut, etc.) to provide a complete authentication API.
+ */
 const AuthContext = createContext<AuthState & {
-  signIn: (email: string, password: string) => Promise<any>
-  signUp: (email: string, password: string, metadata?: Record<string, any>) => Promise<any>
-  signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<any>
-  updatePassword: (password: string) => Promise<any>
-  updateUser: (updates: { email?: string; data?: Record<string, any> }) => Promise<any>
-  signInWithGoogle: () => Promise<any>
+  // Core authentication actions
+  signIn: (email: string, password: string) => Promise<AuthResponse>                                    // Email/password sign in
+  signUp: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<AuthResponse>   // User registration
+  signOut: () => Promise<{ error: AuthError | null }>                                                     // Sign out current user
+  
+  // Password management actions  
+  resetPassword: (email: string) => Promise<{ data: unknown | null; error: AuthError | null }>               // Initiate password reset
+  updatePassword: (password: string) => Promise<UserResponse>                                            // Update user password
+  
+  // User profile management
+  updateUser: (updates: { email?: string; data?: Record<string, unknown> }) => Promise<UserResponse>    // Update user metadata
+  
+  // Social authentication
+  signInWithGoogle: () => Promise<OAuthResponse>                                                         // Google OAuth sign in
 }>({
-  user: null,
-  session: null,
-  loading: true,
-  signIn: async () => {},
-  signUp: async () => {},
-  signOut: async () => {},
-  resetPassword: async () => {},
-  updatePassword: async () => {},
-  updateUser: async () => {},
-  signInWithGoogle: async () => {}
+  // Default state values - will be overridden by the provider
+  user: null,           // No user initially
+  session: null,        // No session initially  
+  loading: true,        // Start in loading state
+  
+  // Default no-op functions - will be overridden by the provider
+  signIn: async () => ({ data: { user: null, session: null }, error: null }),
+  signUp: async () => ({ data: { user: null, session: null }, error: null }),
+  signOut: async () => ({ error: null }),
+  resetPassword: async () => ({ data: null, error: null }),
+  updatePassword: async () => ({ data: { user: null }, error: { message: 'Not implemented', status: 500 } as AuthError }),
+  updateUser: async () => ({ data: { user: null }, error: { message: 'Not implemented', status: 500 } as AuthError }),
+  signInWithGoogle: async () => ({ data: { provider: 'google' as const, url: '' }, error: null })
 })
 
-// Auth provider component
+/**
+ * Authentication Provider Component
+ * 
+ * This component wraps the entire application to provide authentication context
+ * to all child components. It manages authentication state, handles auth events,
+ * and provides methods for authentication operations.
+ * 
+ * The provider initializes the authentication system, sets up event listeners
+ * for auth changes, and maintains the current authentication state.
+ * 
+ * @param children - Child components that will have access to auth context
+ * @returns JSX.Element - Provider component wrapping children
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [session, setSession] = useState<AuthSession | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Authentication state management using React hooks
+  const [user, setUser] = useState<AuthUser | null>(null)           // Current authenticated user
+  const [session, setSession] = useState<AuthSession | null>(null)   // Current session with tokens
+  const [loading, setLoading] = useState(true)                      // Loading state for auth operations
 
+  // Initialize Supabase client for authentication operations
   const supabase = createClient()
 
+  /**
+   * Authentication State Initialization and Event Handling
+   * 
+   * This effect runs once when the component mounts and sets up:
+   * 1. Initial session recovery from stored tokens
+   * 2. Real-time auth state change listeners
+   * 3. Cleanup when component unmounts
+   */
   useEffect(() => {
-    // Get initial session
+    /**
+     * Retrieve initial authentication session
+     * 
+     * Attempts to recover existing session from browser storage
+     * (localStorage/sessionStorage) and update component state.
+     */
     const getInitialSession = async () => {
+      // Retrieve session from Supabase (checks stored tokens)
       const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+      
+      // Update component state with retrieved session data
+      setSession(session)                    // Set session data (tokens, metadata)
+      setUser(session?.user ?? null)        // Extract user data from session
+      setLoading(false)                      // Authentication check complete
     }
 
+    // Execute initial session recovery
     getInitialSession()
 
-    // Listen for auth changes
+    /**
+     * Set up real-time authentication event listener
+     * 
+     * Listens for authentication state changes such as:
+     * - SIGNED_IN: User successfully authenticated
+     * - SIGNED_OUT: User logged out or session expired
+     * - TOKEN_REFRESHED: Session tokens were refreshed
+     * - USER_UPDATED: User metadata was updated
+     */
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+        // Update component state with new session data
+        setSession(session)                  // Update session (may be null on signout)
+        setUser(session?.user ?? null)      // Update user data (may be null on signout)
+        setLoading(false)                    // Mark authentication state as resolved
 
-        // Handle sign out
+        // Handle explicit sign out events
         if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setSession(null)
+          setUser(null)                      // Clear user data
+          setSession(null)                   // Clear session data
+          // Note: Component state is already updated above, this is for clarity
         }
       }
     )
 
+    // Cleanup function: unsubscribe from auth events when component unmounts
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [supabase.auth]) // Re-run if supabase.auth instance changes (should be stable)
 
-  const signIn = async (email: string, password: string) => {
-    setLoading(true)
+  /**
+   * Email/Password Sign In
+   * 
+   * Authenticates a user using email and password credentials.
+   * Updates loading state during the operation and handles errors gracefully.
+   * 
+   * @param email - User's email address
+   * @param password - User's password
+   * @returns Promise<AuthResponse> - Authentication result with user/session or error
+   */
+  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
+    setLoading(true) // Show loading state during authentication
     try {
+      // Attempt authentication with Supabase
       const result = await supabase.auth.signInWithPassword({ email, password })
-      return result
+      return result // Return authentication result (success or error)
     } finally {
-      setLoading(false)
+      setLoading(false) // Always clear loading state
     }
   }
 
-  const signUp = async (email: string, password: string, metadata?: Record<string, any>) => {
-    setLoading(true)
+  /**
+   * User Registration with Welcome Email
+   * 
+   * Creates a new user account with optional metadata and sends a welcome email.
+   * The welcome email is sent asynchronously and won't fail the signup process
+   * if it encounters errors.
+   * 
+   * @param email - User's email address
+   * @param password - User's chosen password
+   * @param metadata - Optional user metadata (name, preferences, etc.)
+   * @returns Promise<AuthResponse> - Registration result with user/session or error
+   */
+  const signUp = async (email: string, password: string, metadata?: Record<string, unknown>): Promise<AuthResponse> => {
+    setLoading(true) // Show loading state during registration
     try {
+      // Attempt user registration with Supabase
       const result = await supabase.auth.signUp({
         email,
         password,
-        options: { data: metadata }
+        options: { data: metadata } // Include user metadata in registration
       })
-      return result
+      
+      // Send welcome notification if signup was successful
+      if (result.data.user && !result.error) {
+        try {
+          // Construct user name from metadata for personalized welcome email
+          const userName = metadata?.first_name && metadata?.last_name 
+            ? `${metadata.first_name} ${metadata.last_name}`    // Full name if available
+            : (metadata?.first_name as string) || 'New Customer'  // First name or generic fallback
+            
+          // Send welcome email via notification API (fire-and-forget)
+          await fetch('/api/notifications/welcome', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: result.data.user.email,  // User's email address
+              name: userName                   // Personalized name for email
+            })
+          })
+        } catch (error) {
+          // Log error but don't fail the signup process
+          console.error('Failed to send welcome notification:', error)
+          // Welcome email failure should not prevent successful user registration
+        }
+      }
+      
+      return result // Return registration result
     } finally {
-      setLoading(false)
+      setLoading(false) // Always clear loading state
     }
   }
 
-  const signOut = async () => {
-    setLoading(true)
+  /**
+   * User Sign Out
+   * 
+   * Signs out the current user and clears all session data.
+   * Updates loading state during the operation.
+   * 
+   * @returns Promise<{ error: AuthError | null }> - Sign out result
+   */
+  const signOut = async (): Promise<{ error: AuthError | null }> => {
+    setLoading(true) // Show loading state during sign out
     try {
-      await supabase.auth.signOut()
+      const result = await supabase.auth.signOut()
+      return { error: result.error } // Return any sign out errors
     } finally {
-      setLoading(false)
+      setLoading(false) // Always clear loading state
     }
   }
 
-  const resetPassword = async (email: string) => {
+  /**
+   * Password Reset Request
+   * 
+   * Sends a password reset email to the specified email address.
+   * The email will contain a link to reset the password.
+   * 
+   * @param email - User's email address
+   * @returns Promise<{ data: unknown | null; error: AuthError | null }> - Reset request result
+   */
+  const resetPassword = async (email: string): Promise<{ data: unknown | null; error: AuthError | null }> => {
     return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`
     })
   }
 
-  const updatePassword = async (password: string) => {
+  /**
+   * Update User Password
+   * 
+   * Updates the current user's password. User must be authenticated.
+   * 
+   * @param password - New password
+   * @returns Promise<UserResponse> - Update result with user data or error
+   */
+  const updatePassword = async (password: string): Promise<UserResponse> => {
     return await supabase.auth.updateUser({ password })
   }
 
-  const updateUser = async (updates: { email?: string; data?: Record<string, any> }) => {
+  /**
+   * Update User Profile
+   * 
+   * Updates the current user's email or metadata. User must be authenticated.
+   * 
+   * @param updates - Object containing email and/or data updates
+   * @returns Promise<UserResponse> - Update result with user data or error
+   */
+  const updateUser = async (updates: { email?: string; data?: Record<string, unknown> }): Promise<UserResponse> => {
     return await supabase.auth.updateUser(updates)
   }
 
-  const handleSignInWithGoogle = async () => {
+  /**
+   * Google OAuth Sign In
+   * 
+   * Initiates Google OAuth authentication flow.
+   * 
+   * @returns Promise<OAuthResponse> - OAuth authentication result with redirect URL
+   */
+  const handleSignInWithGoogle = async (): Promise<OAuthResponse> => {
     return await signInWithGoogle()
   }
 

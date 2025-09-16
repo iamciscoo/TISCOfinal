@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TISCO Email Template Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 1rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header-content { max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; align-items: center; gap: 1rem; }
+        .logo { width: 40px; height: 40px; background: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 300px 1fr; gap: 2rem; min-height: calc(100vh - 100px); }
+        .sidebar { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: fit-content; position: sticky; top: 2rem; }
+        .sidebar h3 { color: #1e293b; margin-bottom: 1rem; font-size: 18px; font-weight: 600; }
+        .event-item { padding: 0.75rem; margin-bottom: 0.5rem; background: #f8fafc; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .event-item:hover { background: #e2e8f0; transform: translateY(-1px); }
+        .event-item.active { background: #dbeafe; border-color: #2563eb; color: #1e40af; }
+        .event-name { font-weight: 600; margin-bottom: 0.25rem; font-size: 14px; }
+        .event-trigger { font-size: 12px; color: #6b7280; }
+        .style-controls { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .control-group input, .control-group select { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .control-group input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .main-content { display: grid; grid-template-rows: auto 1fr; gap: 1rem; }
+        .toolbar { background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; }
+        .btn { padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .btn:hover { background: #f3f4f6; }
+        .btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+        .btn.primary:hover { background: #1d4ed8; }
+        .preview-container { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+        .preview-frame { flex: 1; position: relative; min-height: 600px; }
+        .email-iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        .mobile-frame { width: 375px; height: 600px; margin: 20px auto; border: 8px solid #1e293b; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .loading { display: flex; align-items: center; justify-content: center; height: 200px; color: #6b7280; }
+        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
+        .status-ready { background: #10b981; }
+        .status-loading { background: #f59e0b; }
+        .image-preview { margin-top: 0.5rem; max-height: 100px; overflow: hidden; border-radius: 4px; }
+        .image-preview img { max-width: 100%; height: auto; border-radius: 4px; }
+        .sidebar { max-height: 90vh; overflow-y: auto; }
+        .control-group input[type="file"] { padding: 0.25rem; font-size: 12px; }
+        .version-controls { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+        .version-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 4px; margin-bottom: 0.5rem; font-size: 12px; }
+        .export-preview { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
+        .export-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 2rem; max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
+        .export-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+        .success-message { background: #dcfce7; color: #166534; padding: 0.75rem; border-radius: 6px; margin-top: 1rem; display: none; }
+        
+        /* Enhanced Text Editing Styles */
+        .content-editor { background: #f8fafc; border-radius: 8px; padding: 1.5rem; margin-top: 1rem; border: 1px solid #e2e8f0; }
+        .content-editor h3 { color: #1e293b; margin-bottom: 1.5rem; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .content-editor h3::before { content: '✏️'; }
+        .text-input-group { margin-bottom: 1.25rem; position: relative; }
+        .text-input-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 0.5rem; text-transform: none; letter-spacing: normal; }
+        .text-input-enhanced { width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit; transition: all 0.2s ease; background: white; }
+        .text-input-enhanced:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); background: #fefefe; }
+        .text-input-enhanced:hover { border-color: #d1d5db; }
+        .textarea-enhanced { min-height: 80px; resize: vertical; line-height: 1.5; }
+        .input-hint { font-size: 11px; color: #6b7280; margin-top: 0.25rem; font-style: italic; }
+        
+        /* Enhanced Image Upload Styles */
+        .image-manager { background: #f0f9ff; border-radius: 8px; padding: 1.5rem; margin-top: 1rem; border: 1px solid #bae6fd; }
+        .image-manager h3 { color: #0c4a6e; margin-bottom: 1.5rem; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .image-manager h3::before { content: '🖼️'; }
+        .image-upload-area { border: 2px dashed #93c5fd; border-radius: 8px; padding: 2rem; text-align: center; background: white; transition: all 0.2s ease; cursor: pointer; margin-bottom: 1rem; }
+        .image-upload-area:hover { border-color: #2563eb; background: #f8fafc; }
+        .image-upload-area.dragover { border-color: #2563eb; background: #dbeafe; }
+        .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; color: #6b7280; }
+        .upload-text { color: #374151; font-weight: 500; margin-bottom: 0.25rem; }
+        .upload-hint { color: #6b7280; font-size: 12px; }
+        .image-preview-enhanced { margin-top: 1rem; border-radius: 8px; overflow: hidden; background: white; border: 1px solid #e5e7eb; }
+        .image-preview-enhanced img { width: 100%; height: auto; display: block; }
+        .image-info { padding: 0.75rem; background: #f8fafc; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; }
+        .remove-image { background: #fee2e2; color: #dc2626; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 11px; cursor: pointer; }
+        .remove-image:hover { background: #fecaca; }
+        
+        /* Update Button Enhancement */
+        .update-content-btn { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
+        .update-content-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); }
+        .update-content-btn:active { transform: translateY(0); }
+        
+        /* Enhanced Template Selection */
+        .event-item { position: relative; }
+        .event-item::after { content: ''; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; border-radius: 50%; background: #e5e7eb; transition: all 0.2s; }
+        .event-item.active::after { background: #2563eb; }
+        .event-item:hover::after { background: #6b7280; }
+        
+        /* Real-time Preview Indicator */
+        .preview-updating { position: relative; }
+        .preview-updating::before { content: '🔄 Updating...'; position: absolute; top: 10px; right: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 11px; z-index: 10; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        /* Template Counter */
+        .template-counter { background: #2563eb; color: white; border-radius: 12px; padding: 0.25rem 0.5rem; font-size: 11px; font-weight: 600; margin-left: 0.5rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📧</div>
+            <div>
+                <h1>TISCO Email Template Studio</h1>
+                <p style="opacity: 0.8; font-size: 14px;">Design and customize your email templates</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="margin: 0;">Email Templates</h3>
+                <span class="template-counter">13</span>
+            </div>
+            <div id="emailEvents">
+                <div class="event-item" data-event="order_confirmation">
+                    <div class="event-name">Order Confirmation</div>
+                    <div class="event-trigger">Order created</div>
+                </div>
+                <div class="event-item" data-event="booking_confirmation">
+                    <div class="event-name">Booking Confirmation</div>
+                    <div class="event-trigger">Service booking created</div>
+                </div>
+                <div class="event-item" data-event="welcome_email">
+                    <div class="event-name">Welcome Email</div>
+                    <div class="event-trigger">User registration</div>
+                </div>
+                <div class="event-item" data-event="payment_success">
+                    <div class="event-name">Payment Success</div>
+                    <div class="event-trigger">Payment completed</div>
+                </div>
+                <div class="event-item" data-event="payment_failed">
+                    <div class="event-name">Payment Failed</div>
+                    <div class="event-trigger">Payment failure</div>
+                </div>
+                <div class="event-item" data-event="order_status_update">
+                    <div class="event-name">Order Status Update</div>
+                    <div class="event-trigger">Order status change</div>
+                </div>
+                <div class="event-item" data-event="cart_abandonment">
+                    <div class="event-name">Cart Abandonment</div>
+                    <div class="event-trigger">Cart abandoned 24+ hours</div>
+                </div>
+                <div class="event-item" data-event="password_reset">
+                    <div class="event-name">Password Reset</div>
+                    <div class="event-trigger">Password reset request</div>
+                </div>
+                <div class="event-item" data-event="delivery_confirmation">
+                    <div class="event-name">Delivery Confirmation</div>
+                    <div class="event-trigger">Order delivered</div>
+                </div>
+                <div class="event-item" data-event="review_request">
+                    <div class="event-name">Review Request</div>
+                    <div class="event-trigger">7 days after delivery</div>
+                </div>
+                <div class="event-item" data-event="contact_reply">
+                    <div class="event-name">Contact Form Reply</div>
+                    <div class="event-trigger">Admin reply to inquiry</div>
+                </div>
+                <div class="event-item" data-event="booking_status_update">
+                    <div class="event-name">Booking Status Update</div>
+                    <div class="event-trigger">Booking status change</div>
+                </div>
+                <div class="event-item" data-event="admin_notification">
+                    <div class="event-name">Admin Notification</div>
+                    <div class="event-trigger">Various admin events</div>
+                </div>
+            </div>
+            
+            <div class="content-editor">
+                <h3>Content Editor</h3>
+                <div id="dynamicContentFields">
+                    <!-- Dynamic fields will be populated here based on selected template -->
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button class="update-content-btn" onclick="applyContentChanges()" style="flex: 1;">
+                        ✨ Update Content
+                    </button>
+                    <button class="btn" onclick="resetContent()" style="padding: 0.875rem; border-radius: 8px; background: #f3f4f6; border: 1px solid #d1d5db;" title="Reset to defaults">
+                        🔄
+                    </button>
+                </div>
+            </div>
+            
+            <div class="image-manager">
+                <h3>Image Manager</h3>
+                <div class="text-input-group">
+                    <label>Logo/Header Image</label>
+                    <div class="image-upload-area" onclick="document.getElementById('logoImage').click()" ondrop="handleDrop(event, 'logo')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="upload-icon">📤</div>
+                        <div class="upload-text">Click to upload or drag & drop</div>
+                        <div class="upload-hint">PNG, JPG, GIF up to 2MB</div>
+                    </div>
+                    <input type="file" id="logoImage" accept="image/*" style="display: none;" onchange="handleImageUpload('logo', this)">
+                    <div id="logoPreview" class="image-preview-enhanced" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="style-controls">
+                <h3>Style Customization</h3>
+                <div class="control-group">
+                    <label>Header Color</label>
+                    <input type="color" id="headerColor" value="#1e293b">
+                </div>
+                <div class="control-group">
+                    <label>Accent Color</label>
+                    <input type="color" id="accentColor" value="#2563eb">
+                </div>
+                <div class="control-group">
+                    <label>Text Color</label>
+                    <input type="color" id="textColor" value="#374151">
+                </div>
+                <div class="control-group">
+                    <label>Font Family</label>
+                    <select id="fontFamily">
+                        <option value="Segoe UI">Segoe UI</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Roboto">Roboto</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Font Size</label>
+                    <select id="fontSize">
+                        <option value="14px">Small (14px)</option>
+                        <option value="16px" selected>Medium (16px)</option>
+                        <option value="18px">Large (18px)</option>
+                        <option value="20px">Extra Large (20px)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Text Alignment</label>
+                    <select id="textAlign">
+                        <option value="left" selected>Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                        <option value="justify">Justify</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Line Height</label>
+                    <select id="lineHeight">
+                        <option value="1.2">Tight (1.2)</option>
+                        <option value="1.4">Normal (1.4)</option>
+                        <option value="1.6" selected>Relaxed (1.6)</option>
+                        <option value="1.8">Loose (1.8)</option>
+                    </select>
+                </div>
+                
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Button Styling</h3>
+                <div class="control-group">
+                    <label>Button Color</label>
+                    <input type="color" id="buttonColor" value="#2563eb">
+                </div>
+                <div class="control-group">
+                    <label>Button Style</label>
+                    <select id="buttonStyle">
+                        <option value="solid" selected>Solid</option>
+                        <option value="outline">Outline</option>
+                        <option value="ghost">Ghost</option>
+                        <option value="gradient">Gradient</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Button Size</label>
+                    <select id="buttonSize">
+                        <option value="small">Small</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Button Radius</label>
+                    <select id="buttonRadius">
+                        <option value="0px">Sharp</option>
+                        <option value="4px">Slightly Rounded</option>
+                        <option value="6px" selected>Rounded</option>
+                        <option value="12px">Very Rounded</option>
+                        <option value="50px">Pill</option>
+                    </select>
+                </div>
+                
+                <button class="btn primary" onclick="applyStyles()" style="width: 100%; margin-top: 1rem;">
+                    Apply All Styles
+                </button>
+                
+                
+                <div class="version-controls">
+                    <h3 style="margin-bottom: 1rem;">Template Versions</h3>
+                    <button class="btn" onclick="saveVersion()" style="width: 100%; margin-bottom: 0.5rem;">
+                        Save Current Version
+                    </button>
+                    <div id="versionList"></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="toolbar">
+                <div style="display: flex; align-items: center;">
+                    <span class="status-indicator status-ready" id="status"></span>
+                    <span>Template: <strong id="currentTemplate">Select a template</strong></span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" id="desktopBtn" onclick="setViewMode('desktop')" style="background: #2563eb; color: white;">Desktop</button>
+                        <button class="btn" id="mobileBtn" onclick="setViewMode('mobile')">Mobile</button>
+                    </div>
+                    <button class="btn" onclick="previewExport()">Preview Export</button>
+                    <button class="btn primary" onclick="exportHTML()">Export HTML</button>
+                </div>
+            </div>
+
+            <div class="preview-container">
+                <div class="preview-frame" id="previewFrame">
+                    <div class="loading">
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+                            <p>Select an email template to preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Preview Modal -->
+    <div id="exportPreview" class="export-preview">
+        <div class="export-modal">
+            <div class="modal-header">
+                <h2>Export Preview</h2>
+                <button class="close-modal" onclick="closeExportPreview()">&times;</button>
+            </div>
+            <div id="exportPreviewContent" style="border: 1px solid #e5e7eb; border-radius: 8px; min-height: 400px; background: #f8fafc;"></div>
+            <div class="export-actions">
+                <button class="btn" onclick="closeExportPreview()">Cancel</button>
+                <button class="btn primary" onclick="confirmExport()">Download Template</button>
+            </div>
+            <div id="exportSuccess" class="success-message">
+                ✅ Template exported successfully!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEvent = null;
+        let viewMode = 'desktop';
+        let uploadedImages = { logo: null };
+        let templateVersions = JSON.parse(localStorage.getItem('tisco_template_versions') || '[]');
+        let currentExportTemplate = null;
+        
+        // Store field values per template to maintain independent edits
+        let templateFieldValues = JSON.parse(localStorage.getItem('tisco_template_field_values') || '{}');
+        
+        function handleImageUpload(type, input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // Validate file size (2MB limit)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('File size must be less than 2MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImages[type] = e.target.result;
+                const preview = document.getElementById(type + 'Preview');
+                const fileName = file.name;
+                const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                
+                preview.innerHTML = `
+                    <img src="${e.target.result}" alt="${type} preview">
+                    <div class="image-info">
+                        <span>${fileName} (${fileSize})</span>
+                        <button class="remove-image" onclick="removeImage('${type}')">× Remove</button>
+                    </div>
+                `;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function handleDrop(event, type) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const uploadArea = event.currentTarget;
+            uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const input = document.getElementById(type + 'Image');
+                input.files = files;
+                handleImageUpload(type, input);
+            }
+        }
+        
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+        }
+        
+        function removeImage(type) {
+            uploadedImages[type] = null;
+            const preview = document.getElementById(type + 'Preview');
+            preview.innerHTML = '';
+            preview.style.display = 'none';
+            document.getElementById(type + 'Image').value = '';
+        }
+        
+        function saveVersion() {
+            if (!currentEvent) {
+                alert('Please select a template first');
+                return;
+            }
+            
+            const versionName = prompt('Enter version name:', `Version ${templateVersions.length + 1}`);
+            if (!versionName) return;
+            
+            const version = {
+                id: Date.now(),
+                name: versionName,
+                templateId: currentEvent,
+                timestamp: new Date().toISOString(),
+                customizations: {
+                    styles: {
+                        headerColor: document.getElementById('headerColor').value,
+                        accentColor: document.getElementById('accentColor').value,
+                        textColor: document.getElementById('textColor').value,
+                        fontFamily: document.getElementById('fontFamily').value,
+                        fontSize: document.getElementById('fontSize').value,
+                        textAlign: document.getElementById('textAlign').value,
+                        lineHeight: document.getElementById('lineHeight').value,
+                        buttonColor: document.getElementById('buttonColor').value,
+                        buttonStyle: document.getElementById('buttonStyle').value,
+                        buttonSize: document.getElementById('buttonSize').value,
+                        buttonRadius: document.getElementById('buttonRadius').value
+                    },
+                    content: (() => {
+                        const contentData = {};
+                        const dynamicFields = document.querySelectorAll('#dynamicContentFields input, #dynamicContentFields textarea');
+                        dynamicFields.forEach(field => {
+                            contentData[field.id] = field.value;
+                        });
+                        return contentData;
+                    })(),
+                    images: { ...uploadedImages }
+                }
+            };
+            
+            templateVersions.push(version);
+            localStorage.setItem('tisco_template_versions', JSON.stringify(templateVersions));
+            updateVersionList();
+            
+            const statusSpan = document.getElementById('currentTemplate');
+            const originalText = statusSpan.textContent;
+            statusSpan.textContent = `Version "${versionName}" saved!`;
+            statusSpan.style.color = '#059669';
+            setTimeout(() => {
+                statusSpan.textContent = originalText;
+                statusSpan.style.color = '';
+            }, 2000);
+        }
+        
+        function loadVersion(versionId) {
+            const version = templateVersions.find(v => v.id === versionId);
+            if (!version) return;
+            
+            // Load template
+            selectEvent(version.templateId);
+            
+            // Load styles
+            Object.entries(version.customizations.styles).forEach(([key, value]) => {
+                const element = document.getElementById(key);
+                if (element) element.value = value;
+            });
+            
+            // Load content
+            Object.entries(version.customizations.content).forEach(([key, value]) => {
+                const element = document.getElementById(key);
+                if (element) element.value = value;
+            });
+            
+            // Load images
+            uploadedImages = { ...version.customizations.images };
+            if (uploadedImages.logo) {
+                document.getElementById('logoPreview').innerHTML = `<img src="${uploadedImages.logo}" alt="logo preview">`;
+            }
+            
+            // Apply changes
+            applyContentChanges();
+        }
+        
+        function deleteVersion(versionId) {
+            if (!confirm('Delete this version?')) return;
+            
+            templateVersions = templateVersions.filter(v => v.id !== versionId);
+            localStorage.setItem('tisco_template_versions', JSON.stringify(templateVersions));
+            updateVersionList();
+        }
+        
+        function updateVersionList() {
+            const list = document.getElementById('versionList');
+            list.innerHTML = templateVersions.map(version => `
+                <div class="version-item">
+                    <div>
+                        <div style="font-weight: 600;">${version.name}</div>
+                        <div style="color: #6b7280;">${version.templateId} - ${new Date(version.timestamp).toLocaleDateString()}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.25rem;">
+                        <button class="btn" onclick="loadVersion(${version.id})" style="padding: 0.25rem 0.5rem; font-size: 10px;">Load</button>
+                        <button class="btn" onclick="deleteVersion(${version.id})" style="padding: 0.25rem 0.5rem; font-size: 10px; color: #dc2626;">Del</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function previewExport() {
+            if (!currentEvent) {
+                alert('Please select a template first');
+                return;
+            }
+            
+            currentExportTemplate = generateFinalTemplate();
+            document.getElementById('exportPreviewContent').innerHTML = `<iframe style="width: 100%; height: 400px; border: none;" srcdoc="${currentExportTemplate.replace(/"/g, '&quot;')}"></iframe>`;
+            document.getElementById('exportPreview').style.display = 'block';
+        }
+        
+        function closeExportPreview() {
+            document.getElementById('exportPreview').style.display = 'none';
+            document.getElementById('exportSuccess').style.display = 'none';
+        }
+        
+        function confirmExport() {
+            if (!currentExportTemplate) return;
+            
+            const blob = new Blob([currentExportTemplate], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentEvent}_customized_email_template_${Date.now()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('exportSuccess').style.display = 'block';
+            setTimeout(() => {
+                closeExportPreview();
+            }, 2000);
+        }
+        
+        function generateFinalTemplate() {
+            let finalTemplate = getStyledTemplate();
+            
+            // Get all dynamic field values
+            const contentData = {};
+            const dynamicFields = document.querySelectorAll('#dynamicContentFields input, #dynamicContentFields textarea');
+            dynamicFields.forEach(field => {
+                contentData[field.id] = field.value;
+            });
+            
+            finalTemplate = applyContentToTemplate(finalTemplate, contentData);
+            
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>TISCO Email Template - ${currentEvent.replace('_', ' ').toUpperCase()}</title>
+    <style>
+        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+        .ExternalClass { width: 100%; }
+        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+        @media only screen and (max-width: 600px) {
+            .mobile-center { text-align: center !important; }
+            .mobile-full { width: 100% !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f8fafc;">
+    ${finalTemplate}
+</body>
+</html>`;
+        }
+        
+        // Complete email template samples
+        const templates = {
+            order_confirmation: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット</h1>
+                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">Your Order Confirmation</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi John Doe,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Thank you for choosing TISCOマーケット! We've received your order and our team is preparing it for delivery. No tracking numbers, no complicated processes - just straightforward service and quality tech delivered to your door.</p>
+                        
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Order Details</h3>
+                            <p><strong>Order ID:</strong> ORD-2025-001</p>
+                            <p><strong>Order Date:</strong> January 16, 2025</p>
+                            <p><strong>Total Amount:</strong> TSh 2,345,200</p>
+                        </div>
+                        
+                        <div style="margin: 2rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Items Ordered</h3>
+                            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                                <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0;">
+                                    <strong>Ryzen PC Gaming Desktop</strong> × 1 - TSh 2,000,000
+                                </div>
+                                <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0;">
+                                    <strong>Gaming Mouse Pro</strong> × 1 - TSh 145,000
+                                </div>
+                                <div style="padding: 1rem;">
+                                    <strong>Mechanical Keyboard RGB</strong> × 1 - TSh 200,200
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Order Details</a>
+                        </div>
+                    </div>
+                    
+                    <div type="text/html">
+                        <div style="background: #f1f5f9; padding: 1rem; margin: 1rem 0; font-size: 12px; color: #64748b; text-align: center; border-radius: 4px;">
+                            <p style="margin: 0;">TISCOマーケット | info@tiscomarket.com | +255748624684</p>
+                            <p style="margin-top: 0.5rem;"><a href="#" style="color: #2563eb;">Unsubscribe</a> | <a href="#" style="color: #2563eb;">Contact Us</a></p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            booking_confirmation: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット</h1>
+                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">Service Booking Confirmed</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Jane Smith,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Your service booking has been confirmed. Our technician will contact you shortly.</p>
+                        
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Booking Details</h3>
+                            <p><strong>Booking ID:</strong> BOOK-2025-001</p>
+                            <p><strong>Service:</strong> PC Setup & Configuration Service</p>
+                            <p><strong>Preferred Date:</strong> January 20, 2025</p>
+                            <p><strong>Time Slot:</strong> 10:00 AM - 12:00 PM</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Manage Booking</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            welcome_email: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">Welcome to TISCOマーケット!</h1>
+                        <p style="color: #dbeafe; margin: 0.5rem 0 0 0;">We're excited to have you on board</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Alice Johnson,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Welcome to TISCOマーケット! No BS, no fluff - just quality tech products and professional services delivered straight to your door in Tanzania.</p>
+                        
+                        <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 1.5rem; margin: 1.5rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">What We Offer:</h3>
+                            <ul style="color: #64748b; line-height: 1.8;">
+                                <li>Gaming & office electronics</li>
+                                <li>Professional tech setup services</li>
+                                <li>Direct delivery - no tracking hassles</li>
+                                <li>Expert support when you need it</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="http://localhost:3000/shop" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Start Shopping</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            payment_failed: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">❌ Payment Failed</h1>
+                        <p style="color: #fecaca; margin: 0.5rem 0 0 0;">Payment could not be processed</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Carol Brown,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Unfortunately, your payment could not be processed. Please try again with a different payment method.</p>
+                        
+                        <div style="background: #fef2f2; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; border-left: 4px solid #dc2626;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Payment Details</h3>
+                            <p><strong>Amount:</strong> TSh 850,000</p>
+                            <p><strong>Payment Method:</strong> Vodacom M-Pesa</p>
+                            <p><strong>Failure Reason:</strong> Insufficient balance in mobile money account</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Try Again</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            order_status_update: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット</h1>
+                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">Delivery Update</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi David Lee,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Your TISCOマーケット order is being prepared for delivery. Our team will contact you directly to coordinate the delivery time that works best for you.</p>
+                        
+                        <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Delivery Details</h3>
+                            <p><strong>Status:</strong> Preparing for Delivery</p>
+                            <p><strong>Delivery Area:</strong> Dar es Salaam</p>
+                            <p><strong>Expected Contact:</strong> Within 24 hours</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="http://localhost:3000/account" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">View Order in Account</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            cart_abandonment: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">Don't Miss Out!</h1>
+                        <p style="color: #fde68a; margin: 0.5rem 0 0 0;">Items in your cart are waiting</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Eva Martinez,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">You left some great items in your cart. Complete your purchase before they're gone!</p>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Complete Purchase</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            password_reset: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">🔒 Password Reset</h1>
+                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">Secure password reset request</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Frank Wilson,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">You requested a password reset. Click the button below to create a new password.</p>
+                        
+                        <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <p style="color: #92400e; margin: 0;"><strong>⚠️ Security Notice:</strong> This link expires in 24 hours for your security.</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            payment_success: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">✅ Payment Successful</h1>
+                        <p style="color: #a7f3d0; margin: 0.5rem 0 0 0;">Your payment has been processed</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Bob Wilson,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Great news! Your payment has been successfully processed.</p>
+                        
+                        <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <h3 style="color: #1e293b; margin-bottom: 1rem;">Payment Details</h3>
+                            <p><strong>Amount:</strong> TSh 1,200,000</p>
+                            <p><strong>Payment Method:</strong> Tigo Pesa</p>
+                            <p><strong>Transaction ID:</strong> TXN-789456123</p>
+                            <p><strong>Date:</strong> January 16, 2025 2:30 PM EAT</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Order</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            delivery_confirmation: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">📦 Delivered!</h1>
+                        <p style="color: #a7f3d0; margin: 0.5rem 0 0 0;">Your TISCO tech has arrived</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Grace Kim,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Your TISCOマーケット order has been delivered! No fuss, no complications - just quality tech products delivered as promised. Need setup help? Our tech services team is ready to assist.</p>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="http://localhost:3000/account" style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View in Account</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            review_request: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">⭐ How Was It?</h1>
+                        <p style="color: #ddd6fe; margin: 0.5rem 0 0 0;">Share your experience with us</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Henry Chen,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">We'd love to hear about your experience with your recent purchase. Your feedback helps us serve you better!</p>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Write Review</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            contact_reply: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">💬 Response</h1>
+                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">We've replied to your inquiry</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Isabella Rodriguez,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Thank you for contacting us! Here's our response to your inquiry about warranty options.</p>
+                        
+                        <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                            <p style="color: #374151; line-height: 1.6;">All our gaming laptops come with a 2-year manufacturer warranty plus an optional extended warranty. Our team can help you choose the best coverage for your needs.</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Contact Support</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            booking_status_update: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">✅ Booking Confirmed</h1>
+                        <p style="color: #a7f3d0; margin: 0.5rem 0 0 0;">Your service booking status</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi Jack Thompson,</h2>
+                        <p style="color: #64748b; line-height: 1.6;">Your laptop repair service has been confirmed. Please bring your charger and any external accessories.</p>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Booking</a>
+                        </div>
+                    </div>
+                </div>
+            `,
+            admin_notification: `
+                <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
+                    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2rem; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 2rem;">🚨 Admin Alert</h1>
+                        <p style="color: #fecaca; margin: 0.5rem 0 0 0;">New order requires attention</p>
+                    </div>
+                    <div style="padding: 2rem; background: white; margin: 1rem;">
+                        <h2 style="color: #1e293b; margin-bottom: 1rem;">Admin Notification</h2>
+                        <p style="color: #64748b; line-height: 1.6;">A new order has been placed requiring immediate attention. Order value: TSh 2,500,000</p>
+                        
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="#" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Order</a>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+        
+        // Event listeners
+        document.querySelectorAll('.event-item').forEach(item => {
+            item.addEventListener('click', () => selectEvent(item.dataset.event));
+        });
+        
+        function selectEvent(eventType) {
+            currentEvent = eventType;
+            
+            // Update active state
+            document.querySelectorAll('.event-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-event="${eventType}"]`).classList.add('active');
+            
+            // Update status
+            document.getElementById('currentTemplate').textContent = eventType.replace('_', ' ').toUpperCase();
+            
+            // Update content fields based on template type
+            updateContentFieldsForTemplate(eventType);
+            
+            // Load template base first
+            const template = templates[eventType] || '<p>Template not found</p>';
+            displayTemplate(template);
+
+            // Immediately apply current content and styling so footer/logo appear
+            applyContentChanges();
+        }
+        
+        function updateContentFieldsForTemplate(templateType) {
+            const templateConfigs = {
+                order_confirmation: {
+                    fields: [
+                        { id: 'oc_emailSubject', label: 'Order Email Subject', type: 'text', value: 'Your TISCO Order Confirmation #12345', hint: 'Subject line for order confirmation email', placeholder: 'Enter order email subject' },
+                        { id: 'oc_emailTitle', label: 'Order Title', type: 'text', value: 'Order Confirmation', hint: 'Main title displayed in email header', placeholder: 'Enter order title' },
+                        { id: 'oc_orderNumber', label: 'Order Number', type: 'text', value: '#12345', hint: 'Order reference number', placeholder: 'Enter order number' },
+                        { id: 'oc_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s full name', placeholder: 'Enter customer name' },
+                        { id: 'oc_greetingMessage', label: 'Thank You Message', type: 'text', value: 'Thank you for your order!', hint: 'Appreciation message for the customer', placeholder: 'Enter thank you message' },
+                        { id: 'oc_orderDetails', label: 'Order Details', type: 'textarea', value: 'Your order has been confirmed and is being processed for delivery.', hint: 'Details about the order status and next steps', placeholder: 'Enter order details' },
+                        { id: 'oc_deliveryInfo', label: 'Delivery Information', type: 'textarea', value: 'We\'ll prepare your items for delivery and contact you with delivery details.', hint: 'Delivery timeline and process information', placeholder: 'Enter delivery info' },
+                        { id: 'oc_ctaText', label: 'View Order Button', type: 'text', value: 'View Order Details', hint: 'Text for order viewing button', placeholder: 'Enter button text' },
+                        { id: 'oc_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                welcome_email: {
+                    fields: [
+                        { id: 'we_emailSubject', label: 'Welcome Email Subject', type: 'text', value: 'Welcome to TISCO Market!', hint: 'Subject line for welcome email', placeholder: 'Enter welcome subject' },
+                        { id: 'we_emailTitle', label: 'Welcome Title', type: 'text', value: 'Welcome to TISCO', hint: 'Main welcome headline', placeholder: 'Enter welcome title' },
+                        { id: 'we_customerName', label: 'New Customer Name', type: 'text', value: 'John Doe', hint: 'New customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'we_welcomeMessage', label: 'Welcome Message', type: 'text', value: 'Welcome to our marketplace!', hint: 'Personal welcome greeting', placeholder: 'Enter welcome message' },
+                        { id: 'we_platformBenefits', label: 'Platform Benefits', type: 'textarea', value: 'You\'ve joined thousands of satisfied customers. Enjoy premium electronics, fast delivery, and excellent customer service.', hint: 'Benefits of joining the platform', placeholder: 'Enter platform benefits' },
+                        { id: 'we_gettingStarted', label: 'Getting Started Guide', type: 'textarea', value: 'Start exploring our premium electronics and tech products.', hint: 'Instructions for new users', placeholder: 'Enter getting started info' },
+                        { id: 'we_ctaText', label: 'Start Shopping Button', type: 'text', value: 'Start Shopping', hint: 'Text for shopping button', placeholder: 'Enter button text' },
+                        { id: 'we_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                payment_success: {
+                    fields: [
+                        { id: 'ps_emailSubject', label: 'Payment Success Subject', type: 'text', value: 'Payment Successful - TISCO', hint: 'Subject line for payment confirmation', placeholder: 'Enter payment subject' },
+                        { id: 'ps_emailTitle', label: 'Payment Title', type: 'text', value: 'Payment Confirmed', hint: 'Main payment confirmation title', placeholder: 'Enter payment title' },
+                        { id: 'ps_transactionId', label: 'Transaction ID', type: 'text', value: 'TXN-789456123', hint: 'Payment transaction reference', placeholder: 'Enter transaction ID' },
+                        { id: 'ps_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'ps_successMessage', label: 'Success Message', type: 'text', value: 'Great news! Your payment was successful.', hint: 'Payment success confirmation', placeholder: 'Enter success message' },
+                        { id: 'ps_paymentDetails', label: 'Payment Details', type: 'textarea', value: 'Your transaction has been processed and your order is being prepared for delivery.', hint: 'Details about the payment and next steps', placeholder: 'Enter payment details' },
+                        { id: 'ps_ctaText', label: 'View Order Button', type: 'text', value: 'View Order', hint: 'Text for order viewing button', placeholder: 'Enter button text' },
+                        { id: 'ps_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                payment_failed: {
+                    fields: [
+                        { id: 'pf_emailSubject', label: 'Payment Failed Subject', type: 'text', value: 'Payment Issue - TISCO', hint: 'Subject line for payment failure notification', placeholder: 'Enter payment issue subject' },
+                        { id: 'pf_emailTitle', label: 'Payment Issue Title', type: 'text', value: 'Payment Failed', hint: 'Main payment failure title', placeholder: 'Enter payment issue title' },
+                        { id: 'pf_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'pf_failureMessage', label: 'Failure Message', type: 'text', value: 'Unfortunately, your payment could not be processed.', hint: 'Payment failure explanation', placeholder: 'Enter failure message' },
+                        { id: 'pf_troubleshooting', label: 'Troubleshooting Steps', type: 'textarea', value: 'Please check your payment details and try again. Ensure your card has sufficient funds and is not expired.', hint: 'Steps to resolve payment issues', placeholder: 'Enter troubleshooting steps' },
+                        { id: 'pf_supportInfo', label: 'Support Information', type: 'textarea', value: 'Contact our support team if the issue persists. We\'re here to help!', hint: 'How to get additional help', placeholder: 'Enter support info' },
+                        { id: 'pf_ctaText', label: 'Try Again Button', type: 'text', value: 'Try Again', hint: 'Text for retry payment button', placeholder: 'Enter button text' },
+                        { id: 'pf_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                booking_confirmation: {
+                    fields: [
+                        { id: 'bc_emailSubject', label: 'Booking Email Subject', type: 'text', value: 'Your TISCO Service Booking Confirmed', hint: 'Subject line for booking confirmation', placeholder: 'Enter booking subject' },
+                        { id: 'bc_emailTitle', label: 'Booking Title', type: 'text', value: 'Booking Confirmation', hint: 'Main booking confirmation title', placeholder: 'Enter booking title' },
+                        { id: 'bc_bookingId', label: 'Booking ID', type: 'text', value: 'BK-789123', hint: 'Service booking reference number', placeholder: 'Enter booking ID' },
+                        { id: 'bc_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'bc_serviceDetails', label: 'Service Details', type: 'textarea', value: 'Your service booking has been confirmed. Our technician will contact you soon.', hint: 'Details about the booked service', placeholder: 'Enter service details' },
+                        { id: 'bc_appointmentInfo', label: 'Appointment Information', type: 'textarea', value: 'Scheduled for: [Date] at [Time]. Please be available at the specified location.', hint: 'Appointment date, time, and location', placeholder: 'Enter appointment info' },
+                        { id: 'bc_ctaText', label: 'Manage Booking Button', type: 'text', value: 'Manage Booking', hint: 'Text for booking management button', placeholder: 'Enter button text' },
+                        { id: 'bc_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                password_reset: {
+                    fields: [
+                        { id: 'pr_emailSubject', label: 'Password Reset Subject', type: 'text', value: 'Reset Your TISCO Password', hint: 'Subject line for password reset email', placeholder: 'Enter reset subject' },
+                        { id: 'pr_emailTitle', label: 'Reset Title', type: 'text', value: 'Password Reset Request', hint: 'Main password reset title', placeholder: 'Enter reset title' },
+                        { id: 'pr_customerName', label: 'Account Holder Name', type: 'text', value: 'John Doe', hint: 'Account holder\'s name', placeholder: 'Enter account holder name' },
+                        { id: 'pr_resetMessage', label: 'Reset Instructions', type: 'textarea', value: 'We received a request to reset your password. Click the button below to create a new password.', hint: 'Instructions for password reset', placeholder: 'Enter reset instructions' },
+                        { id: 'pr_securityNote', label: 'Security Notice', type: 'textarea', value: 'If you didn\'t request this reset, please ignore this email. Your password will remain unchanged.', hint: 'Security information for users', placeholder: 'Enter security notice' },
+                        { id: 'pr_ctaText', label: 'Reset Password Button', type: 'text', value: 'Reset Password', hint: 'Text for password reset button', placeholder: 'Enter button text' },
+                        { id: 'pr_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                order_status_update: {
+                    fields: [
+                        { id: 'osu_emailSubject', label: 'Status Update Subject', type: 'text', value: 'Order Status Update - TISCO', hint: 'Subject line for order status notification', placeholder: 'Enter status subject' },
+                        { id: 'osu_emailTitle', label: 'Status Update Title', type: 'text', value: 'Order Status Update', hint: 'Main status update title', placeholder: 'Enter status title' },
+                        { id: 'osu_orderNumber', label: 'Order Number', type: 'text', value: '#12345', hint: 'Order reference number', placeholder: 'Enter order number' },
+                        { id: 'osu_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'osu_statusMessage', label: 'Status Message', type: 'text', value: 'Your order status has been updated.', hint: 'Status change notification', placeholder: 'Enter status message' },
+                        { id: 'osu_orderDetails', label: 'Order Details', type: 'textarea', value: 'Your order is being processed and will be ready for delivery soon.', hint: 'Current order status and next steps', placeholder: 'Enter order details' },
+                        { id: 'osu_ctaText', label: 'View Order Button', type: 'text', value: 'View Order', hint: 'Text for order viewing button', placeholder: 'Enter button text' },
+                        { id: 'osu_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                cart_abandonment: {
+                    fields: [
+                        { id: 'ca_emailSubject', label: 'Cart Reminder Subject', type: 'text', value: 'You left something in your cart - TISCO', hint: 'Subject line for cart abandonment email', placeholder: 'Enter cart reminder subject' },
+                        { id: 'ca_emailTitle', label: 'Cart Reminder Title', type: 'text', value: 'Complete Your Purchase', hint: 'Main cart abandonment title', placeholder: 'Enter cart title' },
+                        { id: 'ca_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'ca_reminderMessage', label: 'Reminder Message', type: 'text', value: 'You left some great items in your cart!', hint: 'Cart abandonment message', placeholder: 'Enter reminder message' },
+                        { id: 'ca_cartDetails', label: 'Cart Details', type: 'textarea', value: 'Don\'t miss out on these premium electronics. Complete your purchase now.', hint: 'Information about abandoned cart items', placeholder: 'Enter cart details' },
+                        { id: 'ca_incentive', label: 'Purchase Incentive', type: 'textarea', value: 'Complete your order in the next 24 hours and enjoy fast delivery.', hint: 'Incentive to complete purchase', placeholder: 'Enter incentive message' },
+                        { id: 'ca_ctaText', label: 'Complete Purchase Button', type: 'text', value: 'Complete Purchase', hint: 'Text for purchase completion button', placeholder: 'Enter button text' },
+                        { id: 'ca_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                delivery_confirmation: {
+                    fields: [
+                        { id: 'dc_emailSubject', label: 'Delivery Confirmation Subject', type: 'text', value: 'Your Order Has Been Delivered - TISCO', hint: 'Subject line for delivery notification', placeholder: 'Enter delivery subject' },
+                        { id: 'dc_emailTitle', label: 'Delivery Title', type: 'text', value: 'Order Delivered', hint: 'Main delivery confirmation title', placeholder: 'Enter delivery title' },
+                        { id: 'dc_orderNumber', label: 'Order Number', type: 'text', value: '#12345', hint: 'Order reference number', placeholder: 'Enter order number' },
+                        { id: 'dc_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'dc_deliveryMessage', label: 'Delivery Message', type: 'text', value: 'Great news! Your order has been delivered successfully.', hint: 'Delivery confirmation message', placeholder: 'Enter delivery message' },
+                        { id: 'dc_deliveryDetails', label: 'Delivery Details', type: 'textarea', value: 'Your items have been delivered to your specified address. We hope you enjoy your purchase!', hint: 'Delivery information and next steps', placeholder: 'Enter delivery details' },
+                        { id: 'dc_ctaText', label: 'Leave Review Button', type: 'text', value: 'Leave Review', hint: 'Text for review button', placeholder: 'Enter button text' },
+                        { id: 'dc_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                review_request: {
+                    fields: [
+                        { id: 'rr_emailSubject', label: 'Review Request Subject', type: 'text', value: 'How was your TISCO experience?', hint: 'Subject line for review request email', placeholder: 'Enter review subject' },
+                        { id: 'rr_emailTitle', label: 'Review Title', type: 'text', value: 'Share Your Experience', hint: 'Main review request title', placeholder: 'Enter review title' },
+                        { id: 'rr_orderNumber', label: 'Order Number', type: 'text', value: '#12345', hint: 'Order reference number', placeholder: 'Enter order number' },
+                        { id: 'rr_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'rr_reviewMessage', label: 'Review Request Message', type: 'text', value: 'We\'d love to hear about your experience with us!', hint: 'Review request message', placeholder: 'Enter review message' },
+                        { id: 'rr_reviewDetails', label: 'Review Details', type: 'textarea', value: 'Your feedback helps us improve our service and helps other customers make informed decisions.', hint: 'Why reviews are important', placeholder: 'Enter review details' },
+                        { id: 'rr_ctaText', label: 'Write Review Button', type: 'text', value: 'Write Review', hint: 'Text for review button', placeholder: 'Enter button text' },
+                        { id: 'rr_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                contact_reply: {
+                    fields: [
+                        { id: 'cr_emailSubject', label: 'Contact Reply Subject', type: 'text', value: 'Re: Your TISCO Inquiry', hint: 'Subject line for contact form reply', placeholder: 'Enter reply subject' },
+                        { id: 'cr_emailTitle', label: 'Reply Title', type: 'text', value: 'Thank You for Contacting Us', hint: 'Main contact reply title', placeholder: 'Enter reply title' },
+                        { id: 'cr_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'cr_replyMessage', label: 'Reply Message', type: 'text', value: 'Thank you for reaching out to us. Here\'s our response to your inquiry:', hint: 'Reply introduction message', placeholder: 'Enter reply message' },
+                        { id: 'cr_responseDetails', label: 'Response Details', type: 'textarea', value: 'We have reviewed your inquiry and are happy to provide the information you requested.', hint: 'Detailed response to customer inquiry', placeholder: 'Enter response details' },
+                        { id: 'cr_supportInfo', label: 'Additional Support', type: 'textarea', value: 'If you have any further questions, please don\'t hesitate to contact us again.', hint: 'Additional support information', placeholder: 'Enter support info' },
+                        { id: 'cr_ctaText', label: 'Contact Support Button', type: 'text', value: 'Contact Support', hint: 'Text for support contact button', placeholder: 'Enter button text' },
+                        { id: 'cr_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                booking_status_update: {
+                    fields: [
+                        { id: 'bsu_emailSubject', label: 'Booking Status Subject', type: 'text', value: 'Booking Status Update - TISCO', hint: 'Subject line for booking status notification', placeholder: 'Enter booking status subject' },
+                        { id: 'bsu_emailTitle', label: 'Booking Status Title', type: 'text', value: 'Booking Status Update', hint: 'Main booking status title', placeholder: 'Enter booking status title' },
+                        { id: 'bsu_bookingId', label: 'Booking ID', type: 'text', value: 'BK-789123', hint: 'Service booking reference number', placeholder: 'Enter booking ID' },
+                        { id: 'bsu_customerName', label: 'Customer Name', type: 'text', value: 'John Doe', hint: 'Customer\'s name', placeholder: 'Enter customer name' },
+                        { id: 'bsu_statusMessage', label: 'Status Update Message', type: 'text', value: 'Your booking status has been updated.', hint: 'Booking status change notification', placeholder: 'Enter status message' },
+                        { id: 'bsu_bookingDetails', label: 'Booking Details', type: 'textarea', value: 'Your service booking is progressing as scheduled. We\'ll keep you updated on any changes.', hint: 'Current booking status and timeline', placeholder: 'Enter booking details' },
+                        { id: 'bsu_ctaText', label: 'View Booking Button', type: 'text', value: 'View Booking', hint: 'Text for booking viewing button', placeholder: 'Enter button text' },
+                        { id: 'bsu_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                },
+                admin_notification: {
+                    fields: [
+                        { id: 'an_emailSubject', label: 'Admin Notification Subject', type: 'text', value: 'TISCO Admin Alert', hint: 'Subject line for admin notification', placeholder: 'Enter admin subject' },
+                        { id: 'an_emailTitle', label: 'Admin Alert Title', type: 'text', value: 'System Notification', hint: 'Main admin notification title', placeholder: 'Enter admin title' },
+                        { id: 'an_alertType', label: 'Alert Type', type: 'text', value: 'System Alert', hint: 'Type of admin alert', placeholder: 'Enter alert type' },
+                        { id: 'an_alertMessage', label: 'Alert Message', type: 'text', value: 'This is an important system notification.', hint: 'Main alert message', placeholder: 'Enter alert message' },
+                        { id: 'an_alertDetails', label: 'Alert Details', type: 'textarea', value: 'Detailed information about the system event or notification that requires admin attention.', hint: 'Detailed information about the alert', placeholder: 'Enter alert details' },
+                        { id: 'an_actionRequired', label: 'Action Required', type: 'textarea', value: 'Please review this notification and take appropriate action if necessary.', hint: 'Actions that may be required', placeholder: 'Enter required actions' },
+                        { id: 'an_ctaText', label: 'Admin Panel Button', type: 'text', value: 'Go to Admin Panel', hint: 'Text for admin panel button', placeholder: 'Enter button text' },
+                        { id: 'an_footerMessage', label: 'Footer Message', type: 'textarea', value: 'TISCOマーケット | info@tiscomarket.com | +255748624684', hint: 'Contact information and legal text', placeholder: 'Enter footer message' }
+                    ]
+                }
+            };
+            
+            const config = templateConfigs[templateType] || templateConfigs.order_confirmation;
+            renderDynamicFields(config.fields);
+        }
+        
+        function renderDynamicFields(fields) {
+            const container = document.getElementById('dynamicContentFields');
+            
+            // Load saved values for this template if they exist
+            const savedValues = templateFieldValues[currentEvent] || {};
+            
+            container.innerHTML = fields.map(field => {
+                // Use saved value if available, otherwise use default
+                const currentValue = savedValues[field.id] !== undefined ? savedValues[field.id] : field.value;
+                
+                const inputElement = field.type === 'textarea' 
+                    ? `<textarea id="${field.id}" class="text-input-enhanced textarea-enhanced" placeholder="${field.placeholder}" rows="${field.id.includes('footer') ? 2 : 3}" oninput="saveFieldValue('${field.id}', this.value)">${currentValue}</textarea>`
+                    : `<input type="text" id="${field.id}" class="text-input-enhanced" value="${currentValue}" placeholder="${field.placeholder}" oninput="saveFieldValue('${field.id}', this.value)">`;
+                
+                return `
+                    <div class="text-input-group">
+                        <label for="${field.id}">${field.label}</label>
+                        ${inputElement}
+                        <div class="input-hint">${field.hint}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function saveFieldValue(fieldId, value) {
+            if (!templateFieldValues[currentEvent]) {
+                templateFieldValues[currentEvent] = {};
+            }
+            templateFieldValues[currentEvent][fieldId] = value;
+            localStorage.setItem('tisco_template_field_values', JSON.stringify(templateFieldValues));
+        }
+        
+        function showTemplate(eventType) {
+            const template = templates[eventType] || `
+                <div style="max-width: 600px; margin: 0 auto; padding: 2rem; text-align: center; font-family: 'Segoe UI', Arial, sans-serif;">
+                    <h2>📧 ${eventType.replace('_', ' ').toUpperCase()}</h2>
+                    <p>Template preview coming soon...</p>
+                </div>
+            `;
+            
+            const frame = document.getElementById('previewFrame');
+            
+            if (viewMode === 'mobile') {
+                frame.innerHTML = `
+                    <div class="mobile-frame">
+                        <iframe class="email-iframe" srcdoc="${template.replace(/"/g, '&quot;')}"></iframe>
+                    </div>
+                `;
+            } else {
+                frame.innerHTML = `
+                    <iframe class="email-iframe" srcdoc="${template.replace(/"/g, '&quot;')}"></iframe>
+                `;
+            }
+        }
+        
+        function setViewMode(mode) {
+            viewMode = mode;
+            const desktopBtn = document.getElementById('desktopBtn');
+            const mobileBtn = document.getElementById('mobileBtn');
+            if (desktopBtn && mobileBtn) {
+                desktopBtn.classList.remove('active');
+                mobileBtn.classList.remove('active');
+                
+                if (mode === 'desktop') {
+                    desktopBtn.classList.add('active');
+                    desktopBtn.style.background = '#2563eb';
+                    desktopBtn.style.color = 'white';
+                    mobileBtn.style.background = '';
+                    mobileBtn.style.color = '';
+                } else {
+                    mobileBtn.classList.add('active');
+                    mobileBtn.style.background = '#2563eb';
+                    mobileBtn.style.color = 'white';
+                    desktopBtn.style.background = '';
+                    desktopBtn.style.color = '';
+                }
+            }
+            
+            if (currentEvent) {
+                // Re-render with current customizations applied
+                applyContentChanges();
+            }
+        }
+        
+        function applyStyles() {
+            if (!currentEvent) {
+                alert('Please select an email template first');
+                return;
+            }
+            getStyledTemplate();
+        }
+        
+        function getStyledTemplate() {
+            let template = templates[currentEvent] || '';
+            template = applyStylesToTemplate(template);
+            displayTemplate(template);
+        }
+        
+        function applyStylesToTemplate(template) {
+            // Get all styling values
+            const headerColor = document.getElementById('headerColor').value || '#1e293b';
+            const accentColor = document.getElementById('accentColor').value || '#2563eb';
+            const textColor = document.getElementById('textColor').value || '#374151';
+            const fontFamily = document.getElementById('fontFamily').value || 'Segoe UI';
+            const fontSize = document.getElementById('fontSize').value || '16px';
+            const textAlign = document.getElementById('textAlign').value || 'left';
+            const lineHeight = document.getElementById('lineHeight').value || '1.6';
+            const buttonColor = document.getElementById('buttonColor').value || '#2563eb';
+            const buttonStyle = document.getElementById('buttonStyle').value || 'solid';
+            const buttonSize = document.getElementById('buttonSize').value || 'medium';
+            const buttonRadius = document.getElementById('buttonRadius').value || 'rounded';
+            
+            // Header colors
+            template = template.replace(/linear-gradient\([^)]+\)/g, headerColor);
+            template = template.replace(/#1e293b/g, headerColor);
+            template = template.replace(/#334155/g, headerColor);
+            
+            // Accent colors
+            template = template.replace(/#2563eb/g, accentColor);
+            template = template.replace(/#1d4ed8/g, accentColor);
+            template = template.replace(/#059669/g, accentColor);
+            template = template.replace(/#047857/g, accentColor);
+            
+            // Text colors
+            template = template.replace(/#64748b/g, textColor);
+            template = template.replace(/#374151/g, textColor);
+            
+            // Typography - with proper validation
+            if (fontFamily) template = template.replace(/'Segoe UI'/g, `'${fontFamily}'`);
+            if (fontSize) template = template.replace(/font-size:\s*\d+px/g, `font-size: ${fontSize}`);
+            if (textAlign) template = template.replace(/text-align:\s*\w+/g, `text-align: ${textAlign}`);
+            if (lineHeight) template = template.replace(/line-height:\s*[\d.]+/g, `line-height: ${lineHeight}`);
+            
+            // Button styling
+            const buttonStyles = getButtonStyles(buttonColor, buttonStyle, buttonSize, buttonRadius);
+            template = template.replace(
+                /style="[^"]*background:\s*#[0-9a-fA-F]{6}[^"]*"/g,
+                (match) => {
+                    if (match.includes('padding') && match.includes('text-decoration')) {
+                        return `style="${buttonStyles}"`;
+                    }
+                    return match;
+                }
+            );
+            
+            return template;
+        }
+        
+        function getButtonStyles(color, style, size, radius) {
+            let padding, fontSize;
+            
+            switch (size) {
+                case 'small': padding = '8px 16px'; fontSize = '14px'; break;
+                case 'large': padding = '16px 32px'; fontSize = '18px'; break;
+                default: padding = '12px 24px'; fontSize = '16px';
+            }
+            
+            let baseStyles = `padding: ${padding}; border-radius: ${radius}; text-decoration: none; font-weight: 600; font-size: ${fontSize}; display: inline-block; text-align: center; transition: all 0.2s;`;
+            
+            switch (style) {
+                case 'outline':
+                    return `${baseStyles} background: transparent; color: ${color}; border: 2px solid ${color};`;
+                case 'ghost':
+                    return `${baseStyles} background: transparent; color: ${color}; border: none;`;
+                case 'gradient':
+                    return `${baseStyles} background: linear-gradient(135deg, ${color}, ${adjustColor(color, -20)}); color: white; border: none;`;
+                default:
+                    return `${baseStyles} background: ${color}; color: white; border: none;`;
+            }
+        }
+        
+        function adjustColor(color, amount) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * amount);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                (B < 255 ? B < 1 ? 0 : B : 255))
+                .toString(16).slice(1);
+        }
+        
+        function displayTemplate(template) {
+            const frame = document.getElementById('previewFrame');
+            
+            if (viewMode === 'mobile') {
+                frame.innerHTML = `
+                    <div class="mobile-frame">
+                        <iframe class="email-iframe" srcdoc="${template.replace(/"/g, '&quot;')}"></iframe>
+                    </div>
+                `;
+            } else {
+                frame.innerHTML = `
+                    <iframe class="email-iframe" srcdoc="${template.replace(/"/g, '&quot;')}"></iframe>
+                `;
+            }
+        }
+        
+        function applyContentChanges() {
+            if (!currentEvent) {
+                alert('Please select an email template first');
+                return;
+            }
+            
+            // Show updating indicator
+            const previewFrame = document.getElementById('previewFrame');
+            previewFrame.classList.add('preview-updating');
+            
+            setTimeout(() => {
+                // Get all dynamic field values
+                const contentData = {};
+                const dynamicFields = document.querySelectorAll('#dynamicContentFields input, #dynamicContentFields textarea');
+                dynamicFields.forEach(field => {
+                    contentData[field.id] = field.value;
+                });
+                
+                // Get FRESH template from original templates object (not styled version to avoid concatenation)
+                let template = templates[currentEvent] || '';
+                
+                // Apply styling first
+                template = applyStylesToTemplate(template);
+                
+                // Then apply content replacements to fresh template
+                template = applyContentToTemplate(template, contentData);
+                
+                displayTemplate(template);
+                
+                // Remove updating indicator
+                previewFrame.classList.remove('preview-updating');
+            }, 500);
+        }
+        
+        function resetContent() {
+            if (!confirm('Reset all content to default values?')) return;
+            
+            // Reset to template-specific defaults
+            updateContentFieldsForTemplate(currentEvent);
+            applyContentChanges();
+        }
+        
+        function applyContentToTemplate(template, content) {
+            // Get the correct field names based on current template
+            const getFieldValue = (suffix) => {
+                const prefix = getTemplatePrefix(currentEvent);
+                return content[`${prefix}_${suffix}`] || content[suffix]; // fallback to old naming
+            };
+            
+            // Replace customer names (fix concatenation bug completely)
+            const customerName = getFieldValue('customerName');
+            if (customerName) {
+                // Replace only the original placeholder, not accumulated names
+                template = template.replace(/Hi John Doe,/g, `Hi ${customerName},`);
+                template = template.replace(/Hello John Doe,/g, `Hello ${customerName},`);
+                // Also replace any standalone John Doe references
+                template = template.replace(/\bJohn Doe\b/g, customerName);
+            }
+            
+            // Replace email titles and headlines
+            const emailTitle = getFieldValue('emailTitle');
+            if (emailTitle) {
+                template = template.replace(/<h1[^>]*>TISCO<\/h1>/g, `<h1 style="color: white; margin: 0; font-size: 2rem;">${emailTitle}</h1>`);
+                template = template.replace(/Your Order Confirmation/g, emailTitle);
+                template = template.replace(/Order Confirmation/g, emailTitle);
+                template = template.replace(/Welcome to TISCO Market/g, emailTitle);
+                template = template.replace(/Payment Confirmation/g, emailTitle);
+                template = template.replace(/Booking Confirmation/g, emailTitle);
+            }
+            
+            // Template-specific replacements based on current template
+            if (currentEvent === 'order_confirmation') {
+                const orderNumber = getFieldValue('orderNumber');
+                const greetingMessage = getFieldValue('greetingMessage');
+                const orderDetails = getFieldValue('orderDetails');
+                const deliveryInfo = getFieldValue('deliveryInfo');
+                
+                if (orderNumber) template = template.replace(/#12345/g, orderNumber);
+                if (greetingMessage) template = template.replace(/Thank you for your order[^.]*\./g, greetingMessage);
+                if (orderDetails) template = template.replace(/We're excited to fulfill your purchase\./g, orderDetails);
+                if (deliveryInfo) template = template.replace(/We'll notify you once your items are shipped\./g, deliveryInfo);
+            } else if (currentEvent === 'welcome_email') {
+                const welcomeMessage = getFieldValue('welcomeMessage');
+                const platformBenefits = getFieldValue('platformBenefits');
+                const gettingStarted = getFieldValue('gettingStarted');
+                
+                if (welcomeMessage) template = template.replace(/Welcome to our marketplace!/g, welcomeMessage);
+                if (platformBenefits) template = template.replace(/You've just joined[^.]*\./g, platformBenefits);
+                if (gettingStarted) template = template.replace(/Start exploring our premium electronics[^.]*\./g, gettingStarted);
+            } else if (currentEvent === 'payment_success') {
+                const transactionId = getFieldValue('transactionId');
+                const successMessage = getFieldValue('successMessage');
+                const paymentDetails = getFieldValue('paymentDetails');
+                
+                if (transactionId) template = template.replace(/TXN-[0-9]+/g, transactionId);
+                if (successMessage) template = template.replace(/Great news! Your payment[^.]*\./g, successMessage);
+                if (paymentDetails) template = template.replace(/Your transaction has been processed[^.]*\./g, paymentDetails);
+            } else if (currentEvent === 'payment_failed') {
+                const failureMessage = getFieldValue('failureMessage');
+                const troubleshooting = getFieldValue('troubleshooting');
+                const supportInfo = getFieldValue('supportInfo');
+                
+                if (failureMessage) template = template.replace(/Unfortunately, your payment[^.]*\./g, failureMessage);
+                if (troubleshooting) template = template.replace(/Please check your payment details[^.]*\./g, troubleshooting);
+                if (supportInfo) template = template.replace(/Contact our support team[^.]*\./g, supportInfo);
+            } else if (currentEvent === 'booking_confirmation') {
+                const bookingId = getFieldValue('bookingId');
+                const serviceDetails = getFieldValue('serviceDetails');
+                const appointmentInfo = getFieldValue('appointmentInfo');
+                
+                if (bookingId) template = template.replace(/BK-[0-9]+/g, bookingId);
+                if (serviceDetails) template = template.replace(/Your service booking has been confirmed[^.]*\./g, serviceDetails);
+                if (appointmentInfo) template = template.replace(/Scheduled for:[^.]*\./g, appointmentInfo);
+            } else if (currentEvent === 'password_reset') {
+                const resetMessage = getFieldValue('resetMessage');
+                const securityNote = getFieldValue('securityNote');
+                
+                if (resetMessage) template = template.replace(/We received a request to reset[^.]*\./g, resetMessage);
+                if (securityNote) template = template.replace(/If you didn't request this reset[^.]*\./g, securityNote);
+            }
+            
+            // Replace CTA button text
+            const ctaText = getFieldValue('ctaText');
+            if (ctaText) {
+                template = template.replace(/>(?:View Details|View Order|Manage Booking|Start Shopping|Track Your Order|Try Again|Reset Password|Leave Review|Write Review|Contact Support|View Booking|Complete Purchase)</g, `>${ctaText}<`);
+            }
+            
+            // Replace footer content
+            const footerMessage = getFieldValue('footerMessage');
+            if (footerMessage) {
+                template = template.replace(/TISCO Market \| info@tiscomarket\.store \| \+255 123 456 789/g, footerMessage);
+            }
+            
+            // Insert logo to the left of the header without removing titles/subtitles
+            if (uploadedImages.logo) {
+                // Case 1: Header has H1 and a following subtitle P
+                const headerWithSubtitle = /<h1([^>]*)>([\s\S]*?)<\/h1>\s*<p([^>]*)>([\s\S]*?)<\/p>/;
+                if (headerWithSubtitle.test(template)) {
+                    template = template.replace(headerWithSubtitle, (m, h1Attrs, h1Text, pAttrs, pText) => {
+                        return `<table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
+<td style="width:64px;padding-right:12px;vertical-align:middle;text-align:left;"><img src="${uploadedImages.logo}" alt="Logo" style="max-height:48px;height:auto;display:block;"></td>
+<td style="vertical-align:middle;text-align:left;"><h1${h1Attrs}>${h1Text}</h1><p${pAttrs}>${pText}</p></td>
+</tr></table>`;
+                    });
+                } else {
+                    // Case 2: Only H1 exists
+                    const headerOnly = /<h1([^>]*)>([\s\S]*?)<\/h1>/;
+                    if (headerOnly.test(template)) {
+                        template = template.replace(headerOnly, (m, h1Attrs, h1Text) => {
+                            return `<table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
+<td style="width:64px;padding-right:12px;vertical-align:middle;text-align:left;"><img src="${uploadedImages.logo}" alt="Logo" style="max-height:48px;height:auto;display:block;"></td>
+<td style="vertical-align:middle;text-align:left;"><h1${h1Attrs}>${h1Text}</h1></td>
+</tr></table>`;
+                        });
+                    }
+                }
+            }
+            
+            // Note: Main content replacements are handled above in the template-specific sections
+
+            // Ensure a footer exists in all previews
+            if (!/info@tiscomarket\.store/.test(template)) {
+                const footerMsg = getFieldValue('footerMessage') || 'TISCOマーケット | info@tiscomarket.com | +255748624684';
+                template += `<div style="max-width: 600px; margin: 0 auto; text-align: center; color: #64748b; font-size: 12px; padding: 1rem;">${footerMsg}</div>`;
+            }
+            
+            return template;
+        }
+        
+        function getTemplatePrefix(templateType) {
+            const prefixes = {
+                'order_confirmation': 'oc',
+                'welcome_email': 'we',
+                'payment_success': 'ps', 
+                'payment_failed': 'pf',
+                'booking_confirmation': 'bc',
+                'password_reset': 'pr',
+                'order_status_update': 'osu',
+                'cart_abandonment': 'ca',
+                'delivery_confirmation': 'dc',
+                'review_request': 'rr',
+                'contact_reply': 'cr',
+                'booking_status_update': 'bsu',
+                'admin_notification': 'an'
+            };
+            return prefixes[templateType] || 'oc';
+        }
+        
+        function getStyledTemplate() {
+            if (!currentEvent) return '';
+            
+            // Get all style values with defaults
+            const headerColor = document.getElementById('headerColor')?.value || '#1e293b';
+            const accentColor = document.getElementById('accentColor')?.value || '#2563eb';
+            const textColor = document.getElementById('textColor')?.value || '#374151';
+            const fontFamily = document.getElementById('fontFamily')?.value || 'Segoe UI';
+            const fontSize = document.getElementById('fontSize')?.value || '16px';
+            const textAlign = document.getElementById('textAlign')?.value || 'left';
+            const lineHeight = document.getElementById('lineHeight')?.value || '1.6';
+            const buttonColor = document.getElementById('buttonColor')?.value || '#2563eb';
+            const buttonStyle = document.getElementById('buttonStyle')?.value || 'solid';
+            const buttonSize = document.getElementById('buttonSize')?.value || 'medium';
+            const buttonRadius = document.getElementById('buttonRadius')?.value || '6px';
+            
+            // Apply styles to current template
+            let template = templates[currentEvent] || '';
+            
+            // Header colors
+            template = template.replace(/linear-gradient\([^)]+\)/g, headerColor);
+            template = template.replace(/#1e293b/g, headerColor);
+            template = template.replace(/#334155/g, headerColor);
+            
+            // Accent colors
+            template = template.replace(/#2563eb/g, accentColor);
+            template = template.replace(/#1d4ed8/g, accentColor);
+            template = template.replace(/#059669/g, accentColor);
+            template = template.replace(/#047857/g, accentColor);
+            
+            // Text colors
+            template = template.replace(/#64748b/g, textColor);
+            template = template.replace(/#374151/g, textColor);
+            
+            // Typography - with proper validation
+            if (fontFamily) template = template.replace(/'Segoe UI'/g, `'${fontFamily}'`);
+            if (fontSize) template = template.replace(/font-size:\s*\d+px/g, `font-size: ${fontSize}`);
+            if (textAlign) template = template.replace(/text-align:\s*\w+/g, `text-align: ${textAlign}`);
+            if (lineHeight) template = template.replace(/line-height:\s*[\d.]+/g, `line-height: ${lineHeight}`);
+            
+            // Button styling
+            const buttonStyles = getButtonStyles(buttonColor, buttonStyle, buttonSize, buttonRadius);
+            template = template.replace(
+                /style="[^"]*background:\s*#[0-9a-fA-F]{6}[^"]*"/g,
+                (match) => {
+                    if (match.includes('padding') && match.includes('text-decoration')) {
+                        return `style="${buttonStyles}"`;
+                    }
+                    return match;
+                }
+            );
+            
+            return template;
+        }
+        
+        function exportHTML() {
+            previewExport();
+        }
+    </script>
+</body>
+</html>

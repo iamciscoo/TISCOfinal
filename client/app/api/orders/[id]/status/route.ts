@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
+import { notifyOrderStatusChanged } from '@/lib/notifications/service'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
@@ -105,8 +106,33 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    // TODO: Send notification email/SMS about status change
-    // TODO: Add order history/audit log entry
+    // Send notification email about status change
+    try {
+      // Get user details for notification
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('auth_user_id', orderRow.user_id)
+        .single()
+
+      if (userData?.email) {
+        const customerName = userData.first_name && userData.last_name 
+          ? `${userData.first_name} ${userData.last_name}` 
+          : 'Customer'
+
+        await notifyOrderStatusChanged({
+          order_id: id,
+          customer_email: userData.email,
+          customer_name: customerName,
+          old_status: order.status || 'unknown',
+          new_status: deliveredViaRpc ? 'delivered' : status
+        })
+        console.log('Order status notification sent successfully')
+      }
+    } catch (emailError) {
+      console.error('Failed to send order status notification:', emailError)
+      // Don't fail the status update if email fails
+    }
 
     // Invalidate caches across client and admin
     try {

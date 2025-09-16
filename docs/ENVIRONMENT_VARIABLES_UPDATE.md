@@ -22,8 +22,6 @@ Your TISCO platform has been refactored to use standardized environment variable
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE=your_service_role_key
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key
-CLERK_SECRET_KEY=your_clerk_secret
 ```
 
 #### Admin Application (`/admin`)
@@ -32,8 +30,6 @@ CLERK_SECRET_KEY=your_clerk_secret
 # .env.production
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE=your_service_role_key
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_admin_clerk_key
-CLERK_SECRET_KEY=your_admin_clerk_secret
 ```
 
 ### 3. Deployment Platform Updates

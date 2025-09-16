@@ -320,8 +320,46 @@ export default function CheckoutPage() {
           return
         }
 
-        // Office payment successful
-        toast({ title: 'Order Placed!', description: `Order #${orderResult.order.id.slice(0, 8)} created.` })
+        // Office payment successful - send notifications
+        try {
+          // Send order confirmation email to customer
+          const { notifyOrderCreated } = await import('@/lib/notifications/service')
+          await notifyOrderCreated({
+            order_id: orderResult.order.id,
+            customer_email: shippingData.email,
+            customer_name: `${shippingData.firstName} ${shippingData.lastName}`,
+            total_amount: subtotal.toString(),
+            currency: 'TZS',
+            items: items.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price.toString()
+            })),
+            order_date: new Date().toLocaleDateString(),
+            payment_method: 'Pay at Office',
+            shipping_address: isPickup ? 'Pickup at Office' : `${shippingData.address}, ${shippingData.place}, ${selectedCity}`
+          })
+
+          // Send admin notification for new office payment order
+          await fetch('/api/notifications/admin-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_id: orderResult.order.id,
+              customer_email: shippingData.email,
+              customer_name: `${shippingData.firstName} ${shippingData.lastName}`,
+              total_amount: subtotal.toString(),
+              currency: 'TZS',
+              payment_method: 'Pay at Office',
+              payment_status: 'pending',
+              items_count: items.length
+            })
+          }).catch(err => console.warn('Failed to send admin notification:', err))
+        } catch (emailError) {
+          console.warn('Failed to send notifications:', emailError)
+        }
+
+        toast({ title: 'Order Placed!', description: `Order #${orderResult.order.id.slice(0, 8)} created. You will be contacted for delivery arrangements.` })
         clearCart()
         void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
         router.push('/account/orders')

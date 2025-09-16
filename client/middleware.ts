@@ -23,6 +23,8 @@ const publicRoutes = [
   '/api/service-bookings',
   '/api/payments/webhooks',
   '/api/payments',
+  '/api/notifications',
+  '/api/admin',
 ]
 
 // Check if route is public

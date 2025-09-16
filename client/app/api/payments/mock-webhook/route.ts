@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       payment_status: status,
       reference: `mock_${Date.now()}`,
       transaction_id: `zeno_${Date.now()}`,
+      gateway_transaction_id: `zeno_${Date.now()}`,
       data: {
         order_id: transaction_reference,
         payment_status: status,
@@ -28,8 +29,11 @@ export async function POST(req: NextRequest) {
         channel: "MPESA-TZ",
         transid: `MOCK${Date.now()}`,
         reference: `mock_${Date.now()}`,
-        msisdn: "255744963858"
-      }
+        msisdn: "255744963858",
+        gateway_transaction_id: `zeno_${Date.now()}`
+      },
+      // Include any additional data passed from the request
+      ...body
     }
 
     console.log('Triggering mock webhook for:', transaction_reference)

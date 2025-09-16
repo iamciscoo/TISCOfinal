@@ -118,31 +118,18 @@ export async function POST(req: NextRequest) {
     const txn = txnData
     let statusRaw = map[txn.status as keyof typeof map] || 'PENDING'
 
-    // Auto-complete stuck payments after 5 minutes
+    // Simple timeout handling - let webhooks handle completion naturally
     const createdAt = new Date(txn.created_at)
     const now = new Date()
     const minutesElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60)
     
-    if (statusRaw === 'PROCESSING' && minutesElapsed > 5) {
-      // Auto-complete stuck payments
-      try {
-        // Trigger mock webhook for auto-completion
-        const base = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
-        const mockWebhookUrl = `${base}/api/payments/mock-webhook`
-        await fetch(mockWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            transaction_reference: txn.transaction_reference,
-            status: 'COMPLETED',
-            ...(isSession ? { session_id: txn.id } : { order_id: txn.order_id })
-          })
-        }).catch(() => {})
-        
-        statusRaw = 'COMPLETED'
-      } catch {
-        // Continue with original status if auto-completion fails
-      }
+    // In production, mark as failed after a reasonable timeout.
+    const PAYMENT_PROCESSING_TIMEOUT_SECONDS = 30;
+    const timeoutMinutes = PAYMENT_PROCESSING_TIMEOUT_SECONDS / 60;
+
+    if (statusRaw === 'PROCESSING' && process.env.NODE_ENV === 'production' && minutesElapsed > timeoutMinutes) {
+      statusRaw = 'FAILED'
+      console.log('Payment timed out in production:', txn.transaction_reference)
     }
 
     // Optional: when still pending/processing, query ZenoPay directly for latest status

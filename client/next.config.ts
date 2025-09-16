@@ -31,17 +31,6 @@ const nextConfig: NextConfig = {
   },
   trailingSlash: false,
   output: 'standalone',
-  experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-  },
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

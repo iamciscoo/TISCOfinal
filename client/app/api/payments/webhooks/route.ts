@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
 import { revalidateTag } from 'next/cache'
+import { notifyPaymentSuccess, notifyPaymentFailed } from '@/lib/notifications/service'
 
 export const runtime = 'nodejs'
 
@@ -24,7 +25,7 @@ interface WebhookPayload {
 
 function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) return null
   return createClient(url, serviceKey)
 }
@@ -334,8 +335,89 @@ async function handlePaymentSuccess(transaction: TransactionRow, webhookData: We
       })
     }
 
-    // TODO: Send confirmation email/SMS
-    // TODO: Trigger order fulfillment process
+    // Send payment success notification
+    try {
+      // Get user and order details for notification
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('auth_user_id', transaction.user_id)
+        .single()
+
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('total_amount, currency')
+        .eq('id', transaction.order_id)
+        .single()
+
+      if (userData?.email && orderData) {
+        const customerName = userData.first_name && userData.last_name 
+          ? `${userData.first_name} ${userData.last_name}` 
+          : 'Customer'
+
+        // Send payment success notification
+        await notifyPaymentSuccess({
+          order_id: transaction.order_id,
+          customer_email: userData.email,
+          customer_name: customerName,
+          amount: orderData.total_amount?.toString() || '0',
+          currency: orderData.currency || 'TZS',
+          payment_method: 'Mobile Money',
+          transaction_id: transaction.transaction_reference
+        })
+        console.log('Payment success notification sent')
+
+        // Send order confirmation email to customer
+        const { notifyOrderCreated } = await import('@/lib/notifications/service')
+        const { data: orderItems } = await supabase
+          .from('order_items')
+          .select(`
+            quantity,
+            price,
+            products(name)
+          `)
+          .eq('order_id', transaction.order_id)
+        
+        const items = (orderItems || []).map((item: any) => ({
+          name: item.products?.name || 'Product',
+          quantity: item.quantity,
+          price: (item.price || 0).toString()
+        }))
+
+        await notifyOrderCreated({
+          order_id: transaction.order_id,
+          customer_email: userData.email,
+          customer_name: customerName,
+          total_amount: orderData.total_amount?.toString() || '0',
+          currency: orderData.currency || 'TZS',
+          items,
+          order_date: new Date().toLocaleDateString(),
+          payment_method: 'Mobile Money',
+          shipping_address: 'Will be contacted for delivery arrangements'
+        })
+        console.log('Order confirmation email sent to customer')
+
+        // Send admin notification for new paid order
+        try {
+          const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+          await notifyAdminOrderCreated({
+            order_id: transaction.order_id,
+            customer_email: userData.email,
+            customer_name: customerName,
+            total_amount: orderData.total_amount?.toString() || '0',
+            currency: orderData.currency || 'TZS',
+            payment_method: 'Mobile Money',
+            payment_status: 'paid',
+            items_count: items.length
+          })
+          console.log('Admin notification sent for new paid order')
+        } catch (adminError) {
+          console.warn('Failed to send admin notification:', adminError)
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send payment success notification:', emailError)
+    }
     
     console.log('Payment completed successfully:', transaction.transaction_reference)
     invalidateOrderCaches(transaction)
@@ -367,6 +449,41 @@ async function handlePaymentFailure(transaction: TransactionRow, reason: string)
         updated_at: new Date().toISOString()
       })
       .eq('id', transaction.order_id)
+
+    // Send payment failure notification
+    try {
+      // Get user details for notification
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('auth_user_id', transaction.user_id)
+        .single()
+
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('total_amount, currency')
+        .eq('id', transaction.order_id)
+        .single()
+
+      if (userData?.email && orderData) {
+        const customerName = userData.first_name && userData.last_name 
+          ? `${userData.first_name} ${userData.last_name}` 
+          : 'Customer'
+
+        await notifyPaymentFailed({
+          order_id: transaction.order_id,
+          customer_email: userData.email,
+          customer_name: customerName,
+          amount: orderData.total_amount?.toString() || '0',
+          currency: orderData.currency || 'TZS',
+          payment_method: 'Mobile Money',
+          failure_reason: reason || 'Payment processing failed'
+        })
+        console.log('Payment failure notification sent')
+      }
+    } catch (emailError) {
+      console.error('Failed to send payment failure notification:', emailError)
+    }
 
     // Log payment failure
     await supabase
@@ -619,6 +736,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
               currency: session.currency,
               status: 'completed',
               payment_type: 'mobile_money',
+              provider: session.provider || 'zenopay',
               transaction_reference: session.transaction_reference,
               gateway_transaction_id: webhookData.gateway_transaction_id || session.gateway_transaction_id,
               completed_at: new Date().toISOString(),
@@ -809,6 +927,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         currency: session.currency,
         status: 'completed',
         payment_type: 'mobile_money',
+        provider: session.provider || 'zenopay',
         transaction_reference: session.transaction_reference,
         gateway_transaction_id: webhookData.gateway_transaction_id || session.gateway_transaction_id,
         completed_at: new Date().toISOString(),
@@ -843,6 +962,69 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         user_id: session.user_id
       })
 
+    // Send payment success and order confirmation notifications for mobile payment
+    try {
+      // Get user details for notification
+      const { data: authUser } = await supabase.auth.admin.getUserById(session.user_id)
+      const userEmail = authUser?.user?.email
+      const userName = authUser?.user?.user_metadata?.full_name || authUser?.user?.user_metadata?.name
+      
+      if (userEmail) {
+        // Send payment success notification
+        await notifyPaymentSuccess({
+          order_id: order.id,
+          customer_email: userEmail,
+          customer_name: userName || 'Customer',
+          amount: total_amount.toString(),
+          currency: session.currency,
+          payment_method: 'Mobile Money',
+          transaction_id: session.transaction_reference
+        })
+        console.log('Mobile payment success notification sent')
+
+        // Send order confirmation email to customer
+        const { notifyOrderCreated } = await import('@/lib/notifications/service')
+        const items = orderItems.map(oi => ({
+          name: `Product ${oi.product_id}`, // Will be enhanced with actual product names
+          quantity: oi.quantity,
+          price: oi.price.toString()
+        }))
+
+        await notifyOrderCreated({
+          order_id: order.id,
+          customer_email: userEmail,
+          customer_name: userName || 'Customer',
+          total_amount: total_amount.toString(),
+          currency: session.currency,
+          items,
+          order_date: new Date().toLocaleDateString(),
+          payment_method: 'Mobile Money',
+          shipping_address: orderData.shipping_address || 'Will be contacted for delivery arrangements'
+        })
+        console.log('Order confirmation email sent to customer')
+
+        // Send admin notification for new paid order
+        try {
+          const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+          await notifyAdminOrderCreated({
+            order_id: order.id,
+            customer_email: userEmail,
+            customer_name: userName || 'Customer',
+            total_amount: total_amount.toString(),
+            currency: session.currency,
+            payment_method: 'Mobile Money',
+            payment_status: 'paid',
+            items_count: items.length
+          })
+          console.log('Admin notification sent for new mobile order')
+        } catch (adminError) {
+          console.warn('Failed to send admin notification for mobile order:', adminError)
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send mobile payment notifications:', emailError)
+    }
+
     console.log('Session payment completed successfully, order created:', session.transaction_reference)
     try {
       revalidateTag('orders')
@@ -871,6 +1053,29 @@ async function handleSessionPaymentFailure(session: PaymentSession, reason: stri
         updated_at: new Date().toISOString()
       })
       .eq('id', session.id)
+
+    // Send payment failure notification for mobile payment
+    try {
+      // Get user details for notification
+      const { data: authUser } = await supabase.auth.admin.getUserById(session.user_id)
+      const userEmail = authUser?.user?.email
+      const userName = authUser?.user?.user_metadata?.full_name || authUser?.user?.user_metadata?.name
+      
+      if (userEmail) {
+        await notifyPaymentFailed({
+          order_id: 'PENDING', // No order created yet for failed session
+          customer_email: userEmail,
+          customer_name: userName || 'Customer',
+          amount: session.amount.toString(),
+          currency: session.currency,
+          payment_method: 'Mobile Money',
+          failure_reason: reason || 'Mobile payment processing failed'
+        })
+        console.log('Mobile payment failure notification sent')
+      }
+    } catch (emailError) {
+      console.error('Failed to send mobile payment failure notification:', emailError)
+    }
 
     // Log payment failure
     await supabase

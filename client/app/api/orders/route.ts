@@ -1,17 +1,50 @@
+/**
+ * Orders API Route
+ * 
+ * Handles order creation and retrieval with comprehensive business logic including:
+ * - User authentication and profile synchronization
+ * - Product validation and stock checking
+ * - Address management and shipping address resolution
+ * - Order confirmation email notifications
+ * - Cart cleanup and cache invalidation
+ * - Optimized queries with caching strategies
+ * 
+ * Security Features:
+ * - User authentication required for all operations
+ * - Server-side price validation to prevent tampering
+ * - Stock quantity validation before order creation
+ * - Transactional order creation with rollback on failures
+ */
+
 import { NextResponse } from 'next/server'
 import { getUser, getUserProfile } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import type { Address } from '@/lib/types'
 import { revalidateTag, unstable_cache } from 'next/cache'
+
+// Use Node.js runtime for access to secure environment variables and notification services
 export const runtime = 'nodejs'
 
+/**
+ * Type definition for Supabase error information extraction
+ * Provides structured error handling for database operations
+ */
 type SupabaseErrorLike = {
-  message?: string
-  details?: string
-  hint?: string
-  code?: string
+  message?: string   // Error message
+  details?: string   // Detailed error information
+  hint?: string     // Suggested resolution hint
+  code?: string     // Error code identifier
 }
 
+/**
+ * Extract structured error information from unknown error objects
+ * 
+ * Safely extracts error details from Supabase errors or other exceptions
+ * to provide consistent error reporting throughout the application.
+ * 
+ * @param err - Unknown error object to extract information from
+ * @returns SupabaseErrorLike - Structured error information
+ */
 function errInfo(err: unknown): SupabaseErrorLike {
   if (typeof err === 'object' && err !== null) {
     const obj = err as Record<string, unknown>
@@ -25,22 +58,67 @@ function errInfo(err: unknown): SupabaseErrorLike {
   return { message: String(err) }
 }
 
-// Server-side Supabase client using service role (RLS bypass is acceptable here as we enforce Supabase auth and explicit filters)
+/**
+ * Server-side Supabase client with service role permissions
+ * 
+ * Uses service role to bypass RLS policies for server operations.
+ * This is secure because we enforce authentication checks and explicit
+ * user ID filters in all database queries.
+ */
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,   // Public Supabase URL
+  process.env.SUPABASE_SERVICE_ROLE!       // Service role key for elevated permissions
 )
 
+/**
+ * Type definition for order item input from client requests
+ * 
+ * Supports both product_id and productId for backward compatibility
+ * with different client implementations.
+ */
 type OrderItemInput = {
-  product_id?: string
-  productId?: string
-  quantity: number
-  price: number
+  product_id?: string   // Product ID (preferred field name)
+  productId?: string    // Alternative product ID field name
+  quantity: number      // Quantity of product ordered
+  price: number         // Client-provided price (will be validated server-side)
 }
 
+/**
+ * POST /api/orders - Create New Order
+ * 
+ * Creates a new order with comprehensive validation, user synchronization,
+ * and notification handling. This endpoint handles the complete order creation
+ * workflow from authentication to confirmation email.
+ * 
+ * Request Body:
+ * {
+ *   items: OrderItemInput[],           // Array of products and quantities
+ *   shipping_address?: string,         // Shipping address (optional if structured fields provided)
+ *   payment_method: string,            // Payment method identifier
+ *   currency?: string,                 // Currency code (default: 'TZS')
+ *   notes?: string,                    // Order notes/special instructions
+ *   // Optional structured delivery fields for profile sync:
+ *   contact_phone?: string,
+ *   address_line_1?: string,
+ *   city?: string,
+ *   email?: string,
+ *   place?: string,
+ *   first_name?: string,
+ *   last_name?: string,
+ *   country?: string
+ * }
+ * 
+ * Response:
+ * - 201: Order created successfully with order details
+ * - 400: Invalid request data or missing required fields
+ * - 401: User not authenticated
+ * - 409: Product not found or insufficient stock
+ * - 500: Server error during order creation
+ */
 export async function POST(req: Request) {
   console.log('=== ORDER CREATION START ===')
   try {
+    // Authenticate user - all order operations require authentication
     const user = await getUser()
     console.log('User authentication result:', user ? `User ID: ${user.id}` : 'No user found')
     if (!user) {
@@ -48,16 +126,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Parse and validate request body
     const body = await req.json()
     const {
-      items,
-      shipping_address,
-      payment_method,
-      currency = 'TZS',
-      notes
+      items,                      // Array of order items with product IDs and quantities
+      shipping_address,           // Complete shipping address string (optional)
+      payment_method,             // Payment method identifier
+      currency = 'TZS',          // Currency code (default: Tanzanian Shilling)
+      notes                       // Optional order notes or special instructions
     } = body
     
-    // Optional structured delivery fields from checkout for syncing user profile
+    /**
+     * Extract optional structured delivery fields from checkout form
+     * These fields are used for user profile synchronization and address management
+     */
     const contact_phone: string | undefined = body?.contact_phone
     const address_line_1_input: string | undefined = typeof body?.address_line_1 === 'string' ? body.address_line_1.trim() : undefined
     const city_input: string | undefined = typeof body?.city === 'string' ? body.city.trim() : undefined
@@ -66,6 +148,8 @@ export async function POST(req: Request) {
     const first_name_input: string | undefined = typeof body?.first_name === 'string' ? body.first_name.trim() : undefined
     const last_name_input: string | undefined = typeof body?.last_name === 'string' ? body.last_name.trim() : undefined
     const country_input: string | undefined = typeof body?.country === 'string' ? body.country.trim() : undefined
+    
+    // Use address_line_1 or fall back to place field for address composition
     const address_line_1_value = address_line_1_input || place_input
 
     console.log('Order request body:', { 
@@ -76,6 +160,7 @@ export async function POST(req: Request) {
       user_id: user.id 
     })
     
+    // Validate that order contains at least one item
     if (!items || !Array.isArray(items) || items.length === 0) {
       console.log('Order creation failed: No items provided')
       return NextResponse.json({ error: 'Items are required' }, { status: 400 })
@@ -345,6 +430,61 @@ export async function POST(req: Request) {
         ...item,
         product: validatedItems[index]
       }))
+    }
+
+    // Send order confirmation notification
+    try {
+      const customerName = userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : first_name_input && last_name_input ? `${first_name_input} ${last_name_input}` : 'Customer'
+
+      console.log('=== SENDING ORDER CONFIRMATION EMAIL ===')
+      console.log('Customer email:', emailValue)
+      console.log('Customer name:', customerName)
+      console.log('Order ID:', order.id)
+
+      // Import notification service directly to avoid external HTTP dependency
+      const { notifyOrderCreated, notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+      await notifyOrderCreated({
+        order_id: order.id,
+        customer_email: emailValue!,
+        customer_name: customerName || 'Customer',
+        total_amount: total_amount.toString(),
+        currency,
+        items: validatedItems.map(item => {
+          const product = productMap.get(item.product_id)
+          return {
+            name: product?.id || 'Product',  // Use product ID as name since we don't fetch names in the query
+            quantity: item.quantity,
+            price: item.price.toString()
+          }
+        }),
+        order_date: new Date().toLocaleDateString(),
+        payment_method,
+        shipping_address: shippingAddressStr
+      })
+      console.log('✅ Order confirmation email sent successfully')
+
+      // Send admin notification for all orders (including "Pay at Office")
+      // This ensures office payments get admin notifications just like mobile payments do via webhooks
+      console.log('=== SENDING ADMIN ORDER NOTIFICATION ===')
+      try {
+        await notifyAdminOrderCreated({
+          order_id: order.id,
+          customer_email: emailValue!,
+          customer_name: customerName || 'Customer',
+          total_amount: total_amount.toString(),
+          currency,
+          payment_method,
+          payment_status: 'pending', // Office payments start as pending
+          items_count: validatedItems.length
+        })
+        console.log('✅ Admin order notification sent successfully')
+      } catch (adminEmailError) {
+        console.error('❌ Failed to send admin order notification:', adminEmailError)
+        // Don't fail the order creation if admin email fails
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send order confirmation email:', emailError)
+      // Don't fail the order creation if email fails
     }
 
     console.log('=== ORDER CREATION SUCCESS ===', order.id)

@@ -106,19 +106,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           description: "Password reset email sent! Check your inbox."
         })
         setMode('signin')
-        if (error) {
-          toast({
-            title: 'Reset failed',
-            description: error.message,
-            variant: 'destructive'
-          })
-        } else {
-          toast({
-            title: 'Reset email sent',
-            description: 'Check your email for password reset instructions.'
-          })
-          handleClose()
-        }
+        handleClose()
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getUser } from '@/lib/supabase-server'
+// Dynamic import of notification service to avoid build issues
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,6 +109,33 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Get service details for notification
+    const { data: serviceData } = await supabase
+      .from('services')
+      .select('title')
+      .eq('id', service_id)
+      .single()
+
+    // Send booking confirmation notification
+    try {
+      // Import notification service dynamically to avoid build issues
+      const { notifyBookingCreated } = await import('@/lib/notifications/service')
+      
+      await notifyBookingCreated({
+        booking_id: data.id,
+        customer_email: contact_email,
+        customer_name,
+        service_name: serviceData?.title || 'Service',
+        preferred_date,
+        preferred_time,
+        description
+      })
+      console.log('Booking confirmation email sent successfully')
+    } catch (emailError) {
+      console.error('Failed to send booking confirmation email:', emailError)
+      // Don't fail the booking creation if email fails
     }
 
     return NextResponse.json({ booking: data }, { status: 201 })

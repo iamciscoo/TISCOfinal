@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
       'cart_abandonment',
       'welcome_email',
       'password_reset',
-      'shipping_notification',
       'delivery_confirmation',
       'review_request'
     ]

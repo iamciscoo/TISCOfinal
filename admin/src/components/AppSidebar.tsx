@@ -18,6 +18,7 @@ import {
   DollarSign,
   CalendarCheck,
   Mail,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,6 +60,11 @@ const items = [
     title: "Revenue",
     url: "/revenue",
     icon: DollarSign,
+  },
+  {
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
   },
 ];
 
@@ -288,6 +294,7 @@ const AppSidebar = () => {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {/* Notifications moved to Application group under Revenue */}
               <SidebarMenuItem>
                 <Sheet>
                   <SheetTrigger asChild>

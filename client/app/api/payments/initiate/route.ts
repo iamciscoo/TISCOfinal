@@ -116,6 +116,8 @@ export async function POST(req: NextRequest) {
       }, { status: 200 })
 
     } catch (error) {
+      console.error('Mobile payment initiation failed:', error)
+      
       // Update session as failed
       await supabase
         .from('payment_sessions')
@@ -125,6 +127,20 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id)
+
+      // Log the failure for debugging
+      try {
+        await supabase
+          .from('payment_logs')
+          .insert({
+            session_id: session.id,
+            event_type: 'payment_initiation_failed',
+            data: { error: (error as Error).message, stack: (error as Error).stack },
+            user_id: session.user_id
+          })
+      } catch {
+        // Don't fail if logging fails
+      }
 
       return NextResponse.json({ 
         error: 'Payment processing failed: ' + (error as Error).message 

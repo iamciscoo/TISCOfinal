@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
         currency,
         status: 'pending',
         payment_type: paymentMethod!.type,
-        provider: paymentMethod!.provider,
+        provider: paymentMethod!.provider || 'unknown',
         transaction_reference: cleanRef
       })
       .select()
