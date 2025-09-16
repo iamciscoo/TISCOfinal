@@ -6,7 +6,7 @@ import { revalidateTag, unstable_cache } from 'next/cache'
 // Server-side Supabase client using service role (same as main orders route)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE!
 )
 
 type Params = { params: Promise<{ id: string }> }

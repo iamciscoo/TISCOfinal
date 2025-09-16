@@ -89,7 +89,7 @@ export const normalizeEmail = (email: string): string => {
  */
 export const getSupabaseConfig = () => {
   const url = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-  const serviceKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY')
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE!
   const anonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
   
   return { url, serviceKey, anonKey }
