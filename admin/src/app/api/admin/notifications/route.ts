@@ -393,6 +393,65 @@ export async function DELETE(req: NextRequest) {
     const sb = await getSupabase()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
+    const bulk = searchParams.get('bulk')
+
+    // Handle bulk delete
+    if (bulk === 'true') {
+      const body = await req.json()
+      const ids = body?.ids as string[]
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return NextResponse.json({ error: 'ids array is required for bulk delete' }, { status: 400 })
+      }
+
+      if (ids.length > 100) {
+        return NextResponse.json({ error: 'Cannot delete more than 100 notifications at once' }, { status: 400 })
+      }
+
+      let deletedCount = 0
+      const errors: string[] = []
+
+      if (sb) {
+        // Try email_notifications table first
+        try {
+          const { error: emailErr, count } = await sb
+            .from('email_notifications')
+            .delete({ count: 'exact' })
+            .in('id', ids)
+          
+          if (!emailErr && count !== null) {
+            deletedCount += count
+          }
+        } catch (e: any) {
+          errors.push(`Email notifications: ${e.message}`)
+        }
+
+        // Try legacy notifications table for remaining IDs
+        if (deletedCount < ids.length) {
+          try {
+            const { error: legacyErr, count } = await sb
+              .from('notifications')
+              .delete({ count: 'exact' })
+              .in('id', ids)
+            
+            if (!legacyErr && count !== null) {
+              deletedCount += count
+            }
+          } catch (e: any) {
+            errors.push(`Legacy notifications: ${e.message}`)
+          }
+        }
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        deletedCount,
+        totalRequested: ids.length,
+        errors: errors.length > 0 ? errors : undefined
+      })
+    }
+
+    // Handle single delete
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     let deleted = false

@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw } from 'lucide-react'
+import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface NotificationRecord {
   id: string
@@ -59,6 +60,10 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<string>('all')
   const [eventFilter, setEventFilter] = useState<string>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  
+  // Bulk actions state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Recipients state
   type Recipient = { id: string; email: string; name?: string; is_active: boolean; created_at: string }
@@ -160,6 +165,58 @@ export default function NotificationsPage() {
     }
   }
 
+  const handleSelectAll = () => {
+    if (selectedIds.size === notifications.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(notifications.map(n => n.id)))
+    }
+  }
+
+  const handleSelectNotification = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) {
+      toast.error('No notifications selected')
+      return
+    }
+
+    const confirmed = confirm(`Are you sure you want to delete ${selectedIds.size} notification${selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/admin/notifications?bulk=true', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        toast.success(`Successfully deleted ${result.deletedCount} notification${result.deletedCount > 1 ? 's' : ''}`)
+        setSelectedIds(new Set())
+        refreshData()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to delete notifications')
+      }
+    } catch (error) {
+      console.error('Failed to delete notifications:', error)
+      toast.error('Failed to delete notifications')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
@@ -246,35 +303,80 @@ export default function NotificationsPage() {
         </TabsList>
 
         <TabsContent value="notifications" className="space-y-4">
-          {/* Filters */}
-          <div className="flex gap-4">
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Filters and Bulk Actions */}
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex gap-4">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                <SelectItem value="order_created">Order Created</SelectItem>
-                <SelectItem value="booking_created">Booking Created</SelectItem>
-                <SelectItem value="contact_message_received">Contact Message</SelectItem>
-                <SelectItem value="user_registered">User Registered</SelectItem>
-                <SelectItem value="payment_success">Payment Success</SelectItem>
-                <SelectItem value="payment_failed">Payment Failed</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by event" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectItem value="order_created">Order Created</SelectItem>
+                  <SelectItem value="booking_created">Booking Created</SelectItem>
+                  <SelectItem value="contact_message_received">Contact Message</SelectItem>
+                  <SelectItem value="user_registered">User Registered</SelectItem>
+                  <SelectItem value="payment_success">Payment Success</SelectItem>
+                  <SelectItem value="payment_failed">Payment Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bulk Actions */}
+            {notifications.length > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedIds.size === notifications.length && notifications.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium">
+                    Select All ({notifications.length})
+                  </span>
+                </div>
+                
+                {selectedIds.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {selectedIds.size} selected
+                    </span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Selected
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notifications List */}
@@ -290,7 +392,11 @@ export default function NotificationsPage() {
                 <Card key={notification.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedIds.has(notification.id)}
+                          onCheckedChange={() => handleSelectNotification(notification.id)}
+                        />
                         {statusIcons[notification.status]}
                         <CardTitle className="text-lg">{notification.subject}</CardTitle>
                       </div>
