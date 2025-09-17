@@ -11,7 +11,7 @@ export const createClient = () =>
 // Auth helper functions
 export const supabaseAuth = {
   // Sign up with email and password
-  async signUp(email: string, password: string, metadata?: Record<string, any>) {
+  async signUp(email: string, password: string, metadata?: Record<string, any>) { // eslint-disable-line @typescript-eslint/no-explicit-any
     const supabase = createClient()
     return await supabase.auth.signUp({
       email,
@@ -65,7 +65,7 @@ export const supabaseAuth = {
 }
 
 // Update user metadata
-export const updateUser = async (updates: { email?: string; data?: Record<string, any> }) => {
+export const updateUser = async (updates: { email?: string; data?: Record<string, any> }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
   const supabase = createClient()
   return await supabase.auth.updateUser(updates)
 }

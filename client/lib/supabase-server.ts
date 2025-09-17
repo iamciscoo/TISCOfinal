@@ -1,19 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { type User } from '@supabase/supabase-js'
+import { validateEnvironment } from './env-check'
 
 export const createClient = async () => {
   const cookieStore = await cookies()
+  const env = validateEnvironment()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabaseUrl,
+    env.supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
           try {
             cookieStore.set({ name, value, ...options })
           } catch {
@@ -22,7 +24,7 @@ export const createClient = async () => {
             // user sessions.
           }
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
           try {
             cookieStore.set({ name, value: '', ...options })
           } catch {

@@ -38,15 +38,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <AuthProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <link 
-            href="https://fonts.googleapis.com/css2?family=Chango&display=swap" 
-            rel="stylesheet"
-          />
-        </head>
-        <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Chango&display=swap" 
+          rel="stylesheet"
+        />
+      </head>
+      <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`}>
+        <AuthProvider>
           <CurrencyProvider>
             <AuthSync />
             <CartRealtime />
@@ -54,8 +54,8 @@ export default async function RootLayout({
             <WhatsAppFloat />
           </CurrencyProvider>
           <Toaster />
-        </body>
-      </html>
-    </AuthProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }
