@@ -1,26 +1,28 @@
-'use client'
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api-client'
-import type { Product } from '@/lib/types'
-import { ProductCard } from '@/components/shared/ProductCard'
+"use client";
+import { ProductCard } from "@/components/shared/ProductCard";
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api-client";
+import type { Product } from "@/lib/types";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export const FeaturedProducts = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    let isMounted = true
-    ;(async () => {
+    let isMounted = true;
+    (async () => {
       try {
-        const data = await api.getFeaturedProducts(9)
-        if (isMounted) setProducts(Array.isArray(data) ? data : [])
+        const data = await api.getFeaturedProducts(9);
+        if (isMounted) setProducts(Array.isArray(data) ? data : []);
       } catch (e) {
-        console.error('Failed to load featured products', e)
+        console.error("Failed to load featured products", e);
       }
-    })()
-    return () => { isMounted = false }
-  }, [])
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="pt-20 pb-4 bg-white">
@@ -31,7 +33,8 @@ export const FeaturedProducts = () => {
             Featured Products
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Discover our handpicked selection of top products.
+            We picked them, you love them, Products you’ll regret missing out
+            on.
           </p>
         </div>
 
@@ -40,7 +43,11 @@ export const FeaturedProducts = () => {
           <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
             {products.slice(0, 9).map((product) => (
               <div key={product.id} className="min-w-[78%] snap-start">
-                <ProductCard product={product} compact className="rounded-xl border border-gray-100" />
+                <ProductCard
+                  product={product}
+                  compact
+                  className="rounded-xl border border-gray-100"
+                />
               </div>
             ))}
           </div>
@@ -56,12 +63,10 @@ export const FeaturedProducts = () => {
         {/* View All Products Button */}
         <div className="text-center">
           <Button asChild variant="outline" size="lg" className="px-8">
-            <Link href="/products">
-              View All Products
-            </Link>
+            <Link href="/products">View All Products</Link>
           </Button>
         </div>
       </div>
     </section>
-  )
-}
+  );
+};

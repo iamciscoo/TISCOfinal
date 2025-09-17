@@ -53,7 +53,7 @@ export const supabaseAuth = {
   async resetPassword(email: string) {
     const supabase = createClient()
     return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
+      redirectTo: `${window.location.origin}/auth/reset-callback`
     })
   },
 

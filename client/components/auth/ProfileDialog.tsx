@@ -12,6 +12,7 @@ import { createClient as createSupabaseBrowserClient } from "@/lib/supabase-auth
 interface ProfileDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  isPasswordReset?: boolean
 }
 
 interface ProfileData {
@@ -21,7 +22,7 @@ interface ProfileData {
   phone: string
 }
 
-export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
+export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: ProfileDialogProps) {
   const { user, updateUser, updatePassword } = useAuth()
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(false)
@@ -159,10 +160,17 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Profile</DialogTitle>
-          <DialogDescription>Update your basic information. Changes sync to your account.</DialogDescription>
+          <DialogTitle>
+            {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
+          </DialogTitle>
+          <DialogDescription>
+            {isPasswordReset 
+              ? 'You\'ve been logged in successfully. Please set a new password to secure your account.'
+              : 'Update your basic information. Changes sync to your account.'
+            }
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3">
@@ -218,13 +226,33 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
           </div>
 
-          <div className="grid gap-2 pt-1">
-            <Label htmlFor="password">New password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" disabled={fetching || loading} />
+          <div className={`grid gap-2 pt-1 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
+            <Label htmlFor="password" className={isPasswordReset ? 'font-semibold text-blue-900' : ''}>
+              {isPasswordReset ? 'Set New Password' : 'New password'}
+            </Label>
+            <Input 
+              id="password" 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              placeholder="••••••••" 
+              disabled={fetching || loading}
+              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
+            />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm">Confirm password</Label>
-            <Input id="confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" disabled={fetching || loading} />
+          <div className={`grid gap-2 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
+            <Label htmlFor="confirm" className={isPasswordReset ? 'font-semibold text-blue-900' : ''}>
+              Confirm password
+            </Label>
+            <Input 
+              id="confirm" 
+              type="password" 
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)} 
+              placeholder="••••••••" 
+              disabled={fetching || loading}
+              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
+            />
           </div>
         </div>
 
