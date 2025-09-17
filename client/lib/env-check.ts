@@ -8,7 +8,18 @@ export function validateEnvironment() {
   const missing = requiredEnvVars.filter(envVar => !process.env[envVar])
   
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+    const errorMessage = `Missing required environment variables: ${missing.join(', ')}`
+    console.error('[ENV] ' + errorMessage)
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error(errorMessage)
+    } else {
+      // In production, log error but provide fallback to prevent crashes
+      console.error('[ENV] Using fallback environment configuration')
+      return {
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      }
+    }
   }
 
   return {

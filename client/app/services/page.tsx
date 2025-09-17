@@ -90,13 +90,26 @@ interface DbService {
 }
 
 async function getDbServices(): Promise<DbService[]> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-  const res = await fetch(`${baseUrl}/api/services?fresh=${Date.now()}`, { cache: 'no-store' })
-  if (!res.ok) return []
-  const j = await res.json().catch(() => ({ services: [] }))
-  return (j?.services || []) as DbService[]
+  try {
+    // Import server-side factory only when needed to avoid client-side issues
+    const { getServiceRoleClient } = await import('@/lib/supabase-factory')
+    const supabase = getServiceRoleClient()
+    
+    const { data: services, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.warn('Services fetch error:', error)
+      return []
+    }
+
+    return (services || []) as DbService[]
+  } catch (error) {
+    console.warn('Error fetching services:', error)
+    return []
+  }
 }
 
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ service?: string }> }) {
