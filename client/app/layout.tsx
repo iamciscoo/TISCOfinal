@@ -22,13 +22,16 @@ const geistMono = Geist_Mono({
 // The CSS variables are maintained for compatibility
 
 export const metadata: Metadata = {
-  title: "TISCOマーケット - Online Shop | Tanzania's Premier Online Marketplace",
-  description: "Tanzania's leading online marketplace for quality electronics, gadgets, and products. Shop with confidence across East Africa. Fast delivery, secure payments, and authentic products guaranteed.",
+  metadataBase: new URL('https://tiscomarket.store'),
+  title: "TISCOマーケット - Online Shop | Tanzania's Online Marketplace",
+  description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, and products. Shop with confidence across East Africa. Fast delivery, secure payments, and authentic products guaranteed.",
   keywords: [
+    "TISCO", "tisco market", "TISCOマーケット", "tiscomarket", "tisco online shop",
     "Tanzania online shop", "East Africa marketplace", "electronics Tanzania", 
     "online shopping Tanzania", "Dar es Salaam electronics", "Kenya online store",
     "Uganda electronics", "East Africa shopping", "mobile phones Tanzania",
-    "laptops Tanzania", "gaming Tanzania", "TISCO market", "tiscomarket"
+    "laptops Tanzania", "gaming Tanzania", "online store Tanzania", 
+    "e-commerce Tanzania", "shopping Tanzania", "buy online Tanzania"
   ],
   authors: [{ name: "TISCO Market" }],
   creator: "TISCO Market",
@@ -50,7 +53,7 @@ export const metadata: Metadata = {
     alternateLocale: ['sw_TZ', 'sw_KE'],
     url: 'https://tiscomarket.store',
     siteName: 'TISCOマーケット - Online Shop',
-    title: 'TISCOマーケット - Tanzania\'s Premier Online Marketplace',
+    title: 'TISCOマーケット - Tanzania\'s Online Marketplace',
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
     images: [
       {
@@ -63,7 +66,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TISCOマーケット - Tanzania\'s Premier Online Marketplace',
+    title: 'TISCOマーケット - Tanzania\'s Online Marketplace',
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
     images: ['/logo-email.png'],
     creator: '@tiscomarket',
@@ -105,10 +108,11 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Favicon */}
+        {/* Favicon - ICO first for better compatibility */}
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="32x32" />
-        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" sizes="180x180" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         
         {/* Fonts */}
         <link 
@@ -125,7 +129,41 @@ export default async function RootLayout({
         <meta name="msapplication-TileColor" content="#0066CC" />
         <meta name="theme-color" content="#0066CC" />
         
-        {/* Structured Data */}
+        {/* Structured Data - Organization */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "TISCO Market",
+              "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
+              "url": "https://tiscomarket.store",
+              "logo": "https://tiscomarket.store/logo-email.png",
+              "description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Dar es Salaam",
+                "addressRegion": "Dar es Salaam",
+                "postalCode": "12345",
+                "addressCountry": "TZ"
+              },
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": -6.792354,
+                "longitude": 39.208328
+              },
+              "areaServed": ["Tanzania", "Kenya", "Uganda", "East Africa"],
+              "sameAs": [
+                "https://twitter.com/tiscomarket",
+                "https://facebook.com/tiscomarket",
+                "https://instagram.com/tiscomarket"
+              ]
+            })
+          }}
+        />
+        
+        {/* Structured Data - WebSite */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -133,16 +171,12 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "TISCOマーケット - Online Shop",
-              "alternateName": "TISCO Market",
+              "alternateName": ["TISCO Market", "TISCO", "Tisco Market", "tiscomarket"],
               "url": "https://tiscomarket.store",
-              "description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.",
+              "description": "Tanzania's online marketplace for quality electronics, gadgets, and products across East Africa.",
               "publisher": {
                 "@type": "Organization",
-                "name": "TISCO Market",
-                "logo": {
-                  "@type": "ImageObject",
-                  "url": "https://tiscomarket.store/logo-email.png"
-                }
+                "name": "TISCO Market"
               },
               "potentialAction": {
                 "@type": "SearchAction",
@@ -151,12 +185,43 @@ export default async function RootLayout({
                   "urlTemplate": "https://tiscomarket.store/search?q={search_term_string}"
                 },
                 "query-input": "required name=search_term_string"
+              }
+            })
+          }}
+        />
+        
+        {/* Structured Data - Local Business */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": "TISCO Market",
+              "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
+              "description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.",
+              "url": "https://tiscomarket.store",
+              "telephone": "+255758787168",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "Dar es Salaam",
+                "addressLocality": "Dar es Salaam",
+                "addressRegion": "Dar es Salaam Region",
+                "postalCode": "12345",
+                "addressCountry": "Tanzania"
               },
-              "sameAs": [
-                "https://twitter.com/tiscomarket",
-                "https://facebook.com/tiscomarket",
-                "https://instagram.com/tiscomarket"
-              ]
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": -6.792354,
+                "longitude": 39.208328
+              },
+              "openingHours": "Mo-Su 00:00-23:59",
+              "areaServed": {
+                "@type": "Country",
+                "name": "Tanzania"
+              },
+              "servedCuisine": "Electronics and Technology Products",
+              "priceRange": "$$"
             })
           }}
         />

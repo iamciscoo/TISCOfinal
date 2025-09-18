@@ -87,6 +87,9 @@ export default function CartPage() {
               <p className="text-gray-600 mb-8 text-center max-w-md">
                 Looks like you haven&apos;t added any items to your cart yet. 
                 Start shopping to fill it up!
+                <br></br>
+                <br></br>
+                Check your account for your orders and bookings
               </p>
               <Button asChild size="lg" className="px-8">
                 <Link href="/products">

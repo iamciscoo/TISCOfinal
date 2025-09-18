@@ -25,6 +25,7 @@ import {
 import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { useAuth } from '@/hooks/use-auth'
+import { OrderProcessingLoader } from '@/components/OrderProcessingLoader'
 
 type CheckoutStep = 'shipping' | 'payment' | 'review'
 
@@ -634,6 +635,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
+      
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6 sm:mb-8 overflow-x-auto">
@@ -1138,7 +1140,16 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            {/* Order Processing Loader Card */}
+            {isProcessing && (
+              <OrderProcessingLoader 
+                isVisible={isProcessing}
+                message={paymentData.method === 'mobile' ? "Processing Payment & Order" : "Creating Your Order"}
+                submessage="Please check your account and emails for status updates."
+              />
+            )}
+            
             <Card className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-auto">
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>

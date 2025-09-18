@@ -14,13 +14,24 @@ Disallow: /_next/
 Disallow: /account/
 Disallow: /checkout/
 Disallow: /cart
+Disallow: /auth/
+Disallow: /*?*
 
-# Allow crawling of important pages
+# Allow crawling of important SEO pages
 Allow: /products
+Allow: /products/*
 Allow: /services
+Allow: /services/*
 Allow: /about
 Allow: /contact
 Allow: /search
+Allow: /deals
+Allow: /faq
+Allow: /delivery-guide
+
+# Specifically allow search engines to crawl TISCO-related content
+Allow: /search?q=tisco*
+Allow: /search?q=TISCO*
 
 # Host
 Host: https://tiscomarket.store
