@@ -1,4 +1,26 @@
+import { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'About Us | TISCOマーケット - Tanzania Online Marketplace',
+  description: 'Learn about TISCO Market, Tanzania trusted online marketplace since 2025. Our mission: help people get quality products quickly at reasonable prices across East Africa.',
+  keywords: [
+    'about TISCO market', 'Tanzania online marketplace', 'East Africa ecommerce',
+    'online shopping Tanzania history', 'TISCO company info', 'Tanzania electronics company',
+    'reliable online store Tanzania', 'trusted marketplace East Africa'
+  ],
+  openGraph: {
+    title: 'About TISCO Market - Tanzania Premier Online Marketplace',
+    description: 'Learn about Tanzania trusted online marketplace. Quality products, fast delivery, secure payments across East Africa since 2025.',
+    url: 'https://tiscomarket.store/about',
+    images: ['/logo-email.png'],
+  },
+  twitter: {
+    title: 'About TISCO Market - Tanzania Premier Online Marketplace',
+    description: 'Learn about Tanzania trusted online marketplace. Quality products, fast delivery, secure payments across East Africa since 2025.',
+    images: ['/logo-email.png'],
+  },
+}
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { MobileSlider } from '@/components/ui/mobile-slider'

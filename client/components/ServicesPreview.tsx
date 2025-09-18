@@ -1,42 +1,43 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { 
-  Cpu, 
-  Monitor, 
-  Settings,
-  ArrowRight,
-  CheckCircle
-} from 'lucide-react'
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowRight, CheckCircle, Cpu, Monitor, Settings } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 const services = [
   {
     icon: Cpu,
-    title: 'Custom PC Building',
-    description: 'Professional custom PC assembly and configuration tailored to your needs',
-    features: ['Component consultation', 'Professional assembly', '1-year warranty'],
-    image: '/services/pcbuild.jpeg'
+    title: "Custom PC Building",
+    description:
+      "Professional custom PC assembly and configuration tailored to your needs",
+    features: [
+      "Component consultation",
+      "Professional assembly",
+      "1-year warranty",
+    ],
+    image: "/services/pcbuild.jpeg",
   },
   {
     icon: Monitor,
-    title: 'Office Space Setup',
-    description: 'Complete workstation and office space configuration for productivity',
-    features: ['Ergonomic design', 'Multi-monitor setup', 'Cable management'],
-    image: '/services/desksetup.jpeg'
+    title: "Office Space Setup",
+    description:
+      "Complete workstation and office space configuration for productivity",
+    features: ["Ergonomic design", "Multi-monitor setup", "Cable management"],
+    image: "/services/desksetup.jpeg",
   },
   {
     icon: Settings,
-    title: 'Software Installation',
-    description: 'Expert installation and configuration of operating systems and software',
-    features: ['OS installation', 'Software licensing', 'System optimization'],
-    image: '/services/software.jpeg'
-  }
-]
+    title: "Software Installation",
+    description:
+      "Expert installation and configuration of operating systems and software",
+    features: ["OS installation", "Software licensing", "System optimization"],
+    image: "/services/software.jpeg",
+  },
+];
 
 // Reusable service card to avoid duplication across mobile slider and desktop grid
-const ServiceCard = ({ service }: { service: typeof services[number] }) => {
-  const IconComponent = service.icon
+const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
+  const IconComponent = service.icon;
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       {/* Service Image */}
@@ -49,7 +50,7 @@ const ServiceCard = ({ service }: { service: typeof services[number] }) => {
           className="object-cover transition-transform duration-300 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        
+
         {/* Icon Overlay */}
         <div className="absolute top-3 right-3">
           <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors">
@@ -62,14 +63,15 @@ const ServiceCard = ({ service }: { service: typeof services[number] }) => {
         <h3 className="font-semibold text-lg text-gray-900 mb-3">
           {service.title}
         </h3>
-        
-        <p className="text-gray-600 mb-4 text-sm">
-          {service.description}
-        </p>
-        
+
+        <p className="text-gray-600 mb-4 text-sm">{service.description}</p>
+
         <div className="space-y-2 mb-4">
           {service.features.map((feature, featureIndex) => (
-            <div key={featureIndex} className="flex items-center justify-center gap-2 text-xs text-gray-500">
+            <div
+              key={featureIndex}
+              className="flex items-center justify-center gap-2 text-xs text-gray-500"
+            >
               <CheckCircle className="h-3 w-3 text-green-600" />
               <span>{feature}</span>
             </div>
@@ -77,8 +79,8 @@ const ServiceCard = ({ service }: { service: typeof services[number] }) => {
         </div>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
 
 export const ServicesPreview = () => {
   return (
@@ -87,10 +89,10 @@ export const ServicesPreview = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Professional Tech Services
+            Our Services
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Expert computer services from custom PC building to complete office setups and software installation
+            We handle the builds, the installs, and the headaches.
           </p>
         </div>
 
@@ -133,9 +135,10 @@ export const ServicesPreview = () => {
               Ready to Transform Your Tech Setup?
             </h3>
             <p className="text-gray-600 mb-6">
-              Get professional tech services tailored to your specific needs. From custom builds to complete setups, we&apos;ve got you covered.
+              Get professional tech services tailored to your specific needs.
+              From custom builds to complete setups, we&apos;ve got you covered.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg">
                 <Link href="/services">
@@ -143,16 +146,14 @@ export const ServicesPreview = () => {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
-              
+
               <Button variant="outline" size="lg" asChild>
-                <Link href="/contact">
-                  Contact Us
-                </Link>
+                <Link href="/contact">Contact Us</Link>
               </Button>
             </div>
           </div>
         </div>
       </div>
     </section>
-  )
-}
+  );
+};

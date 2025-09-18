@@ -1,8 +1,15 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { NewsletterForm } from '@/components/NewsletterForm'
+import { NewsletterForm } from "@/components/NewsletterForm";
+import { Button } from "@/components/ui/button";
+import {
+  Facebook,
+  Instagram,
+  Mail,
+  MapPin,
+  Phone,
+  Twitter,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export const Footer = () => {
   return (
@@ -20,21 +27,37 @@ export const Footer = () => {
                 height={32}
                 className="w-8 h-8"
               />
-              <span className="text-lg sm:text-xl font-bold font-chango">TISCOマーケット</span>
+              <span className="text-lg sm:text-xl font-bold font-chango">
+                TISCOマーケット
+              </span>
             </div>
             <p className="text-gray-400 text-sm leading-snug sm:leading-relaxed">
               No Bullshit. No Excuses. No Fluff. Just What You Need.
               <br className="hidden sm:block" />
-              <span className="hidden sm:inline">Quality products delivered fast without the corporate runaround.</span>
+              <span className="hidden sm:inline">
+                Quality products delivered fast without the corporate runaround.
+              </span>
             </p>
             <div className="flex space-x-3 sm:space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white p-2"
+              >
                 <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white p-2"
+              >
                 <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white p-2"
+              >
                 <Instagram className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
@@ -45,27 +68,42 @@ export const Footer = () => {
             <h3 className="text-base sm:text-lg font-semibold">Quick Links</h3>
             <ul className="space-y-1 sm:space-y-2">
               <li>
-                <Link href="/products" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/products"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Shop
                 </Link>
               </li>
               <li>
-                <Link href="/services" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/services"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Services
                 </Link>
               </li>
               <li>
-                <Link href="/deals" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/deals"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Special Deals
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/about"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   About
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/contact"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Contact
                 </Link>
               </li>
@@ -74,20 +112,31 @@ export const Footer = () => {
 
           {/* Customer Service */}
           <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-base sm:text-lg font-semibold">Customer Service</h3>
+            <h3 className="text-base sm:text-lg font-semibold">
+              Customer Service
+            </h3>
             <ul className="space-y-1 sm:space-y-2">
               <li>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/contact"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Contact Us
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/faq"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/delivery-guide" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
+                <Link
+                  href="/delivery-guide"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                >
                   Delivery Guide
                 </Link>
               </li>
@@ -96,11 +145,13 @@ export const Footer = () => {
 
           {/* Newsletter & Contact */}
           <div className="col-span-2 md:col-span-1 space-y-3 sm:space-y-4">
-            <h3 className="text-base sm:text-lg font-semibold">Stay Connected</h3>
+            <h3 className="text-base sm:text-lg font-semibold">
+              Stay Connected
+            </h3>
             <p className="text-gray-400 text-xs sm:text-sm">
               Subscribe to get special offers, free giveaways, and updates.
             </p>
-            
+
             {/* Newsletter Signup */}
             <NewsletterForm />
 
@@ -112,7 +163,7 @@ export const Footer = () => {
               </div>
               <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-400">
                 <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>+255 XXX XXX XXX</span>
+                <span>+255 748 624 684</span>
               </div>
               <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-400">
                 <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -129,13 +180,22 @@ export const Footer = () => {
               © 2024 TISCO Market. All rights reserved.
             </div>
             <div className="flex space-x-4 sm:space-x-6">
-              <Link href="/privacy" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
+              <Link
+                href="/privacy"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+              >
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
+              <Link
+                href="/terms"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+              >
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
+              <Link
+                href="/cookies"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+              >
                 Cookie Policy
               </Link>
             </div>
@@ -143,5 +203,5 @@ export const Footer = () => {
         </div>
       </div>
     </footer>
-  )
-}
+  );
+};
