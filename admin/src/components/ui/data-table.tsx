@@ -55,7 +55,7 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [deleting, setDeleting] = React.useState(false)
-  const { handleDelete } = useAdminActions()
+  const { handleBulkDelete } = useAdminActions()
 
   const table = useReactTable({
     data,
@@ -90,11 +90,11 @@ export function DataTable<TData, TValue>({
 
     setDeleting(true)
     try {
-      const results = await Promise.allSettled(
-        ids.map((id) => handleDelete(`${deleteApiBase}/${id}`, entityName))
-      )
-      const successful = results.filter((r) => r.status === 'fulfilled').length
-      if (successful === ids.length) setRowSelection({})
+      const urls = ids.map((id) => `${deleteApiBase}/${id}`)
+      const result = await handleBulkDelete(urls, entityName)
+      if (result.success) {
+        setRowSelection({})
+      }
     } finally {
       setDeleting(false)
     }

@@ -1,22 +1,33 @@
 /**
  * Shared utility function for combining CSS classes
  * Used across both client and admin applications
- * Note: This requires clsx and tailwind-merge to be installed in the consuming project
+ * 
+ * WARNING: This is a placeholder implementation.
+ * Each consuming project should implement their own cn function using clsx and tailwind-merge.
+ * 
+ * Example implementation:
+ * ```typescript
+ * import { clsx, type ClassValue } from "clsx"
+ * import { twMerge } from "tailwind-merge"
+ * 
+ * export function cn(...inputs: ClassValue[]) {
+ *   return twMerge(clsx(inputs))
+ * }
+ * ```
  */
-export function cn(...inputs: any[]) {
-  // This will be implemented by the consuming project
-  // Each project should import clsx and tailwind-merge locally
-  throw new Error('cn function must be implemented in the consuming project')
+export function cn(...inputs: any[]): string {
+  console.warn('Using fallback cn function. Implement proper cn function with clsx and tailwind-merge in your project.')
+  return inputs.filter(Boolean).join(' ')
 }
 
 /**
  * Environment variable validation and access
  */
 export const getEnvVar = (key: string, fallback?: string): string => {
-  if (typeof process === 'undefined') {
+  if (typeof globalThis.process === 'undefined') {
     throw new Error('getEnvVar can only be used in Node.js environment')
   }
-  const value = process.env[key]
+  const value = globalThis.process.env[key]
   if (!value && !fallback) {
     throw new Error(`Missing required environment variable: ${key}`)
   }
@@ -89,7 +100,7 @@ export const normalizeEmail = (email: string): string => {
  */
 export const getSupabaseConfig = () => {
   const url = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE!
+  const serviceKey = globalThis.process?.env?.SUPABASE_SERVICE_ROLE!
   const anonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
   
   return { url, serviceKey, anonKey }

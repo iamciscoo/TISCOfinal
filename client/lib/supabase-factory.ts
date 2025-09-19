@@ -22,6 +22,15 @@ export const getServiceRoleClient = () => {
         auth: {
           autoRefreshToken: false,
           persistSession: false
+        },
+        db: {
+          schema: undefined
+        },
+        global: {
+          headers: {
+            'Connection': 'keep-alive',
+            'Keep-Alive': 'timeout=5, max=1000'
+          }
         }
       }
     )

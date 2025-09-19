@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="TISCO BIMI Logo">
-  <!-- Simple BIMI-friendly SVG: square artboard, no fonts, shapes only -->
-  <rect x="0" y="0" width="128" height="128" rx="24" fill="#2563eb"/>
-  <!-- Geometric 'T' using rectangles (no fonts) -->
-  <rect x="28" y="32" width="72" height="16" rx="4" fill="#ffffff"/>
-  <rect x="56" y="48" width="16" height="56" rx="4" fill="#ffffff"/>
-</svg>

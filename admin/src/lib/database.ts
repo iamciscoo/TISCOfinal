@@ -19,11 +19,18 @@ export async function getProducts(limit?: number): Promise<Product[]> {
     .select(`
       *,
       category:categories(*),
-      product_images(*)
+      product_images(
+        id,
+        url,
+        is_main,
+        sort_order,
+        created_at
+      )
     `)
+    .order('is_featured', { ascending: false })  // Featured products first for better performance
     .order('created_at', { ascending: false })
+    .order('is_main', { ascending: false, foreignTable: 'product_images' })  // Main images first
     .order('sort_order', { ascending: true, foreignTable: 'product_images' })
-    .order('created_at', { ascending: true, foreignTable: 'product_images' })
 
   if (limit) {
     query.limit(limit)
@@ -40,11 +47,22 @@ export async function getProductById(id: string | number): Promise<Product | nul
     .from('products')
     .select(`
       *,
-      category:categories(*),
-      product_images(*)
+      category:categories(
+        id,
+        name,
+        description
+      ),
+      product_images(
+        id,
+        url,
+        is_main,
+        sort_order,
+        created_at,
+        path
+      )
     `)
+    .order('is_main', { ascending: false, foreignTable: 'product_images' })  // Main images first
     .order('sort_order', { ascending: true, foreignTable: 'product_images' })
-    .order('created_at', { ascending: true, foreignTable: 'product_images' })
     .eq('id', id)
     .single()
 
@@ -182,16 +200,69 @@ export async function updateUser(id: string, userData: Partial<User>): Promise<U
 export async function getUsersByIds(ids: string[]): Promise<Record<string, User>> {
   const unique = Array.from(new Set((ids || []).filter(Boolean))) as string[]
   if (unique.length === 0) return {}
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .in('id', unique)
-  if (error) throw error
-  const map: Record<string, User> = {}
-  for (const u of data || []) {
-    map[String((u as any).id)] = u
+  
+  console.log('getUsersByIds: Fetching users for IDs:', unique)
+  
+  try {
+    // Use the service role client to bypass RLS - only select columns that exist
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, created_at, phone, updated_at')
+      .in('id', unique)
+      
+    if (error) {
+      console.error('Direct query failed:', error.message, error.code)
+      
+      // Fall back to manual query for each ID (sometimes IN clause has issues)
+      const fallbackResults: any[] = []
+      for (const userId of unique) {
+        try {
+          const { data: singleUser, error: singleError } = await supabase
+            .from('users')
+            .select('id, email, first_name, last_name, created_at, phone, updated_at')
+            .eq('id', userId)
+            .single()
+          
+          if (singleUser && !singleError) {
+            fallbackResults.push(singleUser)
+          }
+        } catch (e) {
+          console.warn('Failed to fetch single user:', userId)
+        }
+      }
+      
+      if (fallbackResults.length > 0) {
+        const map: Record<string, User> = {}
+        for (const u of fallbackResults) {
+          map[String(u.id)] = u as User
+        }
+        console.log(`getUsersByIds: Fallback success - loaded ${Object.keys(map).length} users`)
+        return map
+      }
+      
+      return {}
+    }
+    
+    const map: Record<string, User> = {}
+    for (const u of data || []) {
+      // Map the data with default values for missing fields
+      map[String(u.id)] = {
+        ...u,
+        is_admin: false, // Default since column doesn't exist
+        is_active: true  // Default since column doesn't exist
+      } as User
+    }
+    
+    console.log(`getUsersByIds: Direct query success - loaded ${Object.keys(map).length} users:`)
+    Object.values(map).forEach(user => {
+      console.log(`  - ${user.first_name} ${user.last_name} (${user.email})`)
+    })
+    
+    return map
+  } catch (error) {
+    console.error('getUsersByIds unexpected error:', error)
+    return {}
   }
-  return map
 }
 
 // Order Functions
@@ -201,8 +272,15 @@ export async function getOrders(limit?: number): Promise<Order[]> {
     .select(`
       *,
       order_items:order_items(
-        *,
-        product:products(*)
+        id,
+        quantity,
+        price,
+        product:products(
+          id,
+          name,
+          price,
+          image_url
+        )
       )
     `)
     .order('created_at', { ascending: false })
@@ -225,7 +303,7 @@ export async function getOrders(limit?: number): Promise<Order[]> {
 
   const orders = (data || []) as any[]
 
-  // Attach user information without relying on a DB FK between orders.user_id and users.id
+  // Batch user fetching for better performance
   const userIds = Array.from(new Set(orders.map(o => o?.user_id).filter(Boolean))) as string[]
   let usersById: Record<string, User> = {}
   if (userIds.length > 0) {

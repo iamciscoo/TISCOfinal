@@ -11,20 +11,38 @@ export async function GET(req: Request) {
     const limitNum = limitParam ? Number(limitParam) : undefined;
     const limit = typeof limitNum === 'number' && !Number.isNaN(limitNum)
       ? Math.max(1, Math.min(50, limitNum))
-      : undefined;
+      : 20; // Default limit for better performance
 
     let query = supabase
       .from("products")
       .select(`
-        *,
+        id,
+        name,
+        description,
+        price,
+        image_url,
+        stock_quantity,
+        is_featured,
+        is_on_sale,
+        sale_price,
+        is_deal,
+        deal_price,
+        original_price,
+        rating,
+        reviews_count,
+        created_at,
+        updated_at,
         product_images(
+          id,
           url,
           is_main,
-          sort_order
+          sort_order,
+          created_at
         ),
         categories(
           id,
-          name
+          name,
+          description
         )
       `);
 
@@ -33,20 +51,23 @@ export async function GET(req: Request) {
       query = query.ilike('name', like);
     }
 
+    // Optimize ordering for better performance
     query = query
+      .order("is_featured", { ascending: false })  // Featured products first
       .order("created_at", { ascending: false })
       .order('is_main', { ascending: false, foreignTable: 'product_images' })
-      .order('sort_order', { ascending: true, foreignTable: 'product_images' })
-      .order('created_at', { ascending: true, foreignTable: 'product_images' });
+      .order('sort_order', { ascending: true, foreignTable: 'product_images' });
 
-    if (limit) {
-      query = query.limit(limit);
-    }
+    query = query.limit(limit);
 
     const { data, error } = await query;
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ data }, { status: 200 });
+    
+    // Add cache headers for better performance
+    const response = NextResponse.json({ data }, { status: 200 });
+    response.headers.set('Cache-Control', 'private, max-age=300'); // 5 minutes cache
+    return response;
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -56,7 +77,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price, is_active } = body ?? {};
+    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
 
     if (!name || !description || typeof price !== "number" || !category_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -70,8 +91,6 @@ export async function POST(req: Request) {
       stock_quantity: typeof stock_quantity === "number" ? stock_quantity : 0,
       is_featured: !!is_featured,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
-      // visibility
-      is_active: is_active === false ? false : true,
       // deal/sale fields
       is_deal: !!is_deal,
       original_price: typeof original_price === 'number' ? original_price : null,

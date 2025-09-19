@@ -293,6 +293,8 @@ export default function ReviewsManagement() {
               columns={reviewColumns} 
               data={reviews}
               searchKey="productName"
+              entityName="Review"
+              deleteApiBase="/api/reviews"
             />
           )}
         </CardContent>

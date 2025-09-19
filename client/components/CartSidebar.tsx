@@ -147,7 +147,10 @@ export const CartSidebar = () => {
                   <div className="pt-4">
                     <Button
                       variant="outline"
-                      onClick={clearCart}
+                      onClick={() => {
+                        // Clear local cart only (cart is now client-side only)
+                        clearCart()
+                      }}
                       className="w-full text-red-600 border-red-200 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

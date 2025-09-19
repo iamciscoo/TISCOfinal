@@ -114,13 +114,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleDelete = async (imageId: string) => {
+    if (!imageId || imageId === 'undefined' || imageId === 'null') {
+      toast({ title: 'Delete failed', description: 'Invalid image ID', variant: 'destructive' });
+      return;
+    }
+    
     try {
       const res = await fetch(`/api/product-images/${imageId}`, { method: 'DELETE' });
+      
       if (!res.ok && res.status !== 204) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j?.error || 'Failed to delete image');
       }
       await reloadProduct();
+      toast({ title: 'Success', description: 'Image deleted successfully' });
     } catch (e: any) {
       toast({ title: 'Delete failed', description: e?.message || 'Could not delete image', variant: 'destructive' });
     }
@@ -242,7 +249,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {images.map((img, index) => (
-                <div key={img.id} className="border rounded-lg p-3 space-y-3 bg-white shadow-sm">
+                <div key={img.id || `image-${index}`} className="border rounded-lg p-3 space-y-3 bg-white shadow-sm">
                   <div className="relative w-full h-32 bg-gray-50 rounded-md overflow-hidden">
                     <Image 
                       src={img.url} 

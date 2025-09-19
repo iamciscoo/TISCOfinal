@@ -30,12 +30,11 @@ interface CartStore {
   // State
   items: CartItem[]                    // Array of cart items
   isOpen: boolean                      // Cart sidebar visibility
-  _lastServerHydrate?: number          // Timestamp of last server sync (not persisted)
   hasHydrated: boolean                 // True when persisted state has been loaded
   setHasHydrated: (v: boolean) => void // Setter for hydration flag
-  
-  // Server synchronization
-  setItemsFromServer: (items: CartItem[]) => void
+  // Identify which authenticated user this persisted cart belongs to
+  ownerId: string | null
+  setOwnerId: (id: string | null) => void
   
   // Cart operations
   addItem: (product: {
@@ -66,19 +65,14 @@ export const useCartStore = create<CartStore>()(
       // Initial state
       items: [],
       isOpen: false,
-      _lastServerHydrate: 0,
       hasHydrated: false,
+      ownerId: null,
 
       // Internal: mark store as hydrated from persistence
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
-      /**
-       * Replace local cart items with server data (for synchronization)
-       * @param items - Cart items from server
-       */
-      setItemsFromServer: (items) => {
-        set({ items, _lastServerHydrate: Date.now() })
-      },
+      // Track current owner of this cart (to prevent cross-account merge)
+      setOwnerId: (id) => set({ ownerId: id }),
 
       /**
        * Add a product to the cart or update quantity if already exists
@@ -182,7 +176,7 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'tisco-cart-storage',
       // Only persist cart items, not UI state or server sync timestamps
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items, ownerId: state.ownerId }),
       // Merge strategy for handling storage version changes
       merge: (persistedState, currentState) => ({
         ...currentState,

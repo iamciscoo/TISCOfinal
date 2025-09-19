@@ -53,8 +53,8 @@ export interface User {
   phone?: string
   date_of_birth?: string
   avatar_url?: string
-  is_admin: boolean
-  is_active: boolean
+  is_admin?: boolean
+  is_active?: boolean
   last_login?: string
   created_at: string
   updated_at: string

@@ -247,7 +247,12 @@ export default function MessagesPage() {
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           ) : (
-            <DataTable columns={columns} data={messages} />
+            <DataTable 
+              columns={columns} 
+              data={messages} 
+              entityName="Message"
+              deleteApiBase="/api/messages"
+            />
           )}
         </CardContent>
       </Card>

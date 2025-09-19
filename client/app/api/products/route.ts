@@ -111,12 +111,10 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
       q = q.eq('is_featured', true)                                        // Show only featured products
     }
 
-    // Apply multi-level ordering for consistent results
+    // Apply optimized ordering for consistent results and better cache utilization
     q = q
       .order('is_featured', { ascending: false })                          // Featured products first
       .order('created_at', { ascending: false })                           // Newest products second
-      .order('is_main', { foreignTable: 'product_images', ascending: false }) // Main images first
-      .order('sort_order', { foreignTable: 'product_images', ascending: true }) // Then by sort order
 
     return q // Return configured query builder
   }
@@ -166,6 +164,10 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
  * Error Handling:
  * - 400: Invalid query parameters
  * - 500: Database or server errors
+ * 
+ * Caching:
+ * - Products are cached for 10 minutes to reduce database load
+ * - Cache key includes all query parameters for accurate caching
  */
 export const GET = withMiddleware(
   withValidation(getProductsSchema),    // Validate and parse query parameters
@@ -174,6 +176,13 @@ export const GET = withMiddleware(
   // Execute optimized product query with validated parameters
   const products = await getProductsQuery(validatedData)
   
-  // Return successful response with products data
-  return Response.json(createSuccessResponse(products))
+  // Return successful response with products data and cache headers
+  const response = Response.json(createSuccessResponse(products))
+  
+  // Add cache headers for CDN and browser caching
+  response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=300')
+  response.headers.set('CDN-Cache-Control', 'public, s-maxage=600')
+  response.headers.set('Vary', 'Accept-Encoding')
+  
+  return response
 })

@@ -1,209 +1,35 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { useCartStore, type CartItem } from '@/lib/store'
+import { useCartStore } from '@/lib/store'
 
-// Sync local cart changes to server for signed-in users.
-// Avoid loops by skipping immediately after server-driven hydrations.
+/**
+ * Simplified cart persistence hook
+ * Only handles local storage persistence when user authentication changes
+ * All cart management is now client-side only
+ */
 export function useCartSync() {
-  const { user, loading } = useAuth()
-  const isLoaded = !loading
-  const isSignedIn = !!user
-  const items = useCartStore((s) => s.items)
-  const lastServerHydrate = useCartStore((s) => s._lastServerHydrate)
-  const hasHydrated = useCartStore((s) => s.hasHydrated)
+  const { user } = useAuth()
+  const setOwnerId = useCartStore((s) => s.setOwnerId)
+  const clearCart = useCartStore((s) => s.clearCart)
 
-  // Map of productId -> { id: server cart row id, quantity }
-  const serverMapRef = useRef<Map<string, { id: string; quantity: number }>>(new Map())
-  const lastHydrateTsRef = useRef<number>(0)
-  const syncingRef = useRef(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const signInAtRef = useRef<number>(0)
-  const GRACE_MS = 1500
-
-  // Initialize baseline from server
+  // Track cart ownership to prevent cross-user cart contamination
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
-      // Clear baseline when signed out or not loaded
-      serverMapRef.current.clear()
-      lastHydrateTsRef.current = 0
-      signInAtRef.current = 0
-      return
-    }
-
-    // Record sign-in time to allow AuthSync to merge first
-    if (signInAtRef.current === 0) {
-      signInAtRef.current = Date.now()
-    }
-
-    const init = async () => {
-      try {
-        const res = await fetch('/api/cart', { cache: 'no-store' })
-        if (!res.ok) {
-          if (res.status === 401) {
-            console.debug('[cart-sync] not authenticated, skipping cart sync')
-            return
-          }
-          return
-        }
-        const payload = await res.json()
-        const map = new Map<string, { id: string; quantity: number }>()
-        const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])
-        for (const it of arr) {
-          map.set(String(it.product_id), { id: String(it.id), quantity: Number(it.quantity) || 0 })
-        }
-        serverMapRef.current = map
-      } catch (e) {
-        console.debug('[cart-sync] init baseline failed', e)
+    const currentOwnerId = useCartStore.getState().ownerId
+    
+    if (user?.id) {
+      // User signed in
+      if (currentOwnerId && currentOwnerId !== user.id) {
+        // Different user signed in - clear previous user's cart
+        clearCart()
       }
+      // Associate cart with this user
+      setOwnerId(user.id)
+    } else {
+      // User signed out - keep owner ID to preserve cart for same user returning
+      // Only clear owner if we want to allow guest cart accumulation
+      // setOwnerId(null) - commented out to preserve cart for returning user
     }
-
-    init()
-  }, [isLoaded, isSignedIn])
-
-  // Main sync effect: watch local items and push diffs
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
-    // Wait until local storage has hydrated to avoid pushing empty local state
-    if (!hasHydrated) return
-
-    // If this change was triggered by server hydration, skip outbound sync
-    if (lastServerHydrate && lastServerHydrate > (lastHydrateTsRef.current || 0)) {
-      lastHydrateTsRef.current = lastServerHydrate
-      // Refresh baseline to align with server state after SSE hydration
-      ;(async () => {
-        try {
-          const res = await fetch('/api/cart', { cache: 'no-store' })
-          if (!res.ok) {
-            if (res.status === 401) {
-              console.debug('[cart-sync] not authenticated, skipping baseline refresh')
-              return
-            }
-            return
-          }
-          const payload = await res.json()
-          const map = new Map<string, { id: string; quantity: number }>()
-          const arr: Array<{ id: string; product_id: string; quantity: number }> = (payload?.data?.items ?? payload?.items ?? [])
-          for (const it of arr) {
-            map.set(String(it.product_id), { id: String(it.id), quantity: Number(it.quantity) || 0 })
-          }
-          serverMapRef.current = map
-          console.debug('[cart-sync] refreshed baseline after server hydrate')
-        } catch {}
-      })()
-      return
-    }
-
-    // Within grace window after sign-in, skip outbound sync to let AuthSync merge first
-    if (signInAtRef.current && Date.now() - signInAtRef.current < GRACE_MS) {
-      return
-    }
-
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      if (syncingRef.current) return
-      syncingRef.current = true
-      try {
-        const localMap = new Map<string, { item: CartItem; quantity: number }>()
-        for (const it of items) localMap.set(it.productId, { item: it, quantity: it.quantity })
-
-        const serverMap = serverMapRef.current
-
-        // Compute diffs
-        const toAdd: Array<{ productId: string; quantity: number }> = []
-        const toUpdate: Array<{ serverId: string; productId: string; quantity: number }> = []
-        const toDelete: Array<{ serverId: string; productId: string }> = []
-
-        // Add/Update
-        for (const [productId, { quantity }] of localMap.entries()) {
-          const server = serverMap.get(productId)
-          if (!server) {
-            toAdd.push({ productId, quantity })
-          } else if (server.quantity !== quantity) {
-            toUpdate.push({ serverId: server.id, productId, quantity })
-          }
-        }
-        // Delete
-        for (const [productId, server] of serverMap.entries()) {
-          if (!localMap.has(productId)) {
-            toDelete.push({ serverId: server.id, productId })
-          }
-        }
-
-        // Execute diffs (sequential to keep it simple and ordered)
-        for (const a of toAdd) {
-          try {
-            const res = await fetch('/api/cart', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ product_id: a.productId, quantity: a.quantity })
-            })
-            if (res.ok) {
-              const payload = await res.json()
-              const newItem = (payload?.data?.item ?? payload?.item) as { id: string; product_id: string; quantity: number } | undefined
-              if (newItem) {
-                serverMap.set(String(newItem.product_id), { id: String(newItem.id), quantity: Number(newItem.quantity) || 0 })
-              } else {
-                console.warn('[cart-sync] POST succeeded but response shape missing item', payload)
-              }
-            } else if (res.status === 401) {
-              break
-            } else {
-              console.warn('[cart-sync] add failed', a)
-            }
-          } catch (e) {
-            console.warn('[cart-sync] add error', a, e)
-          }
-        }
-
-        for (const u of toUpdate) {
-          try {
-            const res = await fetch(`/api/cart/${encodeURIComponent(u.serverId)}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ quantity: u.quantity })
-            })
-            if (res.ok) {
-              serverMap.set(u.productId, { id: u.serverId, quantity: u.quantity })
-            } else if (res.status === 401) {
-              break
-            } else {
-              console.warn('[cart-sync] update failed', u)
-            }
-          } catch (e) {
-            console.warn('[cart-sync] update error', u, e)
-          }
-        }
-
-        for (const d of toDelete) {
-          try {
-            const res = await fetch(`/api/cart/${encodeURIComponent(d.serverId)}`, { method: 'DELETE' })
-            if (res.ok) {
-              serverMap.delete(d.productId)
-            } else if (res.status === 401) {
-              break
-            } else {
-              console.warn('[cart-sync] delete failed', d)
-            }
-          } catch (e) {
-            console.warn('[cart-sync] delete error', d, e)
-          }
-        }
-
-        // Keep the ref up to date
-        serverMapRef.current = serverMap
-        console.debug('[cart-sync] sync complete', { adds: toAdd.length, updates: toUpdate.length, deletes: toDelete.length })
-      } finally {
-        syncingRef.current = false
-      }
-    }, 250)
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-        debounceRef.current = null
-      }
-    }
-  }, [isLoaded, isSignedIn, hasHydrated, items, lastServerHydrate])
+  }, [user?.id, setOwnerId, clearCart])
 }

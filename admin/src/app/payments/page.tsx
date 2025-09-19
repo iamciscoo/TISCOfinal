@@ -11,7 +11,11 @@ const getData = async (): Promise<Payment[]> => {
       usersMap = await getUsersByIds(userIds);
     } catch (err) {
       // Log but don't fail payments list if users lookup fails
-      console.error('Error fetching users for payments:', err);
+      console.error('Error fetching users for payments:', {
+        message: err instanceof Error ? err.message : String(err),
+        error: err,
+        userIds: userIds.length
+      });
     }
 
     return orders.map((o) => {

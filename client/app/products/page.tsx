@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -53,6 +53,7 @@ function ProductsContent() {
   const [sortBy, setSortBy] = useState('name')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isManualSearch, setIsManualSearch] = useState(false) // Track manual search input
 
   // Fetch data
   useEffect(() => {
@@ -161,17 +162,21 @@ function ProductsContent() {
       return
     }
 
-    // Last resort: use the term as a search keyword
-    console.debug('[Products] No category match. Falling back to search term.')
-    setSearchTerm(val)
-  }, [searchParams, categories])
+    // Last resort: use the term as a search keyword only if not manually searching
+    if (!isManualSearch) {
+      console.debug('[Products] No category match. Falling back to search term.')
+      setSearchTerm(val)
+    }
+  }, [searchParams, categories, isManualSearch])
 
-  // Initialize search keyword from URL (?query=) only if no category param or category=all
+  // Initialize search keyword from URL (?query=) only if no category param or category=all and not manually searching
   useEffect(() => {
     const q = searchParams?.get('query')
     const cat = searchParams?.get('category')
-    if (q && (!cat || String(cat).toLowerCase() === 'all')) setSearchTerm(String(q))
-  }, [searchParams])
+    if (q && (!cat || String(cat).toLowerCase() === 'all') && !isManualSearch) {
+      setSearchTerm(String(q))
+    }
+  }, [searchParams, isManualSearch])
 
   // Removed columns tracking; pagination is fixed to 4 rows for stability
 
@@ -225,7 +230,20 @@ function ProductsContent() {
 
   const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
 
-  const FiltersPanel = () => (
+  // Stable handlers to prevent input focus loss
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsManualSearch(true)
+    setSearchTerm(e.target.value)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm('')
+    setSelectedCategory('all')
+    setSortBy('name')
+    setIsManualSearch(false)
+  }, [])
+
+  const FiltersPanel = useMemo(() => (
     <>
       {/* Search */}
       <div className="mb-6">
@@ -235,7 +253,7 @@ function ProductsContent() {
           <Input
             placeholder="Search products..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-10"
           />
         </div>
@@ -280,16 +298,12 @@ function ProductsContent() {
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => {
-          setSearchTerm('')
-          setSelectedCategory('all')
-          setSortBy('name')
-        }}
+        onClick={handleClearFilters}
       >
         Clear All Filters
       </Button>
     </>
-  )
+  ), [searchTerm, selectedCategory, sortBy, categories, handleSearchChange, handleClearFilters])
 
   if (loading) {
     return (
@@ -350,7 +364,7 @@ function ProductsContent() {
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
                 <div className="px-4 pb-4 overflow-y-auto">
-                  <FiltersPanel />
+                  {FiltersPanel}
                 </div>
               </SheetContent>
             </Sheet>
@@ -381,7 +395,7 @@ function ProductsContent() {
                     <Filter className="h-5 w-5" />
                     Filters
                   </h3>
-                  <FiltersPanel />
+                  {FiltersPanel}
                 </CardContent>
               </Card>
               

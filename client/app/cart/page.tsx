@@ -69,7 +69,10 @@ export default function CartPage() {
           {displayItems.length > 0 && (
             <Button
               variant="outline"
-              onClick={clearCart}
+              onClick={() => {
+                // Clear local cart only (cart is now client-side only)
+                clearCart()
+              }}
               className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
             >
               <Trash2 className="h-4 w-4 mr-2" />

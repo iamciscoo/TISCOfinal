@@ -155,10 +155,52 @@ export function useAdminActions() {
     return result
   }
 
+  const handleBulkDelete = async (
+    urls: string[],
+    entityName: string,
+    onSuccess?: () => void
+  ) => {
+    // No confirmation dialog here - should be handled by the calling component
+    const results = await Promise.allSettled(
+      urls.map((url) => apiCall(url, { method: 'DELETE' }))
+    )
+
+    const successful = results.filter((r) => r.status === 'fulfilled' && (r.value as ApiResponse).success).length
+    const failed = results.length - successful
+
+    if (successful === results.length) {
+      toast({
+        title: 'Success',
+        description: `All ${successful} ${entityName}(s) deleted successfully`,
+      })
+    } else if (successful > 0) {
+      toast({
+        title: 'Partial Success',
+        description: `${successful} ${entityName}(s) deleted successfully, ${failed} failed`,
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title: 'Error',
+        description: `Failed to delete ${entityName}(s)`,
+        variant: 'destructive',
+      })
+    }
+
+    if (onSuccess) {
+      onSuccess()
+    } else {
+      router.refresh()
+    }
+
+    return { success: successful > 0, successful, failed }
+  }
+
   return {
     handleCreate,
     handleUpdate,
     handleDelete,
+    handleBulkDelete,
     apiCall,
   }
 }

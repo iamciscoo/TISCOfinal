@@ -16,9 +16,11 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .select(`
         *,
         product_images(
+          id,
           url,
           is_main,
-          sort_order
+          sort_order,
+          created_at
         ),
         categories(
           id,
@@ -58,8 +60,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       "is_deal",
       "original_price",
       "deal_price",
-      "is_active",
       "image_url",
+      "is_on_sale",
+      "sale_price",
     ] as const;
 
     const updates: Record<string, unknown> = {};

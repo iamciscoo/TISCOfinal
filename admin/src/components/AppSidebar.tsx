@@ -12,7 +12,6 @@ import {
   Package,
   CreditCard,
   LogOut,
-  ShoppingCart,
   Star,
   Wrench,
   DollarSign,
@@ -204,14 +203,6 @@ const AppSidebar = () => {
                   <Link href="/payments">
                     <CreditCard />
                     {!isCollapsed && <span data-collapse-hide>All Payments</span>}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Cart Management">
-                  <Link href="/cart">
-                    <ShoppingCart />
-                    {!isCollapsed && <span data-collapse-hide>Cart Management</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

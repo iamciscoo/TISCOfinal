@@ -56,7 +56,7 @@ const TOP_TZ_CITIES = [
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { items, clearCart, getTotalPrice, getTotalItems } = useCartStore()
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
@@ -135,6 +135,12 @@ export default function CheckoutPage() {
   // Strict TZ mobile phone format enforcement for payment: +255 7XX XXX XXX (also allow +255 6XX ...)
   const TZ_PHONE_PATTERN = /^\+255 [67]\d{2} \d{3} \d{3}$/
 
+  // Allow free typing during input, only format on blur/submission
+  const allowFreePhoneInput = (raw: string) => {
+    // Just clean basic formatting but allow natural typing
+    return raw.replace(/[^\d\+\-\s\(\)]/g, '').slice(0, 20)
+  }
+
   const formatTzPhoneInput = (raw: string) => {
     // Allow users to input in any format, but normalize and format for display
     const digits = (raw || '').replace(/\D/g, '')
@@ -184,6 +190,74 @@ export default function CheckoutPage() {
   }
 
   const isValidTzPhone = (value: string) => TZ_PHONE_PATTERN.test(value)
+
+  // Check if phone input is definitely invalid (not just incomplete)
+  const isDefinitelyInvalidPhone = (value: string) => {
+    if (!value || value.length <= 3) return false // Too short to determine
+    
+    const digits = value.replace(/\D/g, '')
+    if (!digits) return false
+    
+    // If too long (more than 12 digits), definitely invalid
+    if (digits.length > 12) return true
+    
+    // If has decent length but wrong prefixes, definitely invalid
+    if (digits.length >= 6) {
+      // Check various normalized formats
+      let normalized = digits
+      if (digits.startsWith('0') && digits.length >= 10) {
+        normalized = '255' + digits.slice(1)
+      } else if (digits.length === 9 && (digits[0] === '6' || digits[0] === '7')) {
+        normalized = '255' + digits
+      } else if (digits.startsWith('2550')) {
+        normalized = '255' + digits.slice(4)
+      } else if (!digits.startsWith('255') && digits.length >= 9) {
+        normalized = '255' + digits
+      }
+      
+      // If normalized and has enough digits, check if valid TZ format
+      if (normalized.length >= 10) {
+        // Must start with 255 and 4th digit must be 6 or 7
+        if (!normalized.startsWith('255') || (normalized[3] !== '6' && normalized[3] !== '7')) {
+          return true
+        }
+      }
+    }
+    
+    return false
+  }
+
+  // Check if phone is short after normalization (doesn't have exactly 9 digits after 255)
+  const isPhoneShortAfterNormalization = (value: string) => {
+    if (!value) return false
+    
+    const digits = value.replace(/\D/g, '')
+    if (!digits) return false
+    
+    // Normalize the phone number using the same logic as formatTzPhoneInput
+    let normalized = digits
+    if (digits.startsWith('0') && digits.length >= 10) {
+      normalized = '255' + digits.slice(1)
+    } else if (digits.length === 9 && (digits[0] === '6' || digits[0] === '7')) {
+      normalized = '255' + digits
+    } else if (digits.startsWith('2550') && digits.length >= 13) {
+      normalized = '255' + digits.slice(4)
+    } else if (digits.startsWith('255')) {
+      normalized = digits
+    } else if (digits.length <= 9 && (digits[0] === '6' || digits[0] === '7' || digits[0] === '0')) {
+      if (digits[0] === '0') {
+        normalized = '255' + digits.slice(1)
+      } else {
+        normalized = '255' + digits
+      }
+    } else {
+      normalized = '255' + digits
+    }
+    
+    // After normalization, should have exactly 12 digits (255 + 9 local digits)
+    // If less than 12, it's short
+    return normalized.length < 12
+  }
 
   // Normalize formatted TZ mobile to digits-only E.164 without plus sign (e.g., 2557XXXXXXXXX)
   // Assumes UI already enforces +255 6/7XX XXX XXX, so stripping non-digits is sufficient.
@@ -362,7 +436,6 @@ export default function CheckoutPage() {
 
         toast({ title: 'Order Placed!', description: `Order #${orderResult.order.id.slice(0, 8)} created. You will be contacted for delivery arrangements.` })
         clearCart()
-        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
         router.push('/account/orders')
       } else {
         // Mobile money payment flow - initiate payment first, create order only after success
@@ -418,7 +491,7 @@ export default function CheckoutPage() {
             // Clear local cart to avoid client/server cart divergence and re-syncs.
             toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
             clearCart()
-            void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+            // Cart is now client-side only, no server cleanup needed
             try { sessionStorage.setItem('orders:refresh', '1') } catch {}
             router.push('/account/orders?justPaid=1')
             return
@@ -583,7 +656,7 @@ export default function CheckoutPage() {
         // Clear local cart to prevent stale local items from re-syncing.
         toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
         clearCart()
-        void fetch('/api/cart', { method: 'DELETE' }).catch(() => {})
+        // Cart is now client-side only, no server cleanup needed
         try { sessionStorage.setItem('orders:refresh', '1') } catch {}
         router.push('/account/orders?justPaid=1')
       }
@@ -611,6 +684,7 @@ export default function CheckoutPage() {
           !!shippingData.lastName &&
           !!shippingData.email &&
           !!shippingData.phone &&
+          isValidTzPhone(shippingData.phone) &&
           (shippingData.deliveryMethod === 'pickup' || (
             !!shippingData.city &&
             (shippingData.city !== 'Other' || !!shippingData.otherCity) &&
@@ -747,20 +821,19 @@ export default function CheckoutPage() {
                         id="phone"
                         type="tel"
                         inputMode="numeric"
-                        placeholder="7xx xxx xxx"
+                        placeholder="07xx xxx xxx"
                         value={shippingData.phone}
-                        onChange={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
+                        onChange={(e) => setShippingData(prev => ({ ...prev, phone: allowFreePhoneInput(e.target.value) }))}
                         onBlur={(e) => setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(e.target.value) }))}
                         autoComplete="tel"
                         pattern={'^\\+255 [67]\\d{2} \\d{3} \\d{3}$'}
-                        maxLength={16}
+                        maxLength={20}
                         title="Enter your TZ mobile number in any format - we'll format it automatically"
-                        aria-invalid={shippingData.phone !== '' && !isValidTzPhone(shippingData.phone)}
+                        aria-invalid={isDefinitelyInvalidPhone(shippingData.phone) || isPhoneShortAfterNormalization(shippingData.phone)}
+                        className={(isDefinitelyInvalidPhone(shippingData.phone) || isPhoneShortAfterNormalization(shippingData.phone)) ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                         required
                       />
-                      {!isValidTzPhone(shippingData.phone) && shippingData.phone !== '' && shippingData.phone.length > 3 && (
-                        <p className="mt-1 text-xs text-red-600">Format must be +255 7XX XXX XXX (or +255 6XX XXX XXX)</p>
-                      )}
+                      <p className="mt-1 text-xs text-gray-500">Should be reachable for delivery coordination (may differ from payment number)</p>
                     </div>
                   </div>
 
@@ -947,21 +1020,19 @@ export default function CheckoutPage() {
                           inputMode="numeric"
                           placeholder="7xx xxx xxx"
                           value={paymentData.mobilePhone}
-                          onChange={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
+                          onChange={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: allowFreePhoneInput(e.target.value) }))}
                           onBlur={(e) => setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(e.target.value) }))}
                           autoComplete="tel"
                           pattern={'^\\+255 [67]\\d{2} \\d{3} \\d{3}$'}
-                          maxLength={16}
+                          maxLength={20}
                           title="Enter your TZ mobile number in any format - we'll format it automatically"
-                          aria-invalid={paymentData.mobilePhone !== '' && !isValidTzPhone(paymentData.mobilePhone)}
+                          aria-invalid={isDefinitelyInvalidPhone(paymentData.mobilePhone) || isPhoneShortAfterNormalization(paymentData.mobilePhone)}
+                          className={(isDefinitelyInvalidPhone(paymentData.mobilePhone) || isPhoneShortAfterNormalization(paymentData.mobilePhone)) ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                         />
-                        {!isValidTzPhone(paymentData.mobilePhone) && paymentData.mobilePhone !== '' && paymentData.mobilePhone.length > 3 && (
-                          <p className="mt-1 text-xs text-red-600">Format must be +255 7XX XXX XXX (or +255 6XX XXX XXX)</p>
-                        )}
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 15 seconds.
+                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 15 seconds. Double check if the phone number is correct!!
                         </p>
                         <p className="text-xs text-gray-500">
                           • You have 15 seconds to approve the payment on your phone<br/>
@@ -1181,6 +1252,20 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </CardContent>
+            </Card>
+            <Card className="relative overflow-hidden p-0 border-0 shadow-none bg-transparent h-60 sm:h-65">
+              <Image
+                src="/images/deliverypic.png"
+                alt="Fast, reliable delivery across Tanzania"
+                fill
+                sizes="(min-width: 1024px) 320px, 100vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" aria-hidden="true" />
+              <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
+                <p className="text-sm sm:text-base font-semibold">Quick delivery. Best Service.</p>
+                <p className="text-xs text-gray-200/90">We deliver your product safely and on time.</p>
+              </div>
             </Card>
           </div>
         </div>

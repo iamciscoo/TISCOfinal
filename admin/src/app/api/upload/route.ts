@@ -35,12 +35,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    console.log(`Processing ${files.length} file(s) for product ${productId || 'unknown'}`);
+
     // Validate all files
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: `Item ${i + 1} is not a valid file` }, { status: 400 });
+      }
+      
       const validationError = validateImage(file);
       if (validationError) {
-        return NextResponse.json({ error: validationError }, { status: 400 });
+        return NextResponse.json({ error: `File ${i + 1} (${file.name}): ${validationError}` }, { status: 400 });
       }
+      
+      console.log(`File ${i + 1}: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     }
 
     const BUCKET = 'product-images';
@@ -48,39 +57,72 @@ export async function POST(req: Request) {
     // Ensure bucket exists; create if missing
     const { data: buckets, error: listErr } = await supabase.storage.listBuckets();
     if (listErr) {
-      return NextResponse.json({ error: listErr.message }, { status: 500 });
+      console.error('Failed to list buckets:', listErr);
+      return NextResponse.json({ error: `Storage error: ${listErr.message}` }, { status: 500 });
     }
+    
     const hasBucket = Array.isArray(buckets) && buckets.some((b) => b.name === BUCKET);
     if (!hasBucket) {
-      const { error: createErr } = await supabase.storage.createBucket(BUCKET, { public: true });
+      console.log(`Creating bucket: ${BUCKET}`);
+      const { error: createErr } = await supabase.storage.createBucket(BUCKET, { 
+        public: true,
+        allowedMimeTypes: ALLOWED_TYPES,
+        fileSizeLimit: MAX_FILE_SIZE
+      });
       if (createErr) {
-        return NextResponse.json({ error: createErr.message }, { status: 500 });
+        console.error('Failed to create bucket:', createErr);
+        return NextResponse.json({ error: `Failed to create storage bucket: ${createErr.message}` }, { status: 500 });
       }
+      console.log(`Bucket ${BUCKET} created successfully`);
     }
 
     const sanitize = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const prefix = productId ? `products/${productId}` : 'products';
 
     const uploaded: { path: string; url: string }[] = [];
-    for (const f of files) {
-      const filePath = `${prefix}/${Date.now()}-${sanitize(f.name)}`;
-      const { error: uploadErr } = await supabase.storage
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const timestamp = Date.now();
+      const filePath = `${prefix}/${timestamp}-${i}-${sanitize(f.name)}`;
+      
+      console.log(`Uploading file ${i + 1}/${files.length}: ${f.name} to ${filePath}`);
+      
+      const { data: uploadData, error: uploadErr } = await supabase.storage
         .from(BUCKET)
-        .upload(filePath, f);
+        .upload(filePath, f, {
+          cacheControl: '3600',
+          upsert: false
+        });
+        
       if (uploadErr) {
-        return NextResponse.json({ error: uploadErr.message }, { status: 500 });
+        console.error(`Upload failed for ${f.name}:`, uploadErr);
+        return NextResponse.json({ 
+          error: `Failed to upload ${f.name}: ${uploadErr.message}` 
+        }, { status: 500 });
       }
+      
       const { data: publicUrlData } = supabase.storage
         .from(BUCKET)
         .getPublicUrl(filePath);
+        
+      if (!publicUrlData?.publicUrl) {
+        console.error(`Failed to get public URL for ${filePath}`);
+        return NextResponse.json({ 
+          error: `Failed to get public URL for ${f.name}` 
+        }, { status: 500 });
+      }
+      
       uploaded.push({ path: filePath, url: publicUrlData.publicUrl });
+      console.log(`Successfully uploaded: ${f.name} -> ${publicUrlData.publicUrl}`);
     }
 
     // Optionally create DB records when productId is provided
     const createdImages: Array<{ id?: string; url: string; path: string; is_main?: boolean; sort_order?: number }> = [];
     if (productId) {
+      console.log(`Creating database records for product ${productId}`);
       const isMain = String(isMainParam).toLowerCase() === 'true';
       const sortOrder = Number.isFinite(parseInt(orderParam)) ? parseInt(orderParam) : 0;
+      
       try {
         const rows = uploaded.map((u, idx) => ({
           product_id: productId,
@@ -89,40 +131,78 @@ export async function POST(req: Request) {
           is_main: isMain && idx === 0, // apply is_main to first file only if set
           sort_order: sortOrder + idx,
         }));
+        
+        console.log(`Inserting ${rows.length} image record(s)`);
         const { data: inserted, error: insertErr } = await supabase
           .from('product_images')
           .insert(rows)
           .select();
-        if (!insertErr && inserted) createdImages.push(...inserted);
-
-        // If any inserted image marked main, sync products.image_url
-        const main = inserted?.find((r: { is_main?: boolean }) => r.is_main);
-        if (main) {
-          await supabase
-            .from('products')
-            .update({ image_url: main.url })
-            .eq('id', productId);
+          
+        if (insertErr) {
+          console.error('Database insert error:', insertErr);
+          return NextResponse.json({ 
+            error: `Failed to save image records: ${insertErr.message}` 
+          }, { status: 500 });
+        }
+        
+        if (inserted && inserted.length > 0) {
+          createdImages.push(...inserted);
+          console.log(`Successfully inserted ${inserted.length} image record(s)`);
+          
+          // If any inserted image marked main, sync products.image_url
+          const main = inserted.find((r: { is_main?: boolean }) => r.is_main);
+          if (main) {
+            console.log(`Updating product ${productId} main image URL to: ${main.url}`);
+            const { error: updateErr } = await supabase
+              .from('products')
+              .update({ image_url: main.url })
+              .eq('id', productId);
+              
+            if (updateErr) {
+              console.error('Failed to update product main image:', updateErr);
+              // Don't fail the entire operation for this
+            }
+          }
         }
       } catch (e) {
-        // Swallow DB errors and still return uploaded URLs
-            console.error('Upload DB insert error:', e instanceof Error ? e.message : e);
+        console.error('Upload DB operation error:', e instanceof Error ? e.message : e);
+        return NextResponse.json({ 
+          error: `Database operation failed: ${e instanceof Error ? e.message : 'Unknown error'}` 
+        }, { status: 500 });
       }
     }
 
+    console.log(`Upload operation completed successfully. Files: ${uploaded.length}, DB records: ${createdImages.length}`);
+    
     // Backward-compatible response: if single file, return { url }, else { urls }
     if (uploaded.length === 1) {
       return NextResponse.json(
-        { url: uploaded[0].url, image: createdImages[0], images: createdImages },
+        { 
+          success: true,
+          url: uploaded[0].url, 
+          image: createdImages[0], 
+          images: createdImages,
+          message: `Successfully uploaded ${uploaded.length} image(s)`
+        },
         { status: 200 }
       );
     }
     return NextResponse.json(
-      { urls: uploaded.map(u => u.url), images: createdImages },
+      { 
+        success: true,
+        urls: uploaded.map(u => u.url), 
+        images: createdImages,
+        message: `Successfully uploaded ${uploaded.length} image(s)`
+      },
       { status: 200 }
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Upload route error:', e);
+    return NextResponse.json({ 
+      success: false,
+      error: message 
+    }, { status: 500 });
   }
 }
 

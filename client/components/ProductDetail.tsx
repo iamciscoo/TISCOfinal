@@ -257,7 +257,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           {/* Thumbnail Images */}
           {productImages.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
-              {productImages.map((image, index) => (
+              {productImages.slice(0, 4).map((image, index) => (
                 <div
                   key={index}
                   className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 hover:shadow-md ${
@@ -283,6 +283,15 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                   </div>
                 </div>
               ))}
+              
+              {/* More Images Indicator */}
+              {productImages.length > 4 && (
+                <div className="col-span-4 text-center mt-2">
+                  <span className="text-sm text-gray-500">
+                    +{productImages.length - 4} more images (use navigation arrows)
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

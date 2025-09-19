@@ -65,8 +65,8 @@ const AddProductPage = () => {
       stock_quantity: 0,
       is_featured: false,
       is_deal: false,
-      original_price: undefined,
-      deal_price: undefined,
+      original_price: 0,
+      deal_price: 0,
     },
   });
 
@@ -108,28 +108,62 @@ const AddProductPage = () => {
       }
 
       const newProduct = json?.data;
+      let imageUploadSuccess = true;
+      let uploadMessage = "Product created successfully";
+      
       // Upload images after product creation, if provided
       if (newProduct?.id && images && images.length > 0) {
-        const formData = new FormData();
-        formData.append('productId', newProduct.id.toString());
-        formData.append('is_main', 'true'); // first file becomes main
-        Array.from(images as FileList).forEach((file) => {
-          formData.append('files', file);
-        });
+        try {
+          const formData = new FormData();
+          formData.append('productId', newProduct.id.toString());
+          formData.append('is_main', 'true'); // first file becomes main
+          
+          // Ensure we're working with actual File objects
+          const fileList = Array.from(images as FileList).filter(file => file instanceof File);
+          
+          if (fileList.length === 0) {
+            throw new Error('No valid image files selected');
+          }
+          
+          fileList.forEach((file) => {
+            formData.append('files', file);
+          });
 
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-        const uploadJson = await uploadRes.json().catch(() => ({}));
-        if (!uploadRes.ok) {
-          console.error('Image upload failed:', uploadJson?.error);
-          // Continue without failing product creation
-          toast({ title: 'Warning', description: 'Product created, but image upload failed.', variant: 'destructive' });
+          const uploadRes = await fetch('/api/upload', { 
+            method: 'POST', 
+            body: formData 
+          });
+          
+          const uploadJson = await uploadRes.json().catch(() => ({ error: 'Invalid response from upload server' }));
+          
+          if (!uploadRes.ok) {
+            throw new Error(uploadJson?.error || `Upload failed with status ${uploadRes.status}`);
+          }
+          
+          console.log('Images uploaded successfully:', uploadJson);
+          uploadMessage = `Product created successfully with ${fileList.length} image(s)`;
+          
+        } catch (uploadError: any) {
+          console.error('Image upload failed:', uploadError);
+          imageUploadSuccess = false;
+          
+          // Show warning but don't fail product creation
+          toast({ 
+            title: 'Warning', 
+            description: `Product created, but image upload failed: ${uploadError.message}`,
+            variant: 'destructive' 
+          });
         }
       }
 
-      toast({
-        title: "Success",
-        description: "Product created successfully",
-      });
+      // Only show success if images uploaded successfully or no images were provided
+      if (imageUploadSuccess) {
+        toast({
+          title: "Success",
+          description: uploadMessage,
+        });
+      }
+      
       router.push('/products');
     } catch (error: any) {
       console.error('Error creating product:', error);
@@ -235,9 +269,45 @@ const AddProductPage = () => {
               <FormItem>
                 <FormLabel>Product Images</FormLabel>
                 <FormControl>
-                  <Input type="file" accept="image/*" multiple onChange={(e) => field.onChange(e.target.files)} />
+                  <Input 
+                    type="file" 
+                    accept="image/jpeg,image/png,image/webp,image/gif" 
+                    multiple 
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files && files.length > 0) {
+                        // Validate file types and sizes before setting
+                        const validFiles = Array.from(files).filter(file => {
+                          const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
+                          const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
+                          return isValidType && isValidSize;
+                        });
+                        
+                        if (validFiles.length !== files.length) {
+                          toast({
+                            title: "Warning",
+                            description: `${files.length - validFiles.length} file(s) were skipped (invalid type or size > 5MB)`,
+                            variant: "destructive"
+                          });
+                        }
+                        
+                        if (validFiles.length > 0) {
+                          // Convert back to FileList-like object
+                          const dt = new DataTransfer();
+                          validFiles.forEach(file => dt.items.add(file));
+                          field.onChange(dt.files);
+                        } else {
+                          field.onChange(null);
+                        }
+                      } else {
+                        field.onChange(null);
+                      }
+                    }}
+                  />
                 </FormControl>
-                <FormDescription>Upload one or more images. The first will be set as the main image.</FormDescription>
+                <FormDescription>
+                  Upload one or more images (JPEG, PNG, WebP, GIF). Max 5MB each. The first will be set as the main image.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

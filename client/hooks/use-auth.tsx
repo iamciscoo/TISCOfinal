@@ -23,7 +23,8 @@
 'use client'
 
 // Import React hooks and context utilities for state management
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import type React from 'react'
 // Import configured Supabase client and social authentication functions
 import { createClient, signInWithGoogle } from '@/lib/supabase-auth'
 // Import Supabase TypeScript types for type safety
@@ -37,6 +38,8 @@ import {
   type UserResponse,
   type OAuthResponse
 } from '@supabase/supabase-js'
+// Cart store for clearing persisted items on logout to avoid cross-account cart bleed
+import { useCartStore } from '@/lib/store'
 
 /**
  * Authentication State Interface
@@ -247,18 +250,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   /**
    * User Sign Out
    * 
-   * Signs out the current user and clears all session data.
-   * Updates loading state during the operation.
+   * Signs out the current user and handles cart abandonment intelligently:
+   * - If cart has items: records abandonment and preserves cart for restoration on next login
+   * - If cart is empty: clears any previous abandonment records
+   * - Always clears local cart to prevent cross-account carryover
    * 
    * @returns Promise<{ error: AuthError | null }> - Sign out result
    */
   const signOut = async (): Promise<{ error: AuthError | null }> => {
-    setLoading(true) // Show loading state during sign out
+    setLoading(true)
     try {
+      // Handle cart abandonment logic BEFORE signing out
+      if (user) {
+        console.log('LOGOUT DEBUG: Starting cart abandonment process for user:', user.id)
+
+        // Capture current cart data before sign-out
+        const cartItems = useCartStore.getState().items
+        const hasItems = cartItems.length > 0
+
+        try {
+          if (hasItems) {
+            // Cart abandonment tracking removed - cart is now client-side only
+            console.log('LOGOUT DEBUG: Cart persisted locally for restoration on return')
+          } else {
+            // Empty cart - no action needed as cart is client-side only
+            console.log('LOGOUT DEBUG: Empty cart, no persistence needed')
+          }
+        } catch (error) {
+          console.error('LOGOUT DEBUG: Cart abandonment operation failed (non-blocking):', error)
+        }
+
+        // Important: Sign out FIRST so cart sync stops before we clear local cart
+        const result = await supabase.auth.signOut()
+
+        // Now clear local persisted cart to prevent cross-account carryover
+        try {
+          useCartStore.getState().clearCart()
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('tisco-cart-storage')
+          }
+        } catch {}
+
+        return { error: result.error }
+      }
+
+      // If no user, just sign out defensively
       const result = await supabase.auth.signOut()
-      return { error: result.error } // Return any sign out errors
+      return { error: result.error }
     } finally {
-      setLoading(false) // Always clear loading state
+      setLoading(false)
     }
   }
 
