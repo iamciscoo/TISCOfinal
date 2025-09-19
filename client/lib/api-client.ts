@@ -20,12 +20,23 @@ import { cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
 /**
  * Environment detection for URL resolution
  * In browser environments, use relative URLs to avoid CORS issues
- * In server environments, use absolute URLs for internal API calls
+ * In server environments, use absolute URLs for internal API calls.
+ *
+ * Important: In Vercel, the recommended host is VERCEL_URL (without protocol).
+ * We construct a https:// URL from it. As fallbacks, we support
+ * NEXT_PUBLIC_BASE_URL, SITE_URL, NEXT_PUBLIC_SITE_URL, and finally localhost.
  */
 const isBrowser = typeof window !== 'undefined'
-const API_BASE_URL = isBrowser 
-  ? '' // Use relative URLs in browser to inherit current domain
-  : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000') // Absolute URL for SSR
+const API_BASE_URL = isBrowser
+  ? ''
+  : (
+      process.env.NEXT_PUBLIC_BASE_URL
+      || process.env.SITE_URL
+      || process.env.NEXT_PUBLIC_SITE_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+      || (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined)
+      || 'http://localhost:3000'
+    )
 
 /**
  * Core API Client Class
@@ -65,8 +76,10 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     // Construct full URL with proper API prefix
-    // Handle both relative (browser) and absolute (server) URL scenarios
-    const url = `${this.baseUrl ? this.baseUrl : ''}/api${endpoint}`
+    // Normalize to avoid double slashes
+    const base = this.baseUrl ? this.baseUrl.replace(/\/+$/, '') : ''
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+    const url = `${base}/api${path}`
 
     // Merge default configuration with request-specific options
     const config: RequestInit = {
