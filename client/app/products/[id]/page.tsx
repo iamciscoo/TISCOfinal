@@ -40,15 +40,38 @@ export default async function ProductPage({ params }: ProductPageProps) {
 }
 
 // Generate metadata for SEO
-// Generate static params for all products at build time
+// Generate static params for most popular products at build time
 export async function generateStaticParams() {
   try {
-    // Fetch all products to generate static routes
-    const { getProducts } = await import('@/lib/database')
-    const products = await getProducts(1000) // Increase limit to get all products
+    // Use direct Supabase client to avoid dependency issues during build
+    const { createClient } = await import('@supabase/supabase-js')
+    
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE) {
+      console.warn('Missing environment variables for generateStaticParams, generating common product paths')
+      return []
+    }
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE
+    )
+    
+    // Fetch featured and recent products for static generation
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('id')
+      .or('is_featured.eq.true,created_at.gte.2025-01-01')
+      .limit(50) // Limit to most important products for build performance
+    
+    if (error) {
+      console.error('Database error in generateStaticParams:', error)
+      return []
+    }
+    
+    console.log(`Generated static params for ${products?.length || 0} products`)
     
     // Return array of params for each product
-    return products.map((product) => ({
+    return (products || []).map((product: { id: string }) => ({
       id: String(product.id),
     }))
   } catch (error) {
@@ -57,6 +80,9 @@ export async function generateStaticParams() {
     return []
   }
 }
+
+// Enable ISR with fallback for products not pre-generated
+export const dynamicParams = true
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params

@@ -91,9 +91,18 @@ interface DbService {
 
 async function getDbServices(): Promise<DbService[]> {
   try {
-    // Import server-side factory only when needed to avoid client-side issues
-    const { getServiceRoleClient } = await import('@/lib/supabase-factory')
-    const supabase = getServiceRoleClient()
+    // Use direct Supabase client for more reliable production access
+    const { createClient } = await import('@supabase/supabase-js')
+    
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE) {
+      console.error('Missing Supabase environment variables for services')
+      return []
+    }
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE
+    )
     
     const { data: services, error } = await supabase
       .from('services')
@@ -101,13 +110,14 @@ async function getDbServices(): Promise<DbService[]> {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.warn('Services fetch error:', error)
+      console.error('Services database error:', error)
       return []
     }
 
+    console.log(`Successfully fetched ${services?.length || 0} services from database`)
     return (services || []) as DbService[]
   } catch (error) {
-    console.warn('Error fetching services:', error)
+    console.error('Critical error fetching services:', error)
     return []
   }
 }

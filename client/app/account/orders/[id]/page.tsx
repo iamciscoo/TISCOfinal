@@ -45,11 +45,31 @@ type Order = {
 // Generate static params for orders at build time
 export async function generateStaticParams() {
   try {
-    // Fetch all order IDs to generate static routes
-    const { data: orders } = await supabase
+    const { createClient } = await import('@supabase/supabase-js')
+    
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE) {
+      console.warn('Missing environment variables for orders generateStaticParams, skipping static generation')
+      return []
+    }
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE
+    )
+    
+    // Fetch recent order IDs to generate static routes
+    const { data: orders, error } = await supabase
       .from('orders')
       .select('id')
-      .limit(1000) // Reasonable limit for build time
+      .order('created_at', { ascending: false })
+      .limit(100) // Reasonable limit for build time
+    
+    if (error) {
+      console.error('Database error in orders generateStaticParams:', error)
+      return []
+    }
+    
+    console.log(`Generated static params for ${orders?.length || 0} orders`)
     
     // Return array of params for each order
     return (orders || []).map((order: { id: string }) => ({
@@ -61,6 +81,9 @@ export async function generateStaticParams() {
     return []
   }
 }
+
+// Enable ISR with fallback for orders not pre-generated
+export const dynamicParams = true
 
 async function getOrder(orderId: string, userId: string): Promise<Order | null> {
   const { data, error } = await supabase

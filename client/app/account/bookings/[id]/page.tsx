@@ -118,16 +118,30 @@ export async function generateStaticParams() {
   try {
     // Import server-side Supabase client
     const { createClient } = await import('@supabase/supabase-js')
+    
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE) {
+      console.warn('Missing environment variables for service bookings generateStaticParams, skipping static generation')
+      return []
+    }
+    
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE
     )
     
-    // Fetch all booking IDs to generate static routes
-    const { data: bookings } = await supabase
+    // Fetch recent booking IDs to generate static routes (limit for build performance)
+    const { data: bookings, error } = await supabase
       .from('service_bookings')
       .select('id')
-      .limit(1000) // Reasonable limit for build time
+      .order('created_at', { ascending: false })
+      .limit(100) // Reasonable limit for build time
+    
+    if (error) {
+      console.error('Database error in service bookings generateStaticParams:', error)
+      return []
+    }
+    
+    console.log(`Generated static params for ${bookings?.length || 0} service bookings`)
     
     // Return array of params for each booking
     return (bookings || []).map((booking: { id: string }) => ({
@@ -139,6 +153,9 @@ export async function generateStaticParams() {
     return []
   }
 }
+
+// Enable ISR with fallback for bookings not pre-generated
+export const dynamicParams = true
 
 const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const user = await getUser()
