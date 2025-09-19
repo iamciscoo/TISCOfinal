@@ -1,8 +1,5 @@
-'use client'
-
-import { useState, useEffect, useCallback, use } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { getUser } from '@/lib/supabase-server'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Navbar } from '@/components/Navbar'
@@ -12,8 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
-import { LoadingSpinner } from '@/components/shared'
-import { useCurrency } from '@/lib/currency-context'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+)
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -39,6 +40,58 @@ type Order = {
   payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
   shipping_address?: string | null
   order_items?: OrderItem[]
+}
+
+// Generate static params for orders at build time
+export async function generateStaticParams() {
+  try {
+    // Fetch all order IDs to generate static routes
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id')
+      .limit(1000) // Reasonable limit for build time
+    
+    // Return array of params for each order
+    return (orders || []).map((order: { id: string }) => ({
+      id: order.id,
+    }))
+  } catch (error) {
+    console.error('Error generating static params for orders:', error)
+    // Return empty array to prevent build failure
+    return []
+  }
+}
+
+async function getOrder(orderId: string, userId: string): Promise<Order | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items (
+        *,
+        products (
+          id,
+          name,
+          image_url,
+          product_images (
+            url,
+            is_main,
+            sort_order
+          )
+        )
+      )
+    `)
+    .eq('id', orderId)
+    .eq('user_id', userId)
+    .order('is_main', { ascending: false, foreignTable: 'order_items.products.product_images' })
+    .order('sort_order', { ascending: true, foreignTable: 'order_items.products.product_images' })
+    .single()
+  
+  if (error || !data) {
+    return null
+  }
+  
+  return data as Order
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -71,103 +124,22 @@ function statusColor(status: string) {
   }
 }
 
-export default function OrderDetailsPage({ params }: PageProps) {
-  const resolvedParams = use(params)
-  const { user, loading } = useAuth()
-  const isLoaded = !loading
-  const router = useRouter()
-  const [order, setOrder] = useState<Order | null>(null)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { formatPrice } = useCurrency()
+const formatPrice = (amount: number) => {
+  return `TZS ${Math.round(amount).toLocaleString()}`
+}
 
-  const fetchOrder = useCallback(async (isInitial = false) => {
-    try {
-      if (isInitial) setInitialLoading(true)
-      else setRefreshing(true)
-      setError(null)
-      const response = await fetch(`/api/orders/${resolvedParams.id}?fresh=1`, {
-        cache: 'no-store',
-        headers: { 'x-no-cache': '1' }
-      })
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError('Order not found')
-        } else {
-          setError(`Failed to load order: ${response.status} ${response.statusText}`)
-        }
-        return
-      }
-
-      const data = await response.json()
-      setOrder(data.order)
-    } catch (err) {
-      console.error('Failed to fetch order:', err)
-      setError('Failed to load order')
-    } finally {
-      if (isInitial) setInitialLoading(false)
-      else setRefreshing(false)
-    }
-  }, [resolvedParams.id])
-
-  useEffect(() => {
-    if (isLoaded && user) {
-      fetchOrder(true)
-    }
-  }, [isLoaded, user, fetchOrder])
-
-  // Client-side redirect to avoid hook-order mismatch
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.replace('/sign-in?redirect_url=/account/orders')
-    }
-  }, [isLoaded, user, router])
-
-  // Poll for updates while order is pending/processing or payment not finalized
-  useEffect(() => {
-    if (!order) return
-    const isPaymentPending = order.payment_status === 'pending'
-    const isOrderInProgress = order.status === 'pending' || order.status === 'processing'
-    const shouldPoll = isPaymentPending || isOrderInProgress
-    if (!shouldPoll) return
-    const interval = setInterval(() => {
-      fetchOrder(false)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [order, fetchOrder])
-
-  if (!isLoaded || initialLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <LoadingSpinner text="Loading order details..." fullScreen />
-        <Footer />
-        <CartSidebar />
-      </div>
-    )
+export default async function OrderDetailsPage({ params }: PageProps) {
+  const { id } = await params
+  const user = await getUser()
+  
+  if (!user) {
+    notFound()
   }
 
-  if (isLoaded && !user) {
-    return null
-  }
-
-  if (error || !order) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-2xl font-semibold mb-2">{error || 'Order not found'}</h1>
-          <p className="text-gray-600 mb-6">The order you are looking for does not exist or could not be loaded.</p>
-          <Button asChild>
-            <Link href="/account/orders">Back to orders</Link>
-          </Button>
-        </div>
-        <Footer />
-        <CartSidebar />
-      </div>
-    )
+  const order = await getOrder(id, user.id)
+  
+  if (!order) {
+    notFound()
   }
 
   return (
@@ -182,7 +154,7 @@ export default function OrderDetailsPage({ params }: PageProps) {
             Orders
           </Link>
           <span>/</span>
-          <span className="text-gray-900">Order #{resolvedParams.id.slice(0, 8)}</span>
+          <span className="text-gray-900">Order #{id.slice(0, 8)}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -198,9 +170,6 @@ export default function OrderDetailsPage({ params }: PageProps) {
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
                   </Badge>
-                  {refreshing && (
-                    <span className="ml-auto text-xs font-normal text-gray-500">Refreshing…</span>
-                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-gray-700">
@@ -237,7 +206,7 @@ export default function OrderDetailsPage({ params }: PageProps) {
                 <CardTitle>Items</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {order.order_items?.map((item) => (
+                {order.order_items?.map((item: OrderItem) => (
                   <div key={item.id} className="flex items-center justify-between p-3 border rounded-md">
                     <div className="flex items-center gap-3">
                       {item.products?.image_url && (

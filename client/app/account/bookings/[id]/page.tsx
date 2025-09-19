@@ -113,6 +113,33 @@ const getPaymentStatusBadgeVariant = (status: string) => {
   }
 }
 
+// Generate static params for service bookings at build time
+export async function generateStaticParams() {
+  try {
+    // Import server-side Supabase client
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE!
+    )
+    
+    // Fetch all booking IDs to generate static routes
+    const { data: bookings } = await supabase
+      .from('service_bookings')
+      .select('id')
+      .limit(1000) // Reasonable limit for build time
+    
+    // Return array of params for each booking
+    return (bookings || []).map((booking: { id: string }) => ({
+      id: booking.id,
+    }))
+  } catch (error) {
+    console.error('Error generating static params for service bookings:', error)
+    // Return empty array to prevent build failure
+    return []
+  }
+}
+
 const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const user = await getUser()
   const { id } = await params

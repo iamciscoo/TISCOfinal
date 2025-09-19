@@ -40,6 +40,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
 }
 
 // Generate metadata for SEO
+// Generate static params for all products at build time
+export async function generateStaticParams() {
+  try {
+    // Fetch all products to generate static routes
+    const { getProducts } = await import('@/lib/database')
+    const products = await getProducts(1000) // Increase limit to get all products
+    
+    // Return array of params for each product
+    return products.map((product) => ({
+      id: String(product.id),
+    }))
+  } catch (error) {
+    console.error('Error generating static params for products:', error)
+    // Return empty array to prevent build failure
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params
   const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
