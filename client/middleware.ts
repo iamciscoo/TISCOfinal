@@ -13,6 +13,8 @@ const publicRoutes = [
   '/delivery-guide',
   '/about',
   '/auth',
+  '/sitemap.xml',
+  '/robots.txt',
   '/api/products',
   '/api/categories',
   '/api/services',
