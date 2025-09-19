@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://tiscomarket.store/</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://tiscomarket.store/logo-email.png</image:loc>
+      <image:title>TISCO Market - Tanzania's Online Marketplace</image:title>
+      <image:caption>Quality electronics, gadgets, and products across Tanzania and East Africa</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- Products catalog -->
+  <url>
+    <loc>https://tiscomarket.store/products</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Services -->
+  <url>
+    <loc>https://tiscomarket.store/services</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Search -->
+  <url>
+    <loc>https://tiscomarket.store/search</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Deals -->
+  <url>
+    <loc>https://tiscomarket.store/deals</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- About -->
+  <url>
+    <loc>https://tiscomarket.store/about</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Auth pages -->
+  <url>
+    <loc>https://tiscomarket.store/auth/sign-in</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://tiscomarket.store/auth/sign-up</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Contact -->
+  <url>
+    <loc>https://tiscomarket.store/contact</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Cart -->
+  <url>
+    <loc>https://tiscomarket.store/cart</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- FAQ -->
+  <url>
+    <loc>https://tiscomarket.store/faq</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Legal pages -->
+  <url>
+    <loc>https://tiscomarket.store/privacy</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <url>
+    <loc>https://tiscomarket.store/terms</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <url>
+    <loc>https://tiscomarket.store/cookies</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <url>
+    <loc>https://tiscomarket.store/delivery-guide</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+</urlset>
