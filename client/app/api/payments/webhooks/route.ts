@@ -1,4 +1,4 @@
-// @ts-nocheck
+// TypeScript types for webhook handling
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
@@ -195,10 +195,10 @@ export async function POST(req: NextRequest) {
       console.log('Processing session webhook')
       if (normalizedStatus === 'success') {
         console.log('Handling session payment success')
-        await handleSessionPaymentSuccess(txnData as PaymentSession, body)
+        await handleSessionPaymentSuccess(txnData as unknown as PaymentSession, body)
       } else if (normalizedStatus === 'failed') {
         console.log('Handling session payment failure')
-        await handleSessionPaymentFailure(txnData as PaymentSession, rawStatus)
+        await handleSessionPaymentFailure(txnData as unknown as PaymentSession, rawStatus)
       } else {
         console.log('Session status not actionable:', normalizedStatus)
       }
@@ -681,6 +681,9 @@ type PaymentSession = {
   order_data: string;
   amount: number;
   currency: string;
+  provider?: string;
+  status?: string;
+  order_id?: string;
 }
 
 async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
@@ -999,7 +1002,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
           items,
           order_date: new Date().toLocaleDateString(),
           payment_method: 'Mobile Money',
-          shipping_address: orderData.shipping_address || 'Will be contacted for delivery arrangements'
+          shipping_address: (orderData.shipping_address || 'Will be contacted for delivery arrangements') as string
         })
         console.log('Order confirmation email sent to customer')
 

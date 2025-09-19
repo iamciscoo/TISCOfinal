@@ -108,11 +108,33 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Favicon - ICO first for better compatibility */}
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        {/* Favicon - Multiple sizes for better Google indexing */}
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16 32x32 48x48" />
+        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/favicon.ico" sizes="180x180" />
         <link rel="shortcut icon" href="/favicon.ico" />
+        
+        {/* Apple Touch Icons */}
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="180x180" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="152x152" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="144x144" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="120x120" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="114x114" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="76x76" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="72x72" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="60x60" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="57x57" />
+        
+        {/* Web App Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        
+        {/* Microsoft Tiles */}
+        <meta name="msapplication-square70x70logo" content="/favicon-96x96.png" />
+        <meta name="msapplication-square150x150logo" content="/favicon-192x192.png" />
+        <meta name="msapplication-wide310x150logo" content="/favicon-192x192.png" />
+        <meta name="msapplication-square310x310logo" content="/favicon-512x512.png" />
         
         {/* Fonts */}
         <link 
@@ -125,9 +147,25 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="TISCO Market" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="msapplication-TileColor" content="#0066CC" />
+        <meta name="msapplication-navbutton-color" content="#0066CC" />
         <meta name="theme-color" content="#0066CC" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0066CC" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0066CC" />
+        
+        {/* Google Site Verification (add your verification code if available) */}
+        <meta name="google-site-verification" content="your-google-verification-code" />
+        
+        {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* DNS prefetch for better performance */}
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="//fonts.gstatic.com" />
         
         {/* Structured Data - Organization */}
         <script
