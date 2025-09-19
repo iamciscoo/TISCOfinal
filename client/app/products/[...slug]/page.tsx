@@ -7,11 +7,12 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 
 interface ProductPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string[] }>
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { id } = await params
+  const { slug } = await params
+  const id = slug[0] // Get the first slug segment as the product ID
   
   // Add debug logging for production
   console.log(`[PRODUCT PAGE] Attempting to load product with ID: ${id}`)
@@ -51,7 +52,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: ProductPageProps) {
-  const { id } = await params
+  const { slug } = await params
+  const id = slug[0]
   const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/
   if (!UUID_REGEX.test(id)) {
     return {

@@ -80,7 +80,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           <div className="flex items-stretch">
             {/* Product Image */}
             <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex-shrink-0">
-              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
+              <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
                 <Image
                   src={imageUrl}
                   alt={`${product.name} product image`}
@@ -105,7 +105,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               </div>
               
               {/* Product Name */}
-              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
+              <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
                 <h3 className="text-xl font-semibold mb-2 hover:text-blue-600 transition-colors line-clamp-2">
                   {product.name}
                 </h3>
@@ -168,9 +168,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   return (
     <Card className={cn("group hover:shadow-xl transition-all duration-300 overflow-hidden h-full", className)}>
       <CardContent className="p-0 flex h-full flex-col">
-        {/* Product Image Container */}
+          {/* Product Image Container */}
         <div className={cn("relative overflow-hidden", "aspect-square")}>
-          <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
+          <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
             <Image
               src={imageUrl}
               alt={`${product.name} product image`}
@@ -199,7 +199,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           </Badge>
           
           {/* Product Name */}
-          <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
+          <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
             <h3 className={cn(
               "font-semibold mb-0 hover:text-blue-600 transition-colors",
               compact ? "text-[12px] sm:text-sm md:text-base line-clamp-1 sm:line-clamp-2" : "text-base line-clamp-2"

@@ -354,7 +354,7 @@ export default function DealsPage() {
                         <Card key={deal.id} className="group hover:shadow-lg transition-shadow h-full">
                           <CardContent className={viewMode === 'grid' ? 'p-3 flex h-full flex-col' : 'p-4 flex gap-4'}>
                             {/* Product Image */}
-                            <Link href={`/products/${deal.id}`} className={viewMode === 'grid' 
+                            <Link href={`/product?id=${deal.id}`} className={viewMode === 'grid' 
                               ? 'aspect-square bg-gray-100 rounded-md mb-3 overflow-hidden relative block' 
                               : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0 relative block'
                             }>
@@ -379,7 +379,7 @@ export default function DealsPage() {
                                 <div className="text-xs text-blue-600 font-medium mb-1">
                                   {deal.category}
                                 </div>
-                                <Link href={`/products/${deal.id}`}>
+                                <Link href={`/product?id=${deal.id}`}>
                                   <h3 className={`font-medium text-gray-900 group-hover:text-blue-600 transition-colors ${
                                     viewMode === 'grid' ? 'text-sm line-clamp-2' : 'text-base line-clamp-2'
                                   }`}>
