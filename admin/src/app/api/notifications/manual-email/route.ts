@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendEmail } from '@/lib/sendpulse'
 
@@ -15,7 +15,23 @@ interface ManualEmailRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
     
     // Verify admin authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession()
@@ -82,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare email content based on template type
     let emailHtml = message
-    let emailSubject = subject
+    const emailSubject = subject
 
     if (template_type === 'order_reminder' && order_id) {
       // Fetch order details for enhanced template
@@ -227,7 +243,23 @@ export async function POST(request: NextRequest) {
 // GET endpoint to fetch recent manual emails for admin dashboard
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
     
     // Verify admin authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession()

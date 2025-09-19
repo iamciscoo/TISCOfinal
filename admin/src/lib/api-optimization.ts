@@ -80,8 +80,8 @@ export async function bulkUpdateProducts(updates: Array<{ id: string; data: Reco
       
       const results = await Promise.allSettled(promises)
       return results
-        .filter((result): result is PromiseFulfilledResult<unknown> => result.status === 'fulfilled')
-        .map(result => result.value)
+        .filter((result) => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<any>).value)
     },
     { batchSize: 50, delayMs: 100 }
   )
@@ -115,8 +115,8 @@ export async function bulkUpdateOrderStatus(
       
       const results = await Promise.allSettled(promises)
       return results
-        .filter((result): result is PromiseFulfilledResult<unknown> => result.status === 'fulfilled')
-        .map(result => result.value)
+        .filter((result) => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<any>).value)
     },
     { batchSize: 25, delayMs: 75 }
   )
