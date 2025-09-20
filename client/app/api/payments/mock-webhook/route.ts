@@ -6,6 +6,10 @@ export const runtime = 'nodejs'
 // This simulates ZenoPay sending a success webhook
 export async function POST(req: NextRequest) {
   try {
+    // Disable in production to avoid exposing a mock in prod
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
     const body = await req.json()
     const { transaction_reference, status = 'COMPLETED' } = body
 
@@ -14,7 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger the real webhook with mock ZenoPay payload
-    const webhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/webhooks`
+    const origin = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin
+    const webhookUrl = `${origin}/api/payments/webhooks`
     
     const mockPayload = {
       order_id: transaction_reference,

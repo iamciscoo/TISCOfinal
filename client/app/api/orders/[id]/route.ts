@@ -3,6 +3,8 @@ import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag, unstable_cache } from 'next/cache'
 
+export const runtime = 'nodejs'
+
 // Server-side Supabase client using service role (same as main orders route)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
