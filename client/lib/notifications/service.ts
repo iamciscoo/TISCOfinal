@@ -3,10 +3,22 @@ import { renderEmailTemplate, getDefaultSubject, type TemplateType } from '../em
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase client for notifications
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
-)
+const getSupabaseClient = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !serviceKey) {
+    console.error('Missing Supabase configuration for notifications:', {
+      hasUrl: !!url,
+      hasServiceKey: !!serviceKey
+    })
+    throw new Error('Missing Supabase configuration for notifications')
+  }
+  
+  return createClient(url, serviceKey)
+}
+
+const supabase = getSupabaseClient()
 
 export type NotificationEvent = 
   | 'order_created'

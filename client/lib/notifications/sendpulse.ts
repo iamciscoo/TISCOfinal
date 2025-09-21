@@ -51,43 +51,58 @@ async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
 }
 
 export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPulseEmail): Promise<void> {
-  const token = await getAccessToken(cfg)
-  const url = 'https://api.sendpulse.com/smtp/emails'
+  console.log('SendPulse: Starting email send process')
+  
+  try {
+    const token = await getAccessToken(cfg)
+    console.log('SendPulse: Access token obtained successfully')
+    
+    const url = 'https://api.sendpulse.com/smtp/emails'
 
-  // Handle multiple recipients
-  const recipients = Array.isArray(email.to) ? email.to : [email.to]
-  const toArray = recipients.map(recipient => ({ email: recipient }))
+    // Handle multiple recipients
+    const recipients = Array.isArray(email.to) ? email.to : [email.to]
+    const toArray = recipients.map(recipient => ({ email: recipient }))
+    
+    console.log('SendPulse: Sending to recipients:', recipients.length)
 
-  const htmlB64 = Buffer.from(email.html, 'utf-8').toString('base64')
+    const htmlB64 = Buffer.from(email.html, 'utf-8').toString('base64')
 
-  const payload = {
-    email: {
-      subject: email.subject,
-      from: {
-        name: cfg.senderName || 'TISCO Market',
-        email: cfg.senderEmail,
+    const payload = {
+      email: {
+        subject: email.subject,
+        from: {
+          name: cfg.senderName || 'TISCO Market',
+          email: cfg.senderEmail,
+        },
+        to: toArray,
+        html: htmlB64,
+        text: email.text || email.html.replace(/<[^>]*>/g, '').substring(0, 500) + '...',
+        ...(email.replyTo && { reply_to: { email: email.replyTo } }),
+        ...(email.attachments && { attachments: email.attachments }),
       },
-      to: toArray,
-      html: htmlB64,
-      text: email.text || email.html.replace(/<[^>]*>/g, '').substring(0, 500) + '...',
-      ...(email.replyTo && { reply_to: { email: email.replyTo } }),
-      ...(email.attachments && { attachments: email.attachments }),
-    },
-  }
+    }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
-  } satisfies RequestInit)
+    console.log('SendPulse: Sending request to API')
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    } satisfies RequestInit)
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`SendPulse send error: ${res.status} ${res.statusText} ${txt}`)
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      console.error('SendPulse API error:', { status: res.status, statusText: res.statusText, response: txt })
+      throw new Error(`SendPulse send error: ${res.status} ${res.statusText} ${txt}`)
+    }
+
+    console.log('SendPulse: Email sent successfully')
+  } catch (error) {
+    console.error('SendPulse: Error sending email:', error)
+    throw error
   }
 }
 
