@@ -113,11 +113,23 @@ export async function POST(req: NextRequest) {
     console.log('Webhook authentication passed')
     const body = JSON.parse(rawBody) as WebhookPayload
 
-    // ZenoPay payloads typically include order_id (we sent our transaction_reference),
-    // and may include transaction_id and status/payment_status. Some variants nest under `data`.
+    // ZenoPay payloads: { "order_id": "677e43274d7cb", "payment_status": "COMPLETED", "reference": "1003020496" }
+    // order_id contains our transaction_reference, reference is ZenoPay's internal reference
     const data = (body?.data || {}) as WebhookPayload
-    const refCandidates = [body?.order_id, data?.order_id, body?.reference, body?.transaction_reference].filter(Boolean)
-    const gwCandidates = [body?.transaction_id, data?.transaction_id, body?.gateway_transaction_id].filter(Boolean)
+    const refCandidates = [
+      body?.order_id,           // ZenoPay puts our transaction_reference here
+      body?.transaction_reference, 
+      data?.order_id, 
+      data?.transaction_reference,
+      body?.reference
+    ].filter(Boolean)
+    const gwCandidates = [
+      body?.reference,          // ZenoPay's internal reference
+      body?.transaction_id, 
+      data?.transaction_id, 
+      body?.gateway_transaction_id,
+      data?.reference
+    ].filter(Boolean)
 
     const ref = String(refCandidates[0] || '')
     const gw = String(gwCandidates[0] || '')
