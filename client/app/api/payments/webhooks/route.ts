@@ -52,10 +52,22 @@ export async function POST(req: NextRequest) {
     }
     // Read raw body for signature verification
     const rawBody = await req.text()
-    const signature = req.headers.get('x-signature') || req.headers.get('x-api-key') || req.headers.get('authorization')
-    
+
+    // Accept multiple common signature header variants from providers
+    const sigHeaderNames = ['x-signature', 'x-zenopay-signature', 'x-webhook-signature', 'x-hub-signature-256', 'stripe-signature']
+    let sig: string | null = null
+    let sigHeaderUsed: string | null = null
+    for (const name of sigHeaderNames) {
+      const v = req.headers.get(name)
+      if (v) {
+        sig = v
+        sigHeaderUsed = name
+        break
+      }
+    }
+
     console.log('Webhook headers:', {
-      signature: signature ? 'present' : 'missing',
+      signatureHeader: sigHeaderUsed || 'none',
       contentType: req.headers.get('content-type'),
       userAgent: req.headers.get('user-agent')
     })
@@ -64,26 +76,32 @@ export async function POST(req: NextRequest) {
     // Verify authentication:
     // - Primary: HMAC signature with WEBHOOK_SECRET
     // - Fallback: API key provided via x-api-key or Authorization: Bearer <key>
-    const hmacOk = verifyWebhookSignature(rawBody, signature)
+    const hmacOk = verifyWebhookSignature(rawBody, sig)
     const apiKey = process.env.ZENOPAY_API_KEY
-    const xApiKey = req.headers.get('x-api-key')
-    const authHeader = req.headers.get('authorization')
-    const bearer = authHeader && authHeader.toLowerCase().startsWith('bearer ')
-      ? authHeader.slice(7)
-      : authHeader || undefined
-    const apiKeyOk = Boolean(
-      (xApiKey && apiKey && xApiKey === apiKey) ||
-      (bearer && apiKey && bearer === apiKey)
-    )
+    const tokenCandidates: string[] = []
+    const xApiKey = req.headers.get('x-api-key') || req.headers.get('x-access-token') || req.headers.get('api-key')
+    if (xApiKey) tokenCandidates.push(xApiKey.trim())
+    const authHeader = req.headers.get('authorization') || ''
+    if (authHeader) {
+      const cleaned = authHeader
+        .replace(/^Bearer\s+/i, '')
+        .replace(/^Token\s+/i, '')
+        .replace(/^ApiKey\s+/i, '')
+        .trim()
+      if (cleaned) tokenCandidates.push(cleaned)
+    }
+    const apiKeyOk = !!apiKey && tokenCandidates.some(t => t === apiKey)
 
     console.log('Authentication check:', { hmacOk, apiKeyOk, nodeEnv: process.env.NODE_ENV })
 
   if (!hmacOk && !apiKeyOk) {
     console.error('Webhook authentication failed:', {
-      hasSignature: !!signature,
+      hasSignature: !!sig,
       hasWebhookSecret: !!process.env.WEBHOOK_SECRET,
       hasApiKey: !!apiKey,
-      nodeEnv: process.env.NODE_ENV
+      nodeEnv: process.env.NODE_ENV,
+      signatureHeader: sigHeaderUsed || 'none',
+      tokenCandidates: tokenCandidates.length
     })
     // In production, be more lenient for debugging
     if (process.env.NODE_ENV === 'production' && !process.env.WEBHOOK_SECRET) {

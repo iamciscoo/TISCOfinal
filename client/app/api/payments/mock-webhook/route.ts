@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger the real webhook with mock ZenoPay payload
-    const origin = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin
+    // IMPORTANT: Prefer current request origin first to avoid targeting production when running locally
+    const origin = new URL(req.url).origin || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     const webhookUrl = `${origin}/api/payments/webhooks`
     
     const mockPayload = {
