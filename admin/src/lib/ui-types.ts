@@ -19,6 +19,15 @@ export type ProductColumn = {
     name: string;
     description: string;
   };
+  categories?: Array<{
+    category?: {
+      id: string | number;
+      name: string;
+      description?: string;
+    };
+    id?: string | number;
+    name?: string;
+  }>;
 };
 
 export type OrderColumn = {

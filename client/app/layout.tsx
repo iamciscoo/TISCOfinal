@@ -136,7 +136,7 @@ export default async function RootLayout({
         <meta name="msapplication-wide310x150logo" content="/favicon-192x192.png" />
         <meta name="msapplication-square310x310logo" content="/favicon-512x512.png" />
         
-        {/* Fonts */}
+        {/* Fonts - Chango font for titles */}
         <link 
           href="https://fonts.googleapis.com/css2?family=Chango&display=swap" 
           rel="stylesheet"

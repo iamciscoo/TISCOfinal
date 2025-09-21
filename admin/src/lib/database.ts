@@ -14,60 +14,73 @@ import type {
 
 // Product Functions
 export async function getProducts(limit?: number): Promise<Product[]> {
-  const query = supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(*),
-      product_images(
-        id,
-        url,
-        is_main,
-        sort_order,
-        created_at
-      )
-    `)
-    .order('is_featured', { ascending: false })  // Featured products first for better performance
-    .order('created_at', { ascending: false })
-    .order('is_main', { ascending: false, foreignTable: 'product_images' })  // Main images first
-    .order('sort_order', { ascending: true, foreignTable: 'product_images' })
-
-  if (limit) {
-    query.limit(limit)
+  try {
+    let query = supabase
+      .from('products')
+      .select(`
+        *,
+        categories:product_categories(
+          category:categories(*)
+        ),
+        product_images(
+          id,
+          url,
+          is_main,
+          sort_order,
+          created_at
+        )
+      `)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false })
+    
+    if (limit) {
+      query = query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    
+    if (error) {
+      console.error('Error in getProducts:', error)
+      throw error
+    }
+    
+    return data || []
+  } catch (error) {
+    console.error('[ Server ] Error fetching products:', error)
+    return []
   }
-
-  const { data, error } = await query
-
-  if (error) throw error
-  return data || []
 }
 
 export async function getProductById(id: string | number): Promise<Product | null> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(
-        id,
-        name,
-        description
-      ),
-      product_images(
-        id,
-        url,
-        is_main,
-        sort_order,
-        created_at,
-        path
-      )
-    `)
-    .order('is_main', { ascending: false, foreignTable: 'product_images' })  // Main images first
-    .order('sort_order', { ascending: true, foreignTable: 'product_images' })
-    .eq('id', id)
-    .single()
-
-  if (error) throw error
-  return data
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        categories:product_categories(
+          category:categories(*)
+        ),
+        product_images(
+          id,
+          url,
+          is_main,
+          sort_order,
+          created_at,
+          path
+        )
+      `)
+      .eq('id', id)
+      .single()
+    
+    if (error) {
+      console.error('Error in getProductById:', error)
+      throw error
+    }
+    return data
+  } catch (error) {
+    console.error('[ Server ] Error fetching product by id:', error)
+    return null
+  }
 }
 
 export async function createProduct(productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {

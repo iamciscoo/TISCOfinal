@@ -2,32 +2,32 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'About Us | TISCOマーケット - Tanzania Online Marketplace',
-  description: 'Learn about TISCO Market, Tanzania trusted online marketplace since 2025. Our mission: help people get quality products quickly at reasonable prices across East Africa.',
+  title: 'About Us | TISCO Market - No BS Tech Solutions & Rare Finds',
+  description: 'Learn about TISCO Market: the no-nonsense destination for rare tech products and professional services. Founded August 2025, launching November 2025. No bullshit, just what you need.',
   keywords: [
-    'about TISCO market', 'Tanzania online marketplace', 'East Africa ecommerce',
-    'online shopping Tanzania history', 'TISCO company info', 'Tanzania electronics company',
-    'reliable online store Tanzania', 'trusted marketplace East Africa'
+    'about TISCO market', 'tech marketplace', 'rare tech products', 'professional tech services',
+    'no bullshit tech store', 'TISCO company info', 'tech solutions platform',
+    'reliable tech marketplace', 'transparent pricing tech store'
   ],
   openGraph: {
-    title: 'About TISCO Market - Tanzania Online Marketplace',
-    description: 'Learn about Tanzania trusted online marketplace. Quality products, fast delivery, secure payments across East Africa since 2025.',
+    title: 'About TISCO Market - No BS Tech Solutions & Rare Finds',
+    description: 'The no-nonsense destination for rare tech products and professional services. No bullshit, just what you need.',
     url: 'https://tiscomarket.store/about',
     images: ['/logo-email.png'],
   },
   twitter: {
-    title: 'About TISCO Market - Tanzania Online Marketplace',
-    description: 'Learn about Tanzania trusted online marketplace. Quality products, fast delivery, secure payments across East Africa since 2025.',
+    title: 'About TISCO Market - No BS Tech Solutions & Rare Finds',
+    description: 'The no-nonsense destination for rare tech products and professional services. No bullshit, just what you need.',
     images: ['/logo-email.png'],
   },
 }
+
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import { 
   Users, 
   Award, 
-  Globe, 
   Shield, 
   Heart, 
   Clock,
@@ -68,17 +68,23 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
               <div className="space-y-4 text-gray-600">
                 <p>
-                  Founded in 2025, TISCO Market was created to help people get what they need
-                  quickly and at a reasonable price — without unnecessary waste. 
+                  <strong>Founded in August 2025</strong>, TISCO Market emerged from a simple frustration: 
+                  the tech industry had become bloated with corporate nonsense, inflated pricing, 
+                  and unnecessary complexity. We cut through the BS to create something different.
                 </p>
                 <p>
-                  We focus on the essentials: clear information, fair pricing, and reliable delivery.
-                  By simplifying choices and streamlining operations, we reduce friction for customers
-                  and avoid waste across the journey.
+                  We specialize in <strong>rare tech products</strong> and <strong>professional services</strong> 
+                  that others won&apos;t touch — the hard-to-find components, the niche solutions, 
+                  and the expert installations that make or break your projects.
                 </p>
                 <p>
-                  As we grow, we&apos;re building responsibly — prioritizing trust, quality, and long‑term
-                  value for shoppers and partners.
+                  <strong>Launching November 2025</strong>, we&apos;re building more than a marketplace. 
+                  We&apos;re creating a platform where efficiency, honesty, and expertise come first — 
+                  no fluff, no excuses, no corporate runaround.
+                </p>
+                <p>
+                  From sourcing impossible-to-find parts to complete tech transformations, 
+                  we handle both the hunting and the building.
                 </p>
               </div>
             </div>
@@ -87,24 +93,24 @@ export default function AboutPage() {
                 <CardContent className="p-8">
                   <div className="space-y-5">
                     <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-gray-700 mt-0.5" />
+                      <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Speed without waste</h3>
-                        <p className="text-sm text-gray-600">Fast browsing, fast checkout, and reliable delivery — without unnecessary steps.</p>
+                        <h3 className="font-semibold text-gray-900">Radical Efficiency</h3>
+                        <p className="text-sm text-gray-600">Fast delivery, quick setup, rapid response — no bureaucratic waste.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Shield className="h-5 w-5 text-gray-700 mt-0.5" />
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Fair, transparent pricing</h3>
-                        <p className="text-sm text-gray-600">Clear prices and no surprises.</p>
+                        <h3 className="font-semibold text-gray-900">Brutal Honesty</h3>
+                        <p className="text-sm text-gray-600">Transparent pricing, genuine deals, authentic reviews — no corporate BS.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Award className="h-5 w-5 text-gray-700 mt-0.5" />
+                      <Award className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold text-gray-900">Quality you can trust</h3>
-                        <p className="text-sm text-gray-600">Products and partners we stand behind.</p>
+                        <h3 className="font-semibold text-gray-900">Expert Accessibility</h3>
+                        <p className="text-sm text-gray-600">Professional services without professional headaches or markup games.</p>
                       </div>
                     </div>
                   </div>
@@ -114,32 +120,84 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Our Values */}
+        {/* Development Timeline */}
         <section className="mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">Our Values</h2>
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Our Development Journey</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              From concept to launch, building a platform that actually works for tech professionals.
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Card className="text-center hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">August 2025</h3>
+                  <p className="text-sm text-gray-600 mb-2">Platform Founded</p>
+                  <p className="text-xs text-gray-500">Concept development and initial planning phase</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center hover:shadow-lg transition-shadow border-blue-200">
+                <CardContent className="p-6">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">September - October 2025</h3>
+                  <p className="text-sm text-gray-600 mb-2">Building & Testing</p>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>• Securing partnerships with rare tech suppliers</p>
+                    <p>• Building curated inventory of hard-to-find components</p>
+                    <p>• Establishing verified service provider network</p>
+                    <p>• Platform testing & beta with tech professionals</p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">November 2025</h3>
+                  <p className="text-sm text-gray-600 mb-2">Public Launch</p>
+                  <p className="text-xs text-gray-500">Full platform launch with curated products and services</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Our Mission & Vision */}
+        <section className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">What Drives Us</h2>
           
           {/* Desktop Grid */}
           <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
+                icon: Award,
+                title: 'Your Tech Partner',
+                description: 'We want to be the first place you think of when you need tech gear or professional setup services. No hunting around — just one reliable source.'
+              },
+              {
+                icon: Clock,
+                title: 'Speed That Matters',
+                description: 'Your time is valuable. Fast delivery, quick installations, rapid support responses — because waiting around is frustrating.'
+              },
+              {
                 icon: Shield,
-                title: 'Trust & Security',
-                description: 'Your data and transactions are protected with industry-leading security measures.'
+                title: 'Honest Dealings',
+                description: 'Fair prices, genuine reviews, authentic products. We believe trust is built through transparency, not marketing fluff.'
               },
               {
                 icon: Heart,
-                title: 'Customer First',
-                description: 'Every decision we make is guided by what&apos;s best for our customers.'
-              },
-              {
-                icon: Award,
-                title: 'Quality Assurance',
-                description: 'We work only with verified sellers and stand behind every product sold.'
-              },
-              {
-                icon: Globe,
-                title: 'Global Reach',
-                description: 'Connecting buyers and sellers across the world with seamless experiences.'
+                title: 'Finding the Unfindable',
+                description: 'Those rare components and niche gadgets others don\'t carry? We specialize in tracking down exactly what you need.'
               }
             ].map((value, index) => {
               const IconComponent = value.icon
@@ -162,24 +220,24 @@ export default function AboutPage() {
             <MobileSlider itemsPerView={1} showDots={true} showArrows={true}>
               {[
                 {
+                  icon: Award,
+                  title: 'Your Tech Partner',
+                  description: 'We want to be the first place you think of when you need tech gear or professional setup services. No hunting around — just one reliable source.'
+                },
+                {
+                  icon: Clock,
+                  title: 'Speed That Matters',
+                  description: 'Your time is valuable. Fast delivery, quick installations, rapid support responses — because waiting around is frustrating.'
+                },
+                {
                   icon: Shield,
-                  title: 'Trust & Security',
-                  description: 'Your data and transactions are protected with industry-leading security measures.'
+                  title: 'Honest Dealings',
+                  description: 'Fair prices, genuine reviews, authentic products. We believe trust is built through transparency, not marketing fluff.'
                 },
                 {
                   icon: Heart,
-                  title: 'Customer First',
-                  description: 'Every decision we make is guided by what&apos;s best for our customers.'
-                },
-                {
-                  icon: Award,
-                  title: 'Quality Assurance',
-                  description: 'We work only with verified sellers and stand behind every product sold.'
-                },
-                {
-                  icon: Globe,
-                  title: 'Global Reach',
-                  description: 'Connecting buyers and sellers across the world with seamless experiences.'
+                  title: 'Finding the Unfindable',
+                  description: 'Those rare components and niche gadgets others don\'t carry? We specialize in tracking down exactly what you need.'
                 }
               ].map((value, index) => {
                 const IconComponent = value.icon
@@ -201,25 +259,25 @@ export default function AboutPage() {
 
         {/* Why Choose Us */}
         <section className="mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">Why Choose TISCO Market?</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">Why We&apos;re Different</h2>
           
           {/* Desktop Grid */}
           <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               {
-                icon: Clock,
-                title: '24/7 Customer Support',
-                description: 'Our dedicated support team is always ready to help, any time of day.'
+                icon: CheckCircle,
+                title: 'Complete Solutions',
+                description: 'Why juggle multiple vendors? We handle both the products you need and the professional services to set them up — all in one place.'
               },
               {
-                icon: CheckCircle,
-                title: 'Safe, Secure Delivery',
-                description: 'Items handled with care and sealed packaging.'
+                icon: Clock,
+                title: 'No Bureaucratic Nonsense',
+                description: 'Skip the complicated processes and endless phone trees. We cut through industry complexity to get things done quickly.'
               },
               {
                 icon: Users,
-                title: 'Verified Reviews',
-                description: 'Real reviews from real customers to help you make informed decisions.'
+                title: 'Built for Community',
+                description: 'We work with businesses and customers who share our values: efficiency, authenticity, and getting things done right the first time.'
               }
             ].map((feature, index) => {
               const IconComponent = feature.icon
@@ -244,19 +302,19 @@ export default function AboutPage() {
             <MobileSlider itemsPerView={1} showDots={true} showArrows={true}>
               {[
                 {
-                  icon: Clock,
-                  title: '24/7 Customer Support',
-                  description: 'Our dedicated support team is always ready to help, any time of day.'
+                  icon: CheckCircle,
+                  title: 'Complete Solutions',
+                  description: 'Why juggle multiple vendors? We handle both the products you need and the professional services to set them up — all in one place.'
                 },
                 {
-                  icon: CheckCircle,
-                  title: 'Safe, Secure Delivery',
-                  description: 'Items handled with care and sealed packaging.'
+                  icon: Clock,
+                  title: 'No Bureaucratic Nonsense',
+                  description: 'Skip the complicated processes and endless phone trees. We cut through industry complexity to get things done quickly.'
                 },
                 {
                   icon: Users,
-                  title: 'Verified Reviews',
-                  description: 'Real reviews from real customers to help you make informed decisions.'
+                  title: 'Built for Community',
+                  description: 'We work with businesses and customers who share our values: efficiency, authenticity, and getting things done right the first time.'
                 }
               ].map((feature, index) => {
                 const IconComponent = feature.icon
@@ -288,19 +346,19 @@ export default function AboutPage() {
               {
                 name: 'Francis Jacob',
                 role: 'CEO & Founder',
-                bio: 'Passionate about creating exceptional customer experiences and building lasting relationships.',
-                image: '/team/sarah.jpg'
+                bio: 'Passionate about cutting through industry BS and creating exceptional customer experiences. Building TISCO to be the reliable tech partner we always wished existed.',
+                image: '/team/francis.jpg'
               },
               {
                 name: 'Michael Chen',
                 role: 'CTO',
-                bio: 'Leading our technology vision to create the most user-friendly marketplace platform.',
+                bio: 'Leading our technology vision to create the most efficient, user-friendly platform. Obsessed with performance, reliability, and getting things done right.',
                 image: '/team/michael.jpg'
               },
               {
                 name: 'Emily Rodriguez',
                 role: 'Head of Customer Relations',
-                bio: 'Ensuring every customer interaction exceeds expectations and builds trust.',
+                bio: 'Ensuring every customer interaction exceeds expectations. Building trust through transparency, speed, and authentic service that actually solves problems.',
                 image: '/team/emily.jpg'
               }
             ].map((member, index) => (
@@ -324,19 +382,19 @@ export default function AboutPage() {
                 {
                   name: 'Francis Jacob',
                   role: 'CEO & Founder',
-                  bio: 'Passionate about creating exceptional customer experiences and building lasting relationships.',
-                  image: '/team/sarah.jpg'
+                  bio: 'Passionate about cutting through industry BS and creating exceptional customer experiences. Building TISCO to be the reliable tech partner we always wished existed.',
+                  image: '/team/francis.jpg'
                 },
                 {
                   name: 'Michael Chen',
                   role: 'CTO',
-                  bio: 'Leading our technology vision to create the most user-friendly marketplace platform.',
+                  bio: 'Leading our technology vision to create the most efficient, user-friendly platform. Obsessed with performance, reliability, and getting things done right.',
                   image: '/team/michael.jpg'
                 },
                 {
                   name: 'Emily Rodriguez',
-                  role: 'Head of Customer Success',
-                  bio: 'Ensuring every customer interaction exceeds expectations and builds trust.',
+                  role: 'Head of Customer Relations',
+                  bio: 'Ensuring every customer interaction exceeds expectations. Building trust through transparency, speed, and authentic service that actually solves problems.',
                   image: '/team/emily.jpg'
                 }
               ].map((member, index) => (
@@ -361,13 +419,13 @@ export default function AboutPage() {
             <CardContent className="py-12">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Ready to Start Shopping?</h2>
               <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                Shop confidently with TISCO Market — built for speed, value, and simplicity.
+                Shop confidently with TISCO マーケット — built for speed, value, and simplicity.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="default">
+                <Button asChild size="lg" variant="default" className="rounded-full">
                   <Link href="/products">Browse Products</Link>
                 </Button>
-                <Button asChild size="lg" variant="outline">
+                <Button asChild size="lg" variant="outline" className="rounded-full">
                   <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>

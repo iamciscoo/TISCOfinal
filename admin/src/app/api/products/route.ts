@@ -39,10 +39,12 @@ export async function GET(req: Request) {
           sort_order,
           created_at
         ),
-        categories(
-          id,
-          name,
-          description
+        categories:product_categories(
+          category:categories(
+            id,
+            name,
+            description
+          )
         )
       `);
 
@@ -77,17 +79,28 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
+    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
 
-    if (!name || !description || typeof price !== "number" || !category_id) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!name || !description || typeof price !== "number") {
+      return NextResponse.json({ error: "Missing required fields: name, description, price" }, { status: 400 });
+    }
+
+    // Handle both single category (legacy) and multiple categories (new)
+    const categories = category_ids || (category_id ? [category_id] : []);
+    
+    if (categories.length === 0) {
+      return NextResponse.json({ error: "At least one category is required" }, { status: 400 });
+    }
+
+    if (categories.length > 5) {
+      return NextResponse.json({ error: "A product cannot have more than 5 categories" }, { status: 400 });
     }
 
     const payload = {
       name,
       description,
       price,
-      category_id,
+      category_id: categories[0], // Keep primary category for backward compatibility
       stock_quantity: typeof stock_quantity === "number" ? stock_quantity : 0,
       is_featured: !!is_featured,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
@@ -99,14 +112,32 @@ export async function POST(req: Request) {
       sale_price: typeof sale_price === 'number' ? sale_price : null,
     };
 
-    const { data, error } = await supabase
+    // Create product first
+    const { data: product, error: productError } = await supabase
       .from("products")
       .insert(payload)
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ data }, { status: 201 });
+    if (productError) return NextResponse.json({ error: productError.message }, { status: 500 });
+
+    // Add category relationships
+    const categoryRelationships = categories.map((catId: string) => ({
+      product_id: product.id,
+      category_id: catId
+    }));
+
+    const { error: categoryError } = await supabase
+      .from("product_categories")
+      .insert(categoryRelationships);
+
+    if (categoryError) {
+      // Clean up the created product if category assignment fails
+      await supabase.from("products").delete().eq("id", product.id);
+      return NextResponse.json({ error: categoryError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: product }, { status: 201 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -31,15 +31,15 @@ const services: Service[] = [
   {
     id: 'pc-building',
     title: 'Custom PC Building',
-    description: 'Professional custom PC assembly and configuration tailored to your specific needs and budget.',
+    description: 'Custom PC builds tailored to your needs and budget.',
     icon: Cpu,
     features: [
-      'Component selection consultation',
-      'Professional assembly and testing',
-      'Cable management and optimization',
-      'BIOS configuration and OS installation',
-      '1-year build warranty',
-      'Performance benchmarking'
+      'Component consultation',
+      'Professional assembly',
+      'Cable management',
+      'BIOS & OS setup',
+      '1-year warranty',
+      'Performance testing'
     ],
     image: '/services/pcbuild.jpeg',
     gallery: ['/services/pcbuild.jpeg', '/services/gaming-pc-build.jpeg']
@@ -47,15 +47,15 @@ const services: Service[] = [
   {
     id: 'office-setup',
     title: 'Desktop/Office Space Setup',
-    description: 'Complete workstation and office space configuration for optimal productivity and ergonomics.',
+    description: 'Complete workstation setup for optimal productivity.',
     icon: Monitor,
     features: [
-      'Ergonomic workstation design',
-      'Multi-monitor setup and calibration',
-      'Cable management and organization',
-      'Lighting and acoustics optimization',
-      'Productivity software installation',
-      'Network and connectivity setup'
+      'Ergonomic design',
+      'Multi-monitor setup',
+      'Cable organization',
+      'Lighting optimization',
+      'Software installation',
+      'Network setup'
     ],
 
     image: '/services/desksetup.jpeg',
@@ -64,15 +64,15 @@ const services: Service[] = [
   {
     id: 'software-installation',
     title: 'Computer/Software Installation',
-    description: 'Expert installation and configuration of operating systems, software, and hardware components.',
+    description: 'Expert OS, software, and hardware installation.',
     icon: Settings,
     features: [
-      'Operating system installation/upgrade',
-      'Software suite setup and licensing',
-      'Driver installation and updates',
-      'Security software configuration',
-      'Data migration and backup setup',
-      'System optimization and tuning'
+      'OS installation/upgrade',
+      'Software setup & licensing',
+      'Driver updates',
+      'Security configuration',
+      'Data migration',
+      'System optimization'
     ],
 
     image: '/services/software.jpeg',
@@ -133,7 +133,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
   return (
     <PageLayout>
       {/* Hero Carousel */}
-      <ServicesHeroCarousel />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <ServicesHeroCarousel />
+      </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
@@ -151,8 +153,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             Professional Tech Services
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Expert computer services from custom PC building to complete office setups. 
-            Professional installation, configuration, and optimization for all your tech needs.
+            Expert tech services from custom PC builds to complete office setups. Professional, fast, reliable.
           </p>
         </div>
 
@@ -166,23 +167,25 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 return (
                   <div key={service.id} className="snap-center shrink-0 w-[85%] sm:w-[70%]">
                     <Card className="relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
-                      {/* Service Image */}
-                      <div className="relative h-32 sm:h-40 lg:h-48 overflow-hidden">
-                        <Image
-                          src={service.image}
-                          alt={service.title}
-                          fill
-                          className="object-cover transition-transform duration-300 hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                        
-                        {/* Icon Overlay */}
-                        <div className="absolute top-4 right-4">
-                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
-                            <IconComponent className="h-6 w-6 text-gray-600" />
+                      <CardContent className="p-3 pb-0">
+                        {/* Service Image */}
+                        <div className="relative h-32 sm:h-40 lg:h-48 overflow-hidden rounded-md bg-gray-100 mb-3">
+                          <Image
+                            src={service.image}
+                            alt={service.title}
+                            fill
+                            className="object-cover transition-transform duration-300 hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          
+                          {/* Icon Overlay */}
+                          <div className="absolute top-4 right-4">
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
+                              <IconComponent className="h-6 w-6 text-gray-600" />
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </CardContent>
                       
                       <CardHeader className="text-center">
                         <CardTitle className="text-xl mb-2">{service.title}</CardTitle>
@@ -223,23 +226,25 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             const resolvedId = dbServiceIdByTitle.get(service.title) ?? service.id
             return (
               <Card key={service.id} className="relative hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
-                {/* Service Image */}
-                <div className="relative h-48 overflow-hidden">
-                  <Image
-                    src={service.image}
-                    alt={service.title}
-                    fill
-                    className="object-cover transition-transform duration-300 hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  
-                  {/* Icon Overlay */}
-                  <div className="absolute top-4 right-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
-                      <IconComponent className="h-6 w-6 text-gray-600" />
+                <CardContent className="p-3 pb-0">
+                  {/* Service Image */}
+                  <div className="relative h-48 overflow-hidden rounded-md bg-gray-100 mb-3">
+                    <Image
+                      src={service.image}
+                      alt={service.title}
+                      fill
+                      className="object-cover transition-transform duration-300 hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    
+                    {/* Icon Overlay */}
+                    <div className="absolute top-4 right-4">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/90">
+                        <IconComponent className="h-6 w-6 text-gray-600" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                </CardContent>
                 
                 <CardHeader className="text-center">
                   <CardTitle className="text-xl mb-2">{service.title}</CardTitle>
@@ -328,17 +333,17 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                   {
                     icon: Award,
                     title: 'Certified Technicians',
-                    description: 'Our team consists of certified professionals with years of experience in computer hardware and software.'
+                    description: 'Certified professionals with extensive hardware and software experience.'
                   },
                   {
                     icon: Zap,
                     title: 'Fast & Reliable',
-                    description: 'Quick turnaround times without compromising on quality. Most services completed within 24-48 hours.'
+                    description: 'Fast service without compromising quality. Most jobs done in 24-48 hours.'
                   },
                   {
                     icon: Users,
                     title: 'Customer Focused',
-                    description: 'Personalized service tailored to your specific needs and budget. 100% satisfaction guaranteed.'
+                    description: 'Personalized service for your needs and budget. 100% satisfaction guaranteed.'
                   }
                 ].map((benefit, index) => {
                   const IconComponent = benefit.icon
@@ -366,17 +371,17 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
               {
                 icon: Award,
                 title: 'Certified Technicians',
-                description: 'Our team consists of certified professionals with years of experience in computer hardware and software.'
+                description: 'Certified professionals with extensive hardware and software experience.'
               },
               {
                 icon: Zap,
                 title: 'Fast & Reliable',
-                description: 'Quick turnaround times without compromising on quality. Most services completed within 24-48 hours.'
+                description: 'Fast service without compromising quality. Most jobs done in 24-48 hours.'
               },
               {
                 icon: Users,
                 title: 'Customer Focused',
-                description: 'Personalized service tailored to your specific needs and budget. 100% satisfaction guaranteed.'
+                description: 'Personalized service for your needs and budget. 100% satisfaction guaranteed.'
               }
             ].map((benefit, index) => {
               const IconComponent = benefit.icon

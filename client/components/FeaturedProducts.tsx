@@ -25,7 +25,7 @@ export const FeaturedProducts = () => {
   }, []);
 
   return (
-    <section className="pt-20 pb-4 bg-white">
+    <section className="pt-2 pb-2 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -62,7 +62,7 @@ export const FeaturedProducts = () => {
 
         {/* View All Products Button */}
         <div className="text-center">
-          <Button asChild variant="outline" size="lg" className="px-8">
+          <Button asChild variant="outline" size="lg" className="px-8 rounded-full">
             <Link href="/products">View All Products</Link>
           </Button>
         </div>

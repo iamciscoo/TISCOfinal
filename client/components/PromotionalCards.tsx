@@ -48,7 +48,7 @@ const promotionalCards: PromoCard[] = [
 
 export const PromotionalCards = () => {
   return (
-    <section className="py-10 bg-gray-50">
+    <section className="py-5 sm:py-10 bg-gray-50 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop/Tablet Grid */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -89,22 +89,25 @@ export const PromotionalCards = () => {
         </div>
         {/* Mobile Slider */}
         <div className="md:hidden">
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide">
             {promotionalCards.map((card) => (
-              <Link key={card.id} href={card.ctaLink} className="group min-w-[88%] snap-start">
-                <div className="flex items-center justify-between h-32 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 px-4 overflow-hidden active:scale-[0.99] transition">
+              <Link key={card.id} href={card.ctaLink} className="group min-w-[90%] sm:min-w-[85%] snap-start">
+                <div className="flex items-center justify-between h-36 sm:h-32 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 px-4 sm:px-5 overflow-hidden active:scale-[0.99] transition">
                   {/* Text */}
-                  <div className="flex-1 pr-3">
-                    <h3 className="text-gray-900 text-base font-semibold leading-snug">
+                  <div className="flex-1 pr-3 min-w-0">
+                    <h3 className="text-gray-900 text-base sm:text-lg font-semibold leading-snug mb-1 break-words">
                       {card.title}
                     </h3>
-                    <span className="mt-2 inline-flex items-center text-blue-600 text-sm font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm mb-2 line-clamp-2 break-words">
+                      {card.description}
+                    </p>
+                    <span className="inline-flex items-center text-blue-600 text-sm font-medium">
                       {card.ctaText}
                       <ArrowRight className="ml-1 h-4 w-4" />
                     </span>
                   </div>
                   {/* Image */}
-                  <div className="relative h-full w-28 flex-shrink-0">
+                  <div className="relative h-full w-24 sm:w-28 flex-shrink-0">
                     <div className="absolute inset-y-2 right-0 left-0 rounded-xl overflow-hidden">
                       <Image
                         src={card.imageSrc}

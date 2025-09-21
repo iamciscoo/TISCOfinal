@@ -29,7 +29,8 @@ const getData = async (): Promise<Product[]> => {
         is_active: !!product.is_active,
         rating: (product as any).rating,
         reviews_count: (product as any).reviews_count,
-        category: product.category
+        category: (product as any).categories?.[0]?.category || product.category,
+        categories: (product as any).categories || []
       })
     });
   } catch (error) {

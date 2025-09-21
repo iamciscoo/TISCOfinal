@@ -69,9 +69,9 @@ export const ServicesHeroCarousel = () => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const update = () => {
-      const max = Math.max(1, window.innerHeight * 0.5)
+      const max = Math.max(1, window.innerHeight * 0.6)
       const y = window.scrollY
-      const p = Math.min(1, Math.max(0, y / max))
+      const p = Math.min(0.8, Math.max(0, y / max)) // Limit max scroll effect to 0.8
       el.style.setProperty('--p', String(prefersReduced ? 0 : p))
     }
 
@@ -129,13 +129,15 @@ export const ServicesHeroCarousel = () => {
   return (
     <section
       ref={heroRef}
-      className="relative h-[48vh] sm:h-[55vh] lg:h-[60vh] overflow-hidden bg-gray-900
-                 mx-4 sm:mx-6 lg:mx-8 mt-2 md:mt-4
-                 rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10"
+      className="relative overflow-hidden bg-gray-900
+                 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 md:mt-4
+                 rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10
+                 h-[28vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] xl:h-[60vh]"
       style={{
         containerType: 'inline-size',
-        clipPath: 'inset(0 0 calc(var(--p,0) * 24vh) 0 round 1.5rem)',
-        marginBottom: 'calc(var(--p,0) * -24vh)',
+        clipPath: 'inset(0 0 calc(var(--p,0) * min(20vh, 30%)) 0 round 1.5rem)',
+        // Pull the next section upward by a proportional amount
+        marginBottom: 'calc(var(--p,0) * min(-20vh, -30%))',
         transition: 'clip-path 150ms ease-out, margin-bottom 150ms ease-out',
       } as React.CSSProperties}
     >
@@ -154,7 +156,7 @@ export const ServicesHeroCarousel = () => {
             sizes="100vw"
             className="object-cover rounded-2xl md:rounded-3xl object-center pointer-events-none select-none will-change-transform"
             style={{
-              transform: 'translateY(calc(var(--p,0) * 7vh)) scale(calc(1 + var(--p,0) * 0.04))',
+              transform: 'translateY(calc(var(--p,0) * 4vh)) scale(calc(1 + var(--p,0) * 0.02))',
               willChange: 'transform',
             }}
             priority={index === 0}
@@ -175,69 +177,64 @@ export const ServicesHeroCarousel = () => {
 
       {/* Content Overlay */}
       <div 
-        className="relative z-10 h-full flex items-center"
+        className="absolute inset-0 flex flex-col items-start justify-center z-10"
         style={{
-          transform: 'translateY(calc(var(--p,0) * -2vh))',
-          opacity: 'calc(1 - var(--p,0) * 0.05)',
+          transform: 'translateY(calc(var(--p,0) * -1vh))',
+          opacity: 'calc(1 - var(--p,0) * 0.3)',
           willChange: 'transform, opacity',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-3xl">
             {/* Slide Content */}
-            <div className="text-white space-y-2 sm:space-y-6">
-              <div className="space-y-2 sm:space-y-3">
-                <p className="text-blue-400 font-medium text-sm sm:text-base md:text-lg tracking-wide uppercase">
+            <div className="text-white space-y-2 sm:space-y-4 md:space-y-6 max-w-3xl px-4 sm:px-6">
+              <div className="space-y-1 sm:space-y-3">
+                <p className="text-blue-400 font-medium text-xs sm:text-base md:text-lg tracking-wide uppercase">
                   {heroSlides[currentSlide].subtitle}
                 </p>
-                <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-6xl font-bold leading-tight font-chango">
+                <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight font-chango">
                   {heroSlides[currentSlide].title}
                 </h1>
               </div>
               
-              <p className="text-base sm:text-lg md:text-xl text-gray-200 leading-relaxed max-w-2xl">
+              <p className="hidden sm:block text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 leading-relaxed max-w-2xl">
                 {heroSlides[currentSlide].description}
               </p>
 
-              <div className="pt-2 sm:pt-4">
+              <div className="pt-1 sm:pt-2">
                 <Button 
-                  size="lg" 
-                  className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-blue-600 hover:bg-blue-700"
+                  className="text-sm sm:text-lg px-4 py-3 sm:px-8 sm:py-6 bg-blue-600 hover:bg-blue-700 font-semibold rounded-full"
                   onClick={scrollToBooking}
                 >
                   {heroSlides[currentSlide].cta}
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
       </div>
 
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+        className="absolute left-2 sm:left-4 lg:left-6 top-1/2 transform -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
       </button>
       
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+        className="absolute right-2 sm:right-4 lg:right-6 top-1/2 transform -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
         aria-label="Next slide"
       >
-        <ChevronRight className="h-6 w-6" />
+        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
       </button>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="flex space-x-2">
+      <div className="absolute bottom-3 sm:bottom-4 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="flex space-x-2 sm:space-x-3">
           {heroSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${
                 index === currentSlide 
                   ? 'bg-white scale-110' 
                   : 'bg-white/50 hover:bg-white/75'

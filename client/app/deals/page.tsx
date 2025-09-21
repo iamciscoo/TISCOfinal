@@ -352,10 +352,10 @@ export default function DealsPage() {
                     }>
                       {displayedDeals.map((deal) => (
                         <Card key={deal.id} className="group hover:shadow-lg transition-shadow h-full">
-                          <CardContent className={viewMode === 'grid' ? 'p-3 flex h-full flex-col' : 'p-4 flex gap-4'}>
+                          <CardContent className={viewMode === 'grid' ? 'p-1.5 sm:p-2 flex h-full flex-col' : 'p-4 flex gap-4'}>
                             {/* Product Image */}
-                            <Link href={`/product?id=${deal.id}`} className={viewMode === 'grid' 
-                              ? 'aspect-square bg-gray-100 rounded-md mb-3 overflow-hidden relative block' 
+                            <Link href={`/products/${deal.id}`} className={viewMode === 'grid' 
+                              ? 'aspect-square bg-gray-100 rounded-md mb-1 sm:mb-2 overflow-hidden relative block' 
                               : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0 relative block'
                             }>
                               <Image
@@ -373,15 +373,17 @@ export default function DealsPage() {
                               </Badge>
                             </Link>
 
-                            <div className={viewMode === 'grid' ? 'flex-1 flex flex-col' : 'flex-1 min-w-0'}>
+                            <div className={viewMode === 'grid' ? 'flex-1 flex flex-col px-1 py-0 sm:px-0 sm:py-0' : 'flex-1 min-w-0'}>
                               {/* Product Info */}
-                              <div className={viewMode === 'grid' ? 'mb-2' : 'mb-3'}>
-                                <div className="text-xs text-blue-600 font-medium mb-1">
+                              <div className={viewMode === 'grid' ? 'mb-1 sm:mb-1.5' : 'mb-3'}>
+                                <div className={`text-blue-600 font-medium mb-1 ${
+                                  viewMode === 'grid' ? 'text-[10px] sm:text-xs' : 'text-xs'
+                                }`}>
                                   {deal.category}
                                 </div>
-                                <Link href={`/product?id=${deal.id}`}>
-                                  <h3 className={`font-medium text-gray-900 group-hover:text-blue-600 transition-colors ${
-                                    viewMode === 'grid' ? 'text-sm line-clamp-2' : 'text-base line-clamp-2'
+                                <Link href={`/products/${deal.id}`}>
+                                  <h3 className={`font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-tight ${
+                                    viewMode === 'grid' ? 'text-[11px] sm:text-sm line-clamp-1 sm:line-clamp-2' : 'text-base line-clamp-2'
                                   }`}>
                                     {deal.name}
                                   </h3>
@@ -394,31 +396,37 @@ export default function DealsPage() {
                               </div>
 
                               {/* Price & Actions */}
-                              <div className={viewMode === 'grid' ? 'flex flex-col mt-auto space-y-2' : 'flex items-center justify-between gap-3 flex-wrap'}>
+                              <div className={viewMode === 'grid' ? 'flex flex-col mt-auto space-y-1 sm:space-y-1.5' : 'flex items-center justify-between gap-3 flex-wrap'}>
                                 <div className={viewMode === 'grid' ? 'min-w-0' : 'flex-1 min-w-0'}>
-                                  <div className={viewMode === 'grid' ? 'flex flex-col gap-0.5' : 'flex items-center gap-2 flex-wrap'}>
+                                  <div className={viewMode === 'grid' ? 'flex flex-col gap-0' : 'flex items-center gap-2 flex-wrap'}>
                                     <PriceDisplay 
                                       price={deal.dealPrice} 
                                       className={`font-bold text-red-600 whitespace-normal break-words leading-tight ${
-                                        viewMode === 'grid' ? 'text-sm' : 'text-lg'
+                                        viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-lg'
                                       }`} 
                                     />
                                     {deal.discount > 0 && deal.originalPrice > deal.dealPrice && (
                                       <PriceDisplay 
                                         price={deal.originalPrice} 
-                                        className="text-xs text-gray-500 line-through whitespace-normal break-words leading-tight" 
+                                        className={`text-gray-500 line-through whitespace-normal break-words leading-tight ${
+                                          viewMode === 'grid' ? 'text-[9px] sm:text-xs' : 'text-xs'
+                                        }`} 
                                       />
                                     )}
                                   </div>
                                   {deal.stock_quantity > 0 ? (
-                                    <div className="text-xs text-green-600">In Stock</div>
+                                    <div className={`text-green-600 ${
+                                      viewMode === 'grid' ? 'text-[9px] sm:text-xs' : 'text-xs'
+                                    }`}>In Stock</div>
                                   ) : (
-                                    <div className="text-xs text-red-600">Out of Stock</div>
+                                    <div className={`text-red-600 ${
+                                      viewMode === 'grid' ? 'text-[9px] sm:text-xs' : 'text-xs'
+                                    }`}>Out of Stock</div>
                                   )}
                                 </div>
                                 
                                 <div className={`flex gap-2 ${
-                                  viewMode === 'grid' ? 'justify-center' : 'shrink-0'
+                                  viewMode === 'grid' ? 'justify-center pt-0.5 sm:pt-1' : 'shrink-0'
                                 }`}>
                                   <Button
                                     size={viewMode === 'grid' ? 'sm' : 'sm'}
@@ -426,10 +434,13 @@ export default function DealsPage() {
                                     disabled={deal.stock_quantity === 0}
                                     variant={viewMode === 'grid' ? 'secondary' : 'default'}
                                     className={viewMode === 'grid' 
-                                      ? 'w-full rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 text-xs px-2' 
+                                      ? 'w-full h-7 sm:h-8 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 text-[10px] sm:text-xs px-2' 
                                       : 'shrink-0 whitespace-nowrap'}
                                   >
-                                    <ShoppingCart className="h-3 w-3 mr-1" />
+                                    <ShoppingCart className={viewMode === 'grid' 
+                                      ? 'h-2.5 w-2.5 mr-0.5 sm:h-3 sm:w-3 sm:mr-1' 
+                                      : 'h-3 w-3 mr-1'
+                                    } />
                                     {viewMode === 'list' ? 'Add to Cart' : 'Add'}
                                   </Button>
                                 </div>

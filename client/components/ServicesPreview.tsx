@@ -40,24 +40,26 @@ const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
   const IconComponent = service.icon;
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-      {/* Service Image */}
-      <div className="relative h-40 overflow-hidden">
-        <Image
-          src={service.image}
-          alt={service.title}
-          fill
-          sizes="(min-width: 1024px) 33vw, 100vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+      <CardContent className="p-3 pb-0">
+        {/* Service Image */}
+        <div className="relative h-40 overflow-hidden rounded-md bg-gray-100 mb-3">
+          <Image
+            src={service.image}
+            alt={service.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, 100vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
-        {/* Icon Overlay */}
-        <div className="absolute top-3 right-3">
-          <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-            <IconComponent className="h-5 w-5 text-gray-600 group-hover:text-white transition-colors" />
+          {/* Icon Overlay */}
+          <div className="absolute top-3 right-3">
+            <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+              <IconComponent className="h-5 w-5 text-gray-600 group-hover:text-white transition-colors" />
+            </div>
           </div>
         </div>
-      </div>
+      </CardContent>
 
       <CardContent className="p-6 text-center">
         <h3 className="font-semibold text-lg text-gray-900 mb-3">
@@ -140,14 +142,14 @@ export const ServicesPreview = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="rounded-full">
                 <Link href="/services">
                   View All Services
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
 
-              <Button variant="outline" size="lg" asChild>
+              <Button variant="outline" size="lg" asChild className="rounded-full">
                 <Link href="/contact">Contact Us</Link>
               </Button>
             </div>

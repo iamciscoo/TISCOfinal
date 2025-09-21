@@ -229,8 +229,22 @@ export function getAllProductImages(product: Product): string[] {
  * @param fallback - Default category name if none found
  * @returns Category name string
  */
-export const getCategoryName = (product: { categories?: { name: string }; category?: string }, fallback: string = 'Uncategorized'): string => {
-  return product.categories?.name || product.category || fallback
+export const getCategoryName = (product: { 
+  categories?: Array<{ category: { name: string } }> | { name: string }; 
+  category?: string 
+}, fallback: string = 'General'): string => {
+  // Handle new multi-category structure
+  if (Array.isArray(product.categories) && product.categories.length > 0) {
+    return product.categories[0]?.category?.name || fallback
+  }
+  
+  // Handle legacy single category structure
+  if (product.categories && 'name' in product.categories) {
+    return product.categories.name || fallback
+  }
+  
+  // Handle direct category string
+  return product.category || fallback
 }
 
 // =============================================================================

@@ -192,12 +192,28 @@ function ProductsContent() {
       )
     }
 
-    // Category filter
+    // Category filter - now supports multiple categories per product
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product =>
-        String(product.category_id) === selectedCategory ||
-        String(product.categories?.id ?? '') === selectedCategory
-      )
+      filtered = filtered.filter(product => {
+        // Check primary category for backward compatibility
+        if (String(product.category_id) === selectedCategory) {
+          return true
+        }
+        
+        // Check if product has multiple categories
+        if (product.categories && Array.isArray(product.categories)) {
+          return product.categories.some(cat => 
+            String(cat.category?.id) === selectedCategory
+          )
+        }
+        
+        // Legacy single category check
+        if (product.categories && !Array.isArray(product.categories)) {
+          return String(product.categories.id ?? '') === selectedCategory
+        }
+        
+        return false
+      })
     }
 
     // Price filter removed

@@ -15,16 +15,20 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .from("products")
       .select(`
         *,
+        categories:product_categories(
+          category:categories(
+            id,
+            name,
+            description
+          )
+        ),
         product_images(
           id,
           url,
           is_main,
           sort_order,
-          created_at
-        ),
-        categories(
-          id,
-          name
+          created_at,
+          path
         )
       `)
       .order('is_main', { ascending: false, foreignTable: 'product_images' })
@@ -70,7 +74,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       if (key in body) updates[key] = (body as Record<string, unknown>)[key];
     }
 
-    if (Object.keys(updates).length === 0) {
+    // Handle category updates (both single and multiple)
+    const category_ids = (body as any).category_ids;
+    if (category_ids && Array.isArray(category_ids)) {
+      if (category_ids.length > 5) {
+        return NextResponse.json({ error: "A product cannot have more than 5 categories" }, { status: 400 });
+      }
+      
+      if (category_ids.length > 0) {
+        updates.category_id = category_ids[0]; // Keep primary category for backward compatibility
+      }
+    }
+
+    if (Object.keys(updates).length === 0 && !category_ids) {
       return NextResponse.json(
         { error: "No valid fields to update" },
         { status: 400 }
@@ -79,6 +95,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     updates.updated_at = new Date().toISOString();
 
+    // Update product first
     const { data, error } = await supabase
       .from("products")
       .update(updates)
@@ -87,6 +104,32 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Update categories if provided
+    if (category_ids && Array.isArray(category_ids)) {
+      // Remove existing category relationships
+      await supabase
+        .from("product_categories")
+        .delete()
+        .eq("product_id", id);
+
+      // Add new category relationships
+      if (category_ids.length > 0) {
+        const categoryRelationships = category_ids.map((catId: string) => ({
+          product_id: id,
+          category_id: catId
+        }));
+
+        const { error: categoryError } = await supabase
+          .from("product_categories")
+          .insert(categoryRelationships);
+
+        if (categoryError) {
+          return NextResponse.json({ error: categoryError.message }, { status: 500 });
+        }
+      }
+    }
+
     return NextResponse.json({ data }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";

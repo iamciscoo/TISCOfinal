@@ -21,7 +21,7 @@ export type ProductWithRelations = {
   created_at?: string | null
   updated_at?: string | null
   product_images?: Array<{ url?: string | null; is_main?: boolean | null; sort_order?: number | null }>
-  categories?: { id: string; name: string; slug?: string }
+  categories?: Array<{ category: { id: string; name: string; slug?: string } }>
 };
 
 // Normalize server product to shared UI Product type
@@ -40,8 +40,8 @@ export function normalizeToProduct(p: ProductWithRelations): UIProduct {
     description: p.description ?? '',
     price: Number(p.price) || 0,
     image_url: p.image_url ?? undefined,
-    category_id: p.categories?.id ?? undefined,
-    categories: p.categories ? { id: p.categories.id, name: p.categories.name, slug: p.categories.slug || '' } : undefined,
+    category_id: p.categories?.[0]?.category?.id ?? undefined,
+    categories: p.categories || undefined,
     product_images: images,
     stock_quantity: p.stock_quantity ?? undefined,
     rating: p.rating ?? null,
@@ -85,9 +85,8 @@ export async function fetchProductByIdOrSlug(idOrSlug: string): Promise<ProductW
           is_main,
           sort_order
         ),
-        categories (
-          id,
-          name${withSlug ? ', slug' : ''}
+        categories:product_categories(
+          category:categories(id, name${withSlug ? ', slug' : ''})
         )
       `)
 

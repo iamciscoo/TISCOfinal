@@ -13,16 +13,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
     const limitParam = searchParams.get('limit')
-    const category = searchParams.get('category')
 
     const buildQuery = (withSlug: boolean) => {
       let q = supabase
         .from('products')
         .select(`
           *,
-          categories (
-            id,
-            name${withSlug ? ', slug' : ''}
+          categories:product_categories (
+            category:categories (
+              id,
+              name${withSlug ? ', slug' : ''}
+            )
           ),
           product_images (
             id,
@@ -42,10 +43,8 @@ export async function GET(request: NextRequest) {
         q = q.or(orClauses)
       }
 
-      // Category filter
-      if (category && category !== 'all') {
-        q = q.eq('category_id', category)
-      }
+      // Category filter removed - let frontend handle it to support multi-category products
+      // This matches the shop page behavior which does client-side filtering
 
       // Apply limit only if provided
       if (limitParam) {

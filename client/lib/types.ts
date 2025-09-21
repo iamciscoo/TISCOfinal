@@ -9,7 +9,7 @@ export interface Product {
   image?: string
   category_id?: string | number
   category?: string
-  categories?: {
+  categories?: Array<{ category: { id: string; name: string; slug?: string } }> | {
     id: string | number
     name: string
     slug: string

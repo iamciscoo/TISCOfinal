@@ -197,7 +197,9 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
         <Link href="/products" className="hover:text-blue-600">Products</Link>
         <span>/</span>
         <Link href={`/categories/${product.category_id}`} className="hover:text-blue-600">
-          {product.categories?.name || 'Category'}
+          {Array.isArray(product.categories) && product.categories.length > 0 
+            ? product.categories[0]?.category?.name || 'Category' 
+            : (product.categories && 'name' in product.categories ? product.categories.name : 'Category')}
         </Link>
         <span>/</span>
         <span className="text-gray-900">{product.name}</span>
@@ -301,7 +303,9 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           {/* Product Title & Category */}
           <div>
             <div className="text-sm text-blue-600 font-medium mb-2">
-              {product.categories?.name || 'Electronics'}
+              {Array.isArray(product.categories) && product.categories.length > 0 
+                ? product.categories[0]?.category?.name || 'Electronics'
+                : (product.categories && 'name' in product.categories ? product.categories.name : 'Electronics')}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
             

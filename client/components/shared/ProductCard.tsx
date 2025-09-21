@@ -80,7 +80,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           <div className="flex items-stretch">
             {/* Product Image */}
             <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex-shrink-0">
-              <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
+              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
                 <Image
                   src={imageUrl}
                   alt={`${product.name} product image`}
@@ -105,7 +105,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               </div>
               
               {/* Product Name */}
-              <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
+              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
                 <h3 className="text-xl font-semibold mb-2 hover:text-blue-600 transition-colors line-clamp-2">
                   {product.name}
                 </h3>
@@ -167,21 +167,19 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   // Grid variant (default)
   return (
     <Card className={cn("group hover:shadow-xl transition-all duration-300 overflow-hidden h-full", className)}>
-      <CardContent className="p-0 flex h-full flex-col">
+      <CardContent className={cn(compact ? "p-1.5 sm:p-2" : "p-3", "flex h-full flex-col")}>
           {/* Product Image Container */}
-        <div className={cn("relative overflow-hidden", "aspect-square")}>
-          <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
-            <Image
-              src={imageUrl}
-              alt={`${product.name} product image`}
-              fill
-              className={cn(
-                compact ? "object-contain bg-gray-50" : "object-cover",
-                "group-hover:scale-105 transition-transform duration-300"
-              )}
-              sizes={compact ? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"}
-            />
-          </Link>
+        <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`} className={cn(
+          "aspect-square bg-gray-100 rounded-md overflow-hidden relative block", 
+          compact ? "mb-1 sm:mb-2" : "mb-3"
+        )}>
+          <Image
+            src={imageUrl}
+            alt={`${product.name} product image`}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes={compact ? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"}
+          />
           
           {/* Stock Status Badge */}
           {!inStock && (
@@ -189,45 +187,45 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               Out of Stock
             </Badge>
           )}
-        </div>
+        </Link>
         
         {/* Product Details */}
-        <div className={cn(compact ? "p-1 sm:p-2" : "p-3", "flex flex-col flex-1")}> 
+        <div className={cn(compact ? "px-1 py-0 sm:px-1.5 sm:py-1" : "p-3", "flex flex-col flex-1")}> 
           {/* Category Badge */}
           <Badge variant="secondary" className="hidden sm:inline-flex mb-0.5 text-xs">
             {categoryName}
           </Badge>
           
           {/* Product Name */}
-          <Link href={`/product?id=${product.id}`} aria-label={`View ${product.name} details`}>
+          <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
             <h3 className={cn(
-              "font-semibold mb-0 hover:text-blue-600 transition-colors",
-              compact ? "text-[12px] sm:text-sm md:text-base line-clamp-1 sm:line-clamp-2" : "text-base line-clamp-2"
+              "font-semibold mb-0 hover:text-blue-600 transition-colors leading-tight",
+              compact ? "text-[11px] sm:text-sm md:text-base line-clamp-1 sm:line-clamp-2" : "text-base line-clamp-2"
             )}>
               {product.name}
             </h3>
           </Link>
 
           {/* Price */}
-          <div className="mt-0.5">
+          <div className={cn(compact ? "mt-0.5 sm:mt-1" : "mt-0")}>
             <div className="min-w-0">
               {isDeal ? (
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0">
                   <PriceDisplay 
                     price={currentPrice} 
-                    className={cn("font-bold text-red-600 leading-tight", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}
+                    className={cn("font-bold text-red-600 leading-tight", compact ? "text-xs sm:text-sm" : "text-base sm:text-lg")}
                   />
                   {originalPrice && originalPrice > currentPrice && (
                     <PriceDisplay 
                       price={originalPrice} 
-                      className={cn("text-gray-500 line-through leading-tight", compact ? "text-[10px] sm:text-xs" : "text-xs")}
+                      className={cn("text-gray-500 line-through leading-tight", compact ? "text-[9px] sm:text-xs" : "text-xs")}
                     />
                   )}
                 </div>
               ) : (
                 <PriceDisplay 
                   price={currentPrice} 
-                  className={cn("font-bold text-blue-600 leading-tight", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}
+                  className={cn("font-bold text-blue-600 leading-tight", compact ? "text-xs sm:text-sm" : "text-base sm:text-lg")}
                 />
               )}
             </div>
@@ -235,16 +233,19 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
 
           {/* Bottom-aligned Add to Cart */}
           {showAddToCart && inStock && (
-            <div className="mt-auto pt-1">
+            <div className={cn("mt-auto", compact ? "pt-0.5 sm:pt-1" : "pt-0.5")}>
               <Button 
                 onClick={handleAddToCart}
                 disabled={isLoading}
                 size="sm"
                 variant="secondary"
-                className="w-full rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 py-1.5"
+                className={cn(
+                  "w-full rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200",
+                  compact ? "h-7 sm:h-8 text-[10px] sm:text-xs" : "h-8 sm:h-9"
+                )}
                 aria-label={isLoading ? 'Adding to cart...' : `Add ${product.name} to cart`}
               >
-                <ShoppingCart className="h-3 w-3 mr-1" />
+                <ShoppingCart className={cn(compact ? "h-2.5 w-2.5 mr-0.5 sm:h-3 sm:w-3 sm:mr-1" : "h-3 w-3 mr-1")} />
                 Add
               </Button>
             </div>

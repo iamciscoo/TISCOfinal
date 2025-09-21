@@ -2,6 +2,7 @@ import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import { CartSidebar } from "@/components/CartSidebar"
 import dynamic from 'next/dynamic'
+import RareFindsSection from "@/components/RareFindsSection"
 
 // Dynamic imports for non-critical components
 const HomepageHeroCarousel = dynamic(() => import("@/components/HomepageHeroCarousel").then(mod => ({ default: mod.HomepageHeroCarousel })), {
@@ -16,9 +17,7 @@ const FeaturedProducts = dynamic(() => import("@/components/FeaturedProducts").t
   loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded-lg" />
 })
 
-const BrandSlider = dynamic(() => import("@/components/BrandSlider").then(mod => ({ default: mod.BrandSlider })), {
-  loading: () => <div className="h-32 bg-gray-100 animate-pulse rounded-lg" />
-})
+import { BrandSlider } from "@/components/BrandSlider"
 
 const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").then(mod => ({ default: mod.ServicesPreview })), {
   loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded-lg" />
@@ -28,12 +27,17 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main>
-        <HomepageHeroCarousel />
-        <PromotionalCards />
-        <FeaturedProducts />
-        <BrandSlider />
-        <ServicesPreview />
+      <main className="overflow-x-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 pb-8 sm:pb-12">
+          <HomepageHeroCarousel />
+        </div>
+        <div className="space-y-8 sm:space-y-12 md:space-y-16">
+          <PromotionalCards />
+          <RareFindsSection />
+          <FeaturedProducts />
+          <BrandSlider />
+          <ServicesPreview />
+        </div>
       </main>
       <Footer />
       <CartSidebar />

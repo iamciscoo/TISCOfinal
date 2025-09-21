@@ -505,37 +505,7 @@ async function handlePaymentFailure(transaction: TransactionRow, reason: string)
   }
 }
 
-async function handlePaymentPending(transaction: TransactionRow) {
-  try {
-    const supabase = getAdminSupabase()
-    if (!supabase) return
-    // Update transaction status if not already pending
-    if (transaction.status !== 'pending') {
-      await supabase
-        .from('payment_transactions')
-        .update({
-          status: 'pending',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', transaction.id)
-    }
-
-    // Log pending status
-    await supabase
-      .from('payment_logs')
-      .insert({
-        transaction_id: transaction.id,
-        event_type: 'payment_pending',
-        data: { message: 'Payment is pending confirmation' },
-        user_id: transaction.user_id
-      })
-
-    console.log('Payment pending:', transaction.transaction_reference)
-    invalidateOrderCaches(transaction)
-  } catch (error) {
-    console.error('Error handling payment pending:', error)
-  }
-}
+// Removed unused handlePaymentPending function
 
 // Commented out unused function to fix build warnings
 // async function handlePaymentCancellation(transaction: TransactionRow) {
@@ -1096,37 +1066,7 @@ async function handleSessionPaymentFailure(session: PaymentSession, reason: stri
   }
 }
 
-async function handleSessionPaymentPending(session: PaymentSession) {
-  try {
-    const supabase = getAdminSupabase()
-    if (!supabase) return
-
-    // Update session status if not already pending
-    if (session.status !== 'pending') {
-      await supabase
-        .from('payment_sessions')
-        .update({
-          status: 'pending',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session.id)
-    }
-
-    // Log pending status
-    await supabase
-      .from('payment_logs')
-      .insert({
-        session_id: session.id,
-        event_type: 'payment_pending',
-        data: { message: 'Payment is pending confirmation' },
-        user_id: session.user_id
-      })
-
-    console.log('Session payment pending:', session.transaction_reference)
-  } catch (error) {
-    console.error('Error handling session payment pending:', error)
-  }
-}
+// Removed unused handleSessionPaymentPending function
 
 // Commented out unused function to fix build warnings
 // async function handleSessionPaymentCancellation(session: PaymentSession) {

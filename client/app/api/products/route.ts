@@ -88,9 +88,11 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
         is_main,
         sort_order
       ),
-      categories (
-        id,
-        name${withSlug ? ', slug' : ''}
+      categories:product_categories (
+        category:categories (
+          id,
+          name${withSlug ? ', slug' : ''}
+        )
       )
     `
 

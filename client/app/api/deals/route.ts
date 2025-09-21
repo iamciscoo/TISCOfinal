@@ -12,7 +12,9 @@ export async function GET() {
       .from('products')
       .select(`
         *,
-        categories(id, name),
+        categories:product_categories(
+          category:categories(id, name)
+        ),
         product_images(url, is_main, sort_order)
       `)
       .eq('is_deal', true)
@@ -42,7 +44,7 @@ export async function GET() {
         currentPrice: product.deal_price || product.price,
         discount: discountPercentage,
         image_url: imageUrl,
-        category: product.categories?.name || 'General',
+        category: product.categories?.[0]?.category?.name || 'General',
         category_id: product.category_id,
         rating: product.rating ?? null,
         reviews_count: product.reviews_count ?? null,

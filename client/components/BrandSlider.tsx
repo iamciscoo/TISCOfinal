@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import TextType from '@/components/ui/text-type'
 
 const brandLogos: { src: string; alt: string }[] = [
   { src: '/brands/AMD.png', alt: 'AMD' },
@@ -14,8 +15,25 @@ export const BrandSlider = () => {
   const logos = [...brandLogos, ...brandLogos]
 
   return (
-    <section className="bg-white py-[28px]">
+    <section className="bg-white py-[10px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Title */}
+        <div className="text-center mb-8">
+          <TextType
+            text="Access Products from leading Industry Leaders."
+            as="h3"
+            className="text-lg sm:text-xl font-semibold text-gray-900 mb-2"
+            typingSpeed={50}
+            pauseDuration={2500}
+            deletingSpeed={40}
+            showCursor={true}
+            cursorCharacter="|"
+            cursorClassName="text-black"
+            startOnVisible={true}
+            loop={true}
+          />
+        </div>
+        
         <div className="brand-slider relative overflow-hidden">
           <div className="h-[60px]">
             <div className="track flex items-center gap-8 md:gap-12 h-full will-change-transform">

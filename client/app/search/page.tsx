@@ -27,9 +27,10 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { ProductCard } from '@/components/shared/ProductCard'
 
-import { Product } from '@/lib/types'
+import { Product, Category } from '@/lib/types'
 import { LoadingSpinner } from '@/components/shared'
 import { debounce } from '@/lib/shared-utils'
+import { getCategories } from '@/lib/database'
 
 function SearchResults() {
   const searchParams = useSearchParams()
@@ -38,6 +39,7 @@ function SearchResults() {
   
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState(query)
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -61,6 +63,21 @@ function SearchResults() {
     [query, router]
   )
 
+  // Load categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await getCategories()
+        setCategories(categoriesData || [])
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      }
+    }
+    
+    fetchCategories()
+  }, [])
+
   // Keep input in sync with URL query param
   useEffect(() => {
     setSearchTerm(query)
@@ -78,9 +95,7 @@ function SearchResults() {
       
       try {
         const qs = new URLSearchParams({ q: query || '' })
-        if (selectedCategory && selectedCategory !== 'all') {
-          qs.set('category', selectedCategory)
-        }
+        // Remove category from API call - let frontend handle filtering like shop page
         const response = await fetch('/api/products/search?' + qs.toString())
         
         if (!response.ok) {
@@ -100,7 +115,7 @@ function SearchResults() {
     }
     
     fetchSearchResults()
-  }, [query, selectedCategory])
+  }, [query]) // Remove selectedCategory dependency since API doesn't filter by category anymore
 
   // Filter and sort products
   useEffect(() => {
@@ -114,9 +129,29 @@ function SearchResults() {
       )
     }
 
-    // Category filter (by category ID)
+    // Category filter - now supports multiple categories per product
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => String(product.categories?.id ?? product.category_id ?? '') === selectedCategory)
+      filtered = filtered.filter(product => {
+
+        // Check primary category for backward compatibility
+        if (String(product.category_id) === selectedCategory) {
+          return true
+        }
+        
+        // Check if product has multiple categories
+        if (product.categories && Array.isArray(product.categories)) {
+          return product.categories.some(cat => 
+            String(cat.category?.id) === selectedCategory
+          )
+        }
+        
+        // Legacy single category check
+        if (product.categories && !Array.isArray(product.categories)) {
+          return String(product.categories.id ?? '') === selectedCategory
+        }
+        
+        return false
+      })
     }
 
     // Price filter removed
@@ -147,15 +182,6 @@ function SearchResults() {
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
   const startIndex = (currentPage - 1) * productsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage)
-
-  // Unique categories derived from results (by ID)
-  const categories = Array.from(
-    new Map(
-      products
-        .map((p) => p.categories ? [String(p.categories.id), p.categories.name] as [string, string] : null)
-        .filter((entry): entry is [string, string] => Boolean(entry))
-    )
-  ).map(([id, name]) => ({ id, name }))
 
   if (loading) {
     return (
@@ -264,27 +290,53 @@ function SearchResults() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-lg mb-6">Filters</h3>
 
-                {/* Category Filter */}
-                {categories.length > 0 && (
-                  <div className="mb-6">
-                    <label className="text-sm font-medium mb-2 block">Category</label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Categories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* Search */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
-                )}
+                </div>
 
-                {/* Price Range removed */}
+                {/* Category Filter */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sort By */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Sort By</label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="relevance">Relevance</SelectItem>
+                      <SelectItem value="name">Name A-Z</SelectItem>
+                      <SelectItem value="price-low">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* Clear Filters */}
                 <Button
@@ -296,7 +348,7 @@ function SearchResults() {
                     setSortBy('relevance')
                   }}
                 >
-                  Clear Filters
+                  Clear All Filters
                 </Button>
               </CardContent>
             </Card>

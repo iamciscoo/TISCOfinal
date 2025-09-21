@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Category } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +20,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: "Product name is required!" }),
   description: z.string().min(1, { message: "Description is required!" }),
   price: z.coerce.number().min(0.01, { message: "Price must be greater than 0" }),
-  category_id: z.string().min(1, { message: "Category is required!" }),
+  category_ids: z.array(z.string()).min(1, { message: "At least one category is required!" }).max(5, { message: "Maximum 5 categories allowed!" }),
   stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean(),
   is_deal: z.boolean(),
@@ -39,7 +41,7 @@ type FormData = {
   name: string;
   description: string;
   price: number;
-  category_id: string;
+  category_ids: string[];
   stock_quantity: number;
   is_featured: boolean;
   is_deal: boolean;
@@ -61,7 +63,7 @@ const AddProductPage = () => {
       name: "",
       description: "",
       price: 0,
-      category_id: "",
+      category_ids: [],
       stock_quantity: 0,
       is_featured: false,
       is_deal: false,
@@ -239,25 +241,68 @@ const AddProductPage = () => {
           />
           <FormField
             control={form.control}
-            name="category_id"
+            name="category_ids"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel>Categories ({field.value.length}/5)</FormLabel>
                 <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-3">
+                    <Select
+                      onValueChange={(categoryId) => {
+                        if (field.value.length >= 5) {
+                          toast({
+                            title: "Maximum categories reached",
+                            description: "A product can have maximum 5 categories",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        if (!field.value.includes(categoryId)) {
+                          field.onChange([...field.value, categoryId]);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Add a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories
+                          .filter((cat) => !field.value.includes(cat.id.toString()))
+                          .map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id.toString()}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {field.value.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {field.value.map((categoryId) => {
+                          const category = categories.find(c => c.id.toString() === categoryId);
+                          return (
+                            <Badge
+                              key={categoryId}
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              {category?.name || 'Unknown'}
+                              <X
+                                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                                onClick={() => {
+                                  field.onChange(field.value.filter(id => id !== categoryId));
+                                }}
+                              />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </FormControl>
-                <FormDescription>Select the category of the product.</FormDescription>
+                <FormDescription>
+                  Select up to 5 categories for this product. Click the X to remove a category.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

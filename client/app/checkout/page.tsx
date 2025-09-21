@@ -56,7 +56,7 @@ const TOP_TZ_CITIES = [
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user, session } = useAuth()
+  const { user } = useAuth()
   const { items, clearCart, getTotalPrice, getTotalItems } = useCartStore()
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')

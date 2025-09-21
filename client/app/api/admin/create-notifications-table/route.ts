@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     console.log('Creating email_notifications table...')
 
     // Create the table using raw SQL
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('information_schema.tables')
       .select('table_name')
       .eq('table_name', 'email_notifications')

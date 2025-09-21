@@ -84,7 +84,24 @@ export const columns: ColumnDef<Product>[] = [
     header: "Category",
     cell: ({ row }) => {
       const product = row.original;
-      return product.category?.name || "Uncategorized";
+      // Handle both old and new category structure
+      const categories = product.categories || [];
+      if (categories.length === 0) return "General";
+      
+      // Display first category name, with count if multiple
+      const firstCategory = categories[0]?.category?.name || categories[0]?.name;
+      const additionalCount = categories.length - 1;
+      
+      return (
+        <div className="flex items-center gap-1">
+          <span>{firstCategory}</span>
+          {additionalCount > 0 && (
+            <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+              +{additionalCount}
+            </span>
+          )}
+        </div>
+      );
     },
   },
   {
