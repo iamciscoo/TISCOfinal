@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
     // Derive buyer information from Supabase user
     const buyerName = user.user_metadata?.full_name || user.user_metadata?.name || 'Customer'
     const buyerEmail = user.email || 'no-reply@example.com'
-    const webhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin}/api/payments/webhooks`
+    // Use current request origin for webhook URL to ensure proper environment routing
+    const webhookUrl = `${req.nextUrl.origin}/api/payments/webhooks`
 
     // Process mobile money payment
     try {

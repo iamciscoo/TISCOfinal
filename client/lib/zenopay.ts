@@ -38,10 +38,9 @@ export class ZenoPayClient {
         buyer_email: args.buyer_email,
         amount: args.amount,
       }
-      // Only send webhook_url if not localhost
-      const w = args.webhook_url
-      if (w && !/^https?:\/\/localhost(?::|\/|$)/i.test(w)) {
-        payload.webhook_url = w
+      // Always send webhook_url if provided (including localhost for testing)
+      if (args.webhook_url) {
+        payload.webhook_url = args.webhook_url
       }
       if (args.channel) {
         // Only include documented 'channel' when explicitly provided.
