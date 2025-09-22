@@ -113,18 +113,25 @@ export async function POST(req: NextRequest) {
     console.log('Webhook authentication passed')
     const body = JSON.parse(rawBody) as WebhookPayload
 
-    // ZenoPay payloads: { "order_id": "677e43274d7cb", "payment_status": "COMPLETED", "reference": "1003020496" }
-    // order_id contains our transaction_reference, reference is ZenoPay's internal reference
+    // ZenoPay actual format: { "data": [{ "order_id": "TXREF", "payment_status": "COMPLETED", "reference": "0982403775" }] }
+    // Also handle simple webhook format: { "order_id": "TXREF", "payment_status": "COMPLETED", "reference": "REF" }
+    const dataArray = Array.isArray(body?.data) ? body.data : []
+    const firstDataItem = dataArray[0] || {}
     const data = (body?.data || {}) as WebhookPayload
+    
     const refCandidates = [
-      body?.order_id,           // ZenoPay puts our transaction_reference here
+      body?.order_id,                    // Simple webhook format
+      firstDataItem?.order_id,           // API response format: data[0].order_id contains our transaction_reference
       body?.transaction_reference, 
       data?.order_id, 
       data?.transaction_reference,
       body?.reference
     ].filter(Boolean)
+    
     const gwCandidates = [
-      body?.reference,          // ZenoPay's internal reference
+      firstDataItem?.reference,          // API response format: data[0].reference is ZenoPay's internal reference
+      firstDataItem?.transid,            // API response format: data[0].transid is transaction ID
+      body?.reference,                   // Simple webhook format: reference is ZenoPay's internal reference
       body?.transaction_id, 
       data?.transaction_id, 
       body?.gateway_transaction_id,
@@ -134,11 +141,24 @@ export async function POST(req: NextRequest) {
     const ref = String(refCandidates[0] || '')
     const gw = String(gwCandidates[0] || '')
 
+    // Extract payment status from various possible locations
+    const paymentStatusCandidates = [
+      firstDataItem?.payment_status,     // API response format: data[0].payment_status
+      body?.payment_status,              // Simple webhook format
+      data?.payment_status,
+      body?.status,
+      data?.status
+    ].filter(Boolean)
+    const paymentStatus = String(paymentStatusCandidates[0] || '').toUpperCase()
+
     console.log('Webhook payload parsed:', { 
       ref, 
       gw, 
-      payment_status: body?.payment_status || data?.payment_status,
-      status: body?.status || data?.status 
+      payment_status: paymentStatus,
+      raw_body_keys: Object.keys(body || {}),
+      has_data_array: Array.isArray(body?.data),
+      data_array_length: dataArray.length,
+      first_data_item_keys: Object.keys(firstDataItem)
     })
 
     if (!ref && !gw) {

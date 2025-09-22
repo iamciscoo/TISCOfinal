@@ -124,7 +124,8 @@ export async function POST(req: NextRequest) {
     const minutesElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60)
     
     // In production, mark as failed after a reasonable timeout.
-    const PAYMENT_PROCESSING_TIMEOUT_SECONDS = 30;
+    // Mobile money flows can take longer; avoid premature failure classification in production
+    const PAYMENT_PROCESSING_TIMEOUT_SECONDS = 900; // 15 minutes
     const timeoutMinutes = PAYMENT_PROCESSING_TIMEOUT_SECONDS / 60;
 
     if (statusRaw === 'PROCESSING' && process.env.NODE_ENV === 'production' && minutesElapsed > timeoutMinutes) {
@@ -159,19 +160,54 @@ export async function POST(req: NextRequest) {
           else if (failSet.has(raw)) statusRaw = 'FAILED'
         }
 
-        // If remote indicates success for a session-based transaction, proactively trigger our internal webhook
-        // to finalize the order and clear the cart without waiting for external webhook delivery.
+        // If remote indicates success for a session-based transaction, proactively trigger our internal admin
+        // finalization endpoint (secured) to complete the order flow in both production and local environments.
         if (statusRaw === 'COMPLETED' && isSession) {
           try {
-            const base = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
-            const url = `${base}/api/payments/mock-webhook`
-            await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transaction_reference: txn.transaction_reference, status: 'COMPLETED' }),
-            })
-          } catch {
-            // best-effort
+            const base = req.nextUrl.origin
+            const adminUrl = `${base}/api/payments/admin/trigger`
+            const webhookUrl = `${base}/api/payments/webhooks`
+            const adminKey = process.env.ADMIN_DEBUG_KEY || ''
+            if (adminKey) {
+              const res = await fetch(adminUrl, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'x-admin-key': adminKey,
+                },
+                body: JSON.stringify({ 
+                  transaction_reference: txn.transaction_reference, 
+                  status: 'COMPLETED' 
+                }),
+                cache: 'no-store',
+              })
+              if (!res.ok) {
+                const text = await res.text().catch(() => '')
+                console.warn('Admin trigger from status route failed:', res.status, text)
+              }
+            } else {
+              // Fallback: call webhook route directly using API key auth
+              const payload = {
+                order_id: txn.transaction_reference,
+                payment_status: 'COMPLETED',
+                reference: `status_sync_${Date.now()}`,
+              }
+              const res = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-key': process.env.ZENOPAY_API_KEY || '',
+                },
+                body: JSON.stringify(payload),
+                cache: 'no-store',
+              })
+              if (!res.ok) {
+                const text = await res.text().catch(() => '')
+                console.warn('Direct webhook finalize from status route failed:', res.status, text)
+              }
+            }
+          } catch (e) {
+            console.warn('Auto-finalize via admin trigger failed:', (e as Error)?.message)
           }
         }
       } catch {
