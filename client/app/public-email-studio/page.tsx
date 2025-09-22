@@ -6,7 +6,7 @@ interface EmailEvent {
   name: string
   description: string
   trigger: string
-  testData: Record<string, any>
+  testData: Record<string, unknown>
 }
 
 interface EmailEvents {

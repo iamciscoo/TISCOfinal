@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
-export async function POST(_req: NextRequest) {
+export async function GET() {
   console.log('=== TEST WEBHOOK STARTED ===')
   
   try {

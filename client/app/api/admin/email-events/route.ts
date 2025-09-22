@@ -9,12 +9,12 @@ function addCorsHeaders(response: NextResponse) {
   return response
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return addCorsHeaders(new NextResponse(null, { status: 200 }))
 }
 
 // Get all available email events with their test data
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const emailEvents = {
       order_confirmation: {
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the event data
-    const eventsResponse = await GET(request)
+    const eventsResponse = await GET()
     const eventsData = await eventsResponse.json()
     const eventData = eventsData.events[event_type]
 
@@ -262,6 +262,7 @@ export async function POST(request: NextRequest) {
     const finalTestData = { ...eventData.testData, ...test_data_override }
 
     // Generate the email HTML
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let emailHtml = templateFunction(finalTestData as any)
 
     // Apply custom styles if provided

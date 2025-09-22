@@ -38,7 +38,7 @@ class APICache {
   /**
    * Generate cache key from URL and parameters
    */
-  private generateKey(url: string, params?: Record<string, any>): string {
+  private generateKey(url: string, params?: Record<string, unknown>): string {
     const paramStr = params ? JSON.stringify(params) : ''
     return `${url}:${paramStr}`
   }

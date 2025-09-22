@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       limit,
       offset,
       status,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       event as any
     )
 

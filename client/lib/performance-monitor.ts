@@ -202,14 +202,14 @@ export function monitorPerformance(
   operation: string,
   metadata?: Partial<PerformanceMetrics>
 ) {
-  return function <T extends (...args: any[]) => Promise<any>>(
-    target: any,
+  return function <T extends (...args: unknown[]) => Promise<unknown>>(
+    target: unknown,
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<T>
   ) {
     const originalMethod = descriptor.value!;
 
-    descriptor.value = async function(this: any, ...args: Parameters<T>) {
+    descriptor.value = async function(this: unknown, ...args: Parameters<T>) {
       return performanceMonitor.timeOperation(
         operation,
         () => originalMethod.apply(this, args),

@@ -66,6 +66,7 @@ export default function CheckoutPage() {
 
   // Avoid hydration mismatch by deferring persisted cart reads until after mount
   const [mounted, setMounted] = useState(false)
+  const [validationTrigger, setValidationTrigger] = useState(0)
   useEffect(() => { setMounted(true) }, [])
 
   // Form data
@@ -119,6 +120,72 @@ export default function CheckoutPage() {
       router.push('/sign-in?redirect_url=/checkout')
     }
   }, [user, router])
+
+  // Autofill detection - check for autofilled values periodically and on events
+  useEffect(() => {
+    const detectAutofill = () => {
+      // Get all input elements in the checkout form
+      const inputs = document.querySelectorAll('input[id^="firstName"], input[id^="lastName"], input[id^="email"], input[id^="phone"], input[id^="address"], input[id^="otherCity"], input[id^="place"], input[id^="mobilePhone"]')
+      let hasAutofillValues = false
+      
+      inputs.forEach((input: Element) => {
+        const htmlInput = input as HTMLInputElement
+        if (htmlInput.matches(':-webkit-autofill') || htmlInput.value !== '') {
+          hasAutofillValues = true
+          
+          // Sync autofilled values with React state
+          const id = htmlInput.id
+          const value = htmlInput.value
+          
+          if (id === 'firstName' && value !== shippingData.firstName) {
+            setShippingData(prev => ({ ...prev, firstName: value }))
+          } else if (id === 'lastName' && value !== shippingData.lastName) {
+            setShippingData(prev => ({ ...prev, lastName: value }))
+          } else if (id === 'email' && value !== shippingData.email) {
+            setShippingData(prev => ({ ...prev, email: value }))
+          } else if (id === 'phone' && value !== shippingData.phone) {
+            setShippingData(prev => ({ ...prev, phone: formatTzPhoneInput(value) }))
+          } else if (id === 'address' && value !== shippingData.address) {
+            setShippingData(prev => ({ ...prev, address: value }))
+          } else if (id === 'otherCity' && value !== shippingData.otherCity) {
+            setShippingData(prev => ({ ...prev, otherCity: value }))
+          } else if (id === 'place' && value !== shippingData.place) {
+            setShippingData(prev => ({ ...prev, place: value }))
+          } else if (id === 'mobilePhone' && value !== paymentData.mobilePhone) {
+            setPaymentData(prev => ({ ...prev, mobilePhone: formatTzPhoneInput(value) }))
+          }
+        }
+      })
+      
+      if (hasAutofillValues) {
+        setValidationTrigger(prev => prev + 1)
+      }
+    }
+
+    // Check immediately
+    detectAutofill()
+    
+    // Set up periodic checks for autofill
+    const interval = setInterval(detectAutofill, 500)
+    
+    // Listen for autofill events
+    const handleAutofill = () => {
+      setTimeout(detectAutofill, 100)
+    }
+    
+    // Add event listeners for various autofill triggers
+    const events = ['change', 'input', 'focus', 'blur', 'animationstart']
+    events.forEach(eventType => {
+      document.addEventListener(eventType, handleAutofill)
+    })
+    
+    return () => {
+      clearInterval(interval)
+      events.forEach(eventType => {
+        document.removeEventListener(eventType, handleAutofill)
+      })
+    }
+  }, [shippingData.firstName, shippingData.lastName, shippingData.email, shippingData.phone, shippingData.address, shippingData.otherCity, shippingData.place, paymentData.mobilePhone])
 
   const steps = [
     { id: 'shipping', title: 'Delivery', icon: MapPin },
@@ -272,6 +339,8 @@ export default function CheckoutPage() {
     } else if (currentStep === 'payment') {
       setCurrentStep('review')
     }
+    // Scroll to top smoothly when moving to next step
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handlePreviousStep = () => {
@@ -280,6 +349,8 @@ export default function CheckoutPage() {
     } else if (currentStep === 'review') {
       setCurrentStep('payment')
     }
+    // Scroll to top smoothly when moving to previous step
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handlePlaceOrder = async () => {
@@ -677,6 +748,10 @@ export default function CheckoutPage() {
   }
 
   const isStepValid = (step: CheckoutStep) => {
+    // Force re-evaluation when autofill is detected by including validationTrigger in dependency
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    validationTrigger;
+    
     switch (step) {
       case 'shipping':
         return (
@@ -1192,16 +1267,24 @@ export default function CheckoutPage() {
                 <Button
                   onClick={handlePlaceOrder}
                   disabled={isProcessing || (paymentTimeout && !canRetryPayment)}
-                  className="px-8 w-full sm:w-auto order-1 sm:order-2"
+                  className={`px-8 w-full sm:w-auto order-1 sm:order-2 bg-black hover:bg-black text-white border-black transition-none ${
+                    isProcessing || (paymentTimeout && !canRetryPayment)
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:opacity-90 active:scale-[0.98] sm:hover:scale-[1.02]'
+                  } touch-manipulation`}
                 >
                   {isProcessing ? 'Processing...' : (paymentTimeout ? 'Payment Pending...' : 'Place Order')}
                   {!isProcessing && !paymentTimeout && <ArrowRight className="h-4 w-4 ml-2" />}
                 </Button>
               ) : (
                 <Button
-                  onClick={handleNextStep}
+                  onClick={isStepValid(currentStep) ? handleNextStep : undefined}
                   disabled={!isStepValid(currentStep)}
-                  className="px-6 w-full sm:w-auto order-1 sm:order-2"
+                  className={`px-6 w-full sm:w-auto order-1 sm:order-2 bg-black hover:bg-black text-white border-black transition-none ${
+                    !isStepValid(currentStep)
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:opacity-90 active:scale-[0.98] sm:hover:scale-[1.02]'
+                  } touch-manipulation`}
                 >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />

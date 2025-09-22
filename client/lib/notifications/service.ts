@@ -43,7 +43,7 @@ export interface NotificationData {
   event: NotificationEvent
   recipient_email: string
   recipient_name?: string
-  data: Record<string, any>
+  data?: Record<string, unknown>
   channels?: NotificationChannel[]
   priority?: 'low' | 'medium' | 'high' | 'urgent'
   scheduled_at?: string
@@ -64,7 +64,7 @@ export interface NotificationRecord {
   scheduled_at?: string
   created_at: string
   updated_at: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 class NotificationService {
@@ -126,7 +126,7 @@ class NotificationService {
     let content = ''
     if (template) {
       try {
-        content = await renderEmailTemplate(template, data.data)
+        content = await renderEmailTemplate(template, data.data || {})
       } catch (error) {
         console.error('Template render error:', error)
         content = `Notification for event: ${data.event}`
@@ -135,7 +135,7 @@ class NotificationService {
 
     // Attempt DB insert first (email_notifications), fallback to temp record
     try {
-      const insertPayload: any = {
+      const insertPayload: Record<string, unknown> = {
         template_type: template || 'admin_notification',
         recipient_email: data.recipient_email,
         subject,
@@ -189,7 +189,7 @@ class NotificationService {
         }
         const { data: insertedLegacy, error: legacyError } = await supabase
           .from('notifications')
-          .insert(legacyInsert as any)
+          .insert(legacyInsert as Record<string, unknown>)
           .select()
           .single()
         if (!legacyError && insertedLegacy) {
@@ -239,7 +239,8 @@ class NotificationService {
   }
 
   // Send email notification with enhanced HTML rendering
-  private async sendEmailNotification(record: NotificationRecord, _data: NotificationData): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async sendEmailNotification(record: NotificationRecord, _: NotificationData): Promise<void> {
     try {
       // Ensure we have properly rendered HTML content
       if (!record.content || record.content.trim() === '') {
@@ -538,7 +539,7 @@ class NotificationService {
     errorMessage?: string
   ): Promise<void> {
     try {
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         status,
         updated_at: new Date().toISOString(),
       }
@@ -549,10 +550,11 @@ class NotificationService {
         .update(updates)
         .eq('id', id)
       if (error) throw error
-    } catch (_e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_: unknown) {
       // Try legacy notifications table
       try {
-        const updatesLegacy: Record<string, any> = {
+        const updatesLegacy: Record<string, unknown> = {
           status,
           updated_at: new Date().toISOString(),
         }
@@ -621,7 +623,7 @@ class NotificationService {
       by_event: {} as Record<NotificationEvent, number>
     }
 
-    data.forEach((notification: Record<string, any>) => {
+    data.forEach((notification: Record<string, unknown>) => {
       // Count by status
       if (notification.status === 'sent') stats.sent++
       else if (notification.status === 'failed') stats.failed++

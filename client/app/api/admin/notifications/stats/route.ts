@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getUser } from '@/lib/supabase-server'
 import { notificationService } from '@/lib/notifications/service'
 import { createClient } from '@supabase/supabase-js'
@@ -21,7 +21,7 @@ async function isAdmin(userId: string): Promise<boolean> {
   return data?.role === 'admin'
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const user = await getUser()
     if (!user || !(await isAdmin(user.id))) {

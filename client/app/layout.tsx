@@ -137,6 +137,7 @@ export default async function RootLayout({
         <meta name="msapplication-square310x310logo" content="/favicon-512x512.png" />
         
         {/* Fonts - Chango font for titles */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link 
           href="https://fonts.googleapis.com/css2?family=Chango&display=swap" 
           rel="stylesheet"

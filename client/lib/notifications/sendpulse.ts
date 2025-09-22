@@ -12,7 +12,7 @@ export type SendPulseConfig = {
 }
 
 export type SendPulseEmail = {
-  to: string | string[]
+  to: string
   subject: string
   html: string
   text?: string
@@ -44,8 +44,8 @@ async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
     throw new Error(`SendPulse token error: ${res.status} ${res.statusText} ${txt}`)
   }
 
-  const json = await res.json().catch(() => ({} as any))
-  const token = (json as any)?.access_token as string | undefined
+  const json = await res.json().catch(() => ({} as Record<string, unknown>))
+  const token = (json as Record<string, unknown>)?.access_token as string | undefined
   if (!token) throw new Error('SendPulse token missing in response')
   return token
 }
@@ -100,7 +100,7 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
     }
 
     console.log('SendPulse: Email sent successfully')
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('SendPulse: Error sending email:', error)
     throw error
   }

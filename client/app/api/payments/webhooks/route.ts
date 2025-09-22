@@ -240,8 +240,8 @@ export async function POST(req: NextRequest) {
       body?.payment_status,
       data?.payment_status,
       // Some providers use `result` to indicate status
-      (data as any)?.result,
-      (body as any)?.result,
+      (data as Record<string, unknown>)?.result,
+      (body as Record<string, unknown>)?.result,
       body?.event_type,
       body?.event,
       body?.type,
@@ -876,11 +876,13 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // Normalize items from orderData; support product_id or productId
-    const itemsRaw = Array.isArray((orderData as any)?.items) ? (orderData as any).items : []
+    const orderDataTyped = orderData as Record<string, unknown>
+    const itemsRaw = Array.isArray(orderDataTyped?.items) ? orderDataTyped.items : []
     const items = (itemsRaw as Array<Record<string, unknown>>)
       .map((it) => {
-        const pid = String((it as any).product_id || (it as any).productId || (it as any).id || '')
-        const qty = Number((it as any).quantity || 0)
+        const itemTyped = it as Record<string, unknown>
+        const pid = String(itemTyped.product_id || itemTyped.productId || itemTyped.id || '')
+        const qty = Number(itemTyped.quantity || 0)
         return { product_id: pid, quantity: qty }
       })
       .filter((it) => it.product_id && it.quantity > 0)

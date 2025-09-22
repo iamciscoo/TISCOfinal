@@ -41,15 +41,15 @@ export async function POST() {
         console.log(`📤 Processing notification ${notification.id} (${notification.event})`)
         
         if (notification.event === 'payment_success') {
-          const metadata = notification.metadata as any
+          const metadata = notification.metadata as Record<string, unknown>
           await notifyPaymentSuccess({
-            order_id: metadata?.order_id || 'unknown',
+            order_id: String(metadata?.order_id || 'unknown'),
             customer_email: notification.recipient_email,
             customer_name: notification.recipient_name || 'Customer',
-            amount: metadata?.amount || '0',
-            currency: metadata?.currency || 'TZS',
-            payment_method: metadata?.payment_method || 'Payment',
-            transaction_id: metadata?.transaction_id || 'N/A'
+            amount: String(metadata?.amount || '0'),
+            currency: String(metadata?.currency || 'TZS'),
+            payment_method: String(metadata?.payment_method || 'Payment'),
+            transaction_id: String(metadata?.transaction_id || 'N/A')
           })
         }
         

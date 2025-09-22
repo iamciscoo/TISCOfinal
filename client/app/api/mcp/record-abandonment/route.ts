@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         console.log('MCP ABANDONMENT DEBUG: Preserving', cart_items.length, 'cart items')
         
         // Don't clear existing items - just ensure the abandoned items exist
-        cart_items.forEach((item: any) => {
+        cart_items.forEach((item: Record<string, unknown>) => {
           console.log('MCP ABANDONMENT DEBUG: Preserving item:', item.product_id, 'qty:', item.quantity)
           // Items are already in cart_items table from user's session
           // We just log this for debugging purposes
