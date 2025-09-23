@@ -160,8 +160,8 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
           </DialogTitle>
@@ -173,7 +173,8 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3">
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid gap-3">
           {error && (
             <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
           )}
@@ -254,9 +255,10 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
               className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
             />
           </div>
+          </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-2 shrink-0">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading || fetching}>{loading ? "Saving..." : "Save"}</Button>
         </div>
