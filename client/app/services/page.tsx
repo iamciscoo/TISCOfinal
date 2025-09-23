@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { PageLayout, Breadcrumb } from '@/components/shared'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
+import { ServicesPromoGrid } from '@/components/ServicesPromoGrid'
 
 interface Service {
   id: string
@@ -150,10 +151,10 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Professional Tech Services
+            Top Services
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Expert tech services from custom PC builds to complete office setups. Professional, fast, reliable.
+          Whether it’s one rig, home space or an entire office, we’ve got you covered.
           </p>
         </div>
 
@@ -275,6 +276,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
           })}
         </div>
 
+        {/* Services Promotional Grid */}
+        <ServicesPromoGrid />
+
         {/* Custom Service Promo */}
         <div className="mb-16">
           <Card className="overflow-hidden">
@@ -287,13 +291,13 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 priority
               />
               <div className="absolute inset-0 bg-black/20" />
-              <div className="absolute inset-0 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 px-6 sm:px-10">
+              <div className="absolute inset-0 flex flex-col md:flex-row items-center md:items-center justify-between gap-3 md:gap-4 px-4 py-4 sm:px-6 md:px-10">
                 <div className="text-white max-w-2xl text-center md:text-left">
-                  <h3 className="text-2xl sm:text-3xl font-bold mb-2">Have a unique issue?</h3>
-                  <p className="text-white/90">Tell us your problem and we’ll craft the final piece of the solution.</p>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 md:mb-2">Have a unique issue?</h3>
+                  <p className="text-white/90 text-sm sm:text-base">Tell us your problem and we&apos;ll craft the final piece of the solution.</p>
                 </div>
-                <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100">
-                  <Link href="/services?service=other#booking-form">Describe Your Issue</Link>
+                <Button asChild size="sm" className="bg-white text-gray-900 hover:bg-gray-100 rounded-full mt-2 md:mt-0 md:size-lg px-4 py-2 md:px-6 md:py-3 text-sm md:text-base">
+                  <Link href="/services?service=other#booking-form">We are all Ears!!</Link>
                 </Button>
               </div>
             </div>

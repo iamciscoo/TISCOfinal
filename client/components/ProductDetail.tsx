@@ -50,7 +50,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
   const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
   
-  const { addItem, openCart } = useCartStore()
+  const { addItem, setItemQuantity, openCart } = useCartStore()
   
   // Lazy load related products section
   const shouldLoadRelated = true // Simplified - always load related products
@@ -185,8 +185,8 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     if ((product.stock_quantity || 0) <= 0) return
     setIsBuyingNow(true)
     try {
-      // Ensure item is in cart with selected quantity
-      addItem({
+      // Set exact quantity in cart (doesn't increment existing quantity)
+      setItemQuantity({
         id: product.id.toString(),
         name: product.name,
         price: pricingInfo.currentPrice,
@@ -199,7 +199,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     } finally {
       setIsBuyingNow(false)
     }
-  }, [product, quantity, pricingInfo.currentPrice, addItem, router])
+  }, [product, quantity, pricingInfo.currentPrice, setItemQuantity, router])
   
   // Simple review refresh without debouncing
   const debouncedRefreshReviews = useCallback(() => {
@@ -476,7 +476,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
       {/* Related Products Section */}
       <div ref={relatedRef} className="bg-gray-50 py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6 md:mb-8">Related Products</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6 md:mb-8">Explore Related Items.</h3>
 
           {shouldLoadRelated ? (
             <>

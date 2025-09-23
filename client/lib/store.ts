@@ -43,6 +43,12 @@ interface CartStore {
     price: number
     image_url: string
   }, quantity?: number) => void
+  setItemQuantity: (product: {
+    id: string
+    name: string
+    price: number
+    image_url: string
+  }, quantity: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -94,6 +100,38 @@ export const useCartStore = create<CartStore>()(
           })
         } else {
           // Add new item to cart
+          const newItem: CartItem = {
+            id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity,
+            image_url: product.image_url
+          }
+          set({ items: [...items, newItem] })
+        }
+      },
+
+      /**
+       * Set item to specific quantity (for Buy Now behavior)
+       * @param product - Product information
+       * @param quantity - Exact quantity to set
+       */
+      setItemQuantity: (product, quantity) => {
+        const { items } = get()
+        const existingItem = items.find(item => item.productId === product.id)
+
+        if (existingItem) {
+          // Update existing item to exact quantity
+          set({
+            items: items.map(item =>
+              item.productId === product.id
+                ? { ...item, quantity }
+                : item
+            )
+          })
+        } else {
+          // Add new item with exact quantity
           const newItem: CartItem = {
             id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             productId: product.id,

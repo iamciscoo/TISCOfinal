@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -7,17 +7,22 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { ServiceProcessingOverlay } from '@/components/ServiceProcessingOverlay'
 
 type Service = { id: string; title: string }
 
 export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }: { defaultServiceId?: string; services?: Service[] }) => {
   const { toast } = useToast()
+  const formRef = useRef<HTMLFormElement>(null)
   const [services, setServices] = useState<Service[]>(servicesProp ?? [])
   const [servicesLoading, setServicesLoading] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState<'processing' | 'success' | 'error' | 'idle'>('idle')
+  const [processingError, setProcessingError] = useState<string>('')
   const [today] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedService, setSelectedService] = useState<string | undefined>(defaultServiceId)
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined)
+  const [resetKey, setResetKey] = useState<number>(0)
 
   // Submit the start time of the chosen range to keep DB type compatibility (TIME)
   const TIME_RANGES = [
@@ -83,6 +88,9 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
       }
 
       setLoading(true)
+      setProcessingStatus('processing')
+      setProcessingError('')
+      
       const payload = Object.fromEntries(formData.entries()) as Record<string, string>
       const res = await fetch('/api/service-bookings', {
         method: 'POST',
@@ -101,22 +109,49 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
         const j = await res.json().catch(() => ({}))
         throw new Error(j?.error || 'Failed to create booking')
       }
-      toast({ title: 'Booked', description: 'Your service booking was created.' })
+      
+      // Success state
+      setProcessingStatus('success')
+      // Don't reset immediately - let success overlay show first
+      
     } catch (e) {
-      toast({ title: 'Error', description: e instanceof Error ? e.message : 'Failed', variant: 'destructive' })
+      const errorMessage = e instanceof Error ? e.message : 'Failed to create booking'
+      setProcessingStatus('error')
+      setProcessingError(errorMessage)
+      // Keep toast as fallback for users who might miss the overlay
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
+  const handleOverlayClose = () => {
+    // If closing from success state, reset the form
+    if (processingStatus === 'success') {
+      // Hard reset all form states
+      console.log('Resetting form after success')
+      formRef.current?.reset()
+      // Force complete reset by changing key and clearing states
+      setSelectedService(undefined)
+      setSelectedTime(undefined)
+      setResetKey(prev => prev + 1)
+    }
+    setProcessingStatus('idle')
+    setProcessingError('')
+  }
+
   return (
     <Card className="shadow-xl">
       <CardContent className="p-8">
-        <form action={onSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={(e) => {
+          e.preventDefault()
+          const formData = new FormData(e.currentTarget)
+          onSubmit(formData)
+        }} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="service_id">Service *</Label>
-              <Select value={selectedService} onValueChange={setSelectedService}>
+              <Select key={`service-${resetKey}`} value={selectedService || undefined} onValueChange={setSelectedService}>
                 <SelectTrigger id="service_id" aria-required="true" className="w-full">
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
@@ -152,7 +187,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
             <div className="space-y-2">
               <Label htmlFor="preferred_time">Preferred Time Range *</Label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
+              <Select key={`time-${resetKey}`} value={selectedTime || undefined} onValueChange={setSelectedTime}>
                 <SelectTrigger id="preferred_time" aria-required="true" className="w-full">
                   <SelectValue placeholder="Select time range" />
                 </SelectTrigger>
@@ -179,6 +214,14 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
           <Button type="submit" disabled={loading} className="w-full md:w-auto bg-gray-900 hover:bg-gray-800">{loading ? 'Submitting…' : 'Submit Service Request'}</Button>
         </form>
       </CardContent>
+      
+      {/* Processing Overlay */}
+      <ServiceProcessingOverlay
+        isVisible={processingStatus !== 'idle'}
+        status={processingStatus}
+        onClose={handleOverlayClose}
+        errorMessage={processingError}
+      />
     </Card>
   )
 }
