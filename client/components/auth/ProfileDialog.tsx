@@ -160,7 +160,19 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col">
+      <DialogContent className="
+          grid grid-rows-[auto,1fr,auto] overflow-hidden
+          w-full sm:max-w-md
+          /* Mobile bottom-sheet positioning */
+          top-auto bottom-0 left-0 right-0 translate-x-0 translate-y-0
+          /* Re-center on larger screens (match defaults) */
+          sm:top-[50%] sm:left-[50%] sm:right-auto sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%]
+          /* Sizing */
+          max-h-[calc(100svh-env(safe-area-inset-bottom))] max-h-[calc(100dvh-env(safe-area-inset-bottom))]
+          sm:max-h-[85vh]
+          /* Padding & radius */
+          p-4 sm:p-6 rounded-t-lg sm:rounded-lg rounded-b-none sm:rounded-b-lg
+        ">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
@@ -173,7 +185,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain pt-1 pb-24 sm:pb-2">
+        <div className="min-h-0 overflow-y-auto overscroll-contain touch-pan-y pt-1 pb-3 sm:pb-2">
           <div className="grid gap-3">
           {error && (
             <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
@@ -203,6 +215,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
                     if (f) setPreviewUrl(URL.createObjectURL(f))
                   }}
                   disabled={fetching || loading}
+                  className="text-base sm:text-sm"
                 />
               </div>
             </div>
@@ -211,20 +224,20 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
           <div className="grid gap-2">
             <Label htmlFor="first_name">First name</Label>
-            <Input id="first_name" value={profile.first_name} onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))} placeholder="John" disabled={fetching || loading} />
+            <Input id="first_name" value={profile.first_name} onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))} placeholder="John" disabled={fetching || loading} className="text-base sm:text-sm" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="last_name">Last name</Label>
-            <Input id="last_name" value={profile.last_name} onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" disabled={fetching || loading} />
+            <Input id="last_name" value={profile.last_name} onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" disabled={fetching || loading} className="text-base sm:text-sm" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" disabled={fetching || loading} />
+            <Input id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" disabled={fetching || loading} className="text-base sm:text-sm" />
             <p className="text-xs text-muted-foreground">Changing email may require confirmation.</p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
+            <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} className="text-base sm:text-sm" />
           </div>
 
           <div className={`grid gap-2 pt-1 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
@@ -238,7 +251,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
               onChange={(e) => setPassword(e.target.value)} 
               placeholder="••••••••" 
               disabled={fetching || loading}
-              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
+              className={`${isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''} text-base sm:text-sm`}
             />
           </div>
           <div className={`grid gap-2 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
@@ -252,7 +265,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
               onChange={(e) => setConfirmPassword(e.target.value)} 
               placeholder="••••••••" 
               disabled={fetching || loading}
-              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
+              className={`${isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''} text-base sm:text-sm`}
             />
           </div>
           </div>
@@ -260,7 +273,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           <div className="h-2" aria-hidden="true" />
         </div>
 
-        <div className="sticky bottom-0 z-10 flex justify-end gap-2 pt-2 pb-[env(safe-area-inset-bottom)] shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="w-full flex justify-end gap-2 pt-2 pb-[calc(constant(safe-area-inset-bottom)+0.75rem)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] border-t bg-background shadow-[0_-6px_12px_-8px_rgba(0,0,0,0.12)]">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading || fetching}>{loading ? "Saving..." : "Save"}</Button>
         </div>
