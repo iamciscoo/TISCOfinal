@@ -1056,8 +1056,16 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
 
         // Send order confirmation email to customer
         const { notifyOrderCreated } = await import('@/lib/notifications/service')
+        
+        // Get actual product names for better order confirmation
+        const { data: productDetails } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', orderItems.map(oi => oi.product_id))
+        
+        const productMap = new Map(productDetails?.map(p => [p.id, p.name]) || [])
         const items = orderItems.map(oi => ({
-          name: `Product ${oi.product_id}`, // Will be enhanced with actual product names
+          name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
           quantity: oi.quantity,
           price: oi.price.toString()
         }))

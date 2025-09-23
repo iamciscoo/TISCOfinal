@@ -53,7 +53,43 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          try {
+            const cookieValue = request.cookies.get(name)?.value
+            if (!cookieValue) return undefined
+            
+            // Validate Supabase auth cookies to prevent UTF-8 errors
+            if (name.includes('supabase') || name.includes('auth')) {
+              try {
+                // Test if the cookie value is valid UTF-8
+                const testString = decodeURIComponent(encodeURIComponent(cookieValue))
+                if (testString !== cookieValue) {
+                  console.warn(`Invalid UTF-8 in middleware cookie ${name}, ignoring`)
+                  return undefined
+                }
+                
+                // For JWT tokens, validate base64 structure
+                if (cookieValue.includes('.')) {
+                  const parts = cookieValue.split('.')
+                  if (parts.length >= 2) {
+                    try {
+                      atob(parts[1])
+                    } catch {
+                      console.warn(`Invalid JWT in middleware cookie ${name}, ignoring`)
+                      return undefined
+                    }
+                  }
+                }
+              } catch (error) {
+                console.warn(`Middleware cookie validation failed for ${name}:`, error)
+                return undefined
+              }
+            }
+            
+            return cookieValue
+          } catch (error) {
+            console.warn(`Error reading middleware cookie ${name}:`, error)
+            return undefined
+          }  
         },
         set(name: string, value: string, options) {
           request.cookies.set({
@@ -106,19 +142,80 @@ export async function middleware(request: NextRequest) {
   }
 
   // For protected routes, check authentication
-  const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    // Redirect to sign in for protected pages
+    if (!user) {
+      // Redirect to sign in for protected pages
+      if (!pathname.startsWith('/api/')) {
+        const redirectUrl = new URL('/auth/sign-in', request.url)
+        redirectUrl.searchParams.set('redirectTo', pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+      
+      // Return 401 for protected API routes
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+  } catch (error) {
+    console.error('Auth error in middleware:', error)
+    
+    // If it's a UTF-8 error, clear all auth cookies and redirect/return 401
+    if (error instanceof Error && error.message.includes('UTF-8')) {
+      console.log('Clearing corrupted auth cookies due to UTF-8 error')
+      
+      // Create response to clear cookies
+      const clearResponse = NextResponse.next({
+        request: {
+          headers: request.headers,
+        },
+      })
+      
+      // Clear all Supabase auth cookies
+      const cookiesToClear = [
+        'sb-hgxvlbpvxbliefqlxzak-auth-token',
+        'sb-hgxvlbpvxbliefqlxzak-auth-token.0',
+        'sb-hgxvlbpvxbliefqlxzak-auth-token.1',
+        'supabase-auth-token',
+        'supabase.auth.token'
+      ]
+      
+      cookiesToClear.forEach(cookieName => {
+        clearResponse.cookies.set({
+          name: cookieName,
+          value: '',
+          expires: new Date(0),
+          path: '/',
+          httpOnly: false,
+          secure: false,
+          sameSite: 'lax'
+        })
+      })
+      
+      if (!pathname.startsWith('/api/')) {
+        const redirectUrl = new URL('/auth/sign-in', request.url)
+        redirectUrl.searchParams.set('redirectTo', pathname)
+        redirectUrl.searchParams.set('error', 'session_expired')
+        return NextResponse.redirect(redirectUrl, { headers: clearResponse.headers })
+      }
+      
+      return NextResponse.json(
+        { error: 'Authentication session expired' },
+        { status: 401, headers: clearResponse.headers }
+      )
+    }
+    
+    // For other auth errors, treat as unauthenticated
     if (!pathname.startsWith('/api/')) {
       const redirectUrl = new URL('/auth/sign-in', request.url)
       redirectUrl.searchParams.set('redirectTo', pathname)
       return NextResponse.redirect(redirectUrl)
     }
     
-    // Return 401 for protected API routes
     return NextResponse.json(
-      { error: 'Authentication required' },
+      { error: 'Authentication error' },
       { status: 401 }
     )
   }

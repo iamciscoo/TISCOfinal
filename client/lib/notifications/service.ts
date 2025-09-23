@@ -79,8 +79,8 @@ class NotificationService {
       order_status_update: 'order_status_update',
       payment_success: 'payment_success',
       payment_failed: 'payment_failed',
-      booking_created: 'order_confirmation', // We'll create booking-specific templates
-      booking_status_changed: 'order_status_update',
+      booking_created: 'booking_confirmation', // Use dedicated booking template
+      booking_status_changed: 'booking_status_update',
       user_registered: 'welcome_email',
       contact_message_received: 'admin_notification', // Use admin-styled template
       contact_message_replied: 'contact_reply',
@@ -260,8 +260,32 @@ class NotificationService {
       }
 
       console.log(`Sending HTML email to ${record.recipient_email} with subject: ${record.subject}`)
-      await sendEmailViaSendPulse(this.config, email)
-      console.log(`Successfully sent email notification ${record.id}`)
+      
+      // Try to send email with better error handling
+      try {
+        await sendEmailViaSendPulse(this.config, email)
+        console.log(`Successfully sent email notification ${record.id}`)
+        await this.updateNotificationStatus(record.id, 'sent')
+      } catch (emailError) {
+        console.error(`Failed to send email notification ${record.id}:`, emailError)
+        
+        // Determine if this is a temporary or permanent failure
+        const isTemporary = this.isTemporaryError(emailError)
+        const errorMessage = (emailError as Error).message
+        
+        if (isTemporary) {
+          // For temporary errors, mark as failed but don't throw
+          await this.updateNotificationStatus(record.id, 'failed', `Temporary error: ${errorMessage}`)
+          console.warn(`Email notification ${record.id} failed with temporary error, will retry later`)
+        } else {
+          // For permanent errors, mark as failed and log
+          await this.updateNotificationStatus(record.id, 'failed', `Permanent error: ${errorMessage}`)
+          console.error(`Email notification ${record.id} failed with permanent error:`, emailError)
+        }
+        
+        // Don't throw the error to prevent payment flow interruption
+        return
+      }
 
       // Notify admin recipients about this notification
       try {
@@ -271,10 +295,43 @@ class NotificationService {
         // Don't fail the main notification if admin notification fails
       }
     } catch (error) {
-      console.error(`Failed to send email notification ${record.id}:`, error)
+      console.error(`Failed to process email notification ${record.id}:`, error)
       await this.updateNotificationStatus(record.id, 'failed', (error as Error).message)
-      throw error
+      // Don't throw the error to prevent payment flow interruption
     }
+  }
+
+  // Check if an error is temporary (retryable) or permanent
+  private isTemporaryError(error: unknown): boolean {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase()
+      const cause = (error as { cause?: { code?: string } })?.cause
+      
+      // Network connectivity issues (temporary)
+      if (message.includes('fetch failed') || message.includes('network error')) return true
+      if (message.includes('timeout') || message.includes('connect timeout')) return true
+      if (message.includes('econnreset') || message.includes('enotfound')) return true
+      if (message.includes('socket hang up')) return true
+      
+      // Undici/Node.js network errors (temporary)
+      if (cause?.code === 'UND_ERR_CONNECT_TIMEOUT') return true
+      if (cause?.code === 'UND_ERR_SOCKET') return true
+      if (cause?.code === 'UND_ERR_REQUEST_TIMEOUT') return true
+      
+      // HTTP status codes
+      if (message.includes('500') || message.includes('502') || message.includes('503') || message.includes('504')) return true
+      if (message.includes('429')) return true // Rate limiting
+      
+      // Authentication errors (permanent)
+      if (message.includes('401') || message.includes('403')) return false
+      if (message.includes('invalid credentials') || message.includes('unauthorized')) return false
+      
+      // Bad request errors (permanent)
+      if (message.includes('400') || message.includes('404')) return false
+    }
+    
+    // Default to temporary for unknown errors
+    return true
   }
 
   // Notify admin recipients about new user notifications
@@ -312,9 +369,15 @@ class NotificationService {
           await this.sendAdminNotificationEmail(email.trim(), 'Admin', record)
         }
       } else {
-        // Send to database recipients
-        for (const recipient of recipients) {
+        // Send to database recipients with delay between sends
+        for (let i = 0; i < recipients.length; i++) {
+          const recipient = recipients[i]
           await this.sendAdminNotificationEmail(recipient.email, recipient.name || 'Admin', record)
+          
+          // Add delay between emails to avoid API rate limits (except for last email)
+          if (i < recipients.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
+          }
         }
       }
     } catch (error) {
@@ -322,17 +385,21 @@ class NotificationService {
     }
   }
 
-  // Send individual admin notification email
+  // Send individual admin notification email with retry logic
   private async sendAdminNotificationEmail(email: string, name: string, record: NotificationRecord): Promise<void> {
-    try {
-      const eventName = this.getEventDisplayName(record.event)
-      const message = this.buildAdminNotificationMessage(record)
-      const actionUrl = this.getActionUrl(record)
-      
-      const adminEmail: SendPulseEmail = {
-        to: email,
-        subject: `[TISCO Admin] ${eventName} - Action Required`,
-        html: `
+    const maxRetries = 3
+    let attempt = 0
+    
+    while (attempt < maxRetries) {
+      try {
+        const eventName = this.getEventDisplayName(record.event)
+        const message = this.buildAdminNotificationMessage(record)
+        const actionUrl = this.getActionUrl(record)
+        
+        const adminEmail: SendPulseEmail = {
+          to: email,
+          subject: `[TISCO Admin] ${eventName} - Action Required`,
+          html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -429,8 +496,22 @@ class NotificationService {
 
       await sendEmailViaSendPulse(this.config, adminEmail)
       console.log(`Admin notification sent to ${email} for event: ${record.event}`)
-    } catch (error) {
-      console.error(`Failed to send admin notification to ${email}:`, error)
+      return // Success, exit retry loop
+        
+      } catch (error) {
+        attempt++
+        console.error(`Failed to send admin notification to ${email} (attempt ${attempt}/${maxRetries}):`, error)
+        
+        if (attempt >= maxRetries) {
+          console.error(`Final failure sending admin notification to ${email} after ${maxRetries} attempts`)
+          return
+        }
+        
+        // Wait before retry: exponential backoff with some randomization
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 1000, 10000)
+        console.log(`Retrying admin notification to ${email} in ${Math.round(delay)}ms`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
     }
   }
 
@@ -798,20 +879,27 @@ export async function notifyPaymentFailed(paymentData: {
 
 export async function notifyBookingCreated(bookingData: {
   booking_id: string
-  customer_email: string
-  customer_name?: string
+  contact_email: string
+  customer_name: string
   service_name: string
   preferred_date: string
   preferred_time: string
   description: string
+  service_type?: string
 }): Promise<string> {
   return notificationService.sendNotification({
     event: 'booking_created',
-    recipient_email: bookingData.customer_email,
+    recipient_email: bookingData.contact_email,
     recipient_name: bookingData.customer_name,
     data: {
       order_id: bookingData.booking_id,
       customer_name: bookingData.customer_name,
+      customer_email: bookingData.contact_email,
+      service_name: bookingData.service_name,
+      service_type: bookingData.service_type || 'standard',
+      preferred_date: bookingData.preferred_date,
+      preferred_time: bookingData.preferred_time,
+      description: bookingData.description,
       order_date: new Date().toLocaleDateString(),
       total_amount: 'Service Booking',
       currency: '',
@@ -856,6 +944,121 @@ export async function notifyContactMessageReceived(messageData: {
     data: messageData,
     priority: 'medium',
   })
+}
+
+export async function notifyAdminBookingCreated(bookingData: {
+  booking_id: string
+  contact_email: string
+  customer_name: string
+  service_name: string
+  preferred_date: string
+  preferred_time: string
+  description: string
+  service_type?: string
+}): Promise<void> {
+  try {
+    // Try to fetch admin recipients from database
+    const { data: recipients, error } = await supabase
+      .from('notification_recipients')
+      .select('email, name')
+      .eq('type', 'admin')
+      .eq('is_active', true)
+    
+    if (error || !recipients || recipients.length === 0) {
+      console.warn('No admin recipients found, using fallback emails')
+      // Use fallback admin emails
+      const adminEmails = [
+        'francisjacob08@gmail.com',
+        'info@tiscomarket.store',
+        ...(process.env.ADMIN_EMAIL?.split(',') || [])
+      ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim())
+      
+      for (const email of adminEmails) {
+        await notificationService.sendNotification({
+          event: 'booking_created',
+          recipient_email: email.trim(),
+          data: {
+            order_id: bookingData.booking_id,
+            customer_name: bookingData.customer_name || 'Unknown User',
+            customer_email: bookingData.contact_email,
+            service_name: bookingData.service_name,
+            preferred_date: bookingData.preferred_date,
+            preferred_time: bookingData.preferred_time,
+            description: bookingData.description,
+            order_date: new Date().toLocaleDateString(),
+            total_amount: 'Service Booking',
+            currency: '',
+            items: [{
+              name: bookingData.service_name,
+              quantity: 1,
+              price: 'TBD'
+            }],
+            shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
+            payment_method: 'Service Booking'
+          },
+          priority: 'high',
+        })
+      }
+    } else {
+      // Send to database recipients
+      for (const recipient of recipients) {
+        await notificationService.sendNotification({
+          event: 'booking_created',
+          recipient_email: recipient.email,
+          data: {
+            order_id: bookingData.booking_id,
+            customer_name: bookingData.customer_name || 'Unknown User',
+            customer_email: bookingData.contact_email,
+            service_name: bookingData.service_name,
+            preferred_date: bookingData.preferred_date,
+            preferred_time: bookingData.preferred_time,
+            description: bookingData.description,
+            order_date: new Date().toLocaleDateString(),
+            total_amount: 'Service Booking',
+            currency: '',
+            items: [{
+              name: bookingData.service_name,
+              quantity: 1,
+              price: 'TBD'
+            }],
+            shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
+            payment_method: 'Service Booking'
+          },
+          priority: 'high',
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error in notifyAdminBookingCreated:', error)
+    // Final fallback
+    const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
+    for (const email of adminEmails) {
+      await notificationService.sendNotification({
+        event: 'booking_created',
+        recipient_email: email.trim(),
+        data: {
+          order_id: bookingData.booking_id,
+          customer_name: bookingData.customer_name || 'Unknown User',
+          customer_email: bookingData.contact_email,
+          service_name: bookingData.service_name,
+          preferred_date: bookingData.preferred_date,
+          preferred_time: bookingData.preferred_time,
+          description: bookingData.description,
+          order_date: new Date().toLocaleDateString(),
+          total_amount: 'Service Booking',
+          currency: '',
+          items: [{
+            name: bookingData.service_name,
+            quantity: 1,
+            price: 'TBD'
+          }],
+          shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
+          payment_method: 'Service Booking'
+        },
+        priority: 'high',
+      })
+    }
+  }
 }
 
 export async function notifyOrderStatusChanged(orderData: {

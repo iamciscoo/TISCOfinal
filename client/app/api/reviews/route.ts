@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         .from('reviews')
         .select(`
           *,
-          user:users(first_name, last_name, avatar_url)
+          users(first_name, last_name, avatar_url)
         `)
         .order('created_at', { ascending: false })
       if (productId) q = q.eq('product_id', productId)

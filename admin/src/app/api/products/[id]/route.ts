@@ -15,8 +15,8 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .from("products")
       .select(`
         *,
-        categories:product_categories(
-          category:categories(
+        product_categories(
+          categories(
             id,
             name,
             description

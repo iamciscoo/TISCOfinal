@@ -13,7 +13,43 @@ export const createClient = async () => {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value
+          try {
+            const cookie = cookieStore.get(name)
+            if (!cookie?.value) return undefined
+            
+            // Validate Supabase auth cookies to prevent UTF-8 errors
+            if (name.includes('supabase') || name.includes('auth')) {
+              try {
+                // Test if the cookie value is valid UTF-8 by encoding/decoding
+                const testString = decodeURIComponent(encodeURIComponent(cookie.value))
+                if (testString !== cookie.value) {
+                  console.warn(`Invalid UTF-8 in cookie ${name}, ignoring`)
+                  return undefined
+                }
+                
+                // For JWT tokens, validate base64 structure
+                if (cookie.value.includes('.')) {
+                  const parts = cookie.value.split('.')
+                  if (parts.length >= 2) {
+                    try {
+                      atob(parts[1])
+                    } catch {
+                      console.warn(`Invalid JWT structure in cookie ${name}, ignoring`)
+                      return undefined
+                    }
+                  }
+                }
+              } catch (error) {
+                console.warn(`Cookie validation failed for ${name}:`, error)
+                return undefined
+              }
+            }
+            
+            return cookie.value
+          } catch (error) {
+            console.warn(`Error reading cookie ${name}:`, error)
+            return undefined
+          }
         },
         set(name: string, value: string, options: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
           try {
@@ -40,9 +76,20 @@ export const createClient = async () => {
 
 // Server-side auth helpers
 export const getUser = async (): Promise<User | null> => {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error) {
+      console.error('Auth error in getUser:', error)
+      return null
+    }
+    
+    return user
+  } catch (error) {
+    console.error('Exception in getUser:', error)
+    return null
+  }
 }
 
 export const getSession = async () => {

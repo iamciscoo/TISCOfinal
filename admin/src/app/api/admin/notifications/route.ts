@@ -214,6 +214,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const event = searchParams.get('event')
+    const category = searchParams.get('category')
+    const platform_module = searchParams.get('platform_module')
+    const priorityFilter = searchParams.get('priority')
     const limit = Number(searchParams.get('limit') || '50')
 
     // First, try email_notifications (preferred)
@@ -222,6 +225,7 @@ export async function GET(req: NextRequest) {
       q = q.order('created_at', { ascending: false }).limit(limit)
       if (status && status !== 'all') q = q.eq('status', status)
       if (event && event !== 'all') q = q.eq('template_type', event)
+      if (priorityFilter && priorityFilter !== 'all') q = q.eq('priority', priorityFilter)
       return q
     }
     const emailRes = await trySelect(sb, 'email_notifications', emailCols, emailFilters)
@@ -257,6 +261,53 @@ export async function GET(req: NextRequest) {
       const legacyRes = await trySelect(sb, 'notifications', legacyCols, legacyFilters)
       if (legacyRes.data) notifications = legacyRes.data as any[]
     }
+
+    // Enhanced: also include results from the richer notifications table when filters target its fields
+    const needsEnhanced = Boolean(category) || Boolean(platform_module) || (priorityFilter && priorityFilter !== 'all')
+    if (sb) {
+      const enhancedFilters = (q: any) => {
+        q = q.order('created_at', { ascending: false }).range(0, Math.max(0, limit - 1))
+        if (status && status !== 'all') q = q.eq('status', status)
+        if (event && event !== 'all') q = q.eq('event', event)
+        if (category && category !== 'all') q = q.eq('category', category)
+        if (platform_module && platform_module !== 'all') q = q.eq('platform_module', platform_module)
+        if (priorityFilter && priorityFilter !== 'all') q = q.eq('priority', priorityFilter)
+        return q
+      }
+      const enhancedRes = await trySelect(sb, 'notifications', '*', enhancedFilters)
+      if (enhancedRes.data && Array.isArray(enhancedRes.data)) {
+        const mapped = (enhancedRes.data as any[]).map((n) => ({
+          id: n.id,
+          event: n.event,
+          recipient_email: n.recipient_email,
+          recipient_name: n.recipient_name,
+          subject: n.subject,
+          content: n.content || '',
+          channels: Array.isArray(n.channels) ? n.channels : ['email'],
+          status: n.status || 'pending',
+          priority: n.priority || 'medium',
+          error_message: n.error_message || undefined,
+          sent_at: n.sent_at || undefined,
+          scheduled_at: n.scheduled_at || undefined,
+          created_at: n.created_at,
+          updated_at: n.updated_at,
+          metadata: n.metadata,
+          // extra fields for richer UI
+          category: n.category,
+          platform_module: n.platform_module,
+          action_url: n.action_url,
+        }))
+        // Merge while keeping stability
+        notifications = [...mapped, ...notifications]
+      }
+    }
+
+    // Final sort by created_at desc if present
+    notifications.sort((a, b) => {
+      const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
+      const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
+      return bTime - aTime
+    })
 
     return NextResponse.json({ notifications })
   } catch (e: any) {
@@ -342,11 +393,16 @@ export async function POST(req: NextRequest) {
         if (sb) {
           const { data: recipients } = await sb
             .from('notification_recipients')
-            .select('email, name')
+            .select('email, name, notification_categories')
             .eq('is_active', true)
 
           if (recipients && recipients.length > 0) {
-            const adminNotifications = recipients.map(async (recipient: any) => {
+            // Filter recipients based on their notification category preferences
+            const relevantRecipients = recipients.filter((recipient: any) => {
+              const categories = recipient.notification_categories || ['all']
+              return categories.includes('all') || categories.includes(event)
+            })
+            const adminNotifications = relevantRecipients.map(async (recipient: any) => {
               try {
                 await sendViaSendPulse({
                   to: recipient.email,

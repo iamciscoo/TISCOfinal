@@ -44,7 +44,7 @@ export const GET = withMiddleware(
           is_main,
           sort_order
         ),
-        categories:product_categories (
+        categories:product_categories!fk_product_categories_product_id (
           category:categories (
             id,
             name${withSlug ? ', slug' : ''}

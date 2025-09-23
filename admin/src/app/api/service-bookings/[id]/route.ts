@@ -20,8 +20,8 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .select(`
         id, status, payment_status, preferred_date, preferred_time, notes, created_at, updated_at, total_amount,
         service_id, user_id, service_type, description, contact_email, contact_phone, customer_name,
-        service:services(id, title),
-        user:users(id, first_name, last_name, email)
+        services(id, title),
+        users(first_name, last_name, email)
       `)
       .eq('id', id)
       .single();

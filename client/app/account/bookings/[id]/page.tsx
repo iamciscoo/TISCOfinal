@@ -30,20 +30,24 @@ type ServiceBooking = {
   id: string
   service_id: string
   user_id: string
+  service_type: string
+  description: string | null
   preferred_date: string | null
   preferred_time: string | null
-  scheduled_date?: string | null
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
-  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
-  total_amount?: number | null
+  contact_email: string
+  contact_phone: string | null
+  customer_name: string
+  status: string | null
   notes: string | null
   created_at: string
   updated_at: string
+  total_amount: number | null
+  payment_status: string
   service: {
     id: string
     title: string
     description: string
-    duration: string
+    duration: string | null
     image: string | null
     features?: string[]
     gallery?: string[]
@@ -54,18 +58,78 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
   const { data, error } = await supabase
     .from('service_bookings')
     .select(`
-      *,
-      service:services(*)
+      id,
+      service_id,
+      user_id,
+      service_type,
+      description,
+      preferred_date,
+      preferred_time,
+      contact_email,
+      contact_phone,
+      customer_name,
+      status,
+      notes,
+      created_at,
+      updated_at,
+      total_amount,
+      payment_status,
+      services!inner(
+        id,
+        title,
+        description,
+        duration,
+        image,
+        features,
+        gallery
+      )
     `)
     .eq('id', id)
     .eq('user_id', userId)
     .single()
 
-  if (error || !data) {
+  if (error) {
+    console.error('Error fetching booking:', error)
     return null
   }
 
-  return data as ServiceBooking
+  if (!data) {
+    return null
+  }
+
+  // Transform the data to match our type structure
+  // Supabase returns services as an array when using !inner join, so we take the first item
+  const service = Array.isArray(data.services) ? data.services[0] : data.services
+  
+  const booking: ServiceBooking = {
+    id: data.id,
+    service_id: data.service_id,
+    user_id: data.user_id,
+    service_type: data.service_type,
+    description: data.description,
+    preferred_date: data.preferred_date,
+    preferred_time: data.preferred_time,
+    contact_email: data.contact_email,
+    contact_phone: data.contact_phone,
+    customer_name: data.customer_name,
+    status: data.status || 'pending',
+    notes: data.notes,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    total_amount: data.total_amount,
+    payment_status: data.payment_status,
+    service: service || {
+      id: '',
+      title: 'Unknown Service',
+      description: 'Service information not available',
+      duration: 'Not specified',
+      image: null,
+      features: [],
+      gallery: []
+    }
+  }
+
+  return booking
 }
 
 const formatTZS = (amount: number) => {
@@ -171,9 +235,8 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
     notFound()
   }
 
-  const scheduledDateTime = booking.scheduled_date || 
-    (booking.preferred_date && booking.preferred_time ? 
-      `${booking.preferred_date}T${booking.preferred_time}` : null)
+  const scheduledDateTime = booking.preferred_date && booking.preferred_time ? 
+    `${booking.preferred_date}T${booking.preferred_time}` : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -195,9 +258,9 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
               <p className="text-gray-600 mt-1">Booking #{booking.id.slice(-8)}</p>
             </div>
             <div className="flex items-center gap-2">
-              {getStatusIcon(booking.status)}
-              <Badge variant={getStatusBadgeVariant(booking.status) as 'default' | 'secondary' | 'outline' | 'destructive'}>
-                {booking.status.replace('_', ' ')}
+              {getStatusIcon(booking.status || 'pending')}
+              <Badge variant={getStatusBadgeVariant(booking.status || 'pending') as 'default' | 'secondary' | 'outline' | 'destructive'}>
+                {(booking.status || 'pending').replace('_', ' ')}
               </Badge>
             </div>
           </div>
@@ -216,11 +279,11 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-4">
-                  {booking.service.image ? (
+                  {booking.service?.image ? (
                     <div className="w-20 h-20 rounded-lg overflow-hidden relative bg-gray-100">
                       <Image
                         src={booking.service.image}
-                        alt={booking.service.title}
+                        alt={booking.service?.title || 'Service'}
                         fill
                         sizes="80px"
                         className="object-cover"
@@ -232,12 +295,12 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                     </div>
                   )}
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold">{booking.service.title}</h3>
-                    <p className="text-gray-600 mt-1">{booking.service.description}</p>
+                    <h3 className="text-xl font-semibold">{booking.service?.title || 'Unknown Service'}</h3>
+                    <p className="text-gray-600 mt-1">{booking.service?.description || 'No description available'}</p>
                     <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
-                        {booking.service.duration}
+                        {booking.service?.duration || 'Duration not specified'}
                       </span>
                     </div>
                   </div>

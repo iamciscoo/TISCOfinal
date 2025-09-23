@@ -468,39 +468,34 @@ export default function CheckoutPage() {
 
         // Office payment successful - send notifications
         try {
-          // Send order confirmation email to customer
-          const { notifyOrderCreated } = await import('@/lib/notifications/service')
-          await notifyOrderCreated({
-            order_id: orderResult.order.id,
-            customer_email: shippingData.email,
-            customer_name: `${shippingData.firstName} ${shippingData.lastName}`,
-            total_amount: subtotal.toString(),
-            currency: 'TZS',
-            items: items.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price.toString()
-            })),
-            order_date: new Date().toLocaleDateString(),
-            payment_method: 'Pay at Office',
-            shipping_address: isPickup ? 'Pickup at Office' : `${shippingData.address}, ${shippingData.place}, ${selectedCity}`
-          })
-
-          // Send admin notification for new office payment order
-          await fetch('/api/notifications/admin-order', {
+          // Send notifications via API route
+          const notificationResponse = await fetch('/api/notifications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              order_id: orderResult.order.id,
-              customer_email: shippingData.email,
-              customer_name: `${shippingData.firstName} ${shippingData.lastName}`,
-              total_amount: subtotal.toString(),
-              currency: 'TZS',
-              payment_method: 'Pay at Office',
-              payment_status: 'pending',
-              items_count: items.length
+              type: 'order_created',
+              data: {
+                order_id: orderResult.order.id,
+                customer_email: shippingData.email,
+                customer_name: `${shippingData.firstName} ${shippingData.lastName}`,
+                total_amount: subtotal.toString(),
+                currency: 'TZS',
+                items: items.map(item => ({
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.price.toString()
+                })),
+                order_date: new Date().toLocaleDateString(),
+                payment_method: 'Pay at Office',
+                shipping_address: isPickup ? 'Pickup at Office' : `${shippingData.address}, ${shippingData.place}, ${selectedCity}`,
+                payment_status: 'pending'
+              }
             })
-          }).catch(err => console.warn('Failed to send admin notification:', err))
+          })
+
+          if (!notificationResponse.ok) {
+            console.warn('Failed to send notifications:', await notificationResponse.text())
+          }
         } catch (emailError) {
           console.warn('Failed to send notifications:', emailError)
         }
@@ -546,27 +541,42 @@ export default function CheckoutPage() {
             description: 'Please approve the payment on your phone to complete the order.',
           })
 
-          // Poll our status endpoint with 30-second timeout and retry mechanism
+          // Poll our status endpoint with enhanced timeout and retry mechanism
           const reference: string | undefined = procJson?.transaction?.transaction_reference
-          if (reference) {
-            const success = await pollPaymentStatus(reference)
-            if (!success) {
-              // Payment timed out or failed - enable retry
-              setPaymentTimeout(true)
-              setCanRetryPayment(true)
-              // Payment timeout - no toast notification, just show retry UI
-              return
-            }
-            
-            // Payment successful - rely on server webhook to create the order and clear server cart.
-            // Clear local cart to avoid client/server cart divergence and re-syncs.
-            toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
-            clearCart()
-            // Cart is now client-side only, no server cleanup needed
-            try { sessionStorage.setItem('orders:refresh', '1') } catch {}
-            router.push('/account/orders?justPaid=1')
+          if (!reference) {
+            console.error('No payment reference returned from initiation')
+            toast({
+              title: 'Payment Setup Failed',
+              description: 'Unable to setup payment. Please try again or use a different payment method.',
+              variant: 'destructive'
+            })
+            setPaymentTimeout(true)
+            setCanRetryPayment(true)
             return
           }
+            
+          const success = await pollPaymentStatus(reference)
+          if (!success) {
+            // Payment timed out or failed - enable retry
+            console.log('Payment polling failed, enabling retry')
+            setPaymentTimeout(true)
+            setCanRetryPayment(true)
+            toast({
+              title: 'Payment Timeout',
+              description: 'Payment is taking longer than expected. You can retry or the order will be processed if payment completes.',
+              variant: 'default'
+            })
+            return
+          }
+            
+          // Payment successful - rely on server webhook to create the order and clear server cart.
+          // Clear local cart to avoid client/server cart divergence and re-syncs.
+          toast({ title: 'Payment Confirmed', description: 'We are finalizing your order. It will appear in your Orders shortly.' })
+          clearCart()
+          // Cart is now client-side only, no server cleanup needed
+          try { sessionStorage.setItem('orders:refresh', '1') } catch {}
+          router.push('/account/orders?justPaid=1')
+          return
         } catch (err) {
           console.error('Payment processing error:', err)
           toast({ 
@@ -594,38 +604,67 @@ export default function CheckoutPage() {
     }
   }
 
-  // Enhanced payment status polling with 15-second timeout
+  // Enhanced payment status polling with exponential backoff and better error handling
   const pollPaymentStatus = async (reference: string): Promise<boolean> => {
     const start = Date.now()
-    const timeoutMs = 20_000 // 20 seconds
-    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+    const timeoutMs = 50_000 // 50 seconds for mobile money
+    let attempt = 0
+    const maxAttempts = 20
     
-    while (Date.now() - start < timeoutMs) {
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+    const getDelay = (attempt: number) => Math.min(1000 + (attempt * 500), 4000) // 1s to 4s
+    
+    while (Date.now() - start < timeoutMs && attempt < maxAttempts) {
       try {
         const sres = await fetch('/api/payments/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reference })
         })
+        
+        if (!sres.ok) {
+          console.warn(`Payment status check failed: ${sres.status} ${sres.statusText}`)
+          throw new Error(`Status check failed: ${sres.status}`)
+        }
+        
         const sjson = await sres.json()
         const st = String(sjson?.status || '').toUpperCase()
+        
+        console.log(`Payment status check ${attempt + 1}: ${st}`)
 
         const successSet = new Set(['SUCCESS', 'SETTLED', 'COMPLETED', 'APPROVED', 'SUCCESSFUL'])
-        const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR'])
+        const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR', 'TIMEOUT'])
 
         if (successSet.has(st)) {
+          console.log('Payment confirmed as successful')
           return true // Payment successful
         }
         if (failureSet.has(st)) {
-          toast({ title: 'Payment Failed', description: 'Payment was declined or failed.', variant: 'destructive' })
+          const reason = sjson?.failure_reason || 'Payment was declined or failed'
+          toast({ 
+            title: 'Payment Failed', 
+            description: reason, 
+            variant: 'destructive' 
+          })
           return false // Payment failed
         }
+        // Continue polling for PENDING/PROCESSING status
       } catch (error) {
-        console.warn('Error checking payment status:', error)
+        console.warn(`Payment status check attempt ${attempt + 1} failed:`, error)
+        // Continue trying unless it's the last attempt
+        if (attempt >= maxAttempts - 1) {
+          console.error('Max payment status check attempts reached')
+          return false
+        }
       }
-      await delay(2000) // Check every 2 seconds
+      
+      attempt++
+      const delayMs = getDelay(attempt)
+      console.log(`Waiting ${delayMs}ms before next status check...`)
+      await delay(delayMs)
     }
     
+    console.log('Payment status polling timed out')
     return false // Timeout reached
   }
 

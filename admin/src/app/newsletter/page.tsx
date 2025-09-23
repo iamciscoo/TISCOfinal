@@ -69,7 +69,7 @@ export default function NewsletterPage() {
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.source || '-'}</span>,
     },
     {
-      accessorKey: 'created_at',
+      id: 'status',
       header: 'Status',
       cell: () => <Badge variant="default">Subscribed</Badge>,
     },

@@ -11,8 +11,8 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       .from("reviews")
       .select(`
         *,
-        user:users(*),
-        product:products(*)
+        users(*),
+        products(*)
       `)
       .eq('id', id)
       .single();

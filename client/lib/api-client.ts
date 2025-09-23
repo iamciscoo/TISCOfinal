@@ -16,6 +16,8 @@
 import { ApiResponse } from './middleware'
 // Import caching utilities for performance optimization
 import { cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
+// Import types for type safety
+import type { Product, Category, CartItem, Order } from './types'
 
 /**
  * Environment detection for URL resolution
@@ -295,97 +297,97 @@ export const apiClient = new ApiClient()
 // Cached API functions to replace direct Supabase queries
 export const api = {
   // Products
-  async getProducts(limit?: number) {
+  async getProducts(limit?: number): Promise<Product[]> {
     return withCache(
       cacheKeys.products(limit),
-      () => apiClient.get('/products', limit ? { limit } : undefined),
+      () => apiClient.get<Product[]>('/products', limit ? { limit } : undefined),
       cacheTTL.products
     )
   },
 
-  async getFeaturedProducts(limit?: number) {
+  async getFeaturedProducts(limit?: number): Promise<Product[]> {
     return withCache(
       cacheKeys.featuredProducts(limit),
-      () => apiClient.get('/products/featured', limit ? { limit } : undefined),
+      () => apiClient.get<Product[]>('/products/featured', limit ? { limit } : undefined),
       cacheTTL.products
     )
   },
 
-  async getProduct(id: string) {
+  async getProduct(id: string): Promise<Product> {
     return withCache(
       cacheKeys.product(id),
-      () => apiClient.get(`/products/${id}`),
+      () => apiClient.get<Product>(`/products/${id}`),
       cacheTTL.products
     )
   },
 
-  async searchProducts(query: string, filters?: { category?: string; minPrice?: number; maxPrice?: number; limit?: number; offset?: number }) {
+  async searchProducts(query: string, filters?: { category?: string; minPrice?: number; maxPrice?: number; limit?: number; offset?: number }): Promise<Product[]> {
     // Don't cache search results as they're dynamic
-    return apiClient.get('/products/search', { query, ...filters })
+    return apiClient.get<Product[]>('/products/search', { query, ...filters })
   },
 
-  async getProductsByCategory(categoryId: string) {
+  async getProductsByCategory(categoryId: string): Promise<Product[]> {
     return withCache(
       cacheKeys.productsByCategory(categoryId),
-      () => apiClient.get('/products', { category: categoryId }),
+      () => apiClient.get<Product[]>('/products', { category: categoryId }),
       cacheTTL.products
     )
   },
 
   // Categories
-  async getCategories() {
+  async getCategories(): Promise<Category[]> {
     return withCache(
       cacheKeys.categories(),
-      () => apiClient.get('/categories'),
+      () => apiClient.get<Category[]>('/categories'),
       cacheTTL.categories
     )
   },
 
   // Cart
-  async getCartItems(userId: string) {
+  async getCartItems(userId: string): Promise<CartItem[]> {
     return withCache(
       cacheKeys.cartItems(userId),
-      () => apiClient.get('/cart', { userId }),
+      () => apiClient.get<CartItem[]>('/cart', { userId }),
       cacheTTL.cart
     )
   },
 
-  async addToCart(data: { productId: string; quantity: number }) {
-    const result = await apiClient.post('/cart', data)
+  async addToCart(data: { productId: string; quantity: number }): Promise<CartItem> {
+    const result = await apiClient.post<CartItem>('/cart', data)
     // Invalidate cart cache
     cacheInvalidation.invalidateCart('current-user') // We'd need actual userId
     return result
   },
 
-  async updateCartItem(itemId: string, quantity: number) {
-    const result = await apiClient.patch(`/cart/${itemId}`, { quantity })
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+    const result = await apiClient.patch<CartItem>(`/cart/${itemId}`, { quantity })
     cacheInvalidation.invalidateCart('current-user')
     return result
   },
 
-  async removeFromCart(itemId: string) {
-    const result = await apiClient.delete(`/cart/${itemId}`)
+  async removeFromCart(itemId: string): Promise<{ success: boolean }> {
+    const result = await apiClient.delete<{ success: boolean }>(`/cart/${itemId}`)
     cacheInvalidation.invalidateCart('current-user')
     return result
   },
 
-  async clearCart() {
-    const result = await apiClient.delete('/cart')
+  async clearCart(): Promise<{ success: boolean }> {
+    const result = await apiClient.delete<{ success: boolean }>('/cart')
     cacheInvalidation.invalidateCart('current-user')
     return result
   },
 
-  async updateCart(userId: string, items: Array<{ productId: string; quantity: number }>) {
-    const result = await apiClient.put('/cart', { userId, items })
+  async updateCart(userId: string, items: Array<{ productId: string; quantity: number }>): Promise<CartItem[]> {
+    const result = await apiClient.put<CartItem[]>('/cart', { userId, items })
     cacheInvalidation.invalidateCart('current-user')
     return result
   },
 
   // Orders
-  async getUserOrders(userId: string) {
+  async getUserOrders(userId: string): Promise<Order[]> {
     return withCache(
       cacheKeys.userOrders(userId),
-      () => apiClient.get('/orders', { userId }),
+      () => apiClient.get<Order[]>('/orders', { userId }),
       cacheTTL.orders
     )
   },
@@ -400,28 +402,28 @@ export const api = {
       country: string;
     }
     paymentMethod: string
-  }) {
-    const result = await apiClient.post('/orders', data)
+  }): Promise<Order> {
+    const result = await apiClient.post<Order>('/orders', data)
     cacheInvalidation.invalidateOrders('current-user')
     cacheInvalidation.invalidateCart('current-user')
     return result
   },
 
-  async getOrder(orderId: string) {
-    return apiClient.get(`/orders/${orderId}`)
+  async getOrder(orderId: string): Promise<Order> {
+    return apiClient.get<Order>(`/orders/${orderId}`)
   },
 
-  async updateOrder(id: string, data: { status?: string; shippingAddress?: object; notes?: string }) {
-    const result = await apiClient.patch(`/orders/${id}`, data)
+  async updateOrder(id: string, data: { status?: string; shippingAddress?: object; notes?: string }): Promise<Order> {
+    const result = await apiClient.patch<Order>(`/orders/${id}`, data)
     cacheInvalidation.invalidateOrders('current-user')
     return result
   },
 
   // Reviews
-  async getProductReviews(productId: string) {
+  async getProductReviews(productId: string): Promise<any[]> {
     return withCache(
       cacheKeys.productReviews(productId),
-      () => apiClient.get(`/products/${productId}/reviews`),
+      () => apiClient.get<any[]>(`/products/${productId}/reviews`),
       cacheTTL.reviews
     )
   },
@@ -430,18 +432,18 @@ export const api = {
     rating: number
     title?: string
     comment?: string
-  }) {
-    const result = await apiClient.post(`/products/${productId}/reviews`, data)
+  }): Promise<any> {
+    const result = await apiClient.post<any>(`/products/${productId}/reviews`, data)
     // Invalidate product and reviews cache
     cacheInvalidation.invalidateProduct(productId)
     return result
   },
 
   // Services
-  async getServices() {
+  async getServices(): Promise<any[]> {
     return withCache(
       cacheKeys.services(),
-      () => apiClient.get('/services'),
+      () => apiClient.get<any[]>('/services'),
       cacheTTL.services
     )
   },
@@ -455,15 +457,15 @@ export const api = {
     contactEmail: string
     contactPhone?: string
     customerName: string
-  }) {
-    return apiClient.post('/service-bookings', data)
+  }): Promise<any> {
+    return apiClient.post<any>('/service-bookings', data)
   },
 
   // User & Addresses
-  async getUserAddresses(userId: string) {
+  async getUserAddresses(userId: string): Promise<any[]> {
     return withCache(
       cacheKeys.userAddresses(userId),
-      () => apiClient.get('/addresses', { userId }),
+      () => apiClient.get<any[]>('/addresses', { userId }),
       cacheTTL.addresses
     )
   },
@@ -475,8 +477,8 @@ export const api = {
     zipCode: string;
     country: string;
     isDefault?: boolean;
-  }) {
-    const result = await apiClient.post('/addresses', data)
+  }): Promise<any> {
+    const result = await apiClient.post<any>('/addresses', data)
     cacheInvalidation.invalidateUser('current-user')
     return result
   },
@@ -488,14 +490,14 @@ export const api = {
     zipCode?: string;
     country?: string;
     isDefault?: boolean;
-  }) {
-    const result = await apiClient.patch(`/addresses/${addressId}`, data)
+  }): Promise<any> {
+    const result = await apiClient.patch<any>(`/addresses/${addressId}`, data)
     cacheInvalidation.invalidateUser('current-user')
     return result
   },
 
-  async deleteAddress(addressId: string) {
-    const result = await apiClient.delete(`/addresses/${addressId}`)
+  async deleteAddress(addressId: string): Promise<{ success: boolean }> {
+    const result = await apiClient.delete<{ success: boolean }>(`/addresses/${addressId}`)
     cacheInvalidation.invalidateUser('current-user')
     return result
   }

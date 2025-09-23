@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check } from 'lucide-react'
+import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check, ExternalLink, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -29,6 +29,9 @@ interface NotificationRecord {
   created_at: string
   updated_at: string
   metadata?: Record<string, any>
+  category?: string
+  platform_module?: string
+  action_url?: string
 }
 
 interface NotificationStats {
@@ -53,12 +56,29 @@ const priorityColors = {
   urgent: 'bg-red-100 text-red-800'
 }
 
+const CATEGORIES = [
+  'order_created',
+  'booking_created', 
+  'contact_message_received',
+  'user_registered',
+  'payment_success',
+  'payment_failed',
+  'admin_notification',
+  'system_alert'
+]
+const MODULES = ['orders', 'products', 'users', 'payments', 'inventory', 'analytics', 'system']
+const PRIORITY_OPTIONS = ['all', 'low', 'medium', 'high', 'urgent'] as const
+const DEPARTMENTS = ['technical', 'support', 'sales', 'management']
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [stats, setStats] = useState<NotificationStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
   const [eventFilter, setEventFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [moduleFilter, setModuleFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Bulk actions state
@@ -66,9 +86,10 @@ export default function NotificationsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Recipients state
-  type Recipient = { id: string; email: string; name?: string; is_active: boolean; created_at: string }
+  type Recipient = { id: string; email: string; name?: string; is_active: boolean; department?: string | null; notification_categories?: string[] | null; created_at: string }
   const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [newRecipient, setNewRecipient] = useState<{ email: string; name: string }>({ email: '', name: '' })
+  const [newRecipient, setNewRecipient] = useState<{ email: string; name: string; department: string; notification_categories: string[] }>({ email: '', name: '', department: '', notification_categories: ['all'] })
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(['all']))
 
   // Manual notification form
   const [manualNotification, setManualNotification] = useState({
@@ -77,7 +98,8 @@ export default function NotificationsPage() {
     recipient_name: '',
     title: '',
     message: '',
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent'
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    action_url: ''
   })
 
   const fetchNotifications = async () => {
@@ -85,6 +107,9 @@ export default function NotificationsPage() {
       const params = new URLSearchParams()
       if (filter !== 'all') params.append('status', filter)
       if (eventFilter !== 'all') params.append('event', eventFilter)
+      if (categoryFilter !== 'all') params.append('category', categoryFilter)
+      if (moduleFilter !== 'all') params.append('platform_module', moduleFilter)
+      if (priorityFilter !== 'all') params.append('priority', priorityFilter)
       
       const response = await fetch(`/api/admin/notifications?${params}`)
       if (response.ok) {
@@ -139,7 +164,8 @@ export default function NotificationsPage() {
           data: {
             notification_type: 'Manual Notification',
             title: manualNotification.title,
-            message: manualNotification.message
+            message: manualNotification.message,
+            action_url: manualNotification.action_url || undefined
           },
           priority: manualNotification.priority
         })
@@ -153,7 +179,8 @@ export default function NotificationsPage() {
           recipient_name: '',
           title: '',
           message: '',
-          priority: 'medium'
+          priority: 'medium',
+          action_url: ''
         })
         refreshData()
       } else {
@@ -224,7 +251,7 @@ export default function NotificationsPage() {
       setLoading(false)
     }
     loadData()
-  }, [filter, eventFilter])
+  }, [filter, eventFilter, categoryFilter, moduleFilter, priorityFilter])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -306,7 +333,7 @@ export default function NotificationsPage() {
           {/* Filters and Bulk Actions */}
           <div className="space-y-4">
             {/* Filters */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -332,6 +359,42 @@ export default function NotificationsPage() {
                   <SelectItem value="user_registered">User Registered</SelectItem>
                   <SelectItem value="payment_success">Payment Success</SelectItem>
                   <SelectItem value="payment_failed">Payment Failed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* New filters: Category, Module, Priority */}
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by module" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {MODULES.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map((p) => (
+                    <SelectItem key={p} value={p}>{p[0].toUpperCase() + p.slice(1)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -405,6 +468,12 @@ export default function NotificationsPage() {
                           {notification.priority}
                         </Badge>
                         <Badge variant="outline">{notification.event}</Badge>
+                        {notification.category && (
+                          <Badge variant="outline">{notification.category}</Badge>
+                        )}
+                        {notification.platform_module && (
+                          <Badge variant="secondary">{notification.platform_module}</Badge>
+                        )}
                         <Button
                           variant="destructive"
                           size="sm"
@@ -449,6 +518,19 @@ export default function NotificationsPage() {
                         <Mail className="w-4 h-4" />
                         <span className="text-sm">Channels: {notification.channels.join(', ')}</span>
                       </div>
+                      {notification.action_url && (
+                        <div>
+                          <a
+                            href={notification.action_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm text-blue-600 hover:underline"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            Open action
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -508,10 +590,21 @@ export default function NotificationsPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="action_url">Action URL (Optional)</Label>
+                <Input
+                  id="action_url"
+                  type="url"
+                  value={manualNotification.action_url}
+                  onChange={(e) => setManualNotification(prev => ({ ...prev, action_url: e.target.value }))}
+                  placeholder="https://example.com/action"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
                 <Select 
-                  value={manualNotification.priority} 
-                  onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') => 
+                  value={manualNotification.priority}
+                  onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') =>
                     setManualNotification(prev => ({ ...prev, priority: value }))
                   }
                 >
@@ -569,17 +662,95 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
+              {/* Department and Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Select value={newRecipient.department} onValueChange={(value) => setNewRecipient(prev => ({ ...prev, department: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {DEPARTMENTS.map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="categories">Notification Categories</Label>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={selectedEvents.has('all') ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          if (selectedEvents.has('all')) {
+                            setSelectedEvents(new Set())
+                            setNewRecipient(prev => ({ ...prev, notification_categories: [] }))
+                          } else {
+                            setSelectedEvents(new Set(['all']))
+                            setNewRecipient(prev => ({ ...prev, notification_categories: ['all'] }))
+                          }
+                        }}
+                      >
+                        All Events
+                      </Button>
+                      {CATEGORIES.map((category) => (
+                        <Button
+                          key={category}
+                          type="button"
+                          variant={selectedEvents.has(category) ? 'default' : 'outline'}
+                          size="sm"
+                          disabled={selectedEvents.has('all')}
+                          onClick={() => {
+                            const newSelected = new Set(selectedEvents)
+                            newSelected.delete('all') // Remove 'all' when selecting specific events
+                            
+                            if (newSelected.has(category)) {
+                              newSelected.delete(category)
+                            } else {
+                              newSelected.add(category)
+                            }
+                            
+                            setSelectedEvents(newSelected)
+                            const categories = Array.from(newSelected)
+                            setNewRecipient(prev => ({ ...prev, notification_categories: categories.length > 0 ? categories : ['all'] }))
+                          }}
+                        >
+                          {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Selected: {selectedEvents.has('all') ? 'All Events' : 
+                        Array.from(selectedEvents).map(c => 
+                          c.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                        ).join(', ') || 'None (will default to All Events)'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={async () => {
                   try {
                     const res = await fetch('/api/admin/notifications/recipients', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: newRecipient.email, name: newRecipient.name })
+                      body: JSON.stringify({ 
+                        email: newRecipient.email, 
+                        name: newRecipient.name,
+                        department: newRecipient.department || undefined,
+                        notification_categories: newRecipient.notification_categories
+                      })
                     })
                     if (res.ok) {
                       toast.success('Recipient saved')
-                      setNewRecipient({ email: '', name: '' })
+                      setNewRecipient({ email: '', name: '', department: '', notification_categories: ['all'] })
+                      setSelectedEvents(new Set(['all']))
                       fetchRecipients()
                     } else {
                       const j = await res.json().catch(() => ({}))
@@ -603,6 +774,14 @@ export default function NotificationsPage() {
                       <div>
                         <div className="font-medium">{r.name || 'Admin'}</div>
                         <div className="text-sm text-muted-foreground">{r.email}</div>
+                        <div className="flex gap-2 mt-1">
+                          {r.department && (
+                            <Badge variant="outline">{r.department}</Badge>
+                          )}
+                          {Array.isArray(r.notification_categories) && r.notification_categories.length > 0 && (
+                            <Badge variant="secondary">{r.notification_categories.join(', ')}</Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={r.is_active ? 'default' : 'secondary'}>

@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getServiceRoleClient } from '@/lib/supabase-factory'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const supabase = getServiceRoleClient()
+    console.log('=== GET /api/services START ===')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE!
+    )
     const { data: services, error } = await supabase
       .from('services')
       .select('*')

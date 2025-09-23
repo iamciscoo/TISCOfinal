@@ -15,9 +15,13 @@ const supabase = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  console.log('=== GET /api/service-bookings START ===')
   try {
+    console.log('Getting user...')
     const user = await getUser()
+    console.log('User result:', user ? `User ID: ${user.id}` : 'No user found')
     if (!user?.id) {
+      console.log('No user, returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -25,21 +29,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     searchParams.get('fresh')
 
-    const { data: bookings, error } = await supabase
+    console.log('Fetching service bookings for user:', user.id)
+    const { data, error } = await supabase
       .from('service_bookings')
       .select(`
         *,
-        services(id, title, description, duration, image)
+        services(
+          id,
+          title,
+          description,
+          duration,
+          image,
+          features
+        )
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
+    console.log('Service bookings query result:', { data: data?.length || 0, error: error?.message })
     if (error) {
+      console.error('Service bookings fetch error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ bookings: bookings || [] }, { status: 200 })
+    console.log('Returning service bookings:', data?.length || 0)
+    return NextResponse.json({ bookings: data || [] }, { status: 200 })
   } catch (error: unknown) {
+    console.error('=== GET /api/service-bookings ERROR ===', error)
     return NextResponse.json({ error: (error as Error).message || 'Failed to fetch bookings' }, { status: 500 })
   }
 }
@@ -125,12 +141,13 @@ export async function POST(req: NextRequest) {
       
       await notifyBookingCreated({
         booking_id: data.id,
-        customer_email: contact_email,
+        contact_email: contact_email,
         customer_name,
         service_name: serviceData?.title || 'Service',
         preferred_date,
         preferred_time,
-        description
+        description,
+        service_type
       })
       console.log('Booking confirmation email sent successfully')
     } catch (emailError) {

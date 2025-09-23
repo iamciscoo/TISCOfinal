@@ -499,9 +499,13 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  console.log('=== GET /api/orders START ===')
   try {
+    console.log('Getting user...')
     const user = await getUser()
+    console.log('User result:', user ? `User ID: ${user.id}` : 'No user found')
     if (!user) {
+      console.log('No user, returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -512,6 +516,7 @@ export async function GET(req: Request) {
       || req.headers.get('x-no-cache') === '1'
 
     if (fresh) {
+      console.log('Fresh mode - fetching orders directly from DB for user:', user.id)
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -523,9 +528,13 @@ export async function GET(req: Request) {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+      
+      console.log('Orders query result:', { data: data?.length || 0, error: error?.message })
       if (error) {
+        console.error('Orders fetch error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
+      console.log('Returning fresh orders:', data?.length || 0)
       return NextResponse.json({ orders: data || [] }, { status: 200 })
     }
 
@@ -555,6 +564,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ orders: data }, { status: 200 })
 
   } catch (error: unknown) {
+    console.error('=== GET /api/orders ERROR ===', error)
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to fetch orders' },
       { status: 500 }

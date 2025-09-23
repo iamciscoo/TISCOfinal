@@ -12,8 +12,8 @@ export async function GET() {
       .from('products')
       .select(`
         *,
-        categories:product_categories(
-          category:categories(id, name)
+        product_categories(
+          categories(id, name)
         ),
         product_images(url, is_main, sort_order)
       `)

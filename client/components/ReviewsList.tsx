@@ -13,7 +13,7 @@ interface Review {
   comment?: string
   created_at: string
   is_verified_purchase: boolean
-  user: {
+  users: {
     first_name: string
     last_name: string
     avatar_url?: string
@@ -72,9 +72,9 @@ export function ReviewsList({ productId, refreshTrigger }: ReviewsListProps) {
           <CardContent className="pt-6">
             <div className="flex items-start space-x-4">
               <Avatar>
-                <AvatarImage src={review.user.avatar_url} />
+                <AvatarImage src={review.users?.avatar_url} />
                 <AvatarFallback>
-                  {review.user.first_name?.[0]}{review.user.last_name?.[0]}
+                  {review.users?.first_name?.[0]}{review.users?.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
               
@@ -82,7 +82,7 @@ export function ReviewsList({ productId, refreshTrigger }: ReviewsListProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="font-medium">
-                      {review.user.first_name} {review.user.last_name}
+                      {review.users?.first_name} {review.users?.last_name}
                     </span>
                     {review.is_verified_purchase && (
                       <Badge variant="secondary" className="text-xs">

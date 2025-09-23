@@ -34,7 +34,7 @@ export async function GET() {
 
     const { data, error } = await sb
       .from('notification_recipients')
-      .select('id, email, name, is_active, created_at')
+      .select('id, email, name, is_active, department, notification_categories, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -56,16 +56,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const email = String(body?.email || '').trim().toLowerCase()
     const name = (body?.name as string | undefined)?.trim() || null
+    const departmentInput = (body?.department as string | undefined)?.trim()
+    const department = departmentInput === 'none' || !departmentInput ? null : departmentInput
+    const categoriesInput = body?.notification_categories
+    const notification_categories: string[] = Array.isArray(categoriesInput)
+      ? categoriesInput.map((c: string) => String(c).trim()).filter(Boolean)
+      : typeof categoriesInput === 'string'
+        ? String(categoriesInput).split(',').map((c) => c.trim()).filter(Boolean)
+        : ['all']
 
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
     }
 
-    // Upsert by email to avoid duplicates
+    // Upsert to notification_recipients table only
     const { data, error } = await sb
       .from('notification_recipients')
-      .upsert({ email, name, is_active: true }, { onConflict: 'email' })
-      .select('id, email, name, is_active, created_at')
+      .upsert({ email, name, is_active: true, department, notification_categories }, { onConflict: 'email' })
+      .select('id, email, name, is_active, department, notification_categories, created_at')
       .single()
 
     if (error) {

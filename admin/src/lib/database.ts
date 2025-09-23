@@ -280,15 +280,15 @@ export async function getUsersByIds(ids: string[]): Promise<Record<string, User>
 
 // Order Functions
 export async function getOrders(limit?: number): Promise<Order[]> {
-  const query = supabase
+  let query = supabase
     .from('orders')
     .select(`
       *,
-      order_items:order_items(
+      order_items(
         id,
         quantity,
         price,
-        product:products(
+        products(
           id,
           name,
           price,
@@ -299,7 +299,7 @@ export async function getOrders(limit?: number): Promise<Order[]> {
     .order('created_at', { ascending: false })
 
   if (limit) {
-    query.limit(limit)
+    query = query.limit(limit)
   }
 
   const { data, error } = await query
@@ -311,7 +311,8 @@ export async function getOrders(limit?: number): Promise<Order[]> {
       details: (error as any).details,
       hint: (error as any).hint,
     })
-    throw error
+    // Return empty array instead of throwing to prevent dashboard crashes
+    return []
   }
 
   const orders = (data || []) as any[]
@@ -335,9 +336,9 @@ export async function getOrdersByUser(userId: string): Promise<Order[]> {
     .from('orders')
     .select(`
       *,
-      order_items:order_items(
+      order_items(
         *,
-        product:products(*)
+        products(*)
       )
     `)
     .eq('user_id', userId)
@@ -361,9 +362,9 @@ export async function getOrderById(id: string | number): Promise<Order | null> {
     .from('orders')
     .select(`
       *,
-      order_items:order_items(
+      order_items(
         *,
-        product:products(*)
+        products(*)
       )
     `)
     .eq('id', id)
@@ -412,8 +413,8 @@ export async function getReviews(limit?: number): Promise<Review[]> {
     .from('reviews')
     .select(`
       *,
-      product:products(*),
-      user:users(*)
+      products(*),
+      users(*)
     `)
     .order('created_at', { ascending: false })
 
@@ -457,14 +458,54 @@ export async function getServiceBookings(): Promise<ServiceBooking[]> {
   const { data, error } = await supabase
     .from('service_bookings')
     .select(`
-      *,
-      service:services(*),
-      user:users(*)
+      id,
+      service_id,
+      user_id,
+      service_type,
+      description,
+      preferred_date,
+      preferred_time,
+      contact_email,
+      contact_phone,
+      customer_name,
+      status,
+      notes,
+      created_at,
+      updated_at,
+      total_amount,
+      payment_status,
+      services!inner(
+        id,
+        title,
+        description
+      )
     `)
     .order('created_at', { ascending: false })
 
-  if (error) throw error
-  return data || []
+  if (error) {
+    console.error('getServiceBookings: Supabase error', {
+      message: error.message,
+      code: (error as any).code,
+      details: (error as any).details,
+      hint: (error as any).hint,
+    })
+    return []
+  }
+
+  const bookings = (data || []) as any[]
+
+  // Batch user fetching for better performance
+  const userIds = Array.from(new Set(bookings.map(b => b?.user_id).filter(Boolean))) as string[]
+  let usersById: Record<string, User> = {}
+  if (userIds.length > 0) {
+    try {
+      usersById = await getUsersByIds(userIds)
+    } catch (e) {
+      console.warn('getServiceBookings: failed to fetch users for bookings', e)
+    }
+  }
+
+  return bookings.map(b => ({ ...b, user: usersById[String(b.user_id)] })) as unknown as ServiceBooking[]
 }
 
 // Dashboard Analytics

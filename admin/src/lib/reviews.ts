@@ -45,10 +45,14 @@ export async function updateProductRating(productId: string | number) {
     const sum = reviews!.reduce((acc, r: any) => acc + (r?.rating ?? 0), 0)
     const avg = Math.round((sum / count) * 10) / 10
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('products')
       .update({ rating: avg, reviews_count: count })
       .eq('id', productId)
+    
+    if (updateError) {
+      console.error('updateProductRating: failed to update product', updateError)
+    }
   } catch (e) {
     console.error('updateProductRating: unexpected error', e)
   }

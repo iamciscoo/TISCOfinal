@@ -15,7 +15,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
 
       const { data: cost, error } = await supabase
       .from("service_booking_costs")
-      .select(`*, items:service_booking_cost_items(*)`)
+      .select(`*, service_booking_cost_items(*)`)
       .eq("booking_id", id)
       .single();
 
@@ -200,7 +200,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     // 5) Return new state
     const { data: cost, error: retErr } = await supabase
       .from("service_booking_costs")
-      .select(`*, items:service_booking_cost_items(*)`)
+      .select(`*, service_booking_cost_items(*)`)
       .eq("id", costId)
       .single();
     if (retErr) return NextResponse.json({ error: retErr.message }, { status: 500 });

@@ -39,8 +39,8 @@ export async function GET(req: Request) {
           sort_order,
           created_at
         ),
-        categories:product_categories(
-          category:categories(
+        product_categories(
+          categories(
             id,
             name,
             description

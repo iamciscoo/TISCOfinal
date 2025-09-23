@@ -24,7 +24,99 @@ export type SendPulseEmail = {
   }>
 }
 
+// Token cache to avoid too many concurrent requests
+let tokenCache: { token: string; expiresAt: number } | null = null
+let tokenPromise: Promise<string> | null = null
+
+// Retry configuration
+const MAX_RETRIES = 3
+const INITIAL_DELAY = 1000 // 1 second
+const MAX_DELAY = 10000 // 10 seconds
+
+// Sleep utility
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
+
+// Check if error is retryable
+const isRetryableError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    const cause = (error as { cause?: { code?: string } })?.cause
+    
+    // Network connectivity issues
+    if (message.includes('fetch failed') || message.includes('network error')) return true
+    if (message.includes('timeout') || message.includes('connect timeout')) return true
+    if (message.includes('econnreset') || message.includes('enotfound')) return true
+    
+    // Check cause for UND_ERR codes (undici errors)
+    if (cause?.code === 'UND_ERR_CONNECT_TIMEOUT') return true
+    if (cause?.code === 'UND_ERR_SOCKET') return true
+    if (cause?.code === 'UND_ERR_REQUEST_TIMEOUT') return true
+  }
+  return false
+}
+
+// Fetch with retry logic and exponential backoff
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  retries: number = MAX_RETRIES
+): Promise<Response> {
+  let lastError: unknown
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      console.log(`SendPulse: Attempt ${attempt + 1}/${retries + 1} for ${url}`)
+      const response = await fetch(url, options)
+      console.log(`SendPulse: Request successful on attempt ${attempt + 1}`)
+      return response
+    } catch (error) {
+      lastError = error
+      console.error(`SendPulse: Attempt ${attempt + 1} failed:`, error)
+      
+      // Don't retry if it's not a retryable error or we're on the last attempt
+      if (!isRetryableError(error) || attempt === retries) {
+        break
+      }
+      
+      // Calculate delay with exponential backoff and jitter
+      const baseDelay = Math.min(INITIAL_DELAY * Math.pow(2, attempt), MAX_DELAY)
+      const jitter = Math.random() * 0.1 * baseDelay // Add up to 10% jitter
+      const delay = baseDelay + jitter
+      
+      console.log(`SendPulse: Waiting ${Math.round(delay)}ms before retry...`)
+      await sleep(delay)
+    }
+  }
+  
+  throw lastError
+}
+
 async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
+  // Check cache first
+  if (tokenCache && tokenCache.expiresAt > Date.now()) {
+    console.log('SendPulse: Using cached token')
+    return tokenCache.token
+  }
+
+  // If there's already a token request in progress, wait for it
+  if (tokenPromise) {
+    console.log('SendPulse: Waiting for existing token request')
+    return tokenPromise
+  }
+
+  // Start new token request
+  tokenPromise = requestNewToken(cfg)
+  
+  try {
+    const token = await tokenPromise
+    return token
+  } finally {
+    tokenPromise = null
+  }
+}
+
+async function requestNewToken(cfg: SendPulseConfig): Promise<string> {
+  console.log('SendPulse: Requesting new access token')
   const url = 'https://api.sendpulse.com/oauth/access_token'
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
@@ -32,21 +124,36 @@ async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
     client_secret: cfg.clientSecret,
   })
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
     cache: 'no-store',
+    signal: AbortSignal.timeout(30000), // 30 second timeout
   } satisfies RequestInit)
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '')
+    console.error('SendPulse token request failed:', { status: res.status, statusText: res.statusText, response: txt })
     throw new Error(`SendPulse token error: ${res.status} ${res.statusText} ${txt}`)
   }
 
   const json = await res.json().catch(() => ({} as Record<string, unknown>))
+  console.log('SendPulse token response keys:', Object.keys(json))
+  
   const token = (json as Record<string, unknown>)?.access_token as string | undefined
-  if (!token) throw new Error('SendPulse token missing in response')
+  const expiresIn = Number((json as Record<string, unknown>)?.expires_in) || 3600
+  
+  if (!token) {
+    console.error('SendPulse token response:', json)
+    throw new Error('SendPulse token missing in response')
+  }
+
+  // Cache token for 90% of its lifetime to avoid expiry issues
+  const expiresAt = Date.now() + (expiresIn * 900) // 90% of expires_in in ms
+  tokenCache = { token, expiresAt }
+  
+  console.log('SendPulse: Token cached, expires in:', expiresIn, 'seconds')
   return token
 }
 
@@ -65,7 +172,27 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
     
     console.log('SendPulse: Sending to recipients:', recipients.length)
 
-    const htmlB64 = Buffer.from(email.html, 'utf-8').toString('base64')
+    // Validate email content
+    if (!email.html || email.html.trim().length === 0) {
+      throw new Error('Email HTML content is empty or invalid')
+    }
+
+    // Clean and validate HTML content
+    const cleanHtml = email.html.trim()
+    const htmlB64 = Buffer.from(cleanHtml, 'utf-8').toString('base64')
+    
+    // Generate clean text content
+    const textContent = email.text || cleanHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+    
+    // Validate recipient emails
+    const validRecipients = toArray.filter(recipient => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return recipient.email && emailRegex.test(recipient.email)
+    })
+    
+    if (validRecipients.length === 0) {
+      throw new Error('No valid recipient emails found')
+    }
 
     const payload = {
       email: {
@@ -74,16 +201,23 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
           name: cfg.senderName || 'TISCO Market',
           email: cfg.senderEmail,
         },
-        to: toArray,
+        to: validRecipients,
         html: htmlB64,
-        text: email.text || email.html.replace(/<[^>]*>/g, '').substring(0, 500) + '...',
+        text: textContent.substring(0, 1000), // Limit text length
         ...(email.replyTo && { reply_to: { email: email.replyTo } }),
         ...(email.attachments && { attachments: email.attachments }),
       },
     }
 
+    console.log('SendPulse payload validation:', {
+      subject: payload.email.subject,
+      recipientCount: validRecipients.length,
+      htmlLength: cleanHtml.length,
+      textLength: textContent.length
+    })
+
     console.log('SendPulse: Sending request to API')
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -91,6 +225,7 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
+      signal: AbortSignal.timeout(30000), // 30 second timeout
     } satisfies RequestInit)
 
     if (!res.ok) {

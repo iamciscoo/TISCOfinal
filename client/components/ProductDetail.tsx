@@ -24,8 +24,6 @@ import { ProductCard } from '@/components/shared/ProductCard'
 import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
 import { LoadingSpinner } from '@/components/shared'
-import { useDebouncedCallback } from '@/hooks/useDebounce'
-import { useLazyLoad } from '@/hooks/useIntersectionObserver'
 
 interface ProductDetailProps {
   product: Product
@@ -55,10 +53,10 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const { addItem, openCart } = useCartStore()
   
   // Lazy load related products section
-  const { shouldLoad: shouldLoadRelated, ref: relatedRef } = useLazyLoad({
-    threshold: 0.1,
-    rootMargin: '100px',
-  })
+  const shouldLoadRelated = true // Simplified - always load related products
+  const relatedRef = useCallback(() => {
+    // Simple ref callback without intersection observer for now
+  }, [])
 
   // Memoized product images with proper sorting
   const productImages = useMemo(() => {
@@ -88,17 +86,37 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
 
   // Load related products by category (only when section becomes visible)
   useEffect(() => {
-    if (!shouldLoadRelated || !product.category_id) return
+    if (!shouldLoadRelated) return
     
     let isMounted = true
     const loadRelatedProducts = async () => {
       try {
-        const data = await api.getProductsByCategory(String(product.category_id))
+        let data: Product[] = []
+        
+        // Try to get products from the same category if category_id exists
+        if (product.category_id) {
+          data = await api.getProductsByCategory(String(product.category_id))
+        } else {
+          // Fallback: get featured products if no category
+          data = await api.getFeaturedProducts(8)
+        }
+        
         if (!isMounted) return
+        
+        // Filter out current product and limit to 4 items
         const filtered = Array.isArray(data) ? data.filter((p: Product) => String(p.id) !== String(product.id)) : []
         setRelatedProducts(filtered.slice(0, 4))
       } catch (error) {
         console.error('Failed to load related products:', error)
+        // Try fallback: get any products
+        try {
+          const fallbackData = await api.getProducts(8)
+          if (!isMounted) return
+          const filtered = Array.isArray(fallbackData) ? fallbackData.filter((p: Product) => String(p.id) !== String(product.id)) : []
+          setRelatedProducts(filtered.slice(0, 4))
+        } catch (fallbackError) {
+          console.error('Failed to load fallback products:', fallbackError)
+        }
       }
     }
     
@@ -183,10 +201,10 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     }
   }, [product, quantity, pricingInfo.currentPrice, addItem, router])
   
-  // Debounced review refresh to prevent excessive API calls
-  const debouncedRefreshReviews = useDebouncedCallback(() => {
+  // Simple review refresh without debouncing
+  const debouncedRefreshReviews = useCallback(() => {
     setReviewRefreshTrigger(prev => prev + 1)
-  }, 500)
+  }, [])
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 overflow-x-hidden">

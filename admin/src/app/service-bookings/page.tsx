@@ -17,7 +17,7 @@ const getData = async (): Promise<ServiceBookingRow[]> => {
       }
       return {
         id: String(b.id),
-        serviceTitle: b.service?.title || "Unknown Service",
+        serviceTitle: b.services?.title || "Unknown Service",
         customerName: fullName,
         customerEmail: b.user?.email || "-",
         status: b.status || "pending",

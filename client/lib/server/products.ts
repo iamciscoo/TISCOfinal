@@ -85,8 +85,8 @@ export async function fetchProductByIdOrSlug(idOrSlug: string): Promise<ProductW
           is_main,
           sort_order
         ),
-        categories:product_categories(
-          category:categories(id, name${withSlug ? ', slug' : ''})
+        product_categories(
+          categories(id, name${withSlug ? ', slug' : ''})
         )
       `)
 
