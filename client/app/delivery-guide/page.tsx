@@ -18,8 +18,7 @@ export default function DeliveryGuidePage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-3">Delivery Guide</h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Learn how our delivery process works, estimated timelines, and what to expect
-            after placing an order. This page is a placeholder and will be updated soon
-            with specific regional details and carrier information.
+            after placing an order.
           </p>
         </div>
 

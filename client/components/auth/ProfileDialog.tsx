@@ -160,7 +160,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md min-w-0 max-h-[calc(100svh-2rem)] max-h-[calc(100lvh-2rem)] max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] grid grid-rows-[auto_1fr_auto] gap-2 sm:gap-4 p-4 sm:p-6 top-2 bottom-20 translate-y-0 sm:bottom-auto sm:top-1/2 sm:translate-y-[-50%]">
+      <DialogContent className="sm:max-w-md min-w-0 max-h-[calc(100svh-2rem)] max-h-[calc(100lvh-2rem)] max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] grid grid-rows-[auto_1fr_auto] gap-2 sm:gap-4 p-4 sm:p-6 !top-2 bottom-20 !translate-y-0 sm:bottom-auto sm:top-1/2 sm:translate-y-[-50%]">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
