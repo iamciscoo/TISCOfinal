@@ -38,6 +38,21 @@ export interface ProductImage {
   sort_order?: number
 }
 
+// Product review type used across components and API client
+export interface Review {
+  id: string
+  rating: number
+  title?: string
+  comment?: string
+  created_at: string
+  is_verified_purchase?: boolean
+  users?: {
+    first_name: string
+    last_name: string
+    avatar_url?: string
+  }
+}
+
 export interface Category {
   id: string | number
   name: string

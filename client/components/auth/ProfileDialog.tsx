@@ -160,7 +160,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
@@ -173,7 +173,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain pt-1 pb-24 sm:pb-2">
           <div className="grid gap-3">
           {error && (
             <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
@@ -256,9 +256,11 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
             />
           </div>
           </div>
+          {/* Spacer to prevent last input from being obscured by the sticky footer on mobile */}
+          <div className="h-2" aria-hidden="true" />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 shrink-0">
+        <div className="sticky bottom-0 z-10 flex justify-end gap-2 pt-2 pb-[env(safe-area-inset-bottom)] shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading || fetching}>{loading ? "Saving..." : "Save"}</Button>
         </div>

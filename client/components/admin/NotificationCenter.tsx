@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,8 @@ interface Notification {
   expires_at?: string
   read_at?: string
   dismissed_at?: string
-  metadata?: Record<string, any>
+  // Prefer unknown for generic metadata to avoid explicit any
+  metadata?: Record<string, unknown>
   notification_recipients?: Array<{
     id: string
     user_id?: string
@@ -62,9 +63,7 @@ const CATEGORIES = [
   'general', 'orders', 'products', 'users', 'payments', 'inventory', 'system', 'security', 'refunds'
 ]
 
-const PLATFORM_MODULES = [
-  'orders', 'products', 'users', 'payments', 'inventory', 'analytics', 'system'
-]
+// Removed unused PLATFORM_MODULES to satisfy @typescript-eslint/no-unused-vars
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
 
@@ -112,12 +111,8 @@ export function NotificationCenter() {
     notification_categories: ['all'] as string[]
   })
 
-  useEffect(() => {
-    fetchNotifications()
-    fetchRecipients()
-  }, [filters])
-
-  const fetchNotifications = async () => {
+  // Memoized fetchers to satisfy exhaustive-deps without changing behavior
+  const fetchNotifications = useCallback(async () => {
     try {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
@@ -126,51 +121,42 @@ export function NotificationCenter() {
 
       const response = await fetch(`/api/admin/notifications?${params}`)
       const data = await response.json()
-      
       if (data.success) {
         setNotifications(data.notifications)
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch notifications",
-          variant: "destructive",
-        })
+        toast({ title: 'Error', description: 'Failed to fetch notifications', variant: 'destructive' })
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch notifications",
-        variant: "destructive",
-      })
+      toast({ title: 'Error', description: 'Failed to fetch notifications', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters, toast])
 
-  const fetchRecipients = async () => {
+  const fetchRecipients = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/recipients')
       const data = await response.json()
-      
       if (data.success) {
         setRecipients(data.recipients)
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch recipients",
-          variant: "destructive",
-        })
+        toast({ title: 'Error', description: 'Failed to fetch recipients', variant: 'destructive' })
       }
     } catch (error) {
       console.error('Error fetching recipients:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch recipients", 
-        variant: "destructive",
-      })
+      toast({ title: 'Error', description: 'Failed to fetch recipients', variant: 'destructive' })
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchNotifications()
+    fetchRecipients()
+  }, [fetchNotifications, fetchRecipients])
+
+  // (moved into useCallback above)
+
+  // (moved into useCallback above)
 
   const createNotification = async () => {
     try {

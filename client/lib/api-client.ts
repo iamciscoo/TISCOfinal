@@ -17,7 +17,7 @@ import { ApiResponse } from './middleware'
 // Import caching utilities for performance optimization
 import { cacheKeys, cacheTTL, withCache, cacheInvalidation } from './cache'
 // Import types for type safety
-import type { Product, Category, CartItem, Order } from './types'
+import type { Product, Category, CartItem, Order, Review, Service, ServiceBooking, Address } from './types'
 
 /**
  * Environment detection for URL resolution
@@ -420,10 +420,10 @@ export const api = {
   },
 
   // Reviews
-  async getProductReviews(productId: string): Promise<any[]> {
+  async getProductReviews(productId: string): Promise<Review[]> {
     return withCache(
       cacheKeys.productReviews(productId),
-      () => apiClient.get<any[]>(`/products/${productId}/reviews`),
+      () => apiClient.get<Review[]>(`/products/${productId}/reviews`),
       cacheTTL.reviews
     )
   },
@@ -432,18 +432,18 @@ export const api = {
     rating: number
     title?: string
     comment?: string
-  }): Promise<any> {
-    const result = await apiClient.post<any>(`/products/${productId}/reviews`, data)
+  }): Promise<Review> {
+    const result = await apiClient.post<Review>(`/products/${productId}/reviews`, data)
     // Invalidate product and reviews cache
     cacheInvalidation.invalidateProduct(productId)
     return result
   },
 
   // Services
-  async getServices(): Promise<any[]> {
+  async getServices(): Promise<Service[]> {
     return withCache(
       cacheKeys.services(),
-      () => apiClient.get<any[]>('/services'),
+      () => apiClient.get<Service[]>('/services'),
       cacheTTL.services
     )
   },
@@ -457,15 +457,15 @@ export const api = {
     contactEmail: string
     contactPhone?: string
     customerName: string
-  }): Promise<any> {
-    return apiClient.post<any>('/service-bookings', data)
+  }): Promise<ServiceBooking> {
+    return apiClient.post<ServiceBooking>('/service-bookings', data)
   },
 
   // User & Addresses
-  async getUserAddresses(userId: string): Promise<any[]> {
+  async getUserAddresses(userId: string): Promise<Address[]> {
     return withCache(
       cacheKeys.userAddresses(userId),
-      () => apiClient.get<any[]>('/addresses', { userId }),
+      () => apiClient.get<Address[]>('/addresses', { userId }),
       cacheTTL.addresses
     )
   },
@@ -477,8 +477,8 @@ export const api = {
     zipCode: string;
     country: string;
     isDefault?: boolean;
-  }): Promise<any> {
-    const result = await apiClient.post<any>('/addresses', data)
+  }): Promise<Address> {
+    const result = await apiClient.post<Address>('/addresses', data)
     cacheInvalidation.invalidateUser('current-user')
     return result
   },
@@ -490,8 +490,8 @@ export const api = {
     zipCode?: string;
     country?: string;
     isDefault?: boolean;
-  }): Promise<any> {
-    const result = await apiClient.patch<any>(`/addresses/${addressId}`, data)
+  }): Promise<Address> {
+    const result = await apiClient.patch<Address>(`/addresses/${addressId}`, data)
     cacheInvalidation.invalidateUser('current-user')
     return result
   },
