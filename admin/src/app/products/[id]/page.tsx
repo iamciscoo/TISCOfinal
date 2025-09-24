@@ -174,41 +174,46 @@ export default function ViewProductPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 sm:py-8 space-y-6 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push('/products')}
+            className="shrink-0"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Products
           </Button>
-          <h1 className="text-3xl font-bold">{product.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleCopyId} className="shrink-0">
+              <Copy className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Copy ID</span>
+              <span className="sm:hidden">Copy</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link href={`/products/${product.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link href={`http://localhost:3000/products/${product.id}`} target="_blank">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">View Live</span>
+                <span className="sm:hidden">Live</span>
+              </Link>
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="shrink-0">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handleCopyId}>
-            <Copy className="mr-2 h-4 w-4" />
-            Copy ID
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/products/${product.id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`http://localhost:3000/products/${product.id}`} target="_blank">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Live
-            </Link>
-          </Button>
-          <Button variant="destructive" size="sm" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold break-words">{product.name}</h1>
         </div>
       </div>
 

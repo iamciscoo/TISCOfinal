@@ -208,7 +208,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
           <div className="space-y-2">
             <Label htmlFor="description">Service Description *</Label>
-            <Textarea id="description" name="description" placeholder="Briefly describe the issue or request..." required className="min-h-[120px]" />
+            <Textarea id="description" name="description" placeholder="Briefly describe the issue or request...  (Swahili, English or French feel free)" required className="min-h-[120px]" />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full md:w-auto bg-gray-900 hover:bg-gray-800">{loading ? 'Submitting…' : 'Submit Service Request'}</Button>

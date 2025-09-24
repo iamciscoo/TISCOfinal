@@ -36,7 +36,7 @@ const promoCards: PromoCard[] = [
     image: '/services/nolimits.jpeg',
     size: 'medium',
     ctaText: 'Shop Now',
-    href: '/shop?filter=electronics',
+    href: '/products?category=8e81df36-63e2-430f-bf81-feee911a2069',
     textColor: 'light'
   },
   {

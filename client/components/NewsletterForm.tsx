@@ -15,11 +15,22 @@ export const NewsletterForm = () => {
     setHydrated(true)
   }, [])
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const trimmed = email.trim().toLowerCase()
+    
     if (!trimmed) {
       toast({ title: 'Email required', description: 'Please enter your email.', variant: 'destructive' })
+      return
+    }
+    
+    if (!validateEmail(trimmed)) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address.', variant: 'destructive' })
       return
     }
 
@@ -28,7 +39,10 @@ export const NewsletterForm = () => {
       const res = await fetch('/api/newsletter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed })
+        body: JSON.stringify({ 
+          email: trimmed,
+          source: 'footer_form'
+        })
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {

@@ -10,45 +10,34 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const q = (searchParams.get('q') || '').trim()
-    const status = (searchParams.get('status') || '').trim() // 'subscribed' | 'unsubscribed' | ''
+    const status = (searchParams.get('status') || '').trim()
 
     const from = (page - 1) * limit
     const to = from + limit - 1
 
-    // First try selecting with optional status filter (depends on column existence)
-    const buildQuery = (withStatus: boolean) => {
-      let query = supabase
-        .from('newsletter_subscriptions')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+    // Build query for newsletter subscriptions
+    let query = supabase
+      .from('newsletter_subscriptions')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
 
-      if (q) {
-        // search by email or source
-        query = query.or(`email.ilike.%${q}%,source.ilike.%${q}%`)
-      }
-      // Skip status filter for now since column may not exist
-      // if (withStatus && status) {
-      //   const isSub = status === 'subscribed'
-      //   query = query.eq('is_subscribed', isSub)
-      // }
-      return query.range(from, to)
+    // Add search filters
+    if (q) {
+      query = query.or(`email.ilike.%${q}%,source.ilike.%${q}%`)
     }
 
-    let { data, error, count } = await buildQuery(true)
-    if (error) {
-      const code = (error as any).code || ''
-      const msg = (error as any).message || ''
-      const isUndefinedColumn = code === '42703' || (msg.toLowerCase().includes('column') && msg.toLowerCase().includes('is_subscribed'))
-      if (isUndefinedColumn) {
-        // Retry without status filter for legacy schemas
-        const res = await buildQuery(false)
-        data = res.data
-        error = res.error
-        count = res.count
-      }
+    // Add status filter if specified
+    if (status === 'subscribed') {
+      query = query.eq('is_subscribed', true)
+    } else if (status === 'unsubscribed') {
+      query = query.eq('is_subscribed', false)
     }
 
+    // Apply pagination
+    const { data, error, count } = await query.range(from, to)
+
     if (error) {
+      console.error('Newsletter query error:', error)
       return createErrorResponse(error.message || 'Failed to load subscribers', 500, 'DATABASE_ERROR', error)
     }
 
@@ -59,6 +48,7 @@ export async function GET(request: NextRequest) {
       currentPage: page,
     })
   } catch (e) {
+    console.error('Newsletter GET error:', e)
     const message = e instanceof Error ? e.message : 'Unexpected error'
     return createErrorResponse(message, 500, 'UNEXPECTED_ERROR', e)
   }

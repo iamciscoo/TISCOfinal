@@ -309,7 +309,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Book Your Service
+                Book Your Service Appointment.
               </h2>
               <p className="text-lg text-gray-600">
                 Ready to get started? Fill out the form below and we&apos;ll get back to you within 24 hours.

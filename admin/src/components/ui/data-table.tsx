@@ -101,8 +101,8 @@ export function DataTable<TData, TValue>({
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center py-4 gap-2 sm:gap-4">
+    <div className="w-full max-w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center py-4 gap-3">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
             className="w-full sm:max-w-sm"
           />
         )}
-        <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto sm:ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
@@ -152,19 +152,20 @@ export function DataTable<TData, TValue>({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Delete {entityName}(s)
+              <span className="hidden sm:inline">Delete {entityName}(s)</span>
+              <span className="sm:hidden">Delete ({Object.keys(rowSelection).length})</span>
             </Button>
           )}
         </div>
       </div>
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="whitespace-nowrap">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -185,7 +186,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="whitespace-nowrap">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -207,17 +208,18 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 py-4">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 py-4">
+        <div className="text-sm text-muted-foreground order-2 sm:order-1">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <div className="flex space-x-2">
+        <div className="flex gap-2 order-1 sm:order-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            className="flex-1 sm:flex-none"
           >
             Previous
           </Button>
@@ -226,6 +228,7 @@ export function DataTable<TData, TValue>({
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            className="flex-1 sm:flex-none"
           >
             Next
           </Button>

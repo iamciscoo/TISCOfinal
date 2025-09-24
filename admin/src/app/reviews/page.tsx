@@ -115,6 +115,27 @@ export default function ReviewsManagement() {
 
   const reviewColumns: ColumnDef<Review>[] = [
     {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={(e) => table.toggleAllPageRowsSelected(!!e.target.checked)}
+          className="rounded border-gray-300"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={(e) => row.toggleSelected(!!e.target.checked)}
+          className="rounded border-gray-300"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
       id: 'productName',
       accessorFn: (row) => row.product?.name ?? '',
       header: 'Product',

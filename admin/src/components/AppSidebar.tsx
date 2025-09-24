@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import {
   Home,
   User2,
@@ -69,8 +70,31 @@ const items = [
 
 const AppSidebar = () => {
   const router = useRouter()
-  const { state } = useSidebar()
+  const { state, setOpenMobile } = useSidebar()
   const isCollapsed = state === "collapsed"
+
+  // Auto-collapse sidebar on mobile when navigation occurs
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) { // Mobile breakpoint
+        setOpenMobile(false)
+      }
+    }
+
+    // Close sidebar on mobile when clicking navigation links
+    const handleNavigation = () => {
+      if (window.innerWidth < 768) {
+        setOpenMobile(false)
+      }
+    }
+
+    // Listen for navigation events
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [setOpenMobile])
 
   const handleLogout = async () => {
     try {
@@ -99,7 +123,7 @@ const AppSidebar = () => {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                       <item.icon />
                       {!isCollapsed && <span data-collapse-hide>{item.title}</span>}
                     </Link>
@@ -118,7 +142,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Products">
-                  <Link href="/products">
+                  <Link href="/products" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Shirt />
                     {!isCollapsed && <span data-collapse-hide>All Products</span>}
                   </Link>
@@ -126,7 +150,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Categories">
-                  <Link href="/categories">
+                  <Link href="/categories" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <FolderOpen />
                     {!isCollapsed && <span data-collapse-hide>All Categories</span>}
                   </Link>
@@ -134,7 +158,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Add Product">
-                  <Link href="/products/new">
+                  <Link href="/products/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Plus />
                     {!isCollapsed && <span data-collapse-hide>Add Product</span>}
                   </Link>
@@ -163,7 +187,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Customers">
-                  <Link href="/users">
+                  <Link href="/users" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <User />
                     {!isCollapsed && <span data-collapse-hide>All Customers</span>}
                   </Link>
@@ -192,7 +216,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Orders">
-                  <Link href="/orders">
+                  <Link href="/orders" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Package />
                     {!isCollapsed && <span data-collapse-hide>All Orders</span>}
                   </Link>
@@ -200,7 +224,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Payments">
-                  <Link href="/payments">
+                  <Link href="/payments" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <CreditCard />
                     {!isCollapsed && <span data-collapse-hide>All Payments</span>}
                   </Link>
@@ -229,7 +253,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Services">
-                  <Link href="/services">
+                  <Link href="/services" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Wrench />
                     {!isCollapsed && <span data-collapse-hide>All Services</span>}
                   </Link>
@@ -237,7 +261,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Service Bookings">
-                  <Link href="/service-bookings">
+                  <Link href="/service-bookings" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <CalendarCheck />
                     {!isCollapsed && <span data-collapse-hide>Service Bookings</span>}
                   </Link>
@@ -245,7 +269,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Add Service">
-                  <Link href="/services/new">
+                  <Link href="/services/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Plus />
                     {!isCollapsed && <span data-collapse-hide>Add Service</span>}
                   </Link>
@@ -263,7 +287,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Reviews">
-                  <Link href="/reviews">
+                  <Link href="/reviews" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Star />
                     {!isCollapsed && <span data-collapse-hide>Reviews</span>}
                   </Link>
@@ -271,7 +295,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Newsletter">
-                  <Link href="/newsletter">
+                  <Link href="/newsletter" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Mail />
                     {!isCollapsed && <span data-collapse-hide>Newsletter</span>}
                   </Link>
@@ -279,7 +303,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Messages">
-                  <Link href="/messages">
+                  <Link href="/messages" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Mail />
                     {!isCollapsed && <span data-collapse-hide>Messages</span>}
                   </Link>

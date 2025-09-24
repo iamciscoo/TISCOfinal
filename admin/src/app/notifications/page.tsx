@@ -268,13 +268,13 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">Manage system notifications and email communications</p>
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Notifications</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage system notifications and email communications</p>
         </div>
-        <Button onClick={refreshData} disabled={isRefreshing} variant="outline">
+        <Button onClick={refreshData} disabled={isRefreshing} variant="outline" className="w-full sm:w-auto">
           <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -333,9 +333,9 @@ export default function NotificationsPage() {
           {/* Filters and Bulk Actions */}
           <div className="space-y-4">
             {/* Filters */}
-            <div className="flex gap-4 flex-wrap">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -348,7 +348,7 @@ export default function NotificationsPage() {
               </Select>
 
               <Select value={eventFilter} onValueChange={setEventFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by event" />
                 </SelectTrigger>
                 <SelectContent>
@@ -362,9 +362,8 @@ export default function NotificationsPage() {
                 </SelectContent>
               </Select>
 
-              {/* New filters: Category, Module, Priority */}
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -376,7 +375,7 @@ export default function NotificationsPage() {
               </Select>
 
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by module" />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,7 +387,7 @@ export default function NotificationsPage() {
               </Select>
 
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -401,7 +400,7 @@ export default function NotificationsPage() {
 
             {/* Bulk Actions */}
             {notifications.length > 0 && (
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     checked={selectedIds.size === notifications.length && notifications.length > 0}
@@ -414,7 +413,7 @@ export default function NotificationsPage() {
                 </div>
                 
                 {selectedIds.size > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                     <span className="text-sm text-muted-foreground">
                       {selectedIds.size} selected
                     </span>
@@ -423,6 +422,7 @@ export default function NotificationsPage() {
                       size="sm"
                       onClick={handleBulkDelete}
                       disabled={isDeleting}
+                      className="w-full sm:w-auto"
                     >
                       {isDeleting ? (
                         <>
@@ -454,26 +454,17 @@ export default function NotificationsPage() {
               notifications.map((notification) => (
                 <Card key={notification.id}>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
                         <Checkbox
                           checked={selectedIds.has(notification.id)}
                           onCheckedChange={() => handleSelectNotification(notification.id)}
+                          className="mt-1"
                         />
-                        {statusIcons[notification.status]}
-                        <CardTitle className="text-lg">{notification.subject}</CardTitle>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={priorityColors[notification.priority]}>
-                          {notification.priority}
-                        </Badge>
-                        <Badge variant="outline">{notification.event}</Badge>
-                        {notification.category && (
-                          <Badge variant="outline">{notification.category}</Badge>
-                        )}
-                        {notification.platform_module && (
-                          <Badge variant="secondary">{notification.platform_module}</Badge>
-                        )}
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <div className="shrink-0 mt-1">{statusIcons[notification.status]}</div>
+                          <CardTitle className="text-base sm:text-lg leading-tight break-words hyphens-auto overflow-wrap-anywhere">{notification.subject}</CardTitle>
+                        </div>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -488,25 +479,39 @@ export default function NotificationsPage() {
                               toast.error('Failed to delete notification')
                             }
                           }}
+                          className="shrink-0"
                         >
-                          Delete
+                          <X className="w-4 h-4 sm:hidden" />
+                          <span className="hidden sm:inline">Delete</span>
                         </Button>
                       </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className={priorityColors[notification.priority]}>
+                          {notification.priority}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{notification.event}</Badge>
+                        {notification.category && (
+                          <Badge variant="outline" className="text-xs">{notification.category}</Badge>
+                        )}
+                        {notification.platform_module && (
+                          <Badge variant="secondary" className="text-xs">{notification.platform_module}</Badge>
+                        )}
+                      </div>
                     </div>
-                    <CardDescription>
+                    <CardDescription className="mt-2">
                       To: {notification.recipient_name || notification.recipient_email} 
                       {notification.recipient_name && ` (${notification.recipient_email})`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Created: {new Date(notification.created_at).toLocaleString()}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                        <span className="whitespace-nowrap">Created: {new Date(notification.created_at).toLocaleString()}</span>
                         {notification.sent_at && (
-                          <span>Sent: {new Date(notification.sent_at).toLocaleString()}</span>
+                          <span className="whitespace-nowrap">Sent: {new Date(notification.sent_at).toLocaleString()}</span>
                         )}
                         {notification.scheduled_at && (
-                          <span>Scheduled: {new Date(notification.scheduled_at).toLocaleString()}</span>
+                          <span className="whitespace-nowrap">Scheduled: {new Date(notification.scheduled_at).toLocaleString()}</span>
                         )}
                       </div>
                       {notification.error_message && (
@@ -546,7 +551,7 @@ export default function NotificationsPage() {
               <CardDescription>Send a custom notification to a specific user</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="recipient_email">Recipient Email</Label>
                   <Input
@@ -640,7 +645,7 @@ export default function NotificationsPage() {
               <CardDescription>Manage admins who receive notification updates by email</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="recipient_email">Admin Email</Label>
                   <Input
@@ -663,7 +668,7 @@ export default function NotificationsPage() {
               </div>
 
               {/* Department and Categories */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
                   <Select value={newRecipient.department} onValueChange={(value) => setNewRecipient(prev => ({ ...prev, department: value }))}>
@@ -681,7 +686,7 @@ export default function NotificationsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="categories">Notification Categories</Label>
                   <div className="space-y-2">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                       <Button
                         type="button"
                         variant={selectedEvents.has('all') ? 'default' : 'outline'}

@@ -37,8 +37,9 @@ export default function NewsletterPage() {
       if (q.trim()) params.set('q', q.trim())
       if (status) params.set('status', status)
       const res = await fetch(`/api/newsletter?${params.toString()}`)
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Failed to load subscribers')
+      const response = await res.json()
+      if (!res.ok) throw new Error(response?.error || 'Failed to load subscribers')
+      const data = response.data || response
       setItems(data.subscribers || [])
       setTotalPages(data.totalPages || 1)
       setTotalCount(data.totalCount || 0)
@@ -71,7 +72,11 @@ export default function NewsletterPage() {
     {
       id: 'status',
       header: 'Status',
-      cell: () => <Badge variant="default">Subscribed</Badge>,
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_subscribed === false ? "destructive" : "default"}>
+          {row.original.is_subscribed === false ? "Unsubscribed" : "Subscribed"}
+        </Badge>
+      ),
     },
     {
       accessorKey: 'created_at',
@@ -82,9 +87,8 @@ export default function NewsletterPage() {
 
   const stats = useMemo(() => {
     const current = items
-    // For now, treat all as subscribed since is_subscribed column may not exist
-    const subs = current.length
-    const unsubs = 0
+    const subs = current.filter(item => item.is_subscribed !== false).length
+    const unsubs = current.filter(item => item.is_subscribed === false).length
     return { total: totalCount, subs, unsubs }
   }, [items, totalCount])
 
@@ -145,9 +149,10 @@ export default function NewsletterPage() {
                 className="border rounded px-2 py-2 text-sm"
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setPage(1) }}
-                disabled
               >
-                <option value="">All Subscribed</option>
+                <option value="">All Subscribers</option>
+                <option value="subscribed">Subscribed</option>
+                <option value="unsubscribed">Unsubscribed</option>
               </select>
               <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
               <div className="space-x-2">

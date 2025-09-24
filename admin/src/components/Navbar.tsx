@@ -15,13 +15,13 @@ import { SidebarTrigger } from "./ui/sidebar";
 const Navbar = () => {
   const { setTheme } = useTheme();
   return (
-    <nav className="px-6 py-4 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border z-50">
+    <nav className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border z-50">
       {/* LEFT */}
-      <div className="flex items-center gap-3">
-        <SidebarTrigger className="h-9 w-9" />
+      <div className="flex items-center gap-2 sm:gap-3">
+        <SidebarTrigger className="h-8 w-8 sm:h-9 sm:w-9" />
       </div>
       {/* RIGHT */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
           Dashboard
         </Link>

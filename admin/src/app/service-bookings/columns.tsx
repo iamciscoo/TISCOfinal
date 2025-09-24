@@ -62,16 +62,24 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     header: "Service",
     cell: ({ row }) => {
       const v = row.getValue<string>("serviceTitle");
-      return <span className="font-medium">{v || "Unknown"}</span>;
+      return <span className="font-medium max-w-[200px] truncate block">{v || "Unknown"}</span>;
     },
   },
   {
     accessorKey: "customerName",
     header: "Customer",
+    cell: ({ row }) => {
+      const name = row.getValue<string>("customerName");
+      return <span className="max-w-[150px] truncate block">{name}</span>;
+    },
   },
   {
     accessorKey: "customerEmail",
     header: "Email",
+    cell: ({ row }) => {
+      const email = row.getValue<string>("customerEmail");
+      return <span className="max-w-[180px] truncate block text-sm">{email}</span>;
+    },
   },
   {
     accessorKey: "status",
@@ -97,7 +105,13 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     header: "Scheduled",
     cell: ({ row }) => {
       const iso = row.getValue<string | undefined>("scheduledDate");
-      return <span className="text-sm">{iso ? new Date(iso).toLocaleString() : "-"}</span>;
+      const formatted = iso ? new Date(iso).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : "-";
+      return <span className="text-sm whitespace-nowrap">{formatted}</span>;
     },
   },
   {
@@ -110,7 +124,12 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     header: "Created",
     cell: ({ row }) => {
       const iso = row.getValue<string>("createdAt");
-      return <span className="text-sm">{new Date(iso).toLocaleString()}</span>;
+      const formatted = new Date(iso).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: '2-digit'
+      });
+      return <span className="text-sm whitespace-nowrap">{formatted}</span>;
     },
   },
   {
@@ -232,6 +251,9 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
                 </DropdownMenuPortal>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Link href={`/service-bookings/${booking.id}/view`}>View booking</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Link href={`/service-bookings/${booking.id}`}>Edit booking</Link>
               </DropdownMenuItem>

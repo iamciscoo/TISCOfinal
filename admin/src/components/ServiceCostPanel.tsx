@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { validatePositiveNumber, safeParseNumber, formatNumberForInput } from "@/lib/validation";
 
 interface CostItem {
   id?: string | null;
@@ -48,8 +49,8 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<CostItem[]>([]);
-  const [serviceFee, setServiceFee] = useState<number>(0);
-  const [discount, setDiscount] = useState<number>(0);
+  const [serviceFee, setServiceFee] = useState<string>('');
+  const [discount, setDiscount] = useState<string>('');
   const [currency, setCurrency] = useState<string>(currencyDefault);
   const [notes, setNotes] = useState<string>("");
 
@@ -79,8 +80,8 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
         quantity: numberOrZero(it.quantity || 1),
         unit: String(it.unit || "unit"),
       })) : []);
-      setServiceFee(numberOrZero(data.service_fee));
-      setDiscount(numberOrZero(data.discount));
+      setServiceFee(formatNumberForInput(data.service_fee));
+      setDiscount(formatNumberForInput(data.discount));
       setCurrency(String(data.currency || currencyDefault).slice(0,3).toUpperCase());
       setNotes(String(data.notes || ""));
     } catch (err) {
@@ -182,9 +183,13 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
                   type="number"
                   min={0}
                   step="0.01"
-                  value={it.unit_price}
-                  onChange={(e) => updateItem(idx, { unit_price: Number(e.target.value) })}
+                  value={formatNumberForInput(it.unit_price)}
+                  onChange={(e) => {
+                    const validated = validatePositiveNumber(e.target.value);
+                    updateItem(idx, { unit_price: safeParseNumber(validated) });
+                  }}
                   disabled={loading}
+                  placeholder="0"
                 />
               </div>
               <div className="col-span-2">
@@ -193,9 +198,13 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
                   type="number"
                   min={0.01}
                   step="0.01"
-                  value={it.quantity}
-                  onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
+                  value={formatNumberForInput(it.quantity, false)}
+                  onChange={(e) => {
+                    const validated = validatePositiveNumber(e.target.value);
+                    updateItem(idx, { quantity: safeParseNumber(validated, 1) });
+                  }}
                   disabled={loading}
+                  placeholder="1"
                 />
               </div>
               <div className="col-span-2">
@@ -222,11 +231,33 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label className="text-xs">Service Fee</Label>
-            <Input type="number" min={0} step="0.01" value={serviceFee} onChange={(e) => setServiceFee(Number(e.target.value))} disabled={loading} />
+            <Input 
+              type="number" 
+              min={0} 
+              step="0.01" 
+              value={serviceFee} 
+              onChange={(e) => {
+                const validated = validatePositiveNumber(e.target.value);
+                setServiceFee(validated);
+              }} 
+              disabled={loading}
+              placeholder="0"
+            />
           </div>
           <div>
             <Label className="text-xs">Discount</Label>
-            <Input type="number" min={0} step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={loading} />
+            <Input 
+              type="number" 
+              min={0} 
+              step="0.01" 
+              value={discount} 
+              onChange={(e) => {
+                const validated = validatePositiveNumber(e.target.value);
+                setDiscount(validated);
+              }} 
+              disabled={loading}
+              placeholder="0"
+            />
           </div>
           <div>
             <Label className="text-xs">Currency</Label>

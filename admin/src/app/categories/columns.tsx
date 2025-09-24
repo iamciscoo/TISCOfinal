@@ -64,24 +64,6 @@ export const columns: ColumnDef<Category>[] = [
     },
   },
   {
-    accessorKey: "productCount",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Products
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const count = row.getValue("productCount") as number;
-      return <div className="text-center">{count}</div>;
-    },
-  },
-  {
     accessorKey: "created_at",
     header: ({ column }) => {
       return (
@@ -125,6 +107,9 @@ export const columns: ColumnDef<Category>[] = [
               Copy category ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Link href={`/categories/${category.id}`}>View category</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href={`/categories/${category.id}/edit`}>Edit category</Link>
             </DropdownMenuItem>
