@@ -10,6 +10,15 @@ const supabase = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    global: {
+      fetch: (url, options = {}) => {
+        return fetch(url, {
+          ...options,
+          // Increase timeout for better reliability
+          signal: AbortSignal.timeout(25000), // 25 second timeout
+        })
+      },
     }
   }
 )

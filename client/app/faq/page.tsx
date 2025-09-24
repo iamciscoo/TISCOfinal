@@ -8,10 +8,7 @@ import { Button } from '@/components/ui/button'
 import { 
   Search, 
   ChevronDown, 
-  ChevronUp,
-  MessageCircle,
-  Mail,
-  Phone
+  ChevronUp
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
@@ -28,7 +25,7 @@ const faqs: FAQ[] = [
   {
     id: '1',
     question: 'How will I know when my order ships?',
-    answer: 'You&apos;ll receive an email confirmation once your order ships with delivery timeline information. Check our delivery FAQs for more details about processing and shipping times.',
+    answer: 'You will receive an email confirmation once your order ships with delivery timeline information. Check our delivery FAQs for more details about processing and shipping times.',
     category: 'Orders & Shipping'
   },
   {
@@ -40,7 +37,7 @@ const faqs: FAQ[] = [
   {
     id: '3',
     question: 'How long does delivery take?',
-    answer: 'Standard delivery takes 3-7 business days. Express delivery (1-3 business days) is available for an additional fee.',
+    answer: 'Standard delivery takes 1-3 business days. Express delivery is available for an additional fee.',
     category: 'Orders & Shipping'
   },
   {
@@ -64,13 +61,13 @@ const faqs: FAQ[] = [
   {
     id: '7',
     question: 'Is my payment information secure?',
-    answer: 'Yes, we use industry-standard SSL encryption to protect your payment information. We are PCI DSS compliant and never store your complete credit card information on our servers.',
+    answer: 'Yes, we use industry-standard SSL encryption to protect your payment information. We are TCRA compliant and never store your complete credit card information on our servers.',
     category: 'Payment'
   },
   {
     id: '8',
     question: 'How do I create an account?',
-    answer: 'Click the "Sign Up" button in the top right corner of any page. You can also create an account during checkout. Having an account allows you to view order history, save favorites, and speed up future purchases.',
+    answer: 'Click the "Sign Up" button in the top right corner of any page. You can also create an account during checkout. Having an account allows you to view order history, and speed up future purchases.',
     category: 'Account'
   },
   {
@@ -82,7 +79,7 @@ const faqs: FAQ[] = [
   {
     id: '10',
     question: 'How can I update my account information?',
-    answer: 'Log in to your account and click on "Account Settings". You can update your personal information, shipping addresses, and communication preferences.',
+    answer: 'Log in to your account and click on "Account Settings". You can update your personal information, and communication preferences.',
     category: 'Account'
   },
   {
@@ -100,7 +97,7 @@ const faqs: FAQ[] = [
   {
     id: '13',
     question: 'How can I leave a product review?',
-    answer: 'You can leave a review after purchasing and receiving a product. Go to your order history, find the product, and click "Write a Review". Reviews help other customers make informed decisions.',
+    answer: 'You can leave a review after purchasing and receiving a product. Go to product page, find the product, and click "Write a Review". Reviews help other customers make informed decisions.',
     category: 'Products'
   },
   {
@@ -112,7 +109,7 @@ const faqs: FAQ[] = [
   {
     id: '15',
     question: 'How do I contact customer service?',
-    answer: 'You can contact us via live chat, email at support@tiscomarket.com, or phone at (555) 123-4567. Our support team is available Monday-Friday 9AM-6PM, Saturday 10AM-4PM.',
+    answer: 'You can contact us via live chat in whatsapp, email at support@tiscomarket.com, or phone at +255748624684. Our support team is available Monday-Friday 9AM-6PM, Saturday 10AM-4PM.',
     category: 'Support'
   }
 ]
@@ -294,42 +291,6 @@ export default function FAQPage() {
           </Card>
         )}
 
-        {/* Still Need Help Section */}
-        <section className="mt-16">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Still need help?
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Can&apos;t find what you&apos;re looking for? Our support team is here to help.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button asChild variant="outline" className="h-auto py-4">
-                  <Link href="/contact" className="flex flex-col items-center gap-2">
-                    <MessageCircle className="h-6 w-6" />
-                    <span>Live Chat</span>
-                  </Link>
-                </Button>
-                
-                <Button asChild variant="outline" className="h-auto py-4">
-                  <a href="mailto:support@tiscomarket.com" className="flex flex-col items-center gap-2">
-                    <Mail className="h-6 w-6" />
-                    <span>Email Support</span>
-                  </a>
-                </Button>
-                
-                <Button asChild variant="outline" className="h-auto py-4">
-                  <a href="tel:+15551234567" className="flex flex-col items-center gap-2">
-                    <Phone className="h-6 w-6" />
-                    <span>Phone Support</span>
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
       </div>
 
       <Footer />

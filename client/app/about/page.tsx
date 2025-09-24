@@ -73,7 +73,7 @@ export default function AboutPage() {
                   and unnecessary complexity. We cut through the BS to create something different.
                 </p>
                 <p>
-                  We specialize in <strong>rare tech products</strong> and <strong>professional services</strong> 
+                  We specialize in <strong>rare niche items and tech products</strong> and <strong>professional services </strong> 
                   that others won&apos;t touch — the hard-to-find components, the niche solutions, 
                   and the expert installations that make or break your projects.
                 </p>
@@ -89,33 +89,17 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="relative">
-              <Card className="bg-white border">
-                <CardContent className="p-8">
-                  <div className="space-y-5">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Radical Efficiency</h3>
-                        <p className="text-sm text-gray-600">Fast delivery, quick setup, rapid response — no bureaucratic waste.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Brutal Honesty</h3>
-                        <p className="text-sm text-gray-600">Transparent pricing, genuine deals, authentic reviews — no corporate BS.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Award className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Expert Accessibility</h3>
-                        <p className="text-sm text-gray-600">Professional services without professional headaches or markup games.</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div 
+                className="relative h-96 bg-cover bg-center bg-gray-200 flex items-end rounded-lg overflow-hidden shadow-sm border"
+                style={{ backgroundImage: "url('/about/portraitabout.jpeg')" }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                <div className="relative z-10 p-6 w-full">
+                  <p className="text-white text-lg font-medium text-center">
+                    We are happy to serve you.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -125,7 +109,7 @@ export default function AboutPage() {
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Our Development Journey</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              From concept to launch, building a platform that actually works for tech professionals.
+              From concept to launch, building a platform that actually works for the people.
             </p>
           </div>
           
@@ -415,22 +399,30 @@ export default function AboutPage() {
 
         {/* CTA Section */}
         <section className="text-center">
-          <Card className="bg-white border">
-            <CardContent className="py-12">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Ready to Start Shopping?</h2>
-              <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                Shop confidently with TISCO マーケット — built for speed, value, and simplicity.
+          <div 
+            className="relative bg-cover bg-center rounded-lg overflow-hidden shadow-sm border py-20 min-h-[370px] flex items-center"
+            style={{ 
+              backgroundImage: "url('/about/aboutbottom.jpeg')",
+              backgroundPosition: "center center",
+              backgroundSize: "cover"
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
+            <div className="relative z-10 px-4 w-full">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">Ready to Start Shopping?</h2>
+              <p className="text-lg sm:text-xl text-white/95 mb-8 max-w-2xl mx-auto drop-shadow-md">
+                Shop confidently with TISCO マーケット — built for speed, value, fairness and simplicity.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="default" className="rounded-full">
+                <Button asChild size="lg" variant="outline" className="rounded-full border-2 border-white bg-white/10 backdrop-blur-sm text-white hover:bg-white hover:text-gray-900 shadow-lg">
                   <Link href="/products">Browse Products</Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="rounded-full">
+                <Button asChild size="lg" variant="outline" className="rounded-full border-2 border-white bg-white/10 backdrop-blur-sm text-white hover:bg-white hover:text-gray-900 shadow-lg">
                   <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </section>
       </div>
     </PageLayout>

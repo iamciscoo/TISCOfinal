@@ -11,6 +11,15 @@ export const createClient = async () => {
     env.supabaseUrl,
     env.supabaseAnonKey,
     {
+      global: {
+        fetch: (url, options = {}) => {
+          return fetch(url, {
+            ...options,
+            // Increase timeout and add retry logic
+            signal: AbortSignal.timeout(20000), // 20 second timeout
+          })
+        },
+      },
       cookies: {
         get(name: string) {
           try {
@@ -74,22 +83,42 @@ export const createClient = async () => {
   )
 }
 
-// Server-side auth helpers
-export const getUser = async (): Promise<User | null> => {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error) {
-      console.error('Auth error in getUser:', error)
+// Server-side auth helpers with retry logic
+export const getUser = async (retries = 2): Promise<User | null> => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const supabase = await createClient()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      if (error) {
+        // If it's a retryable error and we have attempts left
+        if (attempt < retries && (error.message?.includes('fetch failed') || error.message?.includes('timeout'))) {
+          console.warn(`Auth error in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
+          continue
+        }
+        console.error('Auth error in getUser:', error)
+        return null
+      }
+      
+      return user
+    } catch (error) {
+      // If it's a retryable error and we have attempts left
+      if (attempt < retries && (error instanceof Error && (
+        error.message?.includes('fetch failed') || 
+        error.message?.includes('timeout') ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('ENOTFOUND')
+      ))) {
+        console.warn(`Exception in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
+        continue
+      }
+      console.error('Exception in getUser:', error)
       return null
     }
-    
-    return user
-  } catch (error) {
-    console.error('Exception in getUser:', error)
-    return null
   }
+  return null
 }
 
 export const getSession = async () => {
