@@ -73,8 +73,8 @@ const AppSidebar = () => {
   const { state, setOpenMobile, isMobile, open } = useSidebar()
   const isCollapsed = state === "collapsed"
   
-  // On mobile, show text when sidebar is open, regardless of collapsed state
-  const shouldShowText = isMobile ? open : !isCollapsed
+  // On mobile, always show text when sidebar is open. Force text display for mobile devices
+  const shouldShowText = (typeof window !== 'undefined' && window.innerWidth < 768) ? true : !isCollapsed
 
   // Auto-collapse sidebar on mobile when navigation occurs
   useEffect(() => {
@@ -108,7 +108,7 @@ const AppSidebar = () => {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="inset" collapsible="icon" className="md:w-64 w-72">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="Admin" className="h-8 w-8" />
@@ -139,9 +139,6 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Catalog</SidebarGroupLabel>
-          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
-            <Plus /> <span className="sr-only">Add Product</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -184,9 +181,6 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Customers</SidebarGroupLabel>
-          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
-            <Plus /> <span className="sr-only">Add Customer</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -213,9 +207,6 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Orders & Payments</SidebarGroupLabel>
-          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
-            <Plus /> <span className="sr-only">Add Order</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -250,9 +241,6 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Services</SidebarGroupLabel>
-          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
-            <Plus /> <span className="sr-only">Add Service</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -284,9 +272,6 @@ const AppSidebar = () => {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Content & Reviews</SidebarGroupLabel>
-          <SidebarGroupAction className="group-data-[collapsible=icon]:hidden">
-            <Plus /> <span className="sr-only">Add Review</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
