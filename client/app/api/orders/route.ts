@@ -67,7 +67,7 @@ function errInfo(err: unknown): SupabaseErrorLike {
  */
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,   // Public Supabase URL
-  process.env.SUPABASE_SERVICE_ROLE!       // Service role key for elevated permissions
+  process.env.SUPABASE_SERVICE_ROLE_KEY!       // Service role key for elevated permissions
 )
 
 /**

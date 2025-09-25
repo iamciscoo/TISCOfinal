@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 // Use service role on server to avoid RLS insert failures and standardize server-side writes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 type ContactMessageInput = {

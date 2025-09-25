@@ -1,40 +1,23 @@
 /**
  * Database abstraction layer for the TISCO e-commerce platform
  * 
- * This module now uses the unified database system for optimal performance and consistency.
- * All operations are routed through the optimized connection manager with built-in
- * caching, performance monitoring, and connection pooling.
+ * This module provides a unified interface for data operations, abstracting away
+ * the complexity of direct database queries and API calls. It serves as the primary
+ * data access layer for the client application, ensuring consistent error handling
+ * and data transformation across all components.
  * 
  * Key Features:
- * - Unified connection management with pooling
- * - Performance monitoring and caching
+ * - Centralized data access patterns
  * - Consistent error handling and logging
  * - Type-safe operations with TypeScript
- * - Automatic retry logic and fallback mechanisms
+ * - Fallback mechanisms for failed operations
+ * - Performance optimization through API client caching
  */
 
-// Import the new unified database system
-import { 
-  getProducts as _getProducts,
-  getFeaturedProducts as _getFeaturedProducts,
-  getProductById as _getProductById,
-  getProductsByCategory as _getProductsByCategory,
-  getCategories as _getCategories,
-  addToCart as _addToCart,
-  getCartItems as _getCartItems,
-  updateCartItemQuantity as _updateCartItemQuantity,
-  removeFromCart as _removeFromCart,
-  createOrder as _createOrder,
-  getUserOrders as _getUserOrders,
-  createUser as _createUser,
-  getUser as _getUser,
-  getUserAddresses as _getUserAddresses,
-  createAddress as _createAddress,
-  getProductReviews as _getProductReviews,
-  createReview as _createReview,
-  getServices as _getServices,
-  createServiceBooking as _createServiceBooking
-} from './database-unified'
+// Import the configured Supabase client for direct database operations
+import { supabase } from './supabase'
+// Import the API client for cached and optimized data operations
+import { api } from './api-client'
 // Import shared type definitions for type safety
 import type { Address, User, Product, Category } from './types'
 
@@ -67,7 +50,26 @@ import type { Address, User, Product, Category } from './types'
  * ```
  */
 export async function getProducts(limit: number = 20): Promise<Product[]> {
-  return _getProducts(limit)
+  try {
+    // Use the cached API client instead of direct Supabase queries to:
+    // 1. Leverage caching for better performance
+    // 2. Avoid Row Level Security (RLS) complications
+    // 3. Maintain consistency with admin panel data
+    // 4. Reduce direct database connections
+    const products = await api.getProducts(limit)
+    
+    // Type assertion ensures the returned data matches our Product interface
+    // This is safe because the API client handles data validation
+    return products as Product[]
+  } catch (error) {
+    // Log the error for monitoring and debugging purposes
+    // Use structured logging format for better log parsing
+    console.error('[database.getProducts] Failed to fetch via API:', error)
+    
+    // Return empty array instead of throwing to prevent UI crashes
+    // This allows the application to gracefully handle API failures
+    return []
+  }
 }
 
 /**
@@ -91,8 +93,23 @@ export async function getProducts(limit: number = 20): Promise<Product[]> {
  * const featuredDefault = await getFeaturedProducts();
  * ```
  */
-export async function getFeaturedProducts(limit: number = 9): Promise<Product[]> {
-  return _getFeaturedProducts(limit)
+export async function getFeaturedProducts(limit: number = 9) {
+  try {
+    // Fetch featured products through cached API client
+    // Featured products are cached more aggressively due to frequent access
+    const products = await api.getFeaturedProducts(limit)
+    
+    // Return as unknown type to allow flexible usage patterns
+    // Components can cast to specific types as needed
+    return products as unknown
+  } catch (error) {
+    // Log error for monitoring - featured products are critical for UX
+    console.error('[database.getFeaturedProducts] Failed to fetch via API:', error)
+    
+    // Re-throw error because featured products are essential for homepage
+    // Components should handle this error appropriately (show fallback content)
+    throw error
+  }
 }
 
 /**
@@ -116,7 +133,21 @@ export async function getFeaturedProducts(limit: number = 9): Promise<Product[]>
  * ```
  */
 export async function getProductById(id: string): Promise<Product | null> {
-  return _getProductById(id)
+  try {
+    // Fetch single product through cached API client
+    // Individual products are cached with longer TTL for better performance
+    const product = await api.getProduct(id)
+    
+    // Type assertion ensures returned data matches Product interface
+    return product as Product
+  } catch (error) {
+    // Log error with product ID for debugging specific product issues
+    console.error('[database.getProductById] Failed to fetch via API:', error)
+    
+    // Return null instead of throwing to allow graceful "not found" handling
+    // Components can check for null and show appropriate 404 content
+    return null
+  }
 }
 
 /**
@@ -136,8 +167,22 @@ export async function getProductById(id: string): Promise<Product | null> {
  * const electronics = await getProductsByCategory('electronics-category-id');
  * ```
  */
-export async function getProductsByCategory(categoryId: string): Promise<Product[]> {
-  return _getProductsByCategory(categoryId)
+export async function getProductsByCategory(categoryId: string) {
+  try {
+    // Fetch category products through cached API client
+    // Category-based queries are cached to improve category page performance
+    const products = await api.getProductsByCategory(categoryId)
+    
+    // Return as unknown to allow flexible casting in components
+    return products as unknown
+  } catch (error) {
+    // Log error with category ID for debugging category-specific issues
+    console.error('[database.getProductsByCategory] Failed to fetch via API:', error)
+    
+    // Re-throw error because category pages need to show meaningful errors
+    // Components should handle this with appropriate error messaging
+    throw error
+  }
 }
 
 /**
@@ -166,7 +211,21 @@ export async function getProductsByCategory(categoryId: string): Promise<Product
  * ```
  */
 export async function getCategories(): Promise<Category[]> {
-  return _getCategories()
+  try {
+    // Fetch categories through cached API client for optimal performance
+    // Categories are cached with extended TTL due to infrequent changes
+    const categories = await api.getCategories()
+    
+    // Type assertion ensures returned data matches Category interface
+    return categories as Category[]
+  } catch (error) {
+    // Log error for monitoring - categories are essential for navigation
+    console.error('[database.getCategories] Failed to fetch via API:', error)
+    
+    // Return empty array to prevent navigation failures
+    // UI should handle empty categories gracefully with fallback content
+    return []
+  }
 }
 
 /**
@@ -202,7 +261,45 @@ export async function getCategories(): Promise<Category[]> {
  * ```
  */
 export async function addToCart(userId: string, productId: string, quantity: number = 1) {
-  return _addToCart(userId, productId, quantity)
+  // First, check if the product already exists in the user's cart
+  // This prevents duplicate entries and allows for quantity updates
+  const { data: existingItem } = await supabase
+    .from('cart_items')
+    .select('*')  // Select all fields to get current quantity
+    .eq('user_id', userId)     // Filter by current user
+    .eq('product_id', productId)  // Filter by specific product
+    .single()  // Expect single result or null
+  
+  if (existingItem) {
+    // Product already exists in cart - update the quantity
+    // Add new quantity to existing quantity for cumulative effect
+    const { data, error } = await supabase
+      .from('cart_items')
+      .update({ quantity: existingItem.quantity + quantity })  // Increment quantity
+      .eq('id', existingItem.id)  // Update specific cart item
+      .select()  // Return updated data for confirmation
+    
+    // Throw error if update operation fails
+    // This ensures calling code can handle database failures appropriately
+    if (error) throw error
+    return data
+  } else {
+    // Product doesn't exist in cart - create new cart item
+    // Insert new record with user, product, and quantity information
+    const { data, error } = await supabase
+      .from('cart_items')
+      .insert({ 
+        user_id: userId,      // Associate with current user
+        product_id: productId, // Reference the product
+        quantity              // Set initial quantity
+      })
+      .select()  // Return inserted data for confirmation
+    
+    // Throw error if insert operation fails
+    // This maintains consistency with the update path above
+    if (error) throw error
+    return data
+  }
 }
 
 /**
@@ -225,7 +322,35 @@ export async function addToCart(userId: string, productId: string, quantity: num
  * ```
  */
 export async function getCartItems(userId: string) {
-  return _getCartItems(userId)
+  // Perform complex join query to get cart items with full product details
+  // This single query replaces multiple separate queries for better performance
+  const { data, error } = await supabase
+    .from('cart_items')  // Main cart items table
+    .select(`
+      *,  // All cart item fields (id, quantity, created_at, etc.)
+      products (  // Join with products table for display information
+        id,
+        name,               // Product name for display
+        price,              // Current price (may differ from order time)
+        image_url,          // Primary product image
+        product_images (    // Additional product images for gallery
+          url,              // Image URL
+          is_main,          // Whether this is the main product image
+          sort_order        // Order for image display
+        ),
+        stock_quantity,     // Available inventory for validation
+        is_active          // Whether product is still available
+      )
+    `)
+    .eq('user_id', userId)  // Filter to current user's cart only
+    // Order product images with main image first, then by sort order
+    .order('is_main', { ascending: false, foreignTable: 'products.product_images' })
+    .order('sort_order', { ascending: true, foreignTable: 'products.product_images' })
+  
+  // Throw error to allow calling code to handle database failures
+  // Cart operations are critical and should not fail silently
+  if (error) throw error
+  return data
 }
 
 /**
@@ -251,7 +376,18 @@ export async function getCartItems(userId: string) {
  * ```
  */
 export async function updateCartItemQuantity(cartItemId: string, quantity: number) {
-  return _updateCartItemQuantity(cartItemId, quantity)
+  // Update the quantity for the specific cart item
+  // The cartItemId ensures we only update the correct item
+  const { data, error } = await supabase
+    .from('cart_items')
+    .update({ quantity })  // Set new quantity value
+    .eq('id', cartItemId)  // Target specific cart item
+    .select()  // Return updated data for confirmation
+  
+  // Throw error if update fails (item not found, constraint violation, etc.)
+  // Calling code should handle errors appropriately (show user feedback)
+  if (error) throw error
+  return data
 }
 
 /**
@@ -275,66 +411,181 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
  * ```
  */
 export async function removeFromCart(cartItemId: string) {
-  return _removeFromCart(cartItemId)
+  // Permanently delete the cart item from the database
+  // This operation is irreversible and removes all traces of the item
+  const { error } = await supabase
+    .from('cart_items')
+    .delete()              // DELETE operation
+    .eq('id', cartItemId)  // Target specific cart item by ID
+  
+  // Throw error if deletion fails (item not found, foreign key constraints, etc.)
+  // Calling code should handle errors and provide user feedback
+  if (error) throw error
 }
 
 // Order Functions
 export async function createOrder(userId: string, totalAmount: number, shippingAddress: string) {
-  return _createOrder(userId, totalAmount, shippingAddress)
+  const { data, error } = await supabase
+    .from('orders')
+    .insert({
+      user_id: userId,
+      total_amount: totalAmount,
+      shipping_address: shippingAddress,
+      status: 'pending'
+    })
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
 }
 
 export async function getUserOrders(userId: string) {
-  return _getUserOrders(userId)
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items (
+        *,
+        products (
+          id,
+          name,
+          image_url,
+          product_images (
+            url,
+            is_main,
+            sort_order
+          )
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .order('is_main', { ascending: false, foreignTable: 'order_items.products.product_images' })
+    .order('sort_order', { ascending: true, foreignTable: 'order_items.products.product_images' })
+  
+  if (error) throw error
+  return data
 }
 
 // User Functions
 export async function createUser(userData: Omit<User, 'created_at' | 'updated_at'>) {
-  return _createUser(userData)
+  const { data, error } = await supabase
+    .from('users')
+    .insert(userData)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
 }
 
 export async function getUser(userId: string) {
-  return _getUser(userId)
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single()
+  
+  if (error) throw error
+  return data
 }
 
 // Address Functions
 export async function getUserAddresses(userId: string) {
-  return _getUserAddresses(userId)
+  const { data, error } = await supabase
+    .from('addresses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+  
+  if (error) throw error
+  return data
 }
 
 export async function createAddress(addressData: Omit<Address, 'id' | 'created_at'>) {
-  return _createAddress(addressData)
+  const { data, error } = await supabase
+    .from('addresses')
+    .insert(addressData)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
 }
 
 // Reviews Functions
 export async function getProductReviews(productId: string) {
-  return _getProductReviews(productId)
+  const { data, error } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      users (
+        first_name,
+        last_name,
+        avatar_url
+      )
+    `)
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data
 }
 
 export async function createReview(reviewData: {
-  product_id: string;
-  user_id: string;
-  rating: number;
-  title?: string;
-  comment?: string;
+  product_id: string
+  user_id: string
+  rating: number
+  title?: string
+  comment?: string
 }) {
-  return _createReview(reviewData)
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert(reviewData)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
 }
 
 // Services Functions
 export async function getServices() {
-  return _getServices()
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('[database.getServices] Supabase error:', error)
+      return []
+    }
+    return data || []
+  } catch (error) {
+    console.error('[database.getServices] Failed to fetch services:', error)
+    return []
+  }
 }
 
 export async function createServiceBooking(bookingData: {
-  service_id: string;
-  user_id: string;
-  service_type: string;
-  description: string;
-  preferred_date: string;
-  preferred_time: string;
-  contact_email: string;
-  contact_phone?: string;
-  customer_name: string;
+  service_id: string
+  user_id: string
+  service_type: string
+  description: string
+  preferred_date: string
+  preferred_time: string
+  contact_email: string
+  contact_phone?: string
+  customer_name: string
 }) {
-  return _createServiceBooking(bookingData)
+  const { data, error } = await supabase
+    .from('service_bookings')
+    .insert(bookingData)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
 }

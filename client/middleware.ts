@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Use Node.js runtime to support Supabase APIs
+export const runtime = 'nodejs'
+
 // Public routes that don't require authentication
 const publicRoutes = [
   '/',

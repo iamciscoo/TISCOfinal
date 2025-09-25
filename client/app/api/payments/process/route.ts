@@ -48,10 +48,9 @@ function generateOrderReference(): string {
   return `TX${ts}${rand}`.replace(/[^A-Z0-9]/g, '')
 }
 
-// Optimized Supabase client using service role for payment operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function POST(req: NextRequest) {

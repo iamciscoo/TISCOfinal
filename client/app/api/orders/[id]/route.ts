@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 // Server-side Supabase client using service role (same as main orders route)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 type Params = { params: Promise<{ id: string }> }

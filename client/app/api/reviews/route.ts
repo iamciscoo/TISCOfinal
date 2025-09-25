@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Use service role client server-side to safely expose minimal user fields
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     const buildQuery = (withApprovalFilter: boolean) => {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Use service role client to bypass RLS (Supabase is our auth source)
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     // Ensure user exists in users table to satisfy FK constraint

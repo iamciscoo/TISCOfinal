@@ -8,7 +8,7 @@ export async function GET() {
     console.log('=== GET /api/services START ===')
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
     const { data: services, error } = await supabase
       .from('services')
