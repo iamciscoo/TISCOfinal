@@ -9,7 +9,7 @@ function sseEncode(obj: unknown) {
 
 export async function GET(req: Request) {
   const supabaseUrl = process.env.SUPABASE_URL!
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE!
 
   if (!supabaseUrl || !supabaseKey) {
     return new Response(JSON.stringify({ error: 'Missing Supabase env vars' }), { status: 500 })

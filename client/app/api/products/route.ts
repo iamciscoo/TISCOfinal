@@ -30,7 +30,7 @@ export const runtime = 'nodejs'
  */
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,   // Public Supabase URL (safe to expose)
-  process.env.SUPABASE_SERVICE_ROLE_KEY!   // Service role key (server-side only)
+  process.env.SUPABASE_SERVICE_ROLE!   // Service role key (server-side only)
 )
 
 /**
