@@ -70,8 +70,11 @@ const items = [
 
 const AppSidebar = () => {
   const router = useRouter()
-  const { state, setOpenMobile } = useSidebar()
+  const { state, setOpenMobile, isMobile, open } = useSidebar()
   const isCollapsed = state === "collapsed"
+  
+  // On mobile, show text when sidebar is open, regardless of collapsed state
+  const shouldShowText = isMobile ? open : !isCollapsed
 
   // Auto-collapse sidebar on mobile when navigation occurs
   useEffect(() => {
@@ -106,15 +109,16 @@ const AppSidebar = () => {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
+      <SidebarHeader>
         <div className="flex items-center gap-2 px-4 py-3">
           <img src="/logo.svg" alt="Admin" className="h-8 w-8" />
-          <span data-collapse-hide className="font-chango text-xl font-bold text-sidebar-foreground">
-            Admin
-          </span>
+          {shouldShowText && (
+            <span className="font-chango text-xl font-bold text-sidebar-foreground">
+              Admin
+            </span>
+          )}
         </div>
       </SidebarHeader>
-      <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Application</SidebarGroupLabel>
@@ -125,7 +129,7 @@ const AppSidebar = () => {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <Link href={item.url} onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                       <item.icon />
-                      {!isCollapsed && <span data-collapse-hide>{item.title}</span>}
+                      {shouldShowText && <span>{item.title}</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -144,7 +148,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Products">
                   <Link href="/products" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Shirt />
-                    {!isCollapsed && <span data-collapse-hide>All Products</span>}
+                    {shouldShowText && <span>All Products</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -152,7 +156,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Categories">
                   <Link href="/categories" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <FolderOpen />
-                    {!isCollapsed && <span data-collapse-hide>All Categories</span>}
+                    {shouldShowText && <span>All Categories</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -160,7 +164,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Add Product">
                   <Link href="/products/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Plus />
-                    {!isCollapsed && <span data-collapse-hide>Add Product</span>}
+                    {shouldShowText && <span>Add Product</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -169,7 +173,7 @@ const AppSidebar = () => {
                   <SheetTrigger asChild>
                     <SidebarMenuButton tooltip="Add Category">
                       <Plus />
-                      {!isCollapsed && <span data-collapse-hide>Add Category</span>}
+                      {shouldShowText && <span>Add Category</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddCategory />
@@ -189,7 +193,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Customers">
                   <Link href="/users" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <User />
-                    {!isCollapsed && <span data-collapse-hide>All Customers</span>}
+                    {shouldShowText && <span>All Customers</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -198,7 +202,7 @@ const AppSidebar = () => {
                   <SheetTrigger asChild>
                     <SidebarMenuButton tooltip="Add Customer">
                       <Plus />
-                      {!isCollapsed && <span data-collapse-hide>Add Customer</span>}
+                      {shouldShowText && <span>Add Customer</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddUser />
@@ -218,7 +222,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Orders">
                   <Link href="/orders" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Package />
-                    {!isCollapsed && <span data-collapse-hide>All Orders</span>}
+                    {shouldShowText && <span>All Orders</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -226,7 +230,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Payments">
                   <Link href="/payments" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <CreditCard />
-                    {!isCollapsed && <span data-collapse-hide>All Payments</span>}
+                    {shouldShowText && <span>All Payments</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -235,7 +239,7 @@ const AppSidebar = () => {
                   <SheetTrigger asChild>
                     <SidebarMenuButton tooltip="Add Order">
                       <Plus />
-                      {!isCollapsed && <span data-collapse-hide>Add Order</span>}
+                      {shouldShowText && <span>Add Order</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddOrder />
@@ -255,7 +259,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="All Services">
                   <Link href="/services" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Wrench />
-                    {!isCollapsed && <span data-collapse-hide>All Services</span>}
+                    {shouldShowText && <span>All Services</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -263,7 +267,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Service Bookings">
                   <Link href="/service-bookings" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <CalendarCheck />
-                    {!isCollapsed && <span data-collapse-hide>Service Bookings</span>}
+                    {shouldShowText && <span>Service Bookings</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -271,7 +275,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Add Service">
                   <Link href="/services/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Plus />
-                    {!isCollapsed && <span data-collapse-hide>Add Service</span>}
+                    {shouldShowText && <span>Add Service</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -289,7 +293,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Reviews">
                   <Link href="/reviews" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Star />
-                    {!isCollapsed && <span data-collapse-hide>Reviews</span>}
+                    {shouldShowText && <span>Reviews</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -297,7 +301,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Newsletter">
                   <Link href="/newsletter" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Mail />
-                    {!isCollapsed && <span data-collapse-hide>Newsletter</span>}
+                    {shouldShowText && <span>Newsletter</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -305,7 +309,7 @@ const AppSidebar = () => {
                 <SidebarMenuButton asChild tooltip="Messages">
                   <Link href="/messages" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
                     <Mail />
-                    {!isCollapsed && <span data-collapse-hide>Messages</span>}
+                    {shouldShowText && <span>Messages</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -315,7 +319,7 @@ const AppSidebar = () => {
                   <SheetTrigger asChild>
                     <SidebarMenuButton tooltip="Add Review">
                       <Plus />
-                      {!isCollapsed && <span data-collapse-hide>Add Review</span>}
+                      {shouldShowText && <span>Add Review</span>}
                     </SidebarMenuButton>
                   </SheetTrigger>
                   <AddReview onCreated={() => { router.push('/reviews'); (router as any).refresh?.() }} />
@@ -332,8 +336,8 @@ const AppSidebar = () => {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton tooltip="Admin">
                   <User2 />
-                  {!isCollapsed && <span data-collapse-hide>Admin User</span>}
-                  <ChevronUp className="ml-auto" data-collapse-hide />
+                  {shouldShowText && <span>Admin User</span>}
+                  {shouldShowText && <ChevronUp className="ml-auto" />}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

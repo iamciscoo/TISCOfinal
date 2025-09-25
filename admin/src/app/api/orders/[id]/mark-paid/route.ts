@@ -116,7 +116,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
       // Trigger notification processing on client backend
       try {
-        const processResponse = await fetch('http://localhost:3000/api/notifications/process', {
+        const processResponse = await fetch('https://tiscomarket.store/api/notifications/process', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

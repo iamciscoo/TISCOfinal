@@ -200,7 +200,7 @@ export default function ViewProductPage() {
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild className="shrink-0">
-              <Link href={`http://localhost:3000/products/${product.id}`} target="_blank">
+              <Link href={`https://tiscomarket.store/products/${product.id}`} target="_blank">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">View Live</span>
                 <span className="sm:hidden">Live</span>
