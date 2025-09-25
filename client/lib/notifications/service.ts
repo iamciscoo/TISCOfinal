@@ -2,23 +2,11 @@ import { sendEmailViaSendPulse, getSendPulseConfig, type SendPulseEmail } from '
 import { renderEmailTemplate, getDefaultSubject, type TemplateType } from '../email-templates'
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase client for notifications
-const getSupabaseClient = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!url || !serviceKey) {
-    console.error('Missing Supabase configuration for notifications:', {
-      hasUrl: !!url,
-      hasServiceKey: !!serviceKey
-    })
-    throw new Error('Missing Supabase configuration for notifications')
-  }
-  
-  return createClient(url, serviceKey)
-}
-
-const supabase = getSupabaseClient()
+// Optimized Supabase client for notifications using service role
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+)
 
 export type NotificationEvent = 
   | 'order_created'
@@ -662,16 +650,17 @@ class NotificationService {
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
-
+    
     if (status) {
       query = query.eq('status', status)
     }
-
+    
     if (event) {
       query = query.eq('event', event)
     }
-
+    
     const { data, error } = await query
+
 
     if (error) {
       throw new Error(`Failed to fetch notifications: ${error.message}`)
@@ -754,7 +743,7 @@ export async function notifyAdminOrderCreated(orderData: {
   items_count: number
 }) {
   try {
-    // Get admin recipients from database using Supabase MCP
+    // Get admin recipients from database using optimized Supabase client
     const { data: recipients, error } = await supabase
       .from('notification_recipients')
       .select('email, name')
