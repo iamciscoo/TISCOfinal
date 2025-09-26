@@ -343,6 +343,55 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const handleNextStepWithValidation = () => {
+    // For shipping step, use existing validation
+    if (currentStep === 'shipping') {
+      if (!isStepValid('shipping')) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required delivery information with valid details.",
+          variant: "destructive",
+        })
+        return
+      }
+      handleNextStep()
+    } 
+    // For payment step, show specific validation feedback
+    else if (currentStep === 'payment') {
+      if (paymentData.method === 'mobile') {
+        if (!paymentData.provider) {
+          toast({
+            title: "Payment Method Required",
+            description: "Please select your mobile service provider.",
+            variant: "destructive",
+          })
+          return
+        }
+        if (!paymentData.mobilePhone) {
+          toast({
+            title: "Phone Number Required",
+            description: "Please enter your mobile phone number.",
+            variant: "destructive",
+          })
+          return
+        }
+        if (!isValidTzPhone(paymentData.mobilePhone)) {
+          toast({
+            title: "Invalid Phone Number",
+            description: "Please enter a valid Tanzanian mobile number (e.g., +255 7XX XXX XXX).",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+      handleNextStep()
+    }
+    // For review step, proceed directly
+    else {
+      handleNextStep()
+    }
+  }
+
   const handlePreviousStep = () => {
     if (currentStep === 'payment') {
       setCurrentStep('shipping')
@@ -1146,7 +1195,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 15 seconds. Double check if the phone number is correct!!
+                          <strong>Payment Process:</strong> After placing your order, you&apos;ll receive a payment prompt on your phone within 15 seconds. <strong>Double check if the phone number is correct!!</strong>
                         </p>
                         <p className="text-xs text-gray-500">
                           • You have 15 seconds to approve the payment on your phone<br/>
@@ -1274,7 +1323,26 @@ export default function CheckoutPage() {
                     <div className="space-y-4">
                       {displayItems.map((item) => (
                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                          <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0"></div>
+                          <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
+                            {item.image_url ? (
+                              <Image
+                                src={item.image_url}
+                                alt={item.name}
+                                width={64}
+                                height={64}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to gray background if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <Package className="h-6 w-6 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
                           <div className="flex-1">
                             <h4 className="font-medium">{item.name}</h4>
                             <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
@@ -1317,13 +1385,8 @@ export default function CheckoutPage() {
                 </Button>
               ) : (
                 <Button
-                  onClick={isStepValid(currentStep) ? handleNextStep : undefined}
-                  disabled={!isStepValid(currentStep)}
-                  className={`px-6 w-full sm:w-auto order-1 sm:order-2 bg-black hover:bg-black text-white border-black transition-none ${
-                    !isStepValid(currentStep)
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:opacity-90 active:scale-[0.98] sm:hover:scale-[1.02]'
-                  } touch-manipulation`}
+                  onClick={handleNextStepWithValidation}
+                  className={`px-6 w-full sm:w-auto order-1 sm:order-2 bg-black hover:bg-black text-white border-black transition-none hover:opacity-90 active:scale-[0.98] sm:hover:scale-[1.02] touch-manipulation`}
                 >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -1333,62 +1396,71 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1">
             {/* Order Processing Loader Card */}
             {isProcessing && (
-              <OrderProcessingLoader 
-                isVisible={isProcessing}
-                message={paymentData.method === 'mobile' ? "Processing Payment & Order" : "Creating Your Order"}
-                submessage="Please check your account and emails for status updates."
-              />
+              <div className="mb-6">
+                <OrderProcessingLoader 
+                  isVisible={isProcessing}
+                  message={paymentData.method === 'mobile' ? "Processing Payment & Order" : "Creating Your Order"}
+                  submessage="Please check your account and emails for status updates."
+                />
+              </div>
             )}
             
-            <Card className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-auto">
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal ({totalItems} items)</span>
-                  <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Delivery</span>
-                  <span>{isPickup ? formatPrice(0) : (hasCity ? (isDar ? 'TSH 5000 to 10000' : formatPrice(15000)) : '—')}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Total</span>
-                  <span>{formatPrice(total)}</span>
-                </div>
+            {/* Sticky container for proper scrolling behavior */}
+            <div className="lg:sticky lg:top-24 space-y-6">
+              <Card className="lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto">
+                <CardHeader>
+                  <CardTitle>Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal ({totalItems} items)</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Delivery</span>
+                    <span>{isPickup ? formatPrice(0) : (hasCity ? (isDar ? 'TSH 5000 to 10000' : formatPrice(15000)) : '—')}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Total</span>
+                    <span>{formatPrice(total)}</span>
+                  </div>
 
-                {/* Trust Badges */}
-                <div className="mt-6 space-y-3">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                    <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span>SSL Encrypted Checkout</span>
+                  {/* Trust Badges */}
+                  <div className="mt-6 space-y-3">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                      <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span>SSL Encrypted Checkout</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs sm:text-sm text-gray-600">
+                      <Truck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <span>Safe, secure delivery. Items handled with care and sealed packaging.</span>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2 text-xs sm:text-sm text-gray-600">
-                    <Truck className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <span>Safe, secure delivery. Items handled with care and sealed packaging.</span>
+                </CardContent>
+              </Card>
+              
+              {/* Delivery Image Card - Only show when not processing */}
+              {!isProcessing && (
+                <Card className="relative overflow-hidden p-0 border-0 shadow-none bg-transparent h-48 lg:h-56">
+                  <Image
+                    src="/images/deliverypic.png"
+                    alt="Fast, reliable delivery across Tanzania"
+                    fill
+                    sizes="(min-width: 1024px) 320px, 100vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" aria-hidden="true" />
+                  <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
+                    <p className="text-sm sm:text-base font-semibold">Quick delivery. Best Service.</p>
+                    <p className="text-xs text-gray-200/90">We deliver your product safely and on time.</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="relative overflow-hidden p-0 border-0 shadow-none bg-transparent h-60 sm:h-65">
-              <Image
-                src="/images/deliverypic.png"
-                alt="Fast, reliable delivery across Tanzania"
-                fill
-                sizes="(min-width: 1024px) 320px, 100vw"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" aria-hidden="true" />
-              <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
-                <p className="text-sm sm:text-base font-semibold">Quick delivery. Best Service.</p>
-                <p className="text-xs text-gray-200/90">We deliver your product safely and on time.</p>
-              </div>
-            </Card>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </div>

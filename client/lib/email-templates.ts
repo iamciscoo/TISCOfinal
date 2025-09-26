@@ -81,46 +81,151 @@ interface AdminNotificationData extends BaseEmailData {
   items_count?: number
 }
 
-// Modernized Email Template with Japanese Branding
+// Modern Email Template with Enhanced Compatibility
 const baseTemplate = (content: string, data: BaseEmailData, previewText?: string, templateType?: string) => `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>TISCO Email Template - ${templateType?.toUpperCase() || 'NOTIFICATION'}</title>
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="date=no">
+    <meta name="format-detection" content="address=no">
+    <meta name="format-detection" content="email=no">
+    ${previewText ? `<meta name="description" content="${previewText}">`  : ''}
+    <title>TISCO Email - ${templateType?.replace('_', ' ').toUpperCase() || 'NOTIFICATION'}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
-        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        /* Reset Styles */
+        body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+        
+        /* Client-specific Styles */
         .ExternalClass { width: 100%; }
         .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+        #outlook a { padding: 0; }
+        .ReadMsgBody { width: 100%; }
+        
+        /* Modern Typography */
+        .heading-1 { font-size: 28px !important; line-height: 34px !important; font-weight: 700 !important; }
+        .heading-2 { font-size: 22px !important; line-height: 28px !important; font-weight: 600 !important; }
+        .heading-3 { font-size: 18px !important; line-height: 24px !important; font-weight: 600 !important; }
+        .text-body { font-size: 16px !important; line-height: 24px !important; }
+        .text-small { font-size: 14px !important; line-height: 20px !important; }
+        
+        /* Button Styles */
+        .btn-primary { 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            border-radius: 8px !important;
+            display: inline-block !important;
+            padding: 16px 32px !important;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            text-align: center !important;
+            border: none !important;
+            cursor: pointer !important;
+        }
+        .btn-secondary {
+            background: #f8fafc !important;
+            border: 2px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            display: inline-block !important;
+            padding: 14px 30px !important;
+            color: #374151 !important;
+            text-decoration: none !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            text-align: center !important;
+        }
+        
+        /* Mobile Responsive */
         @media only screen and (max-width: 600px) {
             .mobile-center { text-align: center !important; }
             .mobile-full { width: 100% !important; }
+            .mobile-padding { padding: 16px !important; }
+            .mobile-margin { margin: 16px 0 !important; }
+            .heading-1 { font-size: 24px !important; line-height: 30px !important; }
+            .heading-2 { font-size: 20px !important; line-height: 26px !important; }
+            .btn-primary, .btn-secondary { width: 100% !important; display: block !important; }
+        }
+        
+        /* Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            .dark-bg { background-color: #1f2937 !important; }
+            .dark-text { color: #f9fafb !important; }
         }
     </style>
 </head>
-<body style="margin: 0; padding: 20px; background-color: #f8fafc;">
-    <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
-        <div style="background: #1e293b; padding: 2rem; text-align: left;">
-            <table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
-                <td style="width:64px;padding-right:12px;vertical-align:middle;text-align:left;">
-                    <img src="https://tiscomarket.store/circular.svg" alt="TISCO Logo" width="64" height="64" border="0" style="display: block; width: 64px; height: 64px; margin: 0; padding: 0; border: 0 none; border-radius: 50%;">
-                </td>
-                <td style="vertical-align:middle;text-align:left;">
-                    <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット</h1>
-                    <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">${previewText || 'Your trusted technology partner'}</p>
-                </td>
-            </tr></table>
-        </div>
-        <div style="padding: 2rem; background: white; margin: 1rem;">
-            ${content}
-        </div>
-    </div>
-    <div style="max-width: 600px; margin: 0 auto; text-align: center; color: #64748b; font-size: 12px; padding: 1rem;">
-        TISCOマーケット | info@tiscomarket.store | +255748624684
-    </div>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';">
+    <!-- Hidden preheader text -->
+    ${previewText ? `<div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; color: #f8fafc; mso-hide: all;">${previewText}</div>` : ''}
+    
+    <!-- Main Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 32px; border-radius: 16px 16px 0 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td width="80" style="vertical-align: middle; padding-right: 16px;">
+                                        <img src="https://tiscomarket.store/circular.svg" alt="TISCO Logo" width="64" height="64" style="display: block; width: 64px; height: 64px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.2;">TISCOマーケット</h1>
+                                        <p style="margin: 8px 0 0 0; font-size: 16px; color: #cbd5e1; line-height: 1.4;">${previewText || 'Premium technology solutions for Tanzania'}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 32px; background-color: #ffffff;">
+                            ${content}
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 32px; background-color: #f8fafc; border-radius: 0 0 16px 16px; border-top: 1px solid #e2e8f0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
+                                        <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Your trusted technology partner in Tanzania</p>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="padding: 0 12px;">
+                                                    <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">info@tiscomarket.store</a>
+                                                </td>
+                                                <td style="padding: 0 12px; border-left: 1px solid #e2e8f0;">
+                                                    <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-size: 14px; font-weight: 500;">+255 748 624 684</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>`
 
@@ -132,161 +237,627 @@ const appBaseUrl = 'https://www.tiscomarket.store'
 // Template functions for each email type
 export const emailTemplates = {
   order_confirmation: (data: OrderEmailData) => {
-    const previewText = `Order Confirmation ${data.order_id} - TISCOマーケット`
+    const previewText = `Order confirmed! We're preparing ${data.order_id} for delivery`
     const content = `
-      <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi ${data.customer_name || 'Valued Customer'},</h2>
-      <p style="color: #374151; line-height: 1.6;">Thank you for choosing TISCOマーケット! We've received your order and our team is preparing it for delivery. No tracking numbers, no complicated processes - just straightforward service and quality tech delivered to your door.</p>
-      
-      <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-        <h3 style="color: #1e293b; margin-bottom: 1rem;">Order Details</h3>
-        <p><strong>Order ID:</strong> ${data.order_id}</p>
-        <p><strong>Order Date:</strong> ${data.order_date}</p>
-        <p><strong>Total Amount:</strong> ${data.currency} ${data.total_amount}</p>
-        ${data.payment_method ? `<p><strong>Payment Method:</strong> ${data.payment_method}</p>` : ''}
-      </div>
-      
-      <div style="margin: 2rem 0;">
-        <h3 style="color: #1e293b; margin-bottom: 1rem;">Items Ordered</h3>
-        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-          ${data.items.map((item, index) => `
-            <div style="padding: 1rem; ${index < data.items.length - 1 ? 'border-bottom: 1px solid #e2e8f0;' : ''}">
-              <strong>${item.name}</strong> × ${item.quantity} - ${data.currency} ${item.price}
+      <!-- Success Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
+        <tr>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">✓</span>
             </div>
-          `).join('')}
-        </div>
-      </div>
-      
-      <div style="text-align: left; margin: 2rem 0;">
-        <a href="${appBaseUrl}/account/orders/${data.order_id}" style="padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">View Order Details</a>
-      </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Order Confirmed!</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Your order is confirmed and we're getting it ready. You'll receive updates as we prepare your tech for delivery.</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Order Summary Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; margin: 32px 0; border: 1px solid #bae6fd;">
+        <tr>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #0c4a6e;">Order Summary</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
+                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">#${data.order_id}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
+                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.order_date}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Total Amount</td>
+                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right; font-size: 16px;">${data.currency} ${data.total_amount}</td>
+              </tr>
+              ${data.payment_method ? `
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
+                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.payment_method}</td>
+              </tr>` : ''}
+              ${data.estimated_delivery ? `
+              <tr>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid #bae6fd;">Estimated Delivery</td>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: #059669; font-weight: 600; text-align: right; border-top: 1px solid #bae6fd;">${data.estimated_delivery}</td>
+              </tr>` : ''}
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Items List -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+        <tr>
+          <td>
+            <h3 class="heading-3" style="margin: 0 0 20px 0; color: #111827;">Your Items</h3>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff;">
+              ${data.items.map((item, index) => `
+                <tr>
+                  <td style="padding: 20px; ${index < data.items.length - 1 ? 'border-bottom: 1px solid #f3f4f6;' : ''}">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="vertical-align: top; width: 70%;">
+                          <p class="text-body" style="margin: 0 0 4px 0; font-weight: 600; color: #111827;">${item.name}</p>
+                          <p class="text-small" style="margin: 0; color: #6b7280;">Quantity: ${item.quantity}</p>
+                        </td>
+                        <td style="vertical-align: top; text-align: right;">
+                          <p class="text-body" style="margin: 0; font-weight: 600; color: #111827;">${data.currency} ${item.price}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              `).join('')}
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- What's Next Section -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 24px;">
+            <h4 class="heading-3" style="margin: 0 0 12px 0; color: #92400e;">What happens next?</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">We're preparing your order for dispatch</li>
+              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">You'll get updates via email as your order progresses</li>
+              <li class="text-small" style="margin-bottom: 0; line-height: 1.5;">Our team will contact you if we need any clarification</li>
+            </ul>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA Buttons -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="https://wa.me/255748624684" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Contact Support</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      ${data.shipping_address ? `
+      <!-- Shipping Info -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280;">
+        <tr>
+          <td>
+            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Delivery Address</p>
+            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">${data.shipping_address}</p>
+          </td>
+        </tr>
+      </table>` : ''}
     `
     return baseTemplate(content, data, previewText, 'order_confirmation')
   },
 
   order_status_update: (data: OrderEmailData & { status: string, reason?: string }) => {
-    const statusMessages = {
-      processing: 'Your order is being processed and will be shipped soon.',
-      shipped: `Great news! Your order has been shipped.${data.tracking_number ? ` Tracking: ${data.tracking_number}` : ''}`,
-      delivered: 'Your order has been delivered. We hope you enjoy your purchase!',
-      cancelled: `Your order has been cancelled.${data.reason ? ` Reason: ${data.reason}` : ''}`
+    const statusConfig = {
+      processing: { 
+        color: '#f59e0b', 
+        bgColor: '#fef3c7', 
+        borderColor: '#fcd34d',
+        icon: '⏳',
+        title: 'Order Processing',
+        message: 'We\'re preparing your order and it will be dispatched soon.'
+      },
+      shipped: { 
+        color: '#2563eb', 
+        bgColor: '#dbeafe', 
+        borderColor: '#93c5fd',
+        icon: '🚚',
+        title: 'Order Shipped',
+        message: `Great news! Your order is on its way${data.tracking_number ? `. Track with: ${data.tracking_number}` : '.'}`
+      },
+      delivered: { 
+        color: '#059669', 
+        bgColor: '#d1fae5', 
+        borderColor: '#a7f3d0',
+        icon: '📦',
+        title: 'Order Delivered',
+        message: 'Your order has been successfully delivered. Enjoy your new tech!'
+      },
+      cancelled: { 
+        color: '#dc2626', 
+        bgColor: '#fee2e2', 
+        borderColor: '#fca5a5',
+        icon: '❌',
+        title: 'Order Cancelled',
+        message: `Your order has been cancelled${data.reason ? `. Reason: ${data.reason}` : '.'}`
+      }
     }
     
+    const config = statusConfig[data.status as keyof typeof statusConfig] || {
+      color: '#6b7280',
+      bgColor: '#f3f4f6',
+      borderColor: '#d1d5db',
+      icon: 'ℹ️',
+      title: 'Status Update',
+      message: 'Your order status has been updated.'
+    }
+    
+    const previewText = `${config.title} - Order ${data.order_id}`
     const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">Order Status Update</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Dear ${data.customer_name || 'Valued Customer'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">Your order status has been updated:</p>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f8f9fa;border-radius:4px;margin:15px 0;">
+      <!-- Status Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
-          <td style="padding:15px;">
-            <p style="margin:0 0 8px 0;color:#333333;font-size:13px;"><strong>Order #:</strong> ${data.order_id}</p>
-            <p style="margin:0 0 8px 0;color:#333333;font-size:13px;"><strong>Status:</strong> ${data.status.toUpperCase()}</p>
-            <p style="margin:0;color:#333333;font-size:13px;">${statusMessages[data.status as keyof typeof statusMessages] || 'Status updated'}</p>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: ${config.color}; border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">${config.icon}</span>
+            </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">${config.title}</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">${config.message}</p>
           </td>
         </tr>
       </table>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:15px 0;">
+
+      <!-- Status Details Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="background-color:#1a1a1a;border-radius:4px;">
-            <a href="${appBaseUrl}/account/orders/${data.order_id}" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:13px;">View Order</a>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: ${config.color};">Order Details</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
+                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 600; text-align: right;">#${data.order_id}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Status</td>
+                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 700; text-align: right; text-transform: capitalize;">${data.status.replace('_', ' ')}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
+                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 600; text-align: right;">${data.order_date}</td>
+              </tr>
+              ${data.tracking_number && data.status === 'shipped' ? `
+              <tr>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid ${config.borderColor};">Tracking Number</td>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: ${config.color}; font-weight: 600; text-align: right; border-top: 1px solid ${config.borderColor};"><code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${data.tracking_number}</code></td>
+              </tr>` : ''}
+              ${data.estimated_delivery && (data.status === 'shipped' || data.status === 'processing') ? `
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Estimated Delivery</td>
+                <td class="text-small" style="padding: 8px 0; color: #059669; font-weight: 600; text-align: right;">${data.estimated_delivery}</td>
+              </tr>` : ''}
+            </table>
           </td>
         </tr>
       </table>
+
+      <!-- Action Buttons -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
+                </td>
+                ${data.status === 'delivered' ? `
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/account/orders/${data.order_id}/review" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Leave Review</a>
+                </td>` : ''}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Additional Info for specific statuses -->
+      ${data.status === 'cancelled' ? `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px;">
+            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Need Help?</p>
+            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">If you have questions about this cancellation or need assistance, our support team is ready to help.</p>
+          </td>
+        </tr>
+      </table>` : ''}
     `
-    return baseTemplate(content, data)
+    return baseTemplate(content, data, previewText, 'order_status_update')
   },
 
   payment_success: (data: PaymentEmailData) => {
-    const previewText = `✅ Payment Successful - TISCOマーケット`
+    const previewText = `Payment confirmed! Your transaction was successful`
     const content = `
-      <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi ${data.customer_name || 'Valued Customer'},</h2>
-      <p style="color: #374151; line-height: 1.6;">Great news! Your payment was successful.</p>
-      
-      <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-        <h3 style="color: #1e293b; margin-bottom: 1rem;">Payment Details</h3>
-        <p><strong>Amount:</strong> ${data.currency} ${data.amount}</p>
-        <p><strong>Payment Method:</strong> ${data.payment_method}</p>
-        <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
-        <p><strong>Date:</strong> ${data.payment_date}</p>
-      </div>
-      
-      ${data.order_id ? `
-      <div style="text-align: left; margin: 2rem 0;">
-        <a href="${appBaseUrl}/account/orders/${data.order_id}" style="padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">View Order</a>
-      </div>
-      ` : ''}
+      <!-- Success Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
+        <tr>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">💳</span>
+            </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Payment Successful!</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Your payment has been processed successfully. Thank you for your business!</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Payment Details Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #065f46;">Payment Receipt</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Amount Paid</td>
+                <td class="text-small" style="padding: 8px 0; color: #065f46; font-weight: 700; text-align: right; font-size: 18px;">${data.currency} ${data.amount}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
+                <td class="text-small" style="padding: 8px 0; color: #065f46; font-weight: 600; text-align: right;">${data.payment_method}</td>
+              </tr>
+              ${data.transaction_id ? `
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Transaction ID</td>
+                <td class="text-small" style="padding: 8px 0; color: #065f46; font-weight: 600; text-align: right;"><code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px;">${data.transaction_id}</code></td>
+              </tr>` : ''}
+              ${data.payment_date ? `
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Date</td>
+                <td class="text-small" style="padding: 8px 0; color: #065f46; font-weight: 600; text-align: right;">${data.payment_date}</td>
+              </tr>` : ''}
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Success Message -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px;">
+            <p class="text-small" style="margin: 0; color: #1e40af; text-align: center; line-height: 1.6;">✓ Your payment has been securely processed and confirmed. You'll receive email updates as your order progresses.</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Action Buttons -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                ${data.order_id ? `
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/shop" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Continue Shopping</a>
+                </td>` : `
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/shop" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Continue Shopping</a>
+                </td>`}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     `
     return baseTemplate(content, data, previewText, 'payment_success')
   },
 
   payment_failed: (data: PaymentEmailData) => {
-    const previewText = `❌ Payment Failed - TISCOマーケット`
+    const previewText = `Payment issue - Let's resolve this together`
     const content = `
-      <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi ${data.customer_name || 'Valued Customer'},</h2>
-      <p style="color: #374151; line-height: 1.6;">Unfortunately, your payment could not be processed. Contact Support or Please try again with a different payment method.</p>
-      
-      <div style="background: #fef2f2; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; border-left: 4px solid #dc2626;">
-        <h3 style="color: #1e293b; margin-bottom: 1rem;">Payment Details</h3>
-        <p><strong>Amount:</strong> ${data.currency} ${data.amount}</p>
-        <p><strong>Payment Method:</strong> ${data.payment_method}</p>
-        ${data.failure_reason ? `<p><strong>Failure Reason:</strong> ${data.failure_reason}</p>` : ''}
-      </div>
-      
-      <div style="text-align: left; margin: 2rem 0;">
-        <a href="${appBaseUrl}/contact" style="padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">Contact Support</a>
-      </div>
+      <!-- Error Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
+        <tr>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">⚠️</span>
+            </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Payment Issue</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">We encountered an issue processing your payment. Don't worry - we're here to help resolve this quickly.</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Payment Details Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 50%); border: 1px solid #fca5a5; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #991b1b;">Payment Details</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Attempted Amount</td>
+                <td class="text-small" style="padding: 8px 0; color: #991b1b; font-weight: 700; text-align: right; font-size: 18px;">${data.currency} ${data.amount}</td>
+              </tr>
+              <tr>
+                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
+                <td class="text-small" style="padding: 8px 0; color: #991b1b; font-weight: 600; text-align: right;">${data.payment_method}</td>
+              </tr>
+              ${data.failure_reason ? `
+              <tr>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid #fca5a5;">Issue</td>
+                <td class="text-small" style="padding: 12px 0 8px 0; color: #991b1b; font-weight: 600; text-align: right; border-top: 1px solid #fca5a5;">${data.failure_reason}</td>
+              </tr>` : ''}
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Common Solutions -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 24px;">
+            <h3 class="heading-3" style="margin: 0 0 16px 0; color: #92400e;">Quick Solutions</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">Check your card details and try again</li>
+              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">Ensure sufficient funds are available</li>
+              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">Try a different payment method</li>
+              <li class="text-small" style="margin-bottom: 0; line-height: 1.5;">Contact your bank if the issue persists</li>
+            </ul>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Action Buttons -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/checkout" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Try Again</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="https://wa.me/255748624684" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Get Help</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Support Note -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px;">
+            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Need Personal Assistance?</p>
+            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">Our payment support team is available to help resolve any issues. Contact us via WhatsApp or email and we'll sort this out quickly.</p>
+          </td>
+        </tr>
+      </table>
     `
     return baseTemplate(content, data, previewText, 'payment_failed')
   },
 
   welcome_email: (data: BaseEmailData) => {
-    const previewText = `Welcome to TISCOマーケット! - We're excited to have you on board`
+    const previewText = `Welcome aboard! Let's get you started with quality tech`
     const content = `
-      <h2 style="color: #1e293b; margin-bottom: 1rem;">Hi ${data.customer_name || 'Valued Customer'},</h2>
-      <p style="color: #374151; line-height: 1.6;">Welcome to TISCOマーケット! No BS, no fluff - just quality tech products and professional services delivered straight to your door in Tanzania.</p>
-      
-      <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 1.5rem; margin: 1.5rem 0;">
-        <h3 style="color: #1e293b; margin-bottom: 1rem;">What We Offer:</h3>
-        <ul style="color: #374151; line-height: 1.6;">
-          <li>Gaming & office electronics</li>
-          <li>Professional tech setup services</li>
-          <li>Direct delivery - no tracking hassles</li>
-          <li>Expert support when you need it</li>
-        </ul>
-      </div>
-      
-      <div style="text-align: left; margin: 2rem 0;">
-        <a href="${appBaseUrl}/shop" style="padding: 16px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 18px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">Start Shopping</a>
-      </div>
+      <!-- Welcome Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
+        <tr>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">🚀</span>
+            </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Welcome to TISCO!</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">We're excited to have you join our community. Quality tech, delivered with care to Tanzania.</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- What We Offer -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #0c4a6e; text-align: center;">What Makes Us Different</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                  <div style="text-align: center;">
+                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">🎮</span>
+                    </div>
+                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Gaming & Electronics</h4>
+                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Latest gaming gear and office electronics</p>
+                  </div>
+                </td>
+                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                  <div style="text-align: center;">
+                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">🔧</span>
+                    </div>
+                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Professional Setup</h4>
+                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Expert installation and configuration</p>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                  <div style="text-align: center;">
+                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">🚚</span>
+                    </div>
+                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Direct Delivery</h4>
+                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Straight to your door, no complications</p>
+                  </div>
+                </td>
+                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                  <div style="text-align: center;">
+                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">📞</span>
+                    </div>
+                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Expert Support</h4>
+                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">WhatsApp support when you need it</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Getting Started -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 24px; text-align: center;">
+            <h3 class="heading-3" style="margin: 0 0 16px 0; color: #92400e;">Ready to get started?</h3>
+            <p class="text-body" style="margin: 0 0 24px 0; color: #92400e; line-height: 1.6;">Browse our curated selection of tech products or book a consultation with our experts.</p>
+            
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/shop" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Browse Products</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/services" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">View Services</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Contact Info -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px; text-align: center;">
+            <p class="text-small" style="margin: 0 0 12px 0; color: #374151; font-weight: 600;">Questions? We're here to help!</p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+              <tr>
+                <td style="padding: 0 16px;">
+                  <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">📱 WhatsApp Support</a>
+                </td>
+                <td style="padding: 0 16px; border-left: 1px solid #e2e8f0;">
+                  <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">✉️ Email Us</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     `
     return baseTemplate(content, data, previewText, 'welcome_email')
   },
 
   cart_abandonment: (data: BaseEmailData & { cart_url: string }) => {
+    const previewText = `Don't miss out! Your cart is waiting for you`
     const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">You Left Something Behind!</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Hi ${data.customer_name || 'there'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">We noticed you left some items in your cart. Don't miss out on these great products!</p>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">Complete your purchase now and enjoy:</p>
-      <ul>
-        <li>✓ Secure checkout process</li>
-        <li>✓ Multiple payment options</li>
-        <li>✓ Fast delivery</li>
-      </ul>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:15px 0;">
+      <!-- Cart Icon -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
-          <td style="background-color:#1a1a1a;border-radius:4px;">
-            <a href="${data.cart_url || appBaseUrl + '/cart'}" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:13px;">Complete Your Order</a>
+          <td align="center">
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">🛍️</span>
+            </div>
+            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Don't Miss Out!</h1>
+            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">You've got some great tech waiting in your cart. Complete your order and get it delivered to your door.</p>
           </td>
         </tr>
       </table>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">Need assistance? We're here to help on WhatsApp: <strong>+255748624684</strong></p>
+
+      <!-- Benefits Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 28px;">
+            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #92400e; text-align: center;">Why Complete Your Order Now?</h2>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 8px 16px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; background: #92400e; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 20px;">🔒</span>
+                    </div>
+                    <p class="text-small" style="margin: 0; color: #92400e; font-weight: 600;">Secure Checkout</p>
+                  </div>
+                </td>
+                <td style="padding: 8px 16px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; background: #92400e; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 20px;">💳</span>
+                    </div>
+                    <p class="text-small" style="margin: 0; color: #92400e; font-weight: 600;">Multiple Payment Options</p>
+                  </div>
+                </td>
+                <td style="padding: 8px 16px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; background: #92400e; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 20px;">⚡</span>
+                    </div>
+                    <p class="text-small" style="margin: 0; color: #92400e; font-weight: 600;">Fast Delivery</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Urgency Message -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px; text-align: center;">
+            <p class="text-small" style="margin: 0; color: #1e40af; line-height: 1.6;">⏰ Items in your cart are popular and may sell out. Complete your order to secure them!</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Action Buttons -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="padding: 0 8px;">
+                  <a href="${data.cart_url || appBaseUrl + '/cart'}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 18px 36px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 18px; text-align: center; border: none;">Complete Your Order</a>
+                </td>
+                <td style="padding: 0 8px;">
+                  <a href="${appBaseUrl}/shop" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 16px 34px; color: #374151; text-decoration: none; font-weight: 600; font-size: 18px; text-align: center;">Continue Shopping</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Support Note -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
+        <tr>
+          <td style="padding: 20px; text-align: center;">
+            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Need Help Deciding?</p>
+            <p class="text-small" style="margin: 0 0 12px 0; color: #6b7280; line-height: 1.5;">Our team is available on WhatsApp to answer any questions about your cart items.</p>
+            <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">📱 Chat with Support: +255 748 624 684</a>
+          </td>
+        </tr>
+      </table>
     `
-    return baseTemplate(content, data)
+    return baseTemplate(content, data, previewText, 'cart_abandonment')
   },
 
 
@@ -651,20 +1222,20 @@ export async function renderEmailTemplate(
 // Get default subject lines for email types
 export function getDefaultSubject(templateType: TemplateType): string {
   const subjects: Record<TemplateType, string> = {
-    order_confirmation: 'Order Confirmation - TISCOマーケット',
-    order_status_update: 'Order Status Update - TISCOマーケット',
-    payment_success: 'Payment Received - TISCOマーケット',
-    payment_failed: 'Payment Failed - Action Required - TISCOマーケット',
-    cart_abandonment: 'You left items in your cart - TISCOマーケット',
-    welcome_email: 'Welcome to TISCOマーケット!',
-    password_reset: 'Password Reset Request - TISCOマーケット',
-    delivery_confirmation: 'Your order has been delivered - TISCOマーケット',
-    review_request: 'How was your experience? - TISCOマーケット',
-    contact_reply: 'Response to your inquiry - TISCOマーケット',
-    booking_confirmation: 'Service Booking Confirmation - TISCOマーケット',
-    booking_status_update: 'Booking Status Update - TISCOマーケット',
-    admin_notification: 'Admin Notification - TISCOマーケット'
+    order_confirmation: 'Order Confirmed ✓ Your tech is on the way',
+    order_status_update: 'Order Update → Status Changed',
+    payment_success: 'Payment Successful ✓ Transaction Complete',
+    payment_failed: 'Payment Issue ⚠️ Let\'s resolve this quickly',
+    cart_abandonment: 'Your cart is waiting 🛍️ Complete your order',
+    welcome_email: 'Welcome to TISCO! 🚀 Let\'s get started',
+    password_reset: 'Reset Your Password 🔒 Secure link inside',
+    delivery_confirmation: 'Delivered! 📦 Your order has arrived',
+    review_request: 'How was your experience? ⭐ Share your thoughts',
+    contact_reply: 'We\'ve responded 💬 Your inquiry answered',
+    booking_confirmation: 'Service Booked 📅 We\'ll be in touch soon',
+    booking_status_update: 'Booking Update 🔄 Status changed',
+    admin_notification: 'Admin Alert 🔔 Action may be required'
   }
   
-  return subjects[templateType] || 'TISCOマーケット'
+  return subjects[templateType] || 'Message from TISCOマーケット'
 }
