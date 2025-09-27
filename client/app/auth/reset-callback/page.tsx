@@ -17,25 +17,74 @@ export default function ResetCallback() {
       const supabase = createClient()
       
       try {
-        // Get the session after password reset
-        const { data, error } = await supabase.auth.getSession()
+        // Check if this is a password reset callback with URL parameters
+        // Try hash parameters first (standard Supabase behavior)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        let accessToken = hashParams.get('access_token')
+        let refreshToken = hashParams.get('refresh_token')
+        let type = hashParams.get('type')
         
-        if (error) {
-          console.error('Reset callback error:', error)
-          setError('Failed to complete password reset. Please try again.')
+        // Fallback to search parameters (some email clients may modify URLs)
+        if (!accessToken || !refreshToken || !type) {
+          const searchParams = new URLSearchParams(window.location.search)
+          accessToken = accessToken || searchParams.get('access_token')
+          refreshToken = refreshToken || searchParams.get('refresh_token')
+          type = type || searchParams.get('type')
+        }
+        
+        console.log('Reset callback - URL analysis:', {
+          hasHash: window.location.hash.length > 1,
+          hasSearch: window.location.search.length > 1,
+          type,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          currentUrl: window.location.href
+        })
+        
+        if (type === 'recovery' && accessToken && refreshToken) {
+          // This is a password reset callback, set the session
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
+          
+          if (error) {
+            console.error('Failed to set session from reset tokens:', error)
+            setError('Failed to complete password reset. Please try again.')
+            setIsProcessing(false)
+            return
+          }
+          
+          if (data.session) {
+            console.log('Password reset session established successfully')
+            setIsProcessing(false)
+            // Small delay to let auth context update
+            setTimeout(() => {
+              setShowProfileDialog(true)
+            }, 800)
+            return
+          }
+        }
+        
+        // Fallback: Check if we already have a session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session retrieval error:', sessionError)
+          setError('Failed to establish session. Please try again.')
           setIsProcessing(false)
           return
         }
 
-        if (data.session) {
-          // User is now logged in after password reset
+        if (sessionData.session) {
+          // User is already logged in
+          console.log('Existing session found')
           setIsProcessing(false)
-          // Small delay to let auth context update
           setTimeout(() => {
             setShowProfileDialog(true)
-          }, 500)
+          }, 800)
         } else {
-          // No session found, something went wrong
+          // No session and no valid reset tokens
           setError('Password reset session expired. Please request a new reset link.')
           setIsProcessing(false)
         }
