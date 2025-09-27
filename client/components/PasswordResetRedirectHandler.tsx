@@ -4,9 +4,11 @@ import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 /**
- * Component to handle password reset redirects that are incorrectly sent to the home page
- * instead of the proper reset callback page. This happens when Supabase is misconfigured
- * in the dashboard to redirect to home page instead of /auth/reset-callback.
+ * Component to handle authentication redirects that are incorrectly sent to the home page
+ * instead of their proper callback pages. This happens when Supabase is misconfigured
+ * in the dashboard. This component properly routes:
+ * - Password reset flows: to /auth/reset-callback
+ * - OAuth flows (Google, etc.): to /auth/callback
  */
 export function PasswordResetRedirectHandler() {
   const router = useRouter()
@@ -19,23 +21,27 @@ export function PasswordResetRedirectHandler() {
     const errorDescription = searchParams.get('error_description')
     const hash = window.location.hash
     
-    // Detect various password reset scenarios that might be misrouted to home page
+    // CRITICAL: Only detect ACTUAL password reset flows, NOT OAuth flows
     const isPasswordResetFlow = (
-      // Hash contains auth tokens
-      hash.includes('access_token') || 
+      // Hash contains recovery type specifically (not OAuth tokens)
       hash.includes('type=recovery') ||
-      // Search params contain auth tokens  
-      searchParams.get('access_token') ||
+      // Search params contain recovery type specifically
       searchParams.get('type') === 'recovery' ||
-      // Auth code flow
-      searchParams.get('code') ||
-      // Error scenarios from password reset
-      (error && error.includes('access_denied')) ||
-      (errorCode && (errorCode.includes('otp_expired') || errorCode.includes('invalid'))) ||
-      (errorDescription && (errorDescription.includes('expired') || errorDescription.includes('invalid')))
+      // Password reset specific error scenarios
+      (error && error.includes('access_denied') && hash.includes('type=recovery')) ||
+      (errorCode && (errorCode.includes('otp_expired') || errorCode.includes('invalid')) && hash.includes('type=recovery')) ||
+      (errorDescription && (errorDescription.includes('expired') || errorDescription.includes('invalid')) && hash.includes('type=recovery'))
     )
     
-    if (isPasswordResetFlow) {
+    // EXCLUDE OAuth flows (these should go to /auth/callback instead)
+    const isOAuthFlow = (
+      searchParams.get('code') ||  // OAuth authorization code
+      hash.includes('provider_token') ||  // OAuth provider token
+      searchParams.get('state') ||  // OAuth state parameter
+      (hash.includes('access_token') && !hash.includes('type=recovery'))  // OAuth tokens without recovery type
+    )
+    
+    if (isPasswordResetFlow && !isOAuthFlow) {
       console.log('🔄 Detected password reset flow redirected to home page')
       console.log('📧 This suggests Supabase redirect URL is misconfigured')
       console.log('🚀 Redirecting to proper reset callback handler...')
@@ -44,6 +50,17 @@ export function PasswordResetRedirectHandler() {
       const searchString = window.location.search
       const hashString = window.location.hash
       const newUrl = `/auth/reset-callback${searchString}${hashString}`
+      
+      console.log('🔗 Redirecting to:', newUrl)
+      router.replace(newUrl)
+    } else if (isOAuthFlow) {
+      console.log('🔄 Detected OAuth flow redirected to home page')
+      console.log('🚀 Redirecting to proper OAuth callback handler...')
+      
+      // Preserve all URL parameters and redirect to OAuth callback
+      const searchString = window.location.search
+      const hashString = window.location.hash
+      const newUrl = `/auth/callback${searchString}${hashString}`
       
       console.log('🔗 Redirecting to:', newUrl)
       router.replace(newUrl)
