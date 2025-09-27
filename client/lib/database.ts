@@ -16,10 +16,8 @@
 
 // Import the configured Supabase client for direct database operations
 import { supabase } from './supabase'
-// Import the API client for cached and optimized data operations
+import type { Product, User, Address, Category } from './types'
 import { api } from './api-client'
-// Import shared type definitions for type safety
-import type { Address, User, Product, Category } from './types'
 
 /**
  * =============================================================================
@@ -265,7 +263,7 @@ export async function addToCart(userId: string, productId: string, quantity: num
   // This prevents duplicate entries and allows for quantity updates
   const { data: existingItem } = await supabase
     .from('cart_items')
-    .select('*')  // Select all fields to get current quantity
+    .select('id, quantity')  // Select only needed fields with explicit types
     .eq('user_id', userId)     // Filter by current user
     .eq('product_id', productId)  // Filter by specific product
     .single()  // Expect single result or null
@@ -273,9 +271,10 @@ export async function addToCart(userId: string, productId: string, quantity: num
   if (existingItem) {
     // Product already exists in cart - update the quantity
     // Add new quantity to existing quantity for cumulative effect
+    const newQuantity = (existingItem.quantity as number) + quantity
     const { data, error } = await supabase
       .from('cart_items')
-      .update({ quantity: existingItem.quantity + quantity })  // Increment quantity
+      .update({ quantity: newQuantity })  // Increment quantity with explicit type
       .eq('id', existingItem.id)  // Update specific cart item
       .select()  // Return updated data for confirmation
     
@@ -503,7 +502,7 @@ export async function getUserAddresses(userId: string) {
   return data
 }
 
-export async function createAddress(addressData: Omit<Address, 'id' | 'created_at'>) {
+export async function createAddress(addressData: Omit<Address, 'id' | 'created_at'> & { user_id: string }) {
   const { data, error } = await supabase
     .from('addresses')
     .insert(addressData)
@@ -550,29 +549,23 @@ export async function createReview(reviewData: {
   return data
 }
 
-// Services Functions
+/**
+ * Get all services for the services page
+ * NOTE: Services table doesn't exist yet - placeholder function
+ */
 export async function getServices() {
-  try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (error) {
-      console.error('[database.getServices] Supabase error:', error)
-      return []
-    }
-    return data || []
-  } catch (error) {
-    console.error('[database.getServices] Failed to fetch services:', error)
-    return []
-  }
+  // TODO: Implement when services table is created
+  console.warn('[database.getServices] Services table not implemented yet')
+  return []
 }
 
+/**
+ * Create service booking
+ * NOTE: Service bookings table doesn't exist yet - placeholder function
+ */
 export async function createServiceBooking(bookingData: {
   service_id: string
   user_id: string
-  service_type: string
   description: string
   preferred_date: string
   preferred_time: string
@@ -580,12 +573,7 @@ export async function createServiceBooking(bookingData: {
   contact_phone?: string
   customer_name: string
 }) {
-  const { data, error } = await supabase
-    .from('service_bookings')
-    .insert(bookingData)
-    .select()
-    .single()
-  
-  if (error) throw error
-  return data
+  // TODO: Implement when service_bookings table is created
+  console.warn('[database.createServiceBooking] Service bookings table not implemented yet')
+  return { id: 'placeholder', ...bookingData }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
+import { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
-import { LoadingSpinner, VideoCard } from '@/components/shared'
+import { VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
 
 // Helper: create URL-friendly slug from a string
@@ -54,13 +54,15 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [isManualSearch, setIsManualSearch] = useState(false) // Track manual search input
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [productsData, categoriesData] = await Promise.all([
-          getProducts(100), // Get more products for filtering
+          getProducts(50), // Reduced initial load for better performance
           getCategories()
         ])
         setProducts(productsData || [])
@@ -77,6 +79,23 @@ function ProductsContent() {
     
     fetchData()
   }, [])
+
+  // Debounce search term to improve performance
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchTerm])
 
   // Initialize category from URL (?category=)
   useEffect(() => {
@@ -180,15 +199,16 @@ function ProductsContent() {
 
   // Removed columns tracking; pagination is fixed to 4 rows for stability
 
-  // Filter and sort products
+  // Filter and sort products (use debounced search term for better performance)
   useEffect(() => {
     let filtered = [...products]
 
-    // Search filter
-    if (searchTerm) {
+    // Search filter with debounced term
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase()
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+        product.name.toLowerCase().includes(searchLower) ||
+        (product.description || '').toLowerCase().includes(searchLower)
       )
     }
 
@@ -234,7 +254,7 @@ function ProductsContent() {
 
     setFilteredProducts(filtered)
     setCurrentPage(1)
-  }, [products, searchTerm, selectedCategory, sortBy])
+  }, [products, debouncedSearchTerm, selectedCategory, sortBy])
 
   // Add to cart handled inside ProductCard
 
@@ -321,11 +341,44 @@ function ProductsContent() {
     </>
   ), [searchTerm, selectedCategory, sortBy, categories, handleSearchChange, handleClearFilters])
 
+  // Optimized loading state with skeleton
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <LoadingSpinner text="Loading products..." fullScreen />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="animate-pulse">
+            {/* Hero skeleton */}
+            <div className="h-40 bg-gray-200 rounded-lg mb-6"></div>
+            
+            {/* Header skeleton */}
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <div className="h-8 bg-gray-200 rounded w-48 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+              </div>
+              <div className="flex gap-2">
+                <div className="h-10 bg-gray-200 rounded w-24"></div>
+                <div className="h-10 bg-gray-200 rounded w-10"></div>
+                <div className="h-10 bg-gray-200 rounded w-10"></div>
+              </div>
+            </div>
+            
+            {/* Products grid skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="hidden lg:block">
+                <div className="h-80 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="lg:col-span-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

@@ -44,18 +44,59 @@ export default function ResetCallback() {
           }
         }
         
-        // Manual parsing fallback for older Supabase versions or edge cases
+        // Check for new token_hash format (PKCE flow)
+        const searchUrlParams = new URLSearchParams(window.location.search)
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        
+        const tokenHash = searchUrlParams.get('token_hash') || hashParams.get('token_hash')
+        const type = searchUrlParams.get('type') || hashParams.get('type')
+        
+        // Handle PKCE flow with token_hash
+        if (tokenHash && type === 'recovery') {
+          console.log('Attempting PKCE password reset with token_hash')
+          try {
+            const { data, error } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: 'recovery'
+            })
+            
+            if (error) {
+              console.error('Failed to verify OTP with token_hash:', error)
+              if (error.message.includes('expired')) {
+                setError('Password reset link has expired. Please request a new reset link.')
+              } else if (error.message.includes('invalid')) {
+                setError('Password reset link is invalid. Please request a new reset link.')
+              } else {
+                setError(`Password reset failed: ${error.message}`)
+              }
+              setIsProcessing(false)
+              return
+            }
+            
+            if (data.session) {
+              console.log('PKCE password reset session established successfully')
+              setIsProcessing(false)
+              setProcessingComplete(true)
+              setTimeout(() => {
+                setShowProfileDialog(true)
+              }, 800)
+              // Clear the URL to prevent re-processing
+              window.history.replaceState({}, document.title, window.location.pathname)
+              return
+            }
+          } catch (tokenError) {
+            console.error('PKCE token verification failed:', tokenError)
+          }
+        }
+        
+        // Manual parsing fallback for older Supabase versions or edge cases
         let accessToken = hashParams.get('access_token')
         let refreshToken = hashParams.get('refresh_token')
-        let type = hashParams.get('type')
         
-        // Fallback to search parameters
-        if (!accessToken || !refreshToken || !type) {
-          const searchParams = new URLSearchParams(window.location.search)
-          accessToken = accessToken || searchParams.get('access_token')
-          refreshToken = refreshToken || searchParams.get('refresh_token')
-          type = type || searchParams.get('type')
+        // Fallback to search parameters for legacy format
+        if (!accessToken || !refreshToken) {
+          accessToken = accessToken || searchUrlParams.get('access_token')
+          refreshToken = refreshToken || searchUrlParams.get('refresh_token')
         }
         
         console.log('Reset callback - URL analysis:', {
@@ -76,7 +117,17 @@ export default function ResetCallback() {
           
           if (error) {
             console.error('Failed to set session from reset tokens:', error)
-            setError('Failed to complete password reset. Please try again.')
+            
+            // Provide specific error messages based on error type
+            if (error.message.includes('expired')) {
+              setError('Password reset link has expired. Please request a new reset link.')
+            } else if (error.message.includes('invalid') || error.message.includes('JWT')) {
+              setError('Password reset link is invalid or malformed. Please request a new reset link.')
+            } else if (error.message.includes('used')) {
+              setError('Password reset link has already been used. Please request a new reset link.')
+            } else {
+              setError(`Password reset failed: ${error.message}. Please try requesting a new reset link.`)
+            }
             setIsProcessing(false)
             return
           }

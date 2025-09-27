@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     // If the order is already marked as paid, avoid charging again
-    if ((order as any).payment_status === 'paid') {
+    if ((order as Record<string, unknown>).payment_status === 'paid') {
       return NextResponse.json({ error: 'Order is already paid' }, { status: 409 })
     }
 

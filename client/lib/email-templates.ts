@@ -102,6 +102,8 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
     <meta name="format-detection" content="date=no">
     <meta name="format-detection" content="address=no">
     <meta name="format-detection" content="email=no">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     ${previewText ? `<meta name="description" content="${previewText}">`  : ''}
     <title>TISCO Email - ${templateType?.replace('_', ' ').toUpperCase() || 'NOTIFICATION'}</title>
     <!--[if mso]>
@@ -170,22 +172,96 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
             .btn-primary, .btn-secondary { width: 100% !important; display: block !important; }
         }
         
-        /* Dark Mode Support */
+        /* Dark Mode Support - Comprehensive Email Client Compatibility */
         @media (prefers-color-scheme: dark) {
-            .dark-bg { background-color: #1f2937 !important; }
+            /* Main containers */
+            .email-body { background-color: #111827 !important; }
+            .email-container { background-color: #1f2937 !important; border: 1px solid #374151 !important; }
+            .content-area { background-color: #1f2937 !important; }
+            
+            /* Text colors - Universal dark mode text */
+            body, p, td, th, div, span, li { color: #f9fafb !important; }
             .dark-text { color: #f9fafb !important; }
+            .dark-text-secondary { color: #d1d5db !important; }
+            .dark-text-muted { color: #9ca3af !important; }
+            
+            /* Headers and titles */
+            h1, h2, h3, h4, h5, h6, .heading-1, .heading-2, .heading-3 { color: #f9fafb !important; }
+            
+            /* Cards and sections - Universal background fixes */
+            table[style*="background"] { background-color: #374151 !important; }
+            .card-bg { background-color: #374151 !important; border-color: #4b5563 !important; }
+            .card-bg-light { background-color: #2d3748 !important; border-color: #4a5568 !important; }
+            
+            /* Specific background overrides for common patterns */
+            table[style*="#f0f9ff"], table[style*="#e0f2fe"], table[style*="#ecfdf5"], 
+            table[style*="#d1fae5"], table[style*="#fef3c7"], table[style*="#f9fafb"],
+            table[style*="#ffffff"], table[style*="white"] { 
+                background-color: #374151 !important; 
+                border-color: #4b5563 !important; 
+            }
+            
+            /* Text color overrides for specific color classes */
+            td[style*="#374151"], td[style*="#6b7280"], td[style*="#111827"],
+            p[style*="#374151"], p[style*="#6b7280"], p[style*="#111827"] { 
+                color: #f9fafb !important; 
+            }
+            
+            td[style*="#0c4a6e"], td[style*="#065f46"], td[style*="#92400e"],
+            p[style*="#0c4a6e"], p[style*="#065f46"], p[style*="#92400e"] { 
+                color: #d1d5db !important; 
+            }
+            
+            /* Buttons - ensure they remain visible */
+            .btn-primary { 
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+                color: #ffffff !important;
+            }
+            .btn-secondary { 
+                background-color: #374151 !important; 
+                border-color: #4b5563 !important; 
+                color: #f9fafb !important; 
+            }
+            
+            /* Links */
+            a { color: #60a5fa !important; }
+            a[style*="#2563eb"] { color: #60a5fa !important; }
+            a[style*="#059669"] { color: #34d399 !important; }
+            
+            /* Footer */
+            .footer-bg { background-color: #111827 !important; border-color: #374151 !important; }
+        }
+        
+        /* Force dark mode styles for email clients that don't support prefers-color-scheme */
+        /* Outlook.com, Gmail, Apple Mail dark mode support */
+        [data-ogsc] .email-body, [data-ogsb] .email-body { background-color: #111827 !important; }
+        [data-ogsc] .email-container, [data-ogsb] .email-container { background-color: #1f2937 !important; }
+        [data-ogsc] .content-area, [data-ogsb] .content-area { background-color: #1f2937 !important; }
+        [data-ogsc] h1, [data-ogsc] h2, [data-ogsc] h3, [data-ogsc] h4,
+        [data-ogsb] h1, [data-ogsb] h2, [data-ogsb] h3, [data-ogsb] h4 { color: #f9fafb !important; }
+        [data-ogsc] .dark-text, [data-ogsb] .dark-text { color: #f9fafb !important; }
+        [data-ogsc] .card-bg, [data-ogsb] .card-bg { background-color: #374151 !important; }
+        
+        /* Gmail specific dark mode */
+        u + .body .email-body { background-color: #111827 !important; }
+        u + .body .email-container { background-color: #1f2937 !important; }
+        
+        /* Apple Mail dark mode */
+        @media (prefers-color-scheme: dark) and (-webkit-min-device-pixel-ratio: 0) {
+            .email-body { background-color: #111827 !important; }
+            .email-container { background-color: #1f2937 !important; }
         }
     </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';">
+<body class="email-body" style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';">
     <!-- Hidden preheader text -->
     ${previewText ? `<div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; color: #f8fafc; mso-hide: all;">${previewText}</div>` : ''}
     
     <!-- Main Container -->
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-body" style="background-color: #f8fafc;">
         <tr>
             <td align="center" style="padding: 20px 10px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05); overflow: hidden;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05); overflow: hidden;">
                     <!-- Header -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); padding: 40px 32px; position: relative; overflow: hidden;">
@@ -208,18 +284,18 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
                     </tr>
                     <!-- Content -->
                     <tr>
-                        <td style="padding: 40px 32px; background-color: #ffffff;">
+                        <td class="content-area" style="padding: 40px 32px; background-color: #ffffff;">
                             ${content}
                         </td>
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 40px 32px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-top: 1px solid rgba(226, 232, 240, 0.5);">
+                        <td class="footer-bg" style="padding: 40px 32px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-top: 1px solid rgba(226, 232, 240, 0.5);">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td align="center">
-                                        <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
-                                        <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Electronics • Tech service solutions • Rare antiques • Hard-to-find collectibles • Trusted across Tanzania</p>
+                                        <p class="dark-text" style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
+                                        <p class="dark-text-secondary" style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Electronics • Tech service solutions • Rare antiques • Hard-to-find collectibles • Trusted across Tanzania</p>
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
                                             <tr>
                                                 <td style="padding: 0 12px;">
@@ -230,7 +306,7 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
                                                 </td>
                                             </tr>
                                         </table>
-                                        <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
+                                        <p class="dark-text-muted" style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
                                     </td>
                                 </tr>
                             </table>
@@ -260,40 +336,40 @@ export const emailTemplates = {
             <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
               <span style="color: #ffffff; font-size: 36px; line-height: 1;">✓</span>
             </div>
-            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Order Confirmed!</h1>
-            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
-            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Your order is confirmed and we're getting it ready. You'll receive updates as we prepare your tech for delivery.</p>
+            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Order Confirmed!</h1>
+            <p class="text-body dark-text" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Your order is confirmed and we're getting it ready. You'll receive updates as we prepare your tech for delivery.</p>
           </td>
         </tr>
       </table>
 
       <!-- Order Summary Card -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; margin: 32px 0; border: 1px solid #bae6fd;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; margin: 32px 0; border: 1px solid #bae6fd;">
         <tr>
           <td style="padding: 28px;">
-            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #0c4a6e;">Order Summary</h2>
+            <h2 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #0c4a6e;">Order Summary</h2>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
-                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">#${data.order_id}</td>
+                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">#${data.order_id}</td>
               </tr>
               <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
-                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.order_date}</td>
+                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.order_date}</td>
               </tr>
               <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Total Amount</td>
-                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right; font-size: 16px;">${data.currency} ${data.total_amount}</td>
+                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Total Amount</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right; font-size: 16px;">${data.currency} ${data.total_amount}</td>
               </tr>
               ${data.payment_method ? `
               <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
-                <td class="text-small" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.payment_method}</td>
+                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.payment_method}</td>
               </tr>` : ''}
               ${data.estimated_delivery ? `
               <tr>
-                <td class="text-small" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid #bae6fd;">Estimated Delivery</td>
-                <td class="text-small" style="padding: 12px 0 8px 0; color: #059669; font-weight: 600; text-align: right; border-top: 1px solid #bae6fd;">${data.estimated_delivery}</td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid #bae6fd;">Estimated Delivery</td>
+                <td class="text-small dark-text" style="padding: 12px 0 8px 0; color: #059669; font-weight: 600; text-align: right; border-top: 1px solid #bae6fd;">${data.estimated_delivery}</td>
               </tr>` : ''}
             </table>
           </td>
@@ -304,19 +380,19 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
         <tr>
           <td>
-            <h3 class="heading-3" style="margin: 0 0 20px 0; color: #111827;">Your Items</h3>
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff;">
+            <h3 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #111827;">Your Items</h3>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff;">
               ${data.items.map((item, index) => `
                 <tr>
                   <td style="padding: 20px; ${index < data.items.length - 1 ? 'border-bottom: 1px solid #f3f4f6;' : ''}">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td style="vertical-align: top; width: 70%;">
-                          <p class="text-body" style="margin: 0 0 4px 0; font-weight: 600; color: #111827;">${item.name}</p>
-                          <p class="text-small" style="margin: 0; color: #6b7280;">Quantity: ${item.quantity}</p>
+                          <p class="text-body dark-text" style="margin: 0 0 4px 0; font-weight: 600; color: #111827;">${item.name}</p>
+                          <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280;">Quantity: ${item.quantity}</p>
                         </td>
                         <td style="vertical-align: top; text-align: right;">
-                          <p class="text-body" style="margin: 0; font-weight: 600; color: #111827;">${data.currency} ${item.price}</p>
+                          <p class="text-body dark-text" style="margin: 0; font-weight: 600; color: #111827;">${data.currency} ${item.price}</p>
                         </td>
                       </tr>
                     </table>
@@ -329,14 +405,14 @@ export const emailTemplates = {
       </table>
 
       <!-- What's Next Section -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
         <tr>
           <td style="padding: 24px;">
-            <h4 class="heading-3" style="margin: 0 0 12px 0; color: #92400e;">What happens next?</h4>
+            <h4 class="heading-3 dark-text" style="margin: 0 0 12px 0; color: #92400e;">What happens next?</h4>
             <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">We're preparing your order for dispatch</li>
-              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">You'll get updates via email as your order progresses</li>
-              <li class="text-small" style="margin-bottom: 0; line-height: 1.5;">Our team will contact you if we need any clarification</li>
+              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.5; color: #92400e;">We're preparing your order for dispatch</li>
+              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.5; color: #92400e;">You'll get updates via email as your order progresses</li>
+              <li class="text-small dark-text-secondary" style="margin-bottom: 0; line-height: 1.5; color: #92400e;">Our team will contact you if we need any clarification</li>
             </ul>
           </td>
         </tr>
@@ -362,11 +438,11 @@ export const emailTemplates = {
 
       ${data.shipping_address ? `
       <!-- Shipping Info -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="margin: 32px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280;">
         <tr>
           <td>
-            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Delivery Address</p>
-            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">${data.shipping_address}</p>
+            <p class="text-small dark-text" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Delivery Address</p>
+            <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.5;">${data.shipping_address}</p>
           </td>
         </tr>
       </table>` : ''}
@@ -1198,7 +1274,7 @@ export const emailTemplates = {
     
     const content = `
       <!-- Priority Banner -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="margin-bottom: 24px;">
         <tr>
           <td style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 8px; padding: 16px;">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -1209,7 +1285,7 @@ export const emailTemplates = {
                   </div>
                 </td>
                 <td style="vertical-align: middle; padding-left: 12px;">
-                  <p style="margin: 0; color: ${config.color}; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${config.label} • ${priority.toUpperCase()} PRIORITY</p>
+                  <p class="dark-text" style="margin: 0; color: ${config.color}; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${config.label} • ${priority.toUpperCase()} PRIORITY</p>
                 </td>
               </tr>
             </table>
@@ -1221,14 +1297,14 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
           <td>
-            <h1 class="heading-1" style="margin: 0 0 24px 0; color: #111827; font-size: 28px; line-height: 1.2; font-weight: 700;">
+            <h1 class="heading-1 dark-text" style="margin: 0 0 24px 0; color: #111827; font-size: 28px; line-height: 1.2; font-weight: 700;">
               ${data.title}
             </h1>
             
-            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-              <div style="color: #374151; font-size: 16px; line-height: 1.7;">
+            <div class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+              <div class="dark-text" style="color: #374151; font-size: 16px; line-height: 1.7;">
                 ${data.message.split('\n').map(paragraph => 
-                  paragraph.trim() ? `<p style="margin: 0 0 16px 0;">${paragraph}</p>` : '<br>'
+                  paragraph.trim() ? `<p class="dark-text" style="margin: 0 0 16px 0;">${paragraph}</p>` : '<br>'
                 ).join('')}
               </div>
             </div>
@@ -1253,11 +1329,11 @@ export const emailTemplates = {
       </table>` : ''}
 
       <!-- Professional Note -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
         <tr>
           <td style="padding: 20px;">
-            <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
-            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
+            <p class="dark-text" style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
+            <p class="dark-text-secondary" style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
           </td>
         </tr>
       </table>
@@ -1266,24 +1342,24 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
         <tr>
           <td style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
-            <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
+            <h3 class="dark-text" style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
+                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
                     <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">+255 748 624 684</a>
                   </div>
                 </td>
                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
+                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
                     <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">info@tiscomarket.store</a>
                   </div>
                 </td>
                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
+                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
                     <a href="https://tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">tiscomarket.store</a>
                   </div>
                 </td>
@@ -1296,8 +1372,8 @@ export const emailTemplates = {
       <!-- Timestamp -->
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
         <tr>
-          <td style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
-            <p style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
+          <td class="card-bg-light" style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
+            <p class="dark-text-muted" style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
               weekday: 'long', 
               year: 'numeric', 
               month: 'long', 

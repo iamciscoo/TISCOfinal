@@ -1,12 +1,19 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { type User, type Session } from '@supabase/supabase-js'
 
-// Create Supabase client for browser usage
-export const createClient = () =>
-  createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+// Singleton browser client to prevent multiple GoTrueClient instances
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
+
+// Create Supabase client for browser usage (singleton pattern)
+export const createClient = () => {
+  if (!browserClient) {
+    browserClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
+  return browserClient
+}
 
 // Auth helper functions
 export const supabaseAuth = {

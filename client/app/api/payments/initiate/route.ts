@@ -87,11 +87,11 @@ export async function POST(req: NextRequest) {
     try {
       // Compute a deterministic key from user + normalized payload for fallback
       const od = (order_data || {}) as Record<string, unknown>
-      const itemsRaw = Array.isArray((od as any)?.items) ? (od as any).items as Array<Record<string, unknown>> : []
+      const itemsRaw = Array.isArray(od?.items) ? od.items as Array<Record<string, unknown>> : []
       const items = itemsRaw
         .map((it) => {
-          const pid = String((it as any).product_id || (it as any).productId || (it as any).id || '')
-          const qty = Number((it as any).quantity || 0)
+          const pid = String(it.product_id || it.productId || it.id || '')
+          const qty = Number(it.quantity || 0)
           return { product_id: pid, quantity: qty }
         })
         .filter((it) => it.product_id && it.quantity > 0)

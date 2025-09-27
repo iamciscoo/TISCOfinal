@@ -27,6 +27,12 @@ export function PasswordResetRedirectHandler() {
       hash.includes('type=recovery') ||
       // Search params contain recovery type specifically
       searchParams.get('type') === 'recovery' ||
+      // NEW: Check for Supabase password reset token hash format
+      searchParams.get('token_hash') && searchParams.get('type') === 'recovery' ||
+      hash.includes('token_hash') && hash.includes('type=recovery') ||
+      // NEW: Check for legacy Supabase reset URL format
+      (searchParams.get('access_token') && searchParams.get('refresh_token') && searchParams.get('type') === 'recovery') ||
+      (hash.includes('access_token') && hash.includes('refresh_token') && hash.includes('type=recovery')) ||
       // Password reset specific error scenarios
       (error && error.includes('access_denied') && hash.includes('type=recovery')) ||
       (errorCode && (errorCode.includes('otp_expired') || errorCode.includes('invalid')) && hash.includes('type=recovery')) ||
@@ -35,10 +41,15 @@ export function PasswordResetRedirectHandler() {
     
     // EXCLUDE OAuth flows (these should go to /auth/callback instead)
     const isOAuthFlow = (
-      searchParams.get('code') ||  // OAuth authorization code
-      hash.includes('provider_token') ||  // OAuth provider token
-      searchParams.get('state') ||  // OAuth state parameter
-      (hash.includes('access_token') && !hash.includes('type=recovery'))  // OAuth tokens without recovery type
+      // OAuth authorization code (but not if it's a password reset)
+      (searchParams.get('code') && !searchParams.get('type')) ||
+      // OAuth provider tokens
+      hash.includes('provider_token') ||
+      // OAuth state parameter (but not if it's a password reset)
+      (searchParams.get('state') && !searchParams.get('type')) ||
+      // OAuth access tokens without recovery type
+      (hash.includes('access_token') && !hash.includes('type=recovery') && !searchParams.get('type')) ||
+      (searchParams.get('access_token') && !searchParams.get('type') && !searchParams.get('token_hash'))
     )
     
     if (isPasswordResetFlow && !isOAuthFlow) {
