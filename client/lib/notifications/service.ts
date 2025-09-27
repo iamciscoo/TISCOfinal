@@ -33,7 +33,6 @@ export type NotificationEvent =
   | 'contact_message_received'
   | 'contact_message_replied'
   | 'contact_reply'
-  | 'cart_abandoned'
   | 'password_reset_requested'
   | 'admin_order_created'
 
@@ -85,7 +84,6 @@ class NotificationService {
       contact_message_received: 'admin_notification', // Use admin-styled template
       contact_message_replied: 'contact_reply',
       contact_reply: 'contact_reply',
-      cart_abandoned: 'cart_abandonment',
       password_reset_requested: 'password_reset',
       admin_order_created: 'admin_notification',
     }
@@ -338,8 +336,8 @@ class NotificationService {
   private async notifyAdminsOfNewNotification(record: NotificationRecord): Promise<void> {
     try {
       // Only notify admins for important customer events, not admin events themselves
+      // Note: 'order_created' is handled by dedicated notifyAdminOrderCreated function
       const adminNotificationEvents: NotificationEvent[] = [
-        'order_created',
         'payment_failed', 
         'contact_message_received',
         'booking_created'
@@ -478,7 +476,7 @@ class NotificationService {
             <p style="margin: 0.5rem 0 0 0;">
                 <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none;">info@tiscomarket.store</a> | 
                 <a href="tel:+255748624684" style="color: #2563eb; text-decoration: none;">+255 748 624 684</a> | 
-                <a href="http://localhost:3001/admin" style="color: #2563eb; text-decoration: none;">Admin Panel</a>
+                <a href="https://admin.tiscomarket.store" style="color: #2563eb; text-decoration: none;">Admin Panel</a>
             </p>
             <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #64748b;">
                 This is an automated administrative notification. Please do not reply to this email.
@@ -519,7 +517,7 @@ class NotificationService {
   private getAdminNotificationPriority(event: NotificationEvent): 'low' | 'medium' | 'high' | 'urgent' {
     const highPriorityEvents: NotificationEvent[] = ['payment_failed', 'order_status_update', 'contact_reply']
     const urgentEvents: NotificationEvent[] = ['payment_failed']
-    const lowPriorityEvents: NotificationEvent[] = ['user_registered', 'cart_abandoned']
+    const lowPriorityEvents: NotificationEvent[] = ['user_registered']
     
     if (urgentEvents.includes(event)) return 'urgent'
     if (highPriorityEvents.includes(event)) return 'high'
@@ -542,7 +540,6 @@ class NotificationService {
       contact_message_received: 'Contact Message Received',
       contact_message_replied: 'Contact Message Replied',
       contact_reply: 'Contact Reply',
-      cart_abandoned: 'Cart Abandoned',
       password_reset_requested: 'Password Reset Requested',
       admin_order_created: 'Admin Order Created'
     }
@@ -602,13 +599,15 @@ class NotificationService {
 
   // Get action URL for admin notifications (if applicable)
   private getActionUrl(record: NotificationRecord): string | undefined {
-    // You can customize these URLs based on your admin panel structure
+    // Production admin panel URLs
+    const adminBaseUrl = 'https://admin.tiscomarket.store'
+    
     if (record.event === 'order_created' || record.event === 'order_confirmation' || record.event === 'order_status_changed' || record.event === 'order_status_update') {
-      return 'http://localhost:3001/orders' // Admin orders page
+      return `${adminBaseUrl}/orders` // Admin orders page
     } else if (record.event === 'contact_message_replied' || record.event === 'contact_reply') {
-      return 'http://localhost:3001/messages' // Admin messages page
+      return `${adminBaseUrl}/messages` // Admin messages page
     } else if (record.event === 'payment_failed') {
-      return 'http://localhost:3001/orders?status=payment_failed' // Failed payments
+      return `${adminBaseUrl}/orders?status=payment_failed` // Failed payments
     }
     return undefined
   }
@@ -779,7 +778,7 @@ export async function notifyAdminOrderCreated(orderData: {
             ...orderData,
             title: 'New Order Created',
             message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-            action_url: `https://www.tiscomarket.store/admin/orders/${orderData.order_id}`
+            action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
         })
@@ -799,7 +798,7 @@ export async function notifyAdminOrderCreated(orderData: {
             ...orderData,
             title: 'New Order Created',
             message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-            action_url: `https://www.tiscomarket.store/admin/orders/${orderData.order_id}`
+            action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
         })
@@ -817,7 +816,7 @@ export async function notifyAdminOrderCreated(orderData: {
           ...orderData,
           title: 'New Order Created',
           message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-          action_url: `https://www.tiscomarket.store/admin/orders/${orderData.order_id}`
+          action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
         },
         priority: 'high'
       })
@@ -830,10 +829,15 @@ export async function notifyAdminOrderCreated(orderData: {
     const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
     const notifications = adminEmails.map(email => 
       notificationService.sendNotification({
-        event: 'order_created',
+        event: 'admin_order_created',
         recipient_email: email.trim(),
         recipient_name: 'Admin',
-        data: orderData,
+        data: {
+          ...orderData,
+          title: 'New Order Created',
+          message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+          action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+        },
         priority: 'high'
       })
     )

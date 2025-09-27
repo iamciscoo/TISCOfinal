@@ -137,21 +137,29 @@ export default function ReviewsManagement() {
     },
     {
       id: 'productName',
-      accessorFn: (row) => row.product?.name ?? '',
+      accessorFn: (row) => {
+        // Handle both products (plural) and product (singular) naming
+        const product = (row as any).products || (row as any).product
+        return product?.name ?? ''
+      },
       header: 'Product',
-      cell: ({ row }) => (
-        <div className="flex items-center space-x-3">
-          <img
-            src={row.original.product.image_url || '/circular.svg'}
-            alt={row.original.product.name}
-            className="w-10 h-10 rounded object-cover"
-          />
-          <div>
-            <p className="font-medium">{row.original.product.name}</p>
-            <p className="text-sm text-gray-600">TZS {row.original.product.price}</p>
+      cell: ({ row }) => {
+        // Handle both products (plural) and product (singular) naming
+        const product = (row.original as any).products || (row.original as any).product
+        return (
+          <div className="flex items-center space-x-3">
+            <img
+              src={product?.image_url || '/circular.svg'}
+              alt={product?.name || 'Product'}
+              className="w-10 h-10 rounded object-cover"
+            />
+            <div>
+              <p className="font-medium">{product?.name || 'Unknown Product'}</p>
+              <p className="text-sm text-gray-600">TZS {product?.price || 0}</p>
+            </div>
           </div>
-        </div>
-      )
+        )
+      }
     },
     {
       id: 'userEmail',

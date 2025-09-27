@@ -26,10 +26,22 @@ function baseTemplate(content: string, previewText: string = 'TISCOマーケッ�
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);border-collapse:collapse;">
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
-              <img src="https://tiscomarket.store/logo-email.svg" alt="TISCOマーケット" width="48" height="48" style="display:block;border:0;outline:none;text-decoration:none;border-radius:12px;margin:0 auto 12px auto;" />
-              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:bold;letter-spacing:-0.5px;">TISCOマーケット</h1>
-              <p style="margin:8px 0 0 0;color:#e2e8f0;font-size:14px;">Your trusted technology partner in Tanzania</p>
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); padding: 40px 32px; border-radius: 12px 12px 0 0; position: relative; overflow: hidden;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td width="100" style="vertical-align: middle; padding-right: 20px;">
+                    <!-- Modern Futuristic Logo -->
+                    <div style="width: 80px; height: 80px; display: table-cell; vertical-align: middle; text-align: center; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border-radius: 50%; backdrop-filter: blur(10px);">
+                      <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 900; color: #ffffff; font-size: 16px; line-height: 18px; margin: 0; padding: 0; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">TISCO</div>
+                      <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 600; color: #e2e8f0; font-size: 11px; line-height: 13px; margin: 3px 0 0 0; padding: 0; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">マーケット</div>
+                    </div>
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <h1 style="margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 0.5px;">TISCOマーケット</h1>
+                    <p style="margin: 12px 0 0 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; color: #cbd5e1; line-height: 1.4; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Electronics • Tech Service Solutions • Rare Antiques • Hard-to-Find Collectibles • Fast Delivery</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
@@ -56,94 +68,235 @@ function baseTemplate(content: string, previewText: string = 'TISCOマーケッ�
 </html>`
 }
 
-function renderAdminNotificationHtml(input: { title: string; message: string; action_url?: string; recipient_email?: string; recipient_name?: string; event?: string }) {
-  const eventName = input.event || 'notification'
-  const timestamp = new Date().toLocaleString('en-TZ', { timeZone: 'Africa/Dar_es_Salaam' })
+function renderAdminNotificationHtml(input: { title: string; message: string; action_url?: string; recipient_email?: string; recipient_name?: string; event?: string; priority?: string }) {
+  const priority = (input.priority || 'medium') as 'low' | 'medium' | 'high' | 'urgent'
   const recipientName = input.recipient_name || input.recipient_email?.split('@')[0] || 'User'
   
-  const content = `
-<!DOCTYPE html>
+  // Priority configurations with enhanced styling
+  const priorityConfig = {
+    low: { 
+      color: '#16a34a', 
+      bgColor: '#f0fdf4', 
+      borderColor: '#bbf7d0',
+      icon: 'ℹ️',
+      label: 'Information'
+    },
+    medium: { 
+      color: '#2563eb', 
+      bgColor: '#eff6ff', 
+      borderColor: '#bfdbfe',
+      icon: '📋',
+      label: 'Notice'
+    },
+    high: { 
+      color: '#ea580c', 
+      bgColor: '#fff7ed', 
+      borderColor: '#fed7aa',
+      icon: '⚠️',
+      label: 'Important'
+    },
+    urgent: { 
+      color: '#dc2626', 
+      bgColor: '#fef2f2', 
+      borderColor: '#fecaca',
+      icon: '🚨',
+      label: 'URGENT'
+    }
+  }
+  
+  const config = priorityConfig[priority]
+  const formattedMessage = input.message.split('\n').map(paragraph => 
+    paragraph.trim() ? `<p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.7;">${paragraph}</p>` : '<br>'
+  ).join('')
+  
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>TISCO Market - ${input.title || 'Notification'}</title>
+    <meta name="format-detection" content="telephone=no">
+    <title>${input.title}</title>
     <style>
-        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
         .ExternalClass { width: 100%; }
-        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+        .btn-primary { 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            border-radius: 8px !important; padding: 16px 32px !important; color: #ffffff !important;
+            text-decoration: none !important; font-weight: 600 !important; font-size: 16px !important;
+        }
         @media only screen and (max-width: 600px) {
             .mobile-center { text-align: center !important; }
             .mobile-full { width: 100% !important; }
+            .mobile-padding { padding: 16px !important; }
         }
     </style>
 </head>
-<body style="margin: 0; padding: 20px; background-color: #f8fafc;">
-    
-    <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
-        <div style="background: #1e293b; padding: 2rem; text-align: left;">
-            <table role="presentation" width="100%" style="border-collapse:collapse;">
-                <tr>
-                    <td style="width:64px;padding-right:12px;vertical-align:middle;text-align:left;">
-                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iNTAwIiB6b29tQW5kUGFuPSJtYWduaWZ5IiB2aWV3Qm94PSIwIDAgMzc1IDM3NC45OTk5OTEiIGhlaWdodD0iNTAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0IiB2ZXJzaW9uPSIxLjIiPjxkZWZzLz4NCjxnIGlkPSJjN2E0ZGJhMWQzIj4NCjxnIG1hc2s9InVybCgjYmFiY2ZkNTZkZSkiIHRyYW5zZm9ybT0ibWF0cml4KDAuMzY4NDA4LDAsMCwwLjM2ODQwOCwtMC45NDUyMzYsLTEuODkwNDY4KSI+DQo8aW1hZ2Ugd2lkdGg9IjEwMjQiIHhsaW5rOmhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQkFBQUFBUUNBSUFBQUR3Zjd6VUFBQUFCbUpMUjBRQS93RC9BUCtndmFlVEFBQWdBRWxFUVZSNG5PeWRlYndjVlpuM24rZFU5YjAzKzU2UWhaQ1F6WkNRRUNDRWZTZUpSQktZVVJZZFFRUkJBamlNaXFEREFDSXlvSTZqZzdLRkFWOUdsR0ZnM0ZISGpFSEJESTZYUVNWQ0lJaEFnSVNZQlpPUW05dGRkWjczaitxcXJ1WFUwbmZyZTI5KzM4OG51ZDFWWjNuT3FkUGR6L09jNTV4REJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFDIV==" alt="TISCO Logo" width="64" height="64" style="display: block; width: 64px; height: 64px; margin: 0; padding: 0; border: 0; border-radius: 8px;">
-                    </td>
-                    <td style="vertical-align:middle;text-align:left;">
-                        <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット</h1>
-                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">${input.title || 'Notification'}</p>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        
-        <div style="padding: 2rem; background: white; margin: 1rem;">
-            <h2 style="color: #1e293b; margin-bottom: 1rem;">Hello ${recipientName},</h2>
-            <p style="color: #374151; line-height: 1.6;">You have received this notification from TISCO Market. Please review the information below.</p>
-            
-            <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 1.5rem; margin: 1.5rem 0;">
-                <h3 style="color: #15803d; margin: 0 0 1rem 0; font-size: 1.1rem;">📩 ${input.title || 'Notification'}</h3>
-                <div style="color: #374151; white-space: pre-wrap; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6;">
-                    ${input.message}
-                </div>
-            </div>
-            
-            ${input.action_url ? `
-            <div style="text-align: left; margin: 2rem 0;">
-                <a href="${input.action_url}" style="padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">
-                    Take Action
-                </a>
-            </div>
-            ` : ''}
-            
-            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-                <h3 style="color: #1e293b; margin-bottom: 1rem;">Notification Details</h3>
-                <p><strong>Sent to:</strong> ${input.recipient_email}</p>
-                <p><strong>Date & Time:</strong> ${timestamp} EAT</p>
-                <p><strong>Message Type:</strong> ${eventName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
-            </div>
-        </div>
-        
-        <div style="background: #f1f5f9; padding: 1rem; margin: 1rem 0; font-size: 14px; color: #374151; text-align: left; border-radius: 4px;">
-            <p style="margin: 0; font-weight: 600;">TISCOマーケット</p>
-            <p style="margin: 0.5rem 0 0 0;">
-                <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none;">info@tiscomarket.store</a> | 
-                <a href="tel:+255748624684" style="color: #2563eb; text-decoration: none;">+255 748 624 684</a>
-            </p>
-            <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #64748b;">
-                Questions? Contact our support team. We're here to help!
-            </p>
-        </div>
-    </div>
-    
-    <div style="max-width: 600px; margin: 0 auto; text-align: center; color: #64748b; font-size: 12px; padding: 1rem;">
-        TISCOマーケット | info@tiscomarket.store | +255748624684
-    </div>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); padding: 40px 32px; border-radius: 16px 16px 0 0; position: relative; overflow: hidden;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td width="100" style="vertical-align: middle; padding-right: 20px;">
+                                        <!-- Modern Futuristic Logo -->
+                                        <div style="width: 80px; height: 80px; display: table-cell; vertical-align: middle; text-align: center; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border-radius: 50%; backdrop-filter: blur(10px);">
+                                            <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 900; color: #ffffff; font-size: 16px; line-height: 18px; margin: 0; padding: 0; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">TISCO</div>
+                                            <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 600; color: #e2e8f0; font-size: 11px; line-height: 13px; margin: 3px 0 0 0; padding: 0; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">マーケット</div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <h1 style="margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 0.5px;">TISCOマーケット</h1>
+                                        <p style="margin: 12px 0 0 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; color: #cbd5e1; line-height: 1.4; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Electronics • Tech Service Solutions • Rare Antiques • Hard-to-Find Collectibles • Trusted Tanzania</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 32px; background-color: #ffffff;">
+                            <!-- Priority Banner -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                                <tr>
+                                    <td style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 8px; padding: 16px;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: middle; width: 40px;">
+                                                    <div style="width: 32px; height: 32px; background: ${config.color}; border-radius: 50%; text-align: center; line-height: 32px;">
+                                                        <span style="font-size: 16px;">${config.icon}</span>
+                                                    </div>
+                                                </td>
+                                                <td style="vertical-align: middle; padding-left: 12px;">
+                                                    <p style="margin: 0; color: ${config.color}; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${config.label} • ${priority.toUpperCase()} PRIORITY</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Main Content -->
+                            <h1 style="margin: 0 0 24px 0; color: #111827; font-size: 28px; line-height: 1.2; font-weight: 700;">
+                                ${input.title}
+                            </h1>
+                            
+                            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                                <div style="color: #374151; font-size: 16px; line-height: 1.7;">
+                                    ${formattedMessage}
+                                </div>
+                            </div>
+
+                            ${input.action_url ? `
+                            <!-- Action Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+                                                    <a href="${input.action_url}" class="btn-primary" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Take Action</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>` : ''}
+
+                            <!-- Professional Note -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
+                                        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Contact Information -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+                                <tr>
+                                    <td style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                                        <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="width: 33.33%; text-align: center; padding: 12px;">
+                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
+                                                        <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">+255 748 624 684</a>
+                                                    </div>
+                                                </td>
+                                                <td style="width: 33.33%; text-align: center; padding: 12px;">
+                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
+                                                        <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">info@tiscomarket.store</a>
+                                                    </div>
+                                                </td>
+                                                <td style="width: 33.33%; text-align: center; padding: 12px;">
+                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
+                                                        <a href="https://tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">tiscomarket.store</a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Timestamp -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+                                <tr>
+                                    <td style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
+                                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
+                                          weekday: 'long', 
+                                          year: 'numeric', 
+                                          month: 'long', 
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 32px; background-color: #f8fafc; border-radius: 0 0 16px 16px; border-top: 1px solid #e2e8f0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
+                                        <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Your trusted technology partner in Tanzania</p>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="padding: 0 12px;">
+                                                    <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">info@tiscomarket.store</a>
+                                                </td>
+                                                <td style="padding: 0 12px; border-left: 1px solid #e2e8f0;">
+                                                    <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-size: 14px; font-weight: 500;">+255 748 624 684</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>`
-  
-  return content
 }
 
 async function getSendPulseAccessToken(clientId: string, clientSecret: string): Promise<string> {
@@ -344,7 +497,8 @@ export async function POST(req: NextRequest) {
       action_url: data?.action_url,
       recipient_email: recipient_email,
       recipient_name: recipient_name,
-      event: event
+      event: event,
+      priority: priority
     })
 
     let insertedId: string | null = null
@@ -388,40 +542,8 @@ export async function POST(req: NextRequest) {
           .eq('id', insertedId)
       }
 
-      // Also send to all admin recipients from notification_recipients table
-      try {
-        if (sb) {
-          const { data: recipients } = await sb
-            .from('notification_recipients')
-            .select('email, name, notification_categories')
-            .eq('is_active', true)
-
-          if (recipients && recipients.length > 0) {
-            // Filter recipients based on their notification category preferences
-            const relevantRecipients = recipients.filter((recipient: any) => {
-              const categories = recipient.notification_categories || ['all']
-              return categories.includes('all') || categories.includes(event)
-            })
-            const adminNotifications = relevantRecipients.map(async (recipient: any) => {
-              try {
-                await sendViaSendPulse({
-                  to: recipient.email,
-                  subject: `Admin Alert: ${subject}`,
-                  html: renderAdminNotificationHtml({
-                    title: `New ${event} Notification Sent`,
-                    message: `A ${event} notification was sent to ${recipient_email}.\n\nSubject: ${subject}\n\nRecipient: ${recipient_name || recipient_email}\nPriority: ${priority}`
-                  })
-                })
-              } catch (e) {
-                console.warn(`Failed to notify admin ${recipient.email}:`, e)
-              }
-            })
-            await Promise.allSettled(adminNotifications)
-          }
-        }
-      } catch (adminErr) {
-        console.warn('Failed to notify admin recipients:', adminErr)
-      }
+      // Note: Admin notifications for order events are handled by the dedicated 
+      // notifyAdminOrderCreated function to avoid duplicates
     } catch (sendErr: any) {
       // Update status to failed if we have a record
       if (sb && insertedId) {

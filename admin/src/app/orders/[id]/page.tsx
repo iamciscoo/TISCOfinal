@@ -155,20 +155,31 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
                     <TableRow key={String(it.id)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          {it.product?.image_url ? (
-                            <img src={it.product.image_url} alt={it.product.name} className="w-12 h-12 object-cover rounded" />
-                          ) : (
-                            <div className="w-12 h-12 bg-muted rounded" />
-                          )}
-                          <div>
-                            <div className="font-medium">{it.product?.name || `Product ${String(it.product_id)}`}</div>
-                            <div className="text-xs text-muted-foreground">ID: {String(it.product_id)}</div>
-                          </div>
+                          {(() => {
+                            // Handle both products (plural) and product (singular) to be defensive
+                            const product = (it as any).products || (it as any).product
+                            const imageUrl = product?.image_url
+                            const productName = product?.name
+                            
+                            return (
+                              <>
+                                {imageUrl ? (
+                                  <img src={imageUrl} alt={productName || 'Product'} className="w-12 h-12 object-cover rounded" />
+                                ) : (
+                                  <div className="w-12 h-12 bg-muted rounded" />
+                                )}
+                                <div>
+                                  <div className="font-medium">{productName || `Product ${String(it.product_id)}`}</div>
+                                  <div className="text-xs text-muted-foreground">ID: {String(it.product_id)}</div>
+                                </div>
+                              </>
+                            )
+                          })()}
                         </div>
                       </TableCell>
-                      <TableCell>{formatTZS((it as any).unit_price)}</TableCell>
+                      <TableCell>{formatTZS((it as any).price)}</TableCell>
                       <TableCell>{it.quantity}</TableCell>
-                      <TableCell>{formatTZS((it as any).total_price)}</TableCell>
+                      <TableCell>{formatTZS(((it as any).price || 0) * (it.quantity || 0))}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

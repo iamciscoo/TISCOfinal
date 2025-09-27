@@ -110,11 +110,11 @@ export interface OrderItem {
   order_id: string | number
   product_id: string | number
   quantity: number
-  unit_price: number
-  total_price: number
+  price: number  // Database uses 'price' not 'unit_price'
   created_at: string
-  // Relations
+  // Relations - handle both naming conventions
   product?: Product
+  products?: Product
 }
 
 export interface Review {

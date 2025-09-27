@@ -452,55 +452,12 @@ async function handlePaymentSuccess(transaction: TransactionRow, webhookData: We
         })
         console.log('Payment success notification sent successfully')
 
-        // Send order confirmation email to customer
-        const { notifyOrderCreated } = await import('@/lib/notifications/service')
-        const { data: orderItems, error: itemsError } = await supabase
-          .from('order_items')
-          .select(`
-            quantity,
-            price,
-            products(name)
-          `)
-          .eq('order_id', transaction.order_id)
-        
-        console.log('Order items fetch:', { count: orderItems?.length || 0, error: itemsError })
-        
-        const items = (orderItems || []).map((item: Record<string, unknown>) => ({
-          name: String((item.products as Record<string, unknown>)?.name || 'Product'),
-          quantity: Number(item.quantity) || 0,
-          price: (Number(item.price) || 0).toString()
-        }))
+        // Note: Customer already received order confirmation when order was created
+        // Payment success notification is sufficient here
 
-        await notifyOrderCreated({
-          order_id: transaction.order_id,
-          customer_email: userData.email,
-          customer_name: customerName,
-          total_amount: orderData.total_amount?.toString() || '0',
-          currency: orderData.currency || 'TZS',
-          items,
-          order_date: new Date().toLocaleDateString(),
-          payment_method: 'Mobile Money',
-          shipping_address: 'Will be contacted for delivery arrangements'
-        })
-        console.log('Order confirmation email sent to customer successfully')
-
-        // Send admin notification for new paid order
-        try {
-          const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
-          await notifyAdminOrderCreated({
-            order_id: transaction.order_id,
-            customer_email: userData.email,
-            customer_name: customerName,
-            total_amount: orderData.total_amount?.toString() || '0',
-            currency: orderData.currency || 'TZS',
-            payment_method: 'Mobile Money',
-            payment_status: 'paid',
-            items_count: items.length
-          })
-          console.log('Admin notification sent for new paid order successfully')
-        } catch (adminError) {
-          console.error('Failed to send admin notification:', adminError)
-        }
+        // Note: For legacy transactions, admin was already notified when order was created
+        // via /api/orders endpoint (e.g., "Pay at Office" orders that get paid later)
+        // No need to send duplicate admin notification on payment success for existing orders
       } else {
         console.error('Missing user data or order data for notifications:', {
           hasUserData: !!userData,
@@ -1083,7 +1040,9 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         })
         console.log('Order confirmation email sent to customer')
 
-        // Send admin notification for new paid order
+        // Send admin notification for mobile payment orders (NEW)
+        // Unlike "pay at office" orders, mobile payment orders are created directly in webhook
+        // so they need admin notifications here
         try {
           const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
           await notifyAdminOrderCreated({
@@ -1093,12 +1052,13 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
             total_amount: total_amount.toString(),
             currency: session.currency,
             payment_method: 'Mobile Money',
-            payment_status: 'paid',
-            items_count: items.length
+            payment_status: 'paid', // Mobile payments are already paid when webhook fires
+            items_count: orderItems.length
           })
-          console.log('Admin notification sent for new mobile order')
-        } catch (adminError) {
-          console.warn('Failed to send admin notification for mobile order:', adminError)
+          console.log('✅ Admin order notification sent for mobile payment')
+        } catch (adminEmailError) {
+          console.error('❌ Failed to send admin order notification for mobile payment:', adminEmailError)
+          // Don't fail the order creation if admin email fails
         }
       }
     } catch (emailError) {

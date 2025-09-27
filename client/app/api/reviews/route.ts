@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const userEmail = user.email || ''
     const userFirstName = user.user_metadata?.first_name || ''
     const userLastName = user.user_metadata?.last_name || ''
-    const userPhone = user.user_metadata?.phone || ''
+    const userPhone = user.user_metadata?.phone || null
     const userAvatar = user.user_metadata?.avatar_url || ''
 
     // Migration safety: if a legacy users row exists without auth_user_id, set it now

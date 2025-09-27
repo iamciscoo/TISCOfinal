@@ -31,7 +31,7 @@ export async function GET() {
 
     // Extract user information from Supabase for profile sync
     const userEmail = user.email || ''
-    const userPhone = user.user_metadata?.phone || ''
+    const userPhone = user.user_metadata?.phone || null
 
     if (!profile) {
       // Normalize names from social metadata

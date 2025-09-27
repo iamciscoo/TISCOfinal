@@ -364,7 +364,13 @@ export async function getOrderById(id: string | number): Promise<Order | null> {
       *,
       order_items(
         *,
-        products(*)
+        products(
+          id,
+          name,
+          image_url,
+          price,
+          description
+        )
       )
     `)
     .eq('id', id)

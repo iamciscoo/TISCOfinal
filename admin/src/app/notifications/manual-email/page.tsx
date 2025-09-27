@@ -28,10 +28,11 @@ import { toast } from 'sonner'
 interface ManualEmailForm {
   recipient_email: string
   recipient_name: string
-  subject: string
+  title: string
   message: string
-  template_type: 'order_reminder' | 'custom' | 'promotional'
-  order_id: string
+  action_url: string
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  template_style: 'default' | 'professional' | 'modern' | 'minimal'
   bypass_timeframe: boolean
 }
 
@@ -57,18 +58,31 @@ interface RecentEmail {
   }>
 }
 
-const EMAIL_TEMPLATES = {
-  order_reminder: {
-    subject: 'Complete Your Order - Special Offer Inside!',
-    message: `We noticed you have an incomplete order. Don't miss out on these great products!\n\nWe've reserved your items for 24 more hours. Complete your purchase now to secure these deals.`
+const NOTIFICATION_TEMPLATES = {
+  order_update: {
+    title: 'Order Status Update',
+    message: `Your recent order has been updated. Please check your account for the latest information about your purchase.\n\nIf you have any questions, our support team is ready to assist you.`,
+    priority: 'medium' as const
+  },
+  account_notice: {
+    title: 'Account Information Notice',
+    message: `We wanted to inform you about an important update to your account.\n\nPlease review the information and take any necessary actions.`,
+    priority: 'medium' as const
   },
   promotional: {
-    subject: 'Exclusive Deal Just for You! 🎉',
-    message: `We have an amazing offer that's perfect for you!\n\nEnjoy special discounts on our latest products. This limited-time offer won't last long.`
+    title: 'Special Offer Just for You',
+    message: `We have an exclusive offer that we think you'll love!\n\nThis limited-time promotion is available for a short period. Don't miss out on these amazing deals.`,
+    priority: 'low' as const
+  },
+  urgent_notice: {
+    title: 'Important Account Notice',
+    message: `This is an urgent notice regarding your account.\n\nPlease review this information immediately and contact our support team if you have any questions.`,
+    priority: 'urgent' as const
   },
   custom: {
-    subject: '',
-    message: ''
+    title: '',
+    message: '',
+    priority: 'medium' as const
   }
 }
 
@@ -76,10 +90,11 @@ export default function ManualEmailPage() {
   const [form, setForm] = useState<ManualEmailForm>({
     recipient_email: '',
     recipient_name: '',
-    subject: '',
+    title: '',
     message: '',
-    template_type: 'custom',
-    order_id: '',
+    action_url: '',
+    priority: 'medium',
+    template_style: 'default',
     bypass_timeframe: false
   })
   
@@ -108,13 +123,13 @@ export default function ManualEmailPage() {
     }
   }
 
-  const handleTemplateChange = (templateType: 'order_reminder' | 'custom' | 'promotional') => {
-    const template = EMAIL_TEMPLATES[templateType]
+  const handleTemplateChange = (templateType: keyof typeof NOTIFICATION_TEMPLATES) => {
+    const template = NOTIFICATION_TEMPLATES[templateType]
     setForm(prev => ({
       ...prev,
-      template_type: templateType,
-      subject: template.subject,
-      message: template.message
+      title: template.title,
+      message: template.message,
+      priority: template.priority
     }))
   }
 
@@ -150,10 +165,11 @@ export default function ManualEmailPage() {
         setForm({
           recipient_email: '',
           recipient_name: '',
-          subject: '',
+          title: '',
           message: '',
-          template_type: 'custom',
-          order_id: '',
+          action_url: '',
+          priority: 'medium',
+          template_style: 'default',
           bypass_timeframe: false
         })
         // Refresh recent emails
@@ -212,21 +228,43 @@ export default function ManualEmailPage() {
             <CardContent className="space-y-6">
               <form onSubmit={handleSendEmail} className="space-y-6">
                 {/* Template Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="template">Email Template</Label>
-                  <Select 
-                    value={form.template_type} 
-                    onValueChange={handleTemplateChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="custom">Custom Message</SelectItem>
-                      <SelectItem value="order_reminder">Order Reminder</SelectItem>
-                      <SelectItem value="promotional">Promotional</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="template">Notification Template</Label>
+                    <Select 
+                      value="custom"
+                      onValueChange={handleTemplateChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select template type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Custom Message</SelectItem>
+                        <SelectItem value="order_update">Order Update</SelectItem>
+                        <SelectItem value="account_notice">Account Notice</SelectItem>
+                        <SelectItem value="promotional">Promotional</SelectItem>
+                        <SelectItem value="urgent_notice">Urgent Notice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="template_style">Template Style</Label>
+                    <Select 
+                      value={form.template_style}
+                      onValueChange={(value) => setForm(prev => ({...prev, template_style: value as any}))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select template style" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="modern">Modern</SelectItem>
+                        <SelectItem value="minimal">Minimal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Recipient Information */}
@@ -254,41 +292,64 @@ export default function ManualEmailPage() {
                   </div>
                 </div>
 
-                {/* Order ID (for order reminders) */}
-                {form.template_type === 'order_reminder' && (
+                {/* Priority and Action URL */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="order_id">Order ID (optional)</Label>
+                    <Label htmlFor="priority">Priority Level</Label>
+                    <Select 
+                      value={form.priority}
+                      onValueChange={(value) => setForm(prev => ({...prev, priority: value as any}))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">🟢 Low Priority</SelectItem>
+                        <SelectItem value="medium">🔵 Medium Priority</SelectItem>
+                        <SelectItem value="high">🟡 High Priority</SelectItem>
+                        <SelectItem value="urgent">🔴 Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="action_url">Action URL (Optional)</Label>
                     <Input
-                      id="order_id"
-                      placeholder="Enter order ID for enhanced template"
-                      value={form.order_id}
-                      onChange={(e) => setForm(prev => ({...prev, order_id: e.target.value}))}
+                      id="action_url"
+                      type="url"
+                      placeholder="https://example.com/action"
+                      value={form.action_url}
+                      onChange={(e) => setForm(prev => ({...prev, action_url: e.target.value}))}
                     />
                   </div>
-                )}
+                </div>
 
                 {/* Email Content */}
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject *</Label>
+                  <Label htmlFor="title">Notification Title *</Label>
                   <Input
-                    id="subject"
-                    placeholder="Email subject"
-                    value={form.subject}
-                    onChange={(e) => setForm(prev => ({...prev, subject: e.target.value}))}
+                    id="title"
+                    placeholder="Notification title"
+                    value={form.title}
+                    onChange={(e) => setForm(prev => ({...prev, title: e.target.value}))}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message">Message Content *</Label>
                   <Textarea
                     id="message"
-                    placeholder="Email message content..."
+                    placeholder="Your notification message content...\n\nSupports multiple paragraphs - separate with line breaks for better formatting."
                     value={form.message}
                     onChange={(e) => setForm(prev => ({...prev, message: e.target.value}))}
-                    rows={6}
+                    rows={8}
                     required
+                    className="resize-y"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Tip: Use line breaks to separate paragraphs. HTML formatting is not needed.
+                  </p>
                 </div>
 
                 {/* One-week restriction warning */}

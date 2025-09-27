@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
       'order_status_update',
       'payment_success',
       'payment_failed',
-      'cart_abandonment',
       'welcome_email',
       'password_reset',
       'delivery_confirmation',

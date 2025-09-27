@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
-import { notifyPaymentSuccess, notifyAdminOrderCreated } from '@/lib/notifications/service'
+import { notifyPaymentSuccess } from '@/lib/notifications/service'
 
 // Add CORS headers for cross-origin requests from admin
 function addCorsHeaders(response: NextResponse) {
@@ -116,22 +116,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       console.warn('Failed to send customer payment success notification:', emailError)
     }
 
-    // Send admin notification for payment confirmation
-    try {
-      await notifyAdminOrderCreated({
-        order_id: id,
-        customer_email: userData.email,
-        customer_name: customerName,
-        total_amount: orderData.total_amount?.toString() || '0',
-        currency: orderData.currency || 'TZS',
-        payment_method: 'Office Payment - Confirmed',
-        payment_status: 'paid',
-        items_count: (orderData.order_items || []).length
-      })
-      console.log('Admin payment confirmation notification sent')
-    } catch (adminError) {
-      console.warn('Failed to send admin notification:', adminError)
-    }
+    // Note: Admin was already notified when order was initially created
+    // This is just a payment status update, no need for duplicate admin notification
 
     // Invalidate caches
     try {

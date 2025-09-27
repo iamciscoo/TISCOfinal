@@ -107,16 +107,6 @@ export async function GET() {
           ]
         }
       },
-      cart_abandonment: {
-        name: 'Cart Abandonment',
-        description: 'Sent when user leaves items in cart',
-        trigger: 'Cart abandoned for 24+ hours',
-        testData: {
-          customer_name: 'Eva Martinez',
-          recipient_email: 'eva@example.com',
-          cart_url: 'https://tiscomarket.store/cart?resume=abc123'
-        }
-      },
       password_reset: {
         name: 'Password Reset',
         description: 'Sent when user requests password reset',

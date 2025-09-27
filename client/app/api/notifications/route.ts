@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { notifyOrderCreated, notifyAdminOrderCreated, notifyBookingCreated, notifyAdminBookingCreated } from '@/lib/notifications/service'
+import { notifyBookingCreated, notifyAdminBookingCreated } from '@/lib/notifications/service'
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,41 +18,11 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'Missing required order data' }, { status: 400 })
         }
         
-        // Send customer notification
-        try {
-          notificationId = await notifyOrderCreated({
-            order_id: data.order_id,
-            customer_email: data.customer_email,
-            customer_name: data.customer_name,
-            total_amount: data.total_amount || '0',
-            currency: data.currency || 'TZS',
-            items: data.items || [],
-            order_date: data.order_date || new Date().toLocaleDateString(),
-            payment_method: data.payment_method || 'Unknown',
-            shipping_address: data.shipping_address || 'Not provided'
-          })
-          console.log('Customer notification sent successfully:', notificationId)
-        } catch (error) {
-          console.error('Failed to send customer notification:', error)
-          notificationId = 'failed-customer-notification'
-        }
-
-        // Send admin notifications
-        try {
-          await notifyAdminOrderCreated({
-            order_id: data.order_id,
-            customer_email: data.customer_email,
-            customer_name: data.customer_name,
-            total_amount: data.total_amount || '0',
-            currency: data.currency || 'TZS',
-            payment_method: data.payment_method || 'Unknown',
-            payment_status: data.payment_status || 'pending',
-            items_count: data.items?.length || 0
-          })
-          console.log('Admin notification sent successfully')
-        } catch (error) {
-          console.error('Failed to send admin notification:', error)
-        }
+        // Note: Customer already received order confirmation during order creation
+        // Admin notifications are handled during order creation
+        // This endpoint should not send duplicate notifications for order events
+        console.log('Order notifications already handled during order creation - skipping duplicates')
+        notificationId = 'skipped-duplicate-order-notification'
 
         break
 
