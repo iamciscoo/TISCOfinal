@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ZenoPayClient } from '@/lib/zenopay'
 import { revalidateTag } from 'next/cache'
 import { getUser } from '@/lib/supabase-server'
+import crypto from 'node:crypto'
 
 function normalizeTzMsisdn(raw: string): string {
   // ZenoPay examples use local format 0XXXXXXXXX (10 digits)
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
       currency = 'TZS',
       provider,
       phone_number,
+      idempotency_key: bodyIdempotencyKey,
     } = await req.json()
 
     if (!order_id || !amount) {
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Verify order ownership and status
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, status, total_amount, user_id')
+      .select('id, status, total_amount, user_id, payment_status')
       .eq('id', order_id)
       .eq('user_id', user.id)
       .single()
@@ -91,6 +93,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         error: 'Order cannot be paid. Current status: ' + order.status 
       }, { status: 400 })
+    }
+
+    // If the order is already marked as paid, avoid charging again
+    if ((order as any).payment_status === 'paid') {
+      return NextResponse.json({ error: 'Order is already paid' }, { status: 409 })
     }
 
     if (Math.abs(order.total_amount - amount) > 0.01) {
@@ -126,9 +133,83 @@ export async function POST(req: NextRequest) {
       } as PaymentMethod
     }
 
+    // Idempotency handling for order payments
+    const headerIdemKey = req.headers.get('idempotency-key') || req.headers.get('x-idempotency-key')
+    const providedIdem = (headerIdemKey || '').trim() || (bodyIdempotencyKey ? String(bodyIdempotencyKey) : '')
+    const hashHex = (s: string) => crypto.createHash('sha256').update(s).digest('hex').toUpperCase()
+    const deriveRefFromKey = (k: string) => `TX${hashHex(k).slice(0, 24)}`
+
+    // Build a fallback idempotency key if not explicitly provided
+    let computedIdem: string | null = null
+    try {
+      let e164 = ''
+      try { e164 = toE164Tz(phone_number || (provider ? '' : '')) } catch { e164 = String(phone_number || '') }
+      const channel = mapChannel(provider) || provider
+      const fingerprint = JSON.stringify({ user_id: user.id, order_id, amount: Number(amount), currency, channel, phone: e164 })
+      computedIdem = hashHex(fingerprint)
+    } catch { computedIdem = null }
+    const idemKey = providedIdem || computedIdem || ''
+    const deterministicRef = idemKey ? deriveRefFromKey(idemKey) : null
+
+    // If a transaction for this key/order already exists, reuse it to maintain idempotency
+    if (deterministicRef) {
+      const { data: existingTx } = await supabase
+        .from('payment_transactions')
+        .select('id, order_id, user_id, amount, currency, status, payment_type, provider, transaction_reference, gateway_transaction_id, created_at')
+        .eq('order_id', order_id)
+        .eq('user_id', user.id)
+        .eq('transaction_reference', deterministicRef)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existingTx) {
+        try {
+          await supabase.from('payment_logs').insert({
+            transaction_id: existingTx.id,
+            event_type: 'duplicate_order_payment_attempt',
+            data: { message: 'Idempotent reuse', idemKey, transaction_reference: deterministicRef },
+            user_id: user.id,
+          })
+        } catch {}
+
+        return NextResponse.json({ 
+          transaction: existingTx,
+          payment_response: null,
+          reused: true,
+        }, { status: 200 })
+      }
+    }
+
+    // Prevent multiple active transactions for this order
+    const { data: activeTx } = await supabase
+      .from('payment_transactions')
+      .select('id, status, transaction_reference')
+      .eq('order_id', order_id)
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (activeTx) {
+      try {
+        await supabase.from('payment_logs').insert({
+          transaction_id: activeTx.id,
+          event_type: 'duplicate_order_payment_in_progress',
+          data: { message: 'Existing active payment found', transaction_reference: activeTx.transaction_reference },
+          user_id: user.id,
+        })
+      } catch {}
+      return NextResponse.json({ 
+        error: 'Payment already in progress for this order',
+        transaction_reference: activeTx.transaction_reference,
+      }, { status: 409 })
+    }
+
     // Create payment transaction record
-    // Create a clean, alphanumeric order reference for the gateway and our DB
-    const cleanRef = generateOrderReference()
+    // Use deterministic ref when available; otherwise use a new random reference
+    const cleanRef = deterministicRef || generateOrderReference()
 
     const { data: transaction, error: transactionError } = await supabase
       .from('payment_transactions')

@@ -322,6 +322,21 @@ async function handlePaymentSuccess(transaction: TransactionRow, webhookData: We
   try {
     const supabase = getAdminSupabase()
     if (!supabase) return
+    // Idempotency: If already completed, log duplicate and return
+    if (String(transaction.status).toLowerCase() === 'completed') {
+      try {
+        await supabase
+          .from('payment_logs')
+          .insert({
+            transaction_id: transaction.id,
+            event_type: 'duplicate_webhook_success',
+            data: { message: 'Transaction already completed, skipping', webhookData },
+            user_id: transaction.user_id,
+          })
+      } catch {}
+      console.log('Duplicate webhook success for already completed transaction:', transaction.transaction_reference)
+      return
+    }
     // Update transaction status
     const { error: txUpdateError } = await supabase
       .from('payment_transactions')
@@ -733,6 +748,17 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         .from('payment_sessions')
         .update({ status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', session.id)
+      // Log duplicate webhook success for observability
+      try {
+        await supabase
+          .from('payment_logs')
+          .insert({
+            session_id: session.id,
+            event_type: 'duplicate_webhook_success',
+            data: { message: 'Existing transaction found for session', transaction_id: existingTx.id, webhookData },
+            user_id: session.user_id,
+          })
+      } catch {}
       return
     }
 

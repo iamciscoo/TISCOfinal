@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ZenoPayClient } from '@/lib/zenopay'
 import { getUser } from '@/lib/supabase-server'
+import crypto from 'node:crypto'
 export const runtime = 'nodejs'
 
 function normalizeTzMsisdn(raw: string): string {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
       provider,
       phone_number,
       order_data,
+      idempotency_key: bodyIdempotencyKey,
     } = await req.json()
 
     if (!amount || !provider || !phone_number || !order_data) {
@@ -74,8 +76,73 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Create a clean, alphanumeric payment reference for the gateway and our DB
-    const cleanRef = generateOrderReference()
+    // Idempotency: accept Idempotency-Key header/body or compute a stable fallback
+    const headerIdemKey = req.headers.get('idempotency-key') || req.headers.get('x-idempotency-key')
+    const providedIdem = (headerIdemKey || '').trim() || (bodyIdempotencyKey ? String(bodyIdempotencyKey) : '')
+
+    const hashHex = (s: string) => crypto.createHash('sha256').update(s).digest('hex').toUpperCase()
+    const deriveRefFromKey = (k: string) => `TX${hashHex(k).slice(0, 24)}` // alphanumeric, stable
+
+    let computedIdem: string | null = null
+    try {
+      // Compute a deterministic key from user + normalized payload for fallback
+      const od = (order_data || {}) as Record<string, unknown>
+      const itemsRaw = Array.isArray((od as any)?.items) ? (od as any).items as Array<Record<string, unknown>> : []
+      const items = itemsRaw
+        .map((it) => {
+          const pid = String((it as any).product_id || (it as any).productId || (it as any).id || '')
+          const qty = Number((it as any).quantity || 0)
+          return { product_id: pid, quantity: qty }
+        })
+        .filter((it) => it.product_id && it.quantity > 0)
+        .sort((a, b) => a.product_id.localeCompare(b.product_id))
+      let e164 = ''
+      try { e164 = toE164Tz(phone_number) } catch { e164 = String(phone_number || '') }
+      const channel = mapChannel(provider) || provider
+      const fingerprint = JSON.stringify({ user_id: user.id, amount: Number(amount), currency, channel, phone: e164, items })
+      computedIdem = hashHex(fingerprint)
+    } catch { computedIdem = null }
+
+    const idemKey = providedIdem || computedIdem || ''
+    const deterministicRef = idemKey ? deriveRefFromKey(idemKey) : null
+
+    // If deterministic ref exists and a session already exists, reuse it (idempotent)
+    if (deterministicRef) {
+      const { data: existing } = await supabase
+        .from('payment_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('transaction_reference', deterministicRef)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        // Log duplicate attempt for observability
+        try {
+          await supabase
+            .from('payment_logs')
+            .insert({
+              session_id: existing.id,
+              event_type: 'duplicate_initiate_attempt',
+              data: { message: 'Idempotent reuse', idemKey, transaction_reference: deterministicRef },
+              user_id: existing.user_id,
+            })
+        } catch {}
+
+        return NextResponse.json({
+          transaction: {
+            transaction_reference: deterministicRef,
+            status: existing.status || 'processing',
+          },
+          payment_response: null,
+          reused: true,
+        }, { status: 200 })
+      }
+    }
+
+    // Use deterministic ref when present; otherwise generate a fresh one
+    const cleanRef = deterministicRef || generateOrderReference()
 
     // Create payment session record (without order_id since order doesn't exist yet)
     const { data: session, error: sessionError } = await supabase
