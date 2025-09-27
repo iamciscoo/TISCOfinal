@@ -11,20 +11,46 @@ export default function ResetCallback() {
   const [showProfileDialog, setShowProfileDialog] = useState(false)
   const [isProcessing, setIsProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [processingComplete, setProcessingComplete] = useState(false)
 
   useEffect(() => {
     const handleResetCallback = async () => {
       const supabase = createClient()
       
       try {
-        // Check if this is a password reset callback with URL parameters
-        // Try hash parameters first (standard Supabase behavior)
+        console.log('Reset callback starting - Current URL:', window.location.href)
+        
+        // First, try to exchange auth code if present (for OAuth/magic link flows)
+        // Check if there's an auth code in the URL (different from password reset)
+        const urlParams = new URLSearchParams(window.location.search)
+        const authCode = urlParams.get('code')
+        
+        if (authCode) {
+          try {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
+            if (data.session && !error) {
+              console.log('Session established from auth code successfully')
+              setIsProcessing(false)
+              setProcessingComplete(true)
+              setTimeout(() => {
+                setShowProfileDialog(true)
+              }, 800)
+              // Clear the URL to prevent re-processing
+              window.history.replaceState({}, document.title, window.location.pathname)
+              return
+            }
+          } catch (codeError) {
+            console.log('No auth code exchange needed:', codeError)
+          }
+        }
+        
+        // Manual parsing fallback for older Supabase versions or edge cases
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         let accessToken = hashParams.get('access_token')
         let refreshToken = hashParams.get('refresh_token')
         let type = hashParams.get('type')
         
-        // Fallback to search parameters (some email clients may modify URLs)
+        // Fallback to search parameters
         if (!accessToken || !refreshToken || !type) {
           const searchParams = new URLSearchParams(window.location.search)
           accessToken = accessToken || searchParams.get('access_token')
@@ -38,11 +64,11 @@ export default function ResetCallback() {
           type,
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
-          currentUrl: window.location.href
+          hasAuthCode: !!authCode
         })
         
         if (type === 'recovery' && accessToken && refreshToken) {
-          // This is a password reset callback, set the session
+          console.log('Attempting to set session manually with tokens')
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
@@ -58,15 +84,17 @@ export default function ResetCallback() {
           if (data.session) {
             console.log('Password reset session established successfully')
             setIsProcessing(false)
-            // Small delay to let auth context update
+            setProcessingComplete(true)
             setTimeout(() => {
               setShowProfileDialog(true)
             }, 800)
+            // Clear the URL hash to prevent re-processing
+            window.history.replaceState({}, document.title, window.location.pathname)
             return
           }
         }
         
-        // Fallback: Check if we already have a session
+        // Final fallback: Check if we already have a session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError) {
@@ -77,14 +105,14 @@ export default function ResetCallback() {
         }
 
         if (sessionData.session) {
-          // User is already logged in
           console.log('Existing session found')
           setIsProcessing(false)
+          setProcessingComplete(true)
           setTimeout(() => {
             setShowProfileDialog(true)
           }, 800)
         } else {
-          // No session and no valid reset tokens
+          console.log('No session found, showing error')
           setError('Password reset session expired. Please request a new reset link.')
           setIsProcessing(false)
         }
@@ -95,8 +123,24 @@ export default function ResetCallback() {
       }
     }
 
-    handleResetCallback()
+    // Small delay to ensure the page is fully loaded
+    const timer = setTimeout(handleResetCallback, 100)
+    return () => clearTimeout(timer)
   }, [])
+
+  // Prevent navigation away from this page while processing
+  useEffect(() => {
+    if (!processingComplete && isProcessing) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault()
+        e.returnValue = 'Password reset is in progress. Please wait.'
+        return 'Password reset is in progress. Please wait.'
+      }
+      
+      window.addEventListener('beforeunload', handleBeforeUnload)
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [processingComplete, isProcessing])
 
   const handleProfileDialogClose = () => {
     setShowProfileDialog(false)
