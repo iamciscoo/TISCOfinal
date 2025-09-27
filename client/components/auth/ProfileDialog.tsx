@@ -107,12 +107,15 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         if (error) throw new Error(error.message || "Failed to update email")
       }
 
-      // Update password if provided
+      // Update password if provided (required for password reset, optional otherwise)
       if (password || confirmPassword) {
         if (password !== confirmPassword) throw new Error("Passwords do not match")
         if (password.length < 8) throw new Error("Password must be at least 8 characters")
         const { error } = await updatePassword(password)
         if (error) throw new Error(error.message || "Failed to update password")
+      } else if (isPasswordReset) {
+        // Password is required for password reset flows
+        throw new Error("Password is required to complete password reset")
       }
 
       // Update Supabase auth user metadata for immediate UI reflection
@@ -227,34 +230,81 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
             <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
           </div>
 
-          <div className={`grid gap-2 pt-1 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
-            <Label htmlFor="password" className={isPasswordReset ? 'font-semibold text-blue-900' : ''}>
-              {isPasswordReset ? 'Set New Password' : 'New password'}
-            </Label>
-            <Input 
-              id="password" 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="••••••••" 
-              disabled={fetching || loading}
-              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
-            />
-          </div>
-          <div className={`grid gap-2 ${isPasswordReset ? 'bg-blue-50 p-3 rounded-lg border border-blue-200' : ''}`}>
-            <Label htmlFor="confirm" className={isPasswordReset ? 'font-semibold text-blue-900' : ''}>
-              Confirm password
-            </Label>
-            <Input 
-              id="confirm" 
-              type="password" 
-              value={confirmPassword} 
-              onChange={(e) => setConfirmPassword(e.target.value)} 
-              placeholder="••••••••" 
-              disabled={fetching || loading}
-              className={isPasswordReset ? 'border-blue-300 focus:ring-blue-500' : ''}
-            />
-          </div>
+          {/* Only show password fields for password reset flows, NOT for OAuth users */}
+          {isPasswordReset && (
+            <>
+              <div className="grid gap-2 pt-1 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <Label htmlFor="password" className="font-semibold text-blue-900">
+                  Set New Password
+                </Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder="••••••••" 
+                  disabled={fetching || loading}
+                  className="border-blue-300 focus:ring-blue-500"
+                  required={isPasswordReset}
+                />
+              </div>
+              <div className="grid gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <Label htmlFor="confirm" className="font-semibold text-blue-900">
+                  Confirm Password
+                </Label>
+                <Input 
+                  id="confirm" 
+                  type="password" 
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)} 
+                  placeholder="••••••••" 
+                  disabled={fetching || loading}
+                  className="border-blue-300 focus:ring-blue-500"
+                  required={isPasswordReset}
+                />
+                <p className="text-xs text-blue-700 mt-1">
+                  Password must be at least 8 characters long.
+                </p>
+              </div>
+            </>
+          )}
+          
+          {/* Optional password change for regular profile updates (non-OAuth users) */}
+          {!isPasswordReset && (
+            <>
+              <div className="grid gap-2 pt-1">
+                <Label htmlFor="password">
+                  New password (optional)
+                </Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder="••••••••" 
+                  disabled={fetching || loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to keep current password. OAuth users don&apos;t need passwords.
+                </p>
+              </div>
+              {password && (
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm">
+                    Confirm new password
+                  </Label>
+                  <Input 
+                    id="confirm" 
+                    type="password" 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    placeholder="••••••••" 
+                    disabled={fetching || loading}
+                  />
+                </div>
+              )}
+            </>
+          )}
           </div>
           {/* Spacer to prevent last input from being obscured by the sticky footer on mobile */}
           <div className="h-2" aria-hidden="true" />
