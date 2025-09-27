@@ -112,8 +112,26 @@ export default function ResetCallback() {
             setShowProfileDialog(true)
           }, 800)
         } else {
-          console.log('No session found, showing error')
-          setError('Password reset session expired. Please request a new reset link.')
+          // Check if we have error parameters indicating expired/invalid link
+          const urlParams = new URLSearchParams(window.location.search)
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const error = urlParams.get('error') || hashParams.get('error')
+          const errorCode = urlParams.get('error_code') || hashParams.get('error_code')
+          const errorDescription = urlParams.get('error_description') || hashParams.get('error_description')
+          
+          if (error || errorCode || errorDescription) {
+            console.log('Received error parameters:', { error, errorCode, errorDescription })
+            if (errorCode === 'otp_expired' || (errorDescription && errorDescription.includes('expired'))) {
+              setError('Password reset link has expired. Please request a new reset link.')
+            } else if (errorCode === 'invalid' || (errorDescription && errorDescription.includes('invalid'))) {
+              setError('Password reset link is invalid. Please request a new reset link.')
+            } else {
+              setError(`Password reset failed: ${errorDescription || error || 'Unknown error'}`)
+            }
+          } else {
+            console.log('No session found, showing generic error')
+            setError('Password reset session could not be established. Please request a new reset link.')
+          }
           setIsProcessing(false)
         }
       } catch (error) {
