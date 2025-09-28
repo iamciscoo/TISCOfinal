@@ -90,6 +90,26 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
     setLoading(true)
     setError(null)
     setSuccess(null)
+    
+    // Early validation for password reset flows
+    if (isPasswordReset) {
+      if (!password.trim()) {
+        setError("Password is required for password reset")
+        setLoading(false)
+        return
+      }
+      if (!confirmPassword.trim()) {
+        setError("Please confirm your password")
+        setLoading(false)
+        return
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match")
+        setLoading(false)
+        return
+      }
+    }
+    
     try {
       // If an avatar file is selected, upload to Supabase Storage (bucket: avatars)
       let uploadedAvatarUrl: string | null = null
@@ -124,8 +144,23 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         if (!hasLowerCase || !hasUpperCase || !hasNumbers) {
           throw new Error("Password must contain at least one lowercase letter, one uppercase letter, and one number")
         }
-        const { error } = await updatePassword(password)
-        if (error) throw new Error(error.message || "Failed to update password")
+        
+        try {
+          const { error } = await updatePassword(password)
+          if (error) {
+            // Handle specific Supabase password update errors
+            if (error.message.includes('session')) {
+              throw new Error("Session expired. Please request a new password reset link.")
+            } else if (error.message.includes('weak')) {
+              throw new Error("Password is too weak. Please choose a stronger password.")
+            } else {
+              throw new Error(error.message || "Failed to update password")
+            }
+          }
+        } catch (passwordError) {
+          console.error('Password update failed:', passwordError)
+          throw passwordError
+        }
       } else if (isPasswordReset) {
         // Password is required for password reset flows
         throw new Error("Please set a new password to complete the reset process")
@@ -160,9 +195,16 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
       if (!res.ok) throw new Error(data?.error || "Failed to update profile")
 
       if (uploadedAvatarUrl) setAvatarUrl(uploadedAvatarUrl)
-      setSuccess("Profile updated successfully")
+      
+      // Show appropriate success message
+      if (isPasswordReset) {
+        setSuccess("Password reset successfully. You can now sign in with your new password.")
+      } else {
+        setSuccess("Profile updated successfully")
+      }
+      
       // Close after short delay
-      setTimeout(() => onOpenChange(false), 800)
+      setTimeout(() => onOpenChange(false), isPasswordReset ? 1200 : 800)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update profile")
     } finally {
