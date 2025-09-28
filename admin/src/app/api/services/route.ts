@@ -1,13 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Validate environment variables
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE
+
+if (!supabaseUrl || !supabaseServiceRole) {
+  console.error('Missing Supabase environment variables:', {
+    url: !!supabaseUrl,
+    serviceRole: !!supabaseServiceRole
+  })
+}
+
 const supabase = createClient(
-  (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL)!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  supabaseUrl!,
+  supabaseServiceRole!
 )
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase is properly configured
+    if (!supabaseUrl || !supabaseServiceRole) {
+      console.error('Supabase not configured properly')
+      return NextResponse.json({ 
+        error: 'Database configuration error',
+        services: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      }, { status: 500 })
+    }
+
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -28,19 +51,31 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('Error fetching services:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('Supabase error fetching services:', error)
+      return NextResponse.json({ 
+        error: error.message,
+        services: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: page
+      }, { status: 500 })
     }
 
     return NextResponse.json({
-      services: data,
-      totalCount: count,
+      services: data || [],
+      totalCount: count || 0,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page
     })
   } catch (error) {
-    console.error('Error in services GET:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Unexpected error in services GET:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      services: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: 1
+    }, { status: 500 })
   }
 }
 
