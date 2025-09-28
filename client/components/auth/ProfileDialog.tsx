@@ -167,7 +167,13 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           if (password.length < 8) {
             throw new Error("Password must be at least 8 characters long")
           }
-          if (!hasLowerCase || !hasUpperCase || !hasNumbers) {
+          
+          // Validate password strength with the actual password value
+          const hasLower = /[a-z]/.test(password)
+          const hasUpper = /[A-Z]/.test(password)
+          const hasNumber = /\d/.test(password)
+          
+          if (!hasLower || !hasUpper || !hasNumber) {
             throw new Error("Password must contain at least one lowercase letter, one uppercase letter, and one number")
           }
           
@@ -225,6 +231,9 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
       if (uploadedAvatarUrl) setAvatarUrl(uploadedAvatarUrl)
       
+      // Clear any existing errors on successful update
+      setError(null)
+      
       // Show appropriate success toast notification
       if (isPasswordReset) {
         toast({
@@ -257,21 +266,24 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : "Failed to update profile"
+      console.error('Profile update error:', e)
       setError(errorMessage)
       
-      // Also show error toast for better visibility
-      if (isPasswordReset) {
-        toast({
-          title: "Password Reset Failed ❌",
-          description: errorMessage,
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Update Failed ❌",
-          description: errorMessage,
-          variant: "destructive",
-        })
+      // Only show error toast for actual errors, not validation warnings
+      if (errorMessage && !errorMessage.includes('successfully')) {
+        if (isPasswordReset) {
+          toast({
+            title: "Password Reset Failed ❌",
+            description: errorMessage,
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Update Failed ❌",
+            description: errorMessage,
+            variant: "destructive",
+          })
+        }
       }
     } finally {
       setLoading(false)
