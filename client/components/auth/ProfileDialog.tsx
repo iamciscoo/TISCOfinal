@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import Image from "next/image"
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase-auth"
+import { Eye, EyeOff, Check, X } from "lucide-react"
 
 interface ProfileDialogProps {
   open: boolean
@@ -38,9 +39,18 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>("")
+
+  // Password validation helpers
+  const isPasswordValid = password.length >= 8
+  const hasLowerCase = /[a-z]/.test(password)
+  const hasUpperCase = /[A-Z]/.test(password)
+  const hasNumbers = /\d/.test(password)
+  const passwordsMatch = password === confirmPassword && password.length > 0
 
   // Track changes internally if needed for future UX (e.g., disable Save when unchanged)
   // For now, keep UI simple without complex dirty checking
@@ -110,12 +120,15 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
       // Update password if provided (required for password reset, optional otherwise)
       if (password || confirmPassword) {
         if (password !== confirmPassword) throw new Error("Passwords do not match")
-        if (password.length < 8) throw new Error("Password must be at least 8 characters")
+        if (password.length < 8) throw new Error("Password must be at least 8 characters long")
+        if (!hasLowerCase || !hasUpperCase || !hasNumbers) {
+          throw new Error("Password must contain at least one lowercase letter, one uppercase letter, and one number")
+        }
         const { error } = await updatePassword(password)
         if (error) throw new Error(error.message || "Failed to update password")
       } else if (isPasswordReset) {
         // Password is required for password reset flows
-        throw new Error("Password is required to complete password reset")
+        throw new Error("Please set a new password to complete the reset process")
       }
 
       // Update Supabase auth user metadata for immediate UI reflection
@@ -156,6 +169,8 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
       setLoading(false)
       setPassword("")
       setConfirmPassword("")
+      setShowPassword(false)
+      setShowConfirmPassword(false)
       setSelectedFile(null)
       setPreviewUrl("")
     }
@@ -163,154 +178,294 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md min-w-0 max-h-[calc(100svh-2rem)] max-h-[calc(100lvh-2rem)] max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] grid grid-rows-[auto_1fr_auto] gap-2 sm:gap-4 p-4 sm:p-6 !top-2 bottom-20 !translate-y-0 sm:bottom-auto sm:top-1/2 sm:translate-y-[-50%]">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>
+      <DialogContent className="max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+          <DialogTitle className="text-lg font-semibold">
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-gray-600">
             {isPasswordReset 
-              ? 'You\'ve been logged in successfully. Please set a new password to secure your account.'
+              ? 'Please set a new password to secure your account.'
               : 'Update your basic information. Changes sync to your account.'
             }
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain pt-1 pb-2 sm:pb-2 scroll-pb-28 sm:scroll-pb-0">
-          <div className="grid gap-2 sm:gap-3">
-          {error && (
-            <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
-          )}
-          {success && (
-            <div role="status" className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>
-          )}
+        <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ minHeight: 0 }}>
+            <div className="space-y-4 py-2">
+              {error && (
+                <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
+              )}
+              {success && (
+                <div role="status" className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>
+              )}
 
-          {/* Avatar Section */}
-          <div className="grid gap-2">
-            <Label>Avatar</Label>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-gray-200">
-                {previewUrl || avatarUrl ? (
-                  <Image src={previewUrl || avatarUrl} alt="Avatar preview" width={64} height={64} className="w-14 h-14 sm:w-16 sm:h-16 object-cover" />
-                ) : (
-                  <div className="w-14 h-14 sm:w-16 sm:h-16" />
-                )}
+              {/* Avatar Section */}
+              <div className="space-y-2">
+                <Label>Avatar</Label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gray-200">
+                    {previewUrl || avatarUrl ? (
+                      <Image src={previewUrl || avatarUrl} alt="Avatar preview" width={56} height={56} className="w-12 h-12 sm:w-14 sm:h-14 object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 sm:w-14 sm:h-14" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null
+                        setSelectedFile(f || null)
+                        if (f) setPreviewUrl(URL.createObjectURL(f))
+                      }}
+                      disabled={fetching || loading}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Square image recommended, max 2MB.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null
-                    setSelectedFile(f || null)
-                    if (f) setPreviewUrl(URL.createObjectURL(f))
-                  }}
-                  disabled={fetching || loading}
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Use a square image for best results. Max ~2MB recommended.</p>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="first_name">First name</Label>
-            <Input id="first_name" value={profile.first_name} onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))} placeholder="John" disabled={fetching || loading} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="last_name">Last name</Label>
-            <Input id="last_name" value={profile.last_name} onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" disabled={fetching || loading} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" disabled={fetching || loading} />
-            <p className="text-xs text-muted-foreground">Changing email may require confirmation.</p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="first_name">First name</Label>
+                <Input id="first_name" value={profile.first_name} onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))} placeholder="John" disabled={fetching || loading} />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Last name</Label>
+                <Input id="last_name" value={profile.last_name} onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" disabled={fetching || loading} />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" disabled={fetching || loading} />
+                <p className="text-xs text-muted-foreground">Changing email may require confirmation.</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
+              </div>
 
-          {/* Only show password fields for password reset flows, NOT for OAuth users */}
-          {isPasswordReset && (
-            <>
-              <div className="grid gap-2 pt-1 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <Label htmlFor="password" className="font-semibold text-blue-900">
-                  Set New Password
-                </Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  disabled={fetching || loading}
-                  className="border-blue-300 focus:ring-blue-500"
-                  required={isPasswordReset}
-                />
-              </div>
-              <div className="grid gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <Label htmlFor="confirm" className="font-semibold text-blue-900">
-                  Confirm Password
-                </Label>
-                <Input 
-                  id="confirm" 
-                  type="password" 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  disabled={fetching || loading}
-                  className="border-blue-300 focus:ring-blue-500"
-                  required={isPasswordReset}
-                />
-                <p className="text-xs text-blue-700 mt-1">
-                  Password must be at least 8 characters long.
-                </p>
-              </div>
-            </>
-          )}
-          
-          {/* Optional password change for regular profile updates (non-OAuth users) */}
-          {!isPasswordReset && (
-            <>
-              <div className="grid gap-2 pt-1">
-                <Label htmlFor="password">
-                  New password (optional)
-                </Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  disabled={fetching || loading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave blank to keep current password. OAuth users don&apos;t need passwords.
-                </p>
-              </div>
-              {password && (
-                <div className="grid gap-2">
-                  <Label htmlFor="confirm">
-                    Confirm new password
-                  </Label>
-                  <Input 
-                    id="confirm" 
-                    type="password" 
-                    value={confirmPassword} 
-                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                    placeholder="••••••••" 
-                    disabled={fetching || loading}
-                  />
+              {/* Enhanced password fields for password reset flows */}
+              {isPasswordReset && (
+                <div className="space-y-3 pt-1 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-xl border border-blue-200">
+                  <div className="text-center">
+                    <h3 className="font-semibold text-blue-900 text-sm">🔐 Set Your New Password</h3>
+                    <p className="text-xs text-blue-700 mt-1">Create a strong password to secure your account</p>
+                  </div>
+
+                  {/* New Password Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="font-medium text-blue-900">
+                      New Password
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="password" 
+                        type={showPassword ? "text" : "password"}
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        placeholder="Enter your new password" 
+                        disabled={fetching || loading}
+                        className="border-blue-300 focus:ring-blue-500 pr-10"
+                        required={isPasswordReset}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Password Strength Indicators */}
+                    {password.length > 0 && (
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        <div className={`flex items-center gap-1 ${isPasswordValid ? 'text-green-600' : 'text-gray-500'}`}>
+                          {isPasswordValid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          <span>8+ chars</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                          {hasLowerCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          <span>Lowercase</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                          {hasUpperCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          <span>Uppercase</span>
+                        </div>
+                        <div className={`flex items-center gap-1 ${hasNumbers ? 'text-green-600' : 'text-gray-500'}`}>
+                          {hasNumbers ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          <span>Number</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Confirm Password Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm" className="font-medium text-blue-900">
+                      Confirm Password
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="confirm" 
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                        placeholder="Confirm your new password" 
+                        disabled={fetching || loading}
+                        className="border-blue-300 focus:ring-blue-500 pr-10"
+                        required={isPasswordReset}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Password Match Indicator */}
+                    {confirmPassword.length > 0 && (
+                      <div className={`flex items-center gap-1 text-xs ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
+                        {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                        <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </>
-          )}
-          </div>
-          {/* Spacer to prevent last input from being obscured by the sticky footer on mobile */}
-          <div className="h-2" aria-hidden="true" />
+
+              {/* Enhanced optional password change for regular profile updates */}
+              {!isPasswordReset && (
+                <div className="space-y-3 pt-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">
+                      New password (optional)
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="password" 
+                        type={showPassword ? "text" : "password"}
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        placeholder="Enter new password" 
+                        disabled={fetching || loading}
+                        className="pr-10"
+                      />
+                      {password && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tabIndex={-1}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Leave blank to keep current password. OAuth users don&apos;t need passwords.
+                    </p>
+                  </div>
+
+                  {password && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm">
+                        Confirm new password
+                      </Label>
+                      <div className="relative">
+                        <Input 
+                          id="confirm" 
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword} 
+                          onChange={(e) => setConfirmPassword(e.target.value)} 
+                          placeholder="Confirm new password" 
+                          disabled={fetching || loading}
+                          className="pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Password validation for optional changes */}
+                      {password.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className={`flex items-center gap-1 ${isPasswordValid ? 'text-green-600' : 'text-gray-500'}`}>
+                              {isPasswordValid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>8+ characters</span>
+                            </div>
+                            <div className={`flex items-center gap-1 ${hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                              {hasLowerCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>Lowercase</span>
+                            </div>
+                            <div className={`flex items-center gap-1 ${hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                              {hasUpperCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>Uppercase</span>
+                            </div>
+                            <div className={`flex items-center gap-1 ${hasNumbers ? 'text-green-600' : 'text-gray-500'}`}>
+                              {hasNumbers ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>Number</span>
+                            </div>
+                          </div>
+                          
+                          {confirmPassword.length > 0 && (
+                            <div className={`flex items-center gap-1 text-xs ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
+                              {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Spacer for better scrolling experience */}
+              <div className="h-6" aria-hidden="true" />
+            </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 pb-4 sm:pb-2 shrink-0 border-t bg-background">
+        <div className="flex-shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-white">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading || fetching}>{loading ? "Saving..." : "Save"}</Button>
         </div>
