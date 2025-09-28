@@ -128,30 +128,33 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
       }
     }
 
-    // Phone number validation to prevent database constraint errors
+    // Optional phone number validation (only validate if phone is provided)
     if (profile.phone && profile.phone.trim()) {
       // Remove any spaces or special characters for validation
       const cleanPhone = profile.phone.replace(/[\s\-\(\)]/g, '')
       
-      // Check if phone is too long (database constraint appears to limit length)
-      if (cleanPhone.length > 15) {
-        setError("Phone number is too long. Please use a valid international format (max 15 digits).")
-        setLoading(false)
-        return
-      }
-      
-      // Check if phone contains only digits and optional + prefix
-      if (!/^\+?[0-9]+$/.test(cleanPhone)) {
-        setError("Phone number should only contain numbers and optional + prefix.")
-        setLoading(false)
-        return
-      }
-      
-      // For Tanzanian numbers, ensure proper format
-      if (cleanPhone.startsWith('255') && cleanPhone.length > 12) {
-        setError("Tanzanian phone number appears too long. Please use format: 255XXXXXXXXX")
-        setLoading(false)
-        return
+      // Only validate if user actually entered a phone number
+      if (cleanPhone.length > 0) {
+        // Check if phone is too long (database constraint appears to limit length)
+        if (cleanPhone.length > 15) {
+          setError("Phone number is too long. Please use a valid international format (max 15 digits).")
+          setLoading(false)
+          return
+        }
+        
+        // Check if phone contains only digits and optional + prefix
+        if (!/^\+?[0-9]+$/.test(cleanPhone)) {
+          setError("Phone number should only contain numbers and optional + prefix.")
+          setLoading(false)
+          return
+        }
+        
+        // For Tanzanian numbers, ensure proper format
+        if (cleanPhone.startsWith('255') && cleanPhone.length > 12) {
+          setError("Tanzanian phone number appears too long. Please use format: 255XXXXXXXXX")
+          setLoading(false)
+          return
+        }
       }
     }
     
@@ -234,7 +237,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           data: {
             first_name: profile.first_name,
             last_name: profile.last_name,
-            phone: profile.phone,
+            phone: profile.phone?.trim() || null, // Handle optional phone properly
             ...(uploadedAvatarUrl ? { avatar_url: uploadedAvatarUrl } : {}),
           }
         })
@@ -248,7 +251,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         body: JSON.stringify({
           first_name: profile.first_name,
           last_name: profile.last_name,
-          phone: profile.phone,
+          phone: profile.phone?.trim() || null, // Send null for empty phone instead of empty string
           email: profile.email,
           ...(uploadedAvatarUrl ? { avatar_url: uploadedAvatarUrl } : {}),
         })
@@ -400,9 +403,9 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
-                <p className="text-xs text-muted-foreground">International format preferred (e.g., 255700000000). Max 15 digits.</p>
+                <Label htmlFor="phone">Phone (optional)</Label>
+                <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000 (optional)" disabled={fetching || loading} />
+                <p className="text-xs text-muted-foreground">Optional. Can be added later for order delivery. International format preferred (e.g., 255700000000).</p>
               </div>
 
               {/* Enhanced password fields for password reset flows */}
