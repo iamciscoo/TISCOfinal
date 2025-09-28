@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase-auth"
 import { Eye, EyeOff, Check, X } from "lucide-react"
@@ -25,10 +26,10 @@ interface ProfileData {
 
 export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: ProfileDialogProps) {
   const { user, updateUser, updatePassword } = useAuth()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
@@ -62,7 +63,6 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
     const load = async () => {
       setFetching(true)
       setError(null)
-      setSuccess(null)
       try {
         const res = await fetch("/api/auth/profile", { cache: "no-store" })
         const data = await res.json()
@@ -89,7 +89,6 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
   const handleSave = async () => {
     setLoading(true)
     setError(null)
-    setSuccess(null)
     
     // Early validation for password reset flows
     if (isPasswordReset) {
@@ -196,17 +195,42 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
       if (uploadedAvatarUrl) setAvatarUrl(uploadedAvatarUrl)
       
-      // Show appropriate success message
+      // Show appropriate success toast notification
       if (isPasswordReset) {
-        setSuccess("Password reset successfully. You can now sign in with your new password.")
+        toast({
+          title: "Password Reset Complete! 🎉",
+          description: "Your password has been successfully updated. You can now sign in with your new password.",
+          variant: "default",
+        })
+        // Close dialog immediately for password reset
+        onOpenChange(false)
       } else {
-        setSuccess("Profile updated successfully")
+        toast({
+          title: "Profile Updated! ✅",
+          description: "Your profile information has been saved successfully.",
+          variant: "default",
+        })
+        // Close after short delay for regular profile updates
+        setTimeout(() => onOpenChange(false), 500)
       }
-      
-      // Close after short delay
-      setTimeout(() => onOpenChange(false), isPasswordReset ? 1200 : 800)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update profile")
+      const errorMessage = e instanceof Error ? e.message : "Failed to update profile"
+      setError(errorMessage)
+      
+      // Also show error toast for better visibility
+      if (isPasswordReset) {
+        toast({
+          title: "Password Reset Failed ❌",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Update Failed ❌",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
       setPassword("")
@@ -237,9 +261,6 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
             <div className="space-y-4 py-2">
               {error && (
                 <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
-              )}
-              {success && (
-                <div role="status" className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>
               )}
 
               {/* Avatar Section */}
