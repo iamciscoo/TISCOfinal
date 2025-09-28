@@ -236,7 +236,7 @@ export default async function RootLayout({
                 "@type": "ContactPoint",
                 "telephone": "+255748624684",
                 "contactType": "customer service",
-                "email": "support@tiscomarket.com"
+                "email": "support@tiscomarket.store"
               },
               "geo": {
                 "@type": "GeoCoordinates",
