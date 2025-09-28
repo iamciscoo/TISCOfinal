@@ -127,6 +127,33 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         }
       }
     }
+
+    // Phone number validation to prevent database constraint errors
+    if (profile.phone && profile.phone.trim()) {
+      // Remove any spaces or special characters for validation
+      const cleanPhone = profile.phone.replace(/[\s\-\(\)]/g, '')
+      
+      // Check if phone is too long (database constraint appears to limit length)
+      if (cleanPhone.length > 15) {
+        setError("Phone number is too long. Please use a valid international format (max 15 digits).")
+        setLoading(false)
+        return
+      }
+      
+      // Check if phone contains only digits and optional + prefix
+      if (!/^\+?[0-9]+$/.test(cleanPhone)) {
+        setError("Phone number should only contain numbers and optional + prefix.")
+        setLoading(false)
+        return
+      }
+      
+      // For Tanzanian numbers, ensure proper format
+      if (cleanPhone.startsWith('255') && cleanPhone.length > 12) {
+        setError("Tanzanian phone number appears too long. Please use format: 255XXXXXXXXX")
+        setLoading(false)
+        return
+      }
+    }
     
     try {
       // If an avatar file is selected, upload to Supabase Storage (bucket: avatars)
@@ -267,20 +294,31 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : "Failed to update profile"
       console.error('Profile update error:', e)
-      setError(errorMessage)
+      
+      // Handle specific database constraint errors with user-friendly messages
+      let userFriendlyMessage = errorMessage
+      if (errorMessage.includes('chk_users_phone_length')) {
+        userFriendlyMessage = "Phone number is invalid or too long. Please use a valid format (e.g., 255700000000)."
+      } else if (errorMessage.includes('constraint')) {
+        userFriendlyMessage = "Invalid data format. Please check your information and try again."
+      } else if (errorMessage.includes('duplicate')) {
+        userFriendlyMessage = "This information is already in use. Please use different values."
+      }
+      
+      setError(userFriendlyMessage)
       
       // Only show error toast for actual errors, not validation warnings
-      if (errorMessage && !errorMessage.includes('successfully')) {
+      if (userFriendlyMessage && !userFriendlyMessage.includes('successfully')) {
         if (isPasswordReset) {
           toast({
             title: "Password Reset Failed ❌",
-            description: errorMessage,
+            description: userFriendlyMessage,
             variant: "destructive",
           })
         } else {
           toast({
             title: "Update Failed ❌",
-            description: errorMessage,
+            description: userFriendlyMessage,
             variant: "destructive",
           })
         }
@@ -364,6 +402,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000" disabled={fetching || loading} />
+                <p className="text-xs text-muted-foreground">International format preferred (e.g., 255700000000). Max 15 digits.</p>
               </div>
 
               {/* Enhanced password fields for password reset flows */}
