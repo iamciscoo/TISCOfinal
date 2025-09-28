@@ -107,6 +107,25 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         setLoading(false)
         return
       }
+    } else {
+      // Early validation for optional password changes in profile updates
+      if (password || confirmPassword) {
+        if (password && !confirmPassword) {
+          setError("Please confirm your new password")
+          setLoading(false)
+          return
+        }
+        if (!password && confirmPassword) {
+          setError("Please enter a new password to confirm")
+          setLoading(false)
+          return
+        }
+        if (password !== confirmPassword) {
+          setError("Passwords do not match")
+          setLoading(false)
+          return
+        }
+      }
     }
     
     try {
@@ -138,27 +157,38 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
       // Update password if provided (required for password reset, optional otherwise)
       if (password || confirmPassword) {
-        if (password !== confirmPassword) throw new Error("Passwords do not match")
-        if (password.length < 8) throw new Error("Password must be at least 8 characters long")
-        if (!hasLowerCase || !hasUpperCase || !hasNumbers) {
-          throw new Error("Password must contain at least one lowercase letter, one uppercase letter, and one number")
+        // Enhanced validation for both password reset and optional password changes
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match")
         }
         
-        try {
-          const { error } = await updatePassword(password)
-          if (error) {
-            // Handle specific Supabase password update errors
-            if (error.message.includes('session')) {
-              throw new Error("Session expired. Please request a new password reset link.")
-            } else if (error.message.includes('weak')) {
-              throw new Error("Password is too weak. Please choose a stronger password.")
-            } else {
-              throw new Error(error.message || "Failed to update password")
-            }
+        // Only validate password strength if user has entered a password
+        if (password) {
+          if (password.length < 8) {
+            throw new Error("Password must be at least 8 characters long")
           }
-        } catch (passwordError) {
-          console.error('Password update failed:', passwordError)
-          throw passwordError
+          if (!hasLowerCase || !hasUpperCase || !hasNumbers) {
+            throw new Error("Password must contain at least one lowercase letter, one uppercase letter, and one number")
+          }
+          
+          try {
+            const { error } = await updatePassword(password)
+            if (error) {
+              // Handle specific Supabase password update errors
+              if (error.message.includes('session')) {
+                throw new Error("Session expired. Please request a new password reset link.")
+              } else if (error.message.includes('weak')) {
+                throw new Error("Password is too weak. Please choose a stronger password.")
+              } else {
+                throw new Error(error.message || "Failed to update password")
+              }
+            }
+          } catch (passwordError) {
+            console.error('Password update failed:', passwordError)
+            throw passwordError
+          }
+        } else if (confirmPassword && !password) {
+          throw new Error("Please enter a new password to confirm")
         }
       } else if (isPasswordReset) {
         // Password is required for password reset flows
@@ -205,11 +235,23 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         // Close dialog immediately for password reset
         onOpenChange(false)
       } else {
-        toast({
-          title: "Profile Updated! ✅",
-          description: "Your profile information has been saved successfully.",
-          variant: "default",
-        })
+        // Check if password was changed for regular profile updates
+        const passwordChanged = password && password.length > 0
+        
+        if (passwordChanged) {
+          toast({
+            title: "Profile & Password Updated! 🔐",
+            description: "Your profile information and password have been updated successfully.",
+            variant: "default",
+          })
+        } else {
+          toast({
+            title: "Profile Updated! ✅",
+            description: "Your profile information has been saved successfully.",
+            variant: "default",
+          })
+        }
+        
         // Close after short delay for regular profile updates
         setTimeout(() => onOpenChange(false), 500)
       }
