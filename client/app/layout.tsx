@@ -178,11 +178,7 @@ export default async function RootLayout({
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0066CC" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0066CC" />
         
-        {/* Google Site Verification - Replace with your actual verification code from Google Search Console */}
-        <meta name="google-site-verification" content="your-google-verification-code" />
-        
-        {/* Bing Webmaster Tools - Replace with your actual verification code */}
-        <meta name="msvalidate.01" content="your-bing-verification-code" />
+        {/* Site is verified via DNS through domain registrar - no HTML tags needed */}
         
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -233,9 +229,14 @@ export default async function RootLayout({
               "address": {
                 "@type": "PostalAddress",
                 "addressLocality": "Dar es Salaam",
-                "addressRegion": "Dar es Salaam",
-                "postalCode": "12345",
+                "addressRegion": "Dar es Salaam Region",
                 "addressCountry": "TZ"
+              },
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+255748624684",
+                "contactType": "customer service",
+                "email": "support@tiscomarket.com"
               },
               "geo": {
                 "@type": "GeoCoordinates",
@@ -304,25 +305,24 @@ export default async function RootLayout({
           }}
         />
         
-        {/* Structured Data - Local Business */}
+        {/* Structured Data - Store/ElectronicsStore */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "LocalBusiness",
+              "@type": "ElectronicsStore",
               "name": "TISCO Market",
               "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
               "description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.",
               "url": "https://tiscomarket.store",
-              "telephone": "+255758787168",
+              "telephone": "+255748624684",
+              "email": "support@tiscomarket.com",
               "address": {
                 "@type": "PostalAddress",
-                "streetAddress": "Dar es Salaam",
                 "addressLocality": "Dar es Salaam",
-                "addressRegion": "Dar es Salaam Region",
-                "postalCode": "12345",
-                "addressCountry": "Tanzania"
+                "addressRegion": "Dar es Salaam Region",  
+                "addressCountry": "TZ"
               },
               "geo": {
                 "@type": "GeoCoordinates",
@@ -330,12 +330,10 @@ export default async function RootLayout({
                 "longitude": 39.208328
               },
               "openingHours": "Mo-Su 00:00-23:59",
-              "areaServed": {
-                "@type": "Country",
-                "name": "Tanzania"
-              },
-              "servedCuisine": "Electronics and Technology Products",
-              "priceRange": "$$"
+              "areaServed": ["Tanzania", "Kenya", "Uganda"],
+              "priceRange": "$$",
+              "paymentAccepted": ["Mobile Money", "Credit Card", "Bank Transfer"],
+              "currenciesAccepted": "TZS"
             })
           }}
         />
