@@ -1,5 +1,36 @@
+import { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+
+export const metadata: Metadata = {
+  title: 'Tech Services | TISCO Market - PC Building & Setup Services Tanzania',
+  description: 'Professional tech services in Tanzania: Custom PC building, ergonomic office setup, software installation, device repair, and game installation. Certified technicians provide 24-48 hour service with 1-year warranty on PC builds. Complete workspace solutions in Dar es Salaam.',
+  keywords: [
+    'PC building Tanzania', 'custom PC build Dar es Salaam', 'office setup Tanzania', 
+    'computer repair Tanzania', 'software installation Tanzania', 'desktop setup services',
+    'gaming PC build Tanzania', 'workstation setup', 'tech services Tanzania',
+    'computer technician Tanzania', 'system optimization', 'hardware installation',
+    'workspace setup Tanzania', 'ergonomic office design Dar es Salaam', 'multi-monitor setup Tanzania',
+    'cable management services', 'lighting optimization Tanzania', 'network setup services',
+    'BIOS setup Tanzania', 'OS installation Tanzania', 'driver updates Dar es Salaam',
+    'security configuration Tanzania', 'data migration services', 'performance testing Tanzania',
+    'device repair Tanzania', 'game installation Tanzania', 'certified technicians Dar es Salaam',
+    'fast tech repair Tanzania', '24-48 hour service Tanzania', 'professional assembly Tanzania',
+    'component consultation Tanzania', '1-year warranty PC builds', 'software licensing Tanzania',
+    'system diagnostics Tanzania', 'PC optimization services', 'computer setup expert Tanzania'
+  ],
+  openGraph: {
+    title: 'Professional Tech Services | TISCO Market Tanzania',
+    description: 'Custom PC building, ergonomic office setup, software installation, device repair & game installation. Certified technicians, 24-48hr service, 1-year warranty.',
+    url: 'https://tiscomarket.store/services',
+    images: ['https://tiscomarket.store/services/pcbuild.jpeg'],
+  },
+  twitter: {
+    title: 'Professional Tech Services | TISCO Market Tanzania',
+    description: 'Custom PC building, ergonomic office setup, software installation, device repair & game installation. Certified technicians, 24-48hr service, 1-year warranty.',
+    images: ['https://tiscomarket.store/services/pcbuild.jpeg'],
+  },
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 // Removed unused form primitives now that form is a separate component

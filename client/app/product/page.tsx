@@ -62,21 +62,41 @@ export async function generateMetadata({ searchParams }: ProductPageProps) {
     }
 
     const imageUrl = getImageUrl(normalizeToProduct(product))
+    const productName = product.name
+    const productDescription = product.description || `Shop ${productName} at TISCO Market. Quality products with fast delivery across Tanzania and East Africa.`
     
     return {
-      title: `${product.name} - TISCO Market`,
-      description: product.description || `Shop ${product.name} at TISCO Market. Quality products with fast delivery.`,
+      title: `${productName} | Buy Online Tanzania - TISCO Market`,
+      description: productDescription,
+      keywords: [
+        productName,
+        'TISCO Market',
+        'buy online Tanzania',
+        'electronics Tanzania',
+        'fast delivery Tanzania',
+        'mobile money payment',
+        'quality products Tanzania'
+      ],
       openGraph: {
-        title: `${product.name} - TISCO Market`,
-        description: product.description || `Shop ${product.name} at TISCO Market`,
-        images: imageUrl ? [{ url: imageUrl, alt: product.name }] : [],
-        type: 'website',
+        title: `${productName} - Buy Online Tanzania | TISCO Market`,
+        description: productDescription,
+        images: imageUrl ? [{ 
+          url: imageUrl, 
+          alt: productName, 
+          width: 800, 
+          height: 600 
+        }] : [],
+        type: 'product',
+        url: `https://tiscomarket.store/product?id=${product.id}`,
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${product.name} - TISCO Market`,
-        description: product.description || `Shop ${product.name} at TISCO Market`,
+        title: `${productName} - Buy Online Tanzania | TISCO Market`,
+        description: productDescription,
         images: imageUrl ? [imageUrl] : [],
+      },
+      alternates: {
+        canonical: `https://tiscomarket.store/product?id=${product.id}`,
       },
     }
   } catch (error) {

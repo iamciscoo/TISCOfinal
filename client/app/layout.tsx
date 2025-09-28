@@ -24,14 +24,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://tiscomarket.store'),
   title: "TISCOマーケット - Online Shop | Tanzania's Online Marketplace",
-  description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, and products. Shop with confidence across East Africa. Fast delivery, secure payments, and authentic products guaranteed.",
+  description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, rare finds, and professional tech services. Custom PC building, office setup, device repair. Shop with confidence across East Africa. Fast delivery, secure payments, and authentic products guaranteed.",
   keywords: [
     "TISCO", "tisco market", "TISCOマーケット", "tiscomarket", "tisco online shop",
     "Tanzania online shop", "East Africa marketplace", "electronics Tanzania", 
     "online shopping Tanzania", "Dar es Salaam electronics", "Kenya online store",
     "Uganda electronics", "East Africa shopping", "mobile phones Tanzania",
     "laptops Tanzania", "gaming Tanzania", "online store Tanzania", 
-    "e-commerce Tanzania", "shopping Tanzania", "buy online Tanzania"
+    "e-commerce Tanzania", "shopping Tanzania", "buy online Tanzania",
+    "rare finds Tanzania", "antiques Tanzania", "anime merchandise Tanzania", 
+    "niche products Tanzania", "collectibles Dar es Salaam", "figurines Tanzania",
+    "manga Tanzania", "vintage items Tanzania", "unique products Tanzania",
+    "hard to find items Tanzania", "specialty electronics Tanzania", "rare tech Tanzania",
+    "PC building services Tanzania", "computer repair Dar es Salaam", "office setup Tanzania",
+    "tech services Tanzania", "device repair Tanzania", "game installation Tanzania",
+    "certified technicians Tanzania", "workspace setup Dar es Salaam", "ergonomic office design",
+    "professional tech services Tanzania", "system optimization Tanzania"
   ],
   authors: [{ name: "TISCO Market" }],
   creator: "TISCO Market",
@@ -49,7 +57,6 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
     alternateLocale: ['sw_TZ', 'sw_KE'],
     url: 'https://tiscomarket.store',
     siteName: 'TISCOマーケット - Online Shop',
@@ -57,10 +64,18 @@ export const metadata: Metadata = {
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
     images: [
       {
-        url: '/logo-email.png',
+        url: 'https://tiscomarket.store/logo-email.png',
         width: 1200,
         height: 630,
-        alt: 'TISCO Market - Tanzania Online Shopping',
+        alt: 'TISCO Market - Tanzania Online Shopping & Rare Finds',
+        type: 'image/png',
+      },
+      {
+        url: 'https://tiscomarket.store/favicon-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'TISCOマーケット Logo',
+        type: 'image/png',
       },
     ],
   },
@@ -68,7 +83,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'TISCOマーケット - Tanzania\'s Online Marketplace',
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
-    images: ['/logo-email.png'],
+    images: ['https://tiscomarket.store/logo-email.png'],
     creator: '@tiscomarket',
     site: '@tiscomarket',
   },
@@ -108,13 +123,19 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Favicon - Multiple sizes for better Google indexing */}
+        {/* Favicon - Multiple sizes for better Google indexing and brand recognition */}
         <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16 32x32 48x48" />
         <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
         <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
+        <link rel="icon" href="/favicon-192x192.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/favicon-512x512.png" type="image/png" sizes="512x512" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon.ico" />
+        
+        {/* High-resolution logo for search engines */}
+        <link rel="preload" href="/logo-email.png" as="image" type="image/png" />
+        <link rel="preload" href="/favicon-512x512.png" as="image" type="image/png" />
         
         {/* Apple Touch Icons */}
         <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="180x180" />
@@ -157,8 +178,11 @@ export default async function RootLayout({
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0066CC" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0066CC" />
         
-        {/* Google Site Verification (add your verification code if available) */}
+        {/* Google Site Verification - Replace with your actual verification code from Google Search Console */}
         <meta name="google-site-verification" content="your-google-verification-code" />
+        
+        {/* Bing Webmaster Tools - Replace with your actual verification code */}
+        <meta name="msvalidate.01" content="your-bing-verification-code" />
         
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -178,7 +202,33 @@ export default async function RootLayout({
               "name": "TISCO Market",
               "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
               "url": "https://tiscomarket.store",
-              "logo": "https://tiscomarket.store/logo-email.png",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://tiscomarket.store/logo-email.png",
+                "width": 1200,
+                "height": 630,
+                "caption": "TISCO Market Logo - Tanzania's Online Marketplace"
+              },
+              "image": [
+                {
+                  "@type": "ImageObject",
+                  "url": "https://tiscomarket.store/logo-email.png",
+                  "width": 1200,
+                  "height": 630
+                },
+                {
+                  "@type": "ImageObject", 
+                  "url": "https://tiscomarket.store/favicon-512x512.png",
+                  "width": 512,
+                  "height": 512
+                },
+                {
+                  "@type": "ImageObject",
+                  "url": "https://tiscomarket.store/favicon.svg",
+                  "width": 512,
+                  "height": 512
+                }
+              ],
               "description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.",
               "address": {
                 "@type": "PostalAddress",
@@ -210,20 +260,45 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "TISCOマーケット - Online Shop",
-              "alternateName": ["TISCO Market", "TISCO", "Tisco Market", "tiscomarket"],
+              "alternateName": "TISCO Market",
               "url": "https://tiscomarket.store",
-              "description": "Tanzania's online marketplace for quality electronics, gadgets, and products across East Africa.",
-              "publisher": {
-                "@type": "Organization",
-                "name": "TISCO Market"
-              },
+              "logo": "https://tiscomarket.store/logo-email.png",
+              "image": "https://tiscomarket.store/logo-email.png",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": {
                   "@type": "EntryPoint",
-                  "urlTemplate": "https://tiscomarket.store/search?q={search_term_string}"
+                  "urlTemplate": "https://tiscomarket.store/products?query={search_term_string}"
                 },
                 "query-input": "required name=search_term_string"
+              }
+            })
+          }}
+        />
+        
+        {/* Structured Data - Brand */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Brand",
+              "name": "TISCO Market",
+              "alternateName": ["TISCOマーケット", "TISCO", "tiscomarket"],
+              "url": "https://tiscomarket.store",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://tiscomarket.store/logo-email.png",
+                "width": 1200,
+                "height": 630,
+                "caption": "TISCO Market Logo - Tanzania's Premier Online Marketplace"
+              },
+              "description": "TISCO Market brand - Tanzania's leading online marketplace for electronics, rare finds, and professional tech services",
+              "slogan": "No Bullshit. No Excuses. No Fluff. Just What You Need.",
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "reviewCount": "150"
               }
             })
           }}

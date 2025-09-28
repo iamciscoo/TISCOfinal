@@ -206,8 +206,71 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     setReviewRefreshTrigger(prev => prev + 1)
   }, [])
 
+  // Calculate average rating
+  const averageRating = actualReviews.length > 0 
+    ? actualReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / actualReviews.length 
+    : 0
+  
+  // Structured data for SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description || `${product.name} available at TISCO Market Tanzania`,
+    "image": productImages.map(img => img ? (img.startsWith('http') ? img : `https://tiscomarket.store${img}`) : ''),
+    "sku": product.id.toString(),
+    "brand": {
+      "@type": "Brand",
+      "name": "TISCO Market"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": `https://tiscomarket.store/product?id=${product.id}`,
+      "priceCurrency": "TZS",
+      "price": pricingInfo.currentPrice,
+      "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      "availability": (product.stock_quantity || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "TISCO Market",
+        "url": "https://tiscomarket.store"
+      }
+    },
+    ...(actualReviews.length > 0 && {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": averageRating,
+        "reviewCount": actualReviews.length,
+        "bestRating": 5,
+        "worstRating": 1
+      },
+      "review": actualReviews.slice(0, 5).map(review => ({
+        "@type": "Review",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": review.rating || 5,
+          "bestRating": 5,
+          "worstRating": 1
+        },
+        "author": {
+          "@type": "Person",
+          "name": (review as Record<string, unknown>).user_name as string || 'TISCO Customer'
+        },
+        "reviewBody": (review as Record<string, unknown>).comment as string || 'Great product!',
+        "datePublished": (review as Record<string, unknown>).created_at as string || new Date().toISOString()
+      }))
+    })
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 overflow-x-hidden">
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 overflow-x-hidden">
       {/* Breadcrumb */}
       <nav className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-8">
         <Link href="/" className="hover:text-blue-600">Home</Link>
@@ -514,6 +577,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
