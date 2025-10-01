@@ -46,7 +46,7 @@ interface AdminProductOption {
 const formSchema = z.object({
   product_id: z.string().min(1, { message: "Select a product" }),
   user_id: z.string().min(1, { message: "Select a user" }),
-  rating: z.coerce.number().int().min(1).max(5),
+  rating: z.number().int().min(1).max(5),
   title: z.string().optional(),
   comment: z.string().optional(),
 });
@@ -156,7 +156,14 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Rating</FormLabel>
-                      <Input type="number" min={1} max={5} step={1} {...field} />
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        max={5} 
+                        step={1} 
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

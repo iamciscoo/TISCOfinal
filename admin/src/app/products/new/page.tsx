@@ -19,13 +19,13 @@ import { useRouter } from 'next/navigation';
 const formSchema = z.object({
   name: z.string().min(1, { message: "Product name is required!" }),
   description: z.string().min(1, { message: "Description is required!" }),
-  price: z.coerce.number().min(0.01, { message: "Price must be greater than 0" }),
+  price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category_ids: z.array(z.string()).min(1, { message: "At least one category is required!" }).max(5, { message: "Maximum 5 categories allowed!" }),
-  stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
+  stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean(),
   is_deal: z.boolean(),
-  original_price: z.coerce.number().min(0.01).optional(),
-  deal_price: z.coerce.number().min(0.01).optional(),
+  original_price: z.number().min(0.01).optional(),
+  deal_price: z.number().min(0.01).optional(),
   images: z.any().optional(),
 }).refine((data) => {
   if (data.is_deal) {
@@ -37,18 +37,7 @@ const formSchema = z.object({
   path: ["deal_price"],
 });
 
-type FormData = {
-  name: string;
-  description: string;
-  price: number;
-  category_ids: string[];
-  stock_quantity: number;
-  is_featured: boolean;
-  is_deal: boolean;
-  original_price?: number;
-  deal_price?: number;
-  images?: any;
-};
+type FormData = z.infer<typeof formSchema>;
 
 const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -218,7 +207,12 @@ const AddProductPage = () => {
               <FormItem>
                 <FormLabel>Price</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
                 </FormControl>
                 <FormDescription>Enter the price of the product.</FormDescription>
                 <FormMessage />
@@ -232,7 +226,11 @@ const AddProductPage = () => {
               <FormItem>
                 <FormLabel>Stock Quantity</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number" 
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  />
                 </FormControl>
                 <FormDescription>Enter the available stock quantity.</FormDescription>
                 <FormMessage />
@@ -402,7 +400,12 @@ const AddProductPage = () => {
                   <FormItem>
                     <FormLabel>Original Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                      />
                     </FormControl>
                     <FormDescription>Enter the original price before discount.</FormDescription>
                     <FormMessage />
@@ -416,7 +419,12 @@ const AddProductPage = () => {
                   <FormItem>
                     <FormLabel>Deal Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                      />
                     </FormControl>
                     <FormDescription>Enter the discounted deal price.</FormDescription>
                     <FormMessage />

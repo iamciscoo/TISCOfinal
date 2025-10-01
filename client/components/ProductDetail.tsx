@@ -211,7 +211,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     ? actualReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / actualReviews.length 
     : 0
   
-  // Structured data for SEO
+  // Structured data for SEO - Fixed for Google Search Console
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -246,6 +246,11 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
       },
       "review": actualReviews.slice(0, 5).map(review => ({
         "@type": "Review",
+        // CRITICAL FIX: Added itemReviewed field required by Google
+        "itemReviewed": {
+          "@type": "Product",
+          "name": product.name
+        },
         "reviewRating": {
           "@type": "Rating",
           "ratingValue": review.rating || 5,

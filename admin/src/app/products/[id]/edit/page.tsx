@@ -22,15 +22,15 @@ const MAX_CATEGORIES = 5;
 const formSchema = z.object({
   name: z.string().min(1, { message: "Product name is required!" }),
   description: z.string().min(1, { message: "Description is required!" }),
-  price: z.coerce.number().min(0.01, { message: "Price must be greater than 0" }),
+  price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category_ids: z.array(z.string())
     .min(1, { message: "At least one category is required!" })
     .max(MAX_CATEGORIES, { message: `Maximum ${MAX_CATEGORIES} categories allowed!` }),
-  stock_quantity: z.coerce.number().min(0, { message: "Stock quantity must be 0 or greater" }),
+  stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean().optional(),
   is_deal: z.boolean().optional(),
-  original_price: z.coerce.number().optional(),
-  deal_price: z.coerce.number().optional(),
+  original_price: z.number().optional(),
+  deal_price: z.number().optional(),
 }).refine((data) => {
   if (data.is_deal) {
     return data.original_price && data.deal_price && data.original_price > data.deal_price;
@@ -377,7 +377,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <FormItem>
                 <FormLabel>Price</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
                 </FormControl>
                 <FormDescription>Enter the price of the product.</FormDescription>
                 <FormMessage />
@@ -391,7 +396,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <FormItem>
                 <FormLabel>Stock Quantity</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number" 
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  />
                 </FormControl>
                 <FormDescription>Enter the available stock quantity.</FormDescription>
                 <FormMessage />
@@ -517,7 +526,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   <FormItem>
                     <FormLabel>Original Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                      />
                     </FormControl>
                     <FormDescription>Enter the original price before discount.</FormDescription>
                     <FormMessage />
@@ -531,7 +545,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   <FormItem>
                     <FormLabel>Deal Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                      />
                     </FormControl>
                     <FormDescription>Enter the discounted deal price.</FormDescription>
                     <FormMessage />
