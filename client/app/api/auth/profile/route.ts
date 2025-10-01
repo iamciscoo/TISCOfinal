@@ -63,8 +63,7 @@ export async function GET() {
         })
         .select(`
           *,
-          addresses(*),
-          payment_methods(*)
+          addresses(*)
         `)
         .single()
 

@@ -24,8 +24,6 @@ export interface Product {
   is_deal?: boolean
   original_price?: number
   deal_price?: number
-  is_on_sale?: boolean
-  sale_price?: number
   tags?: string[]
   slug?: string
   created_at?: string
@@ -182,7 +180,6 @@ export interface ProductFilters {
   rating?: number
   in_stock?: boolean
   is_featured?: boolean
-  is_on_sale?: boolean
   tags?: string[]
 }
 

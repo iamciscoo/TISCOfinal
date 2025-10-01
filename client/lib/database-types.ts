@@ -195,14 +195,12 @@ export type Database = {
           id: string
           is_deal: boolean | null
           is_featured: boolean | null
-          is_on_sale: boolean | null
           main_image_url: string | null
           name: string
           original_price: number | null
           price: number
           rating: number | null
           reviews_count: number | null
-          sale_price: number | null
           slug: string | null
           stock_quantity: number | null
           updated_at: string | null
@@ -215,14 +213,12 @@ export type Database = {
           id?: string
           is_deal?: boolean | null
           is_featured?: boolean | null
-          is_on_sale?: boolean | null
           main_image_url?: string | null
           name: string
           original_price?: number | null
           price: number
           rating?: number | null
           reviews_count?: number | null
-          sale_price?: number | null
           slug?: string | null
           stock_quantity?: number | null
           updated_at?: string | null
@@ -235,14 +231,12 @@ export type Database = {
           id?: string
           is_deal?: boolean | null
           is_featured?: boolean | null
-          is_on_sale?: boolean | null
           main_image_url?: string | null
           name?: string
           original_price?: number | null
           price?: number
           rating?: number | null
           reviews_count?: number | null
-          sale_price?: number | null
           slug?: string | null
           stock_quantity?: number | null
           updated_at?: string | null

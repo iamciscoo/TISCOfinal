@@ -106,20 +106,12 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Resolve payment method details
+    // Platform uses simple payment methods: Mobile Money & Pay at Office
+    // No need for payment_methods table - methods are passed as strings
     let paymentMethod: PaymentMethod | null = null
     if (payment_method_id) {
-      const { data: found, error: methodError } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('id', payment_method_id)
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single()
-      if (methodError || !found) {
-        return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
-      }
-      paymentMethod = found as PaymentMethod
+      // payment_method_id no longer used - platform uses simple strings
+      return NextResponse.json({ error: 'payment_method_id deprecated - use payment_method string' }, { status: 400 })
     } else {
       // Ephemeral method (no DB row yet) - requires provider and phone
       if (!provider || !phone_number) {

@@ -73,8 +73,6 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
       image_url,
       stock_quantity,
       is_featured,
-      is_on_sale,
-      sale_price,
       is_deal,
       deal_price,
       original_price,

@@ -41,8 +41,6 @@ interface Product {
   rating: number;
   reviews_count: number;
   is_featured: boolean;
-  is_on_sale: boolean;
-  sale_price?: number;
   tags?: string;
   slug?: string;
   is_deal: boolean;
@@ -314,7 +312,6 @@ export default function ViewProductPage() {
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {product.is_featured && <Badge>Featured</Badge>}
-                {product.is_on_sale && <Badge variant="destructive">On Sale</Badge>}
                 {product.is_deal && <Badge variant="outline">Deal</Badge>}
                 {product.stock_quantity === 0 && <Badge variant="secondary">Out of Stock</Badge>}
               </div>
@@ -345,13 +342,6 @@ export default function ViewProductPage() {
                   <span className="text-sm font-medium">Regular Price:</span>
                   <span className="text-sm font-semibold">{formatCurrency(product.price)}</span>
                 </div>
-                
-                {product.is_on_sale && product.sale_price && (
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Sale Price:</span>
-                    <span className="text-sm font-semibold text-red-600">{formatCurrency(product.sale_price)}</span>
-                  </div>
-                )}
                 
                 {product.is_deal && (
                   <>

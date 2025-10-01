@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { notifyPaymentSuccess, notifyPaymentFailed } from '@/lib/notifications/service'
+import { logger } from '../../../../../shared/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -27,28 +28,33 @@ function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY
   
-  console.log('Supabase config check:', {
+  logger.debug('Supabase config check', {
     hasUrl: !!url,
     hasServiceKey: !!serviceKey,
     urlPreview: url ? `${url.slice(0, 30)}...` : 'missing'
   })
   
   if (!url || !serviceKey) {
-    console.error('Missing Supabase configuration:', {
+    logger.error('Missing Supabase configuration', undefined, {
       url: !!url,
       serviceKey: !!serviceKey
     })
     return null
   }
-  return createClient(url, serviceKey)
+  return createClient(url!, serviceKey!)
 }
 
 export async function POST(req: NextRequest) {
-  console.log('=== WEBHOOK RECEIVED ===')
+  logger.webhook('webhook_received', 'zenopay', false)
+  
   try {
     const supabase = getAdminSupabase()
     if (!supabase) {
-      return NextResponse.json({ error: 'Webhook disabled: missing SUPABASE_SERVICE_ROLE' }, { status: 503 })
+      logger.error('Supabase not configured for webhook', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL || !!process.env.SUPABASE_URL,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE || !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      })
+      return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 })
     }
     // Read raw body for signature verification
     const rawBody = await req.text()
@@ -302,6 +308,11 @@ export async function POST(req: NextRequest) {
 
 type WebhookData = { gateway_transaction_id?: string; [key: string]: unknown }
 type TransactionRow = { id: string; order_id: string; user_id: string; status: string; transaction_reference: string; gateway_transaction_id?: string }
+type OrderWithUser = { 
+  total_amount: number; 
+  payment_method: string; 
+  users: { email: string; first_name: string; last_name: string } 
+}
 
 function invalidateOrderCaches(t: TransactionRow) {
   try {
@@ -564,10 +575,40 @@ async function handlePaymentFailure(transaction: TransactionRow, reason: string)
         user_id: transaction.user_id
       })
 
-    // TODO: Send failure notification
-    // TODO: Restore product stock if needed
+    // Send failure notification to customer
+    try {
+      // Get order and user details for notification
+      const supabase = getAdminSupabase()
+      if (supabase) {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('*, users(email, first_name, last_name)')
+          .eq('id', transaction.order_id)
+          .single()
+        
+        if (order) {
+          const orderData = order as unknown as OrderWithUser
+          const user = orderData.users
+          await notifyPaymentFailed({
+            order_id: transaction.order_id,
+            customer_email: user?.email || '',
+            customer_name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Customer',
+            amount: orderData.total_amount?.toString() || '0',
+            currency: 'TZS',
+            payment_method: orderData.payment_method || 'Mobile Money',
+            failure_reason: reason || 'Payment failed'
+          })
+          logger.info('Payment failure notification sent', { transaction_id: transaction.id })
+        }
+      }
+    } catch (notifError) {
+      logger.error('Failed to send payment failure notification', notifError, { transaction_id: transaction.id })
+    }
     
-    console.log('Payment failed:', transaction.transaction_reference, reason)
+    logger.payment('payment_failed', { 
+      transaction_reference: transaction.transaction_reference, 
+      reason 
+    })
     invalidateOrderCaches(transaction)
   } catch (error) {
     console.error('Error handling payment failure:', error)

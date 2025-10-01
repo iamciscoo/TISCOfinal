@@ -23,8 +23,6 @@ export async function GET(req: Request) {
         image_url,
         stock_quantity,
         is_featured,
-        is_on_sale,
-        sale_price,
         is_deal,
         deal_price,
         original_price,
@@ -79,7 +77,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price, is_on_sale, sale_price } = body ?? {};
+    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price } = body ?? {};
 
     if (!name || !description || typeof price !== "number") {
       return NextResponse.json({ error: "Missing required fields: name, description, price" }, { status: 400 });
@@ -108,8 +106,6 @@ export async function POST(req: Request) {
       is_deal: !!is_deal,
       original_price: typeof original_price === 'number' ? original_price : null,
       deal_price: typeof deal_price === 'number' ? deal_price : null,
-      is_on_sale: !!is_on_sale,
-      sale_price: typeof sale_price === 'number' ? sale_price : null,
     };
 
     // Create product first

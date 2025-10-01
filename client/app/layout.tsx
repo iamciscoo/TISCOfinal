@@ -138,7 +138,7 @@ export default async function RootLayout({
         <link rel="preload" href="/favicon-512x512.png" as="image" type="image/png" />
         
         {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="180x180" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="152x152" />
         <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="144x144" />
         <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="120x120" />
