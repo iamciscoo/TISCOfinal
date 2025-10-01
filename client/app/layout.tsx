@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
 import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
+import { OrganizationSchema, WebsiteSchema, SiteNavigationSchema, LocalBusinessSchema } from '@/components/StructuredData'
 import { Geist, Geist_Mono } from 'next/font/google'
 import "./globals.css";
 
@@ -123,6 +124,12 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Structured Data for Rich Search Results */}
+        <OrganizationSchema />
+        <WebsiteSchema />
+        <SiteNavigationSchema />
+        <LocalBusinessSchema />
+        
         {/* Favicon - Multiple sizes for better Google indexing and brand recognition */}
         <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16 32x32 48x48" />
         <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
