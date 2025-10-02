@@ -329,7 +329,13 @@ class NotificationService {
         return
       }
       
-      // Allow order_created events to trigger Admin Alert emails (good design)
+      // Skip admin notifications for order_created events since we use notifyAdminOrderCreated directly
+      // This prevents duplicate admin emails - we want only the beautiful "New Order Created" emails
+      if (record.event === 'order_created') {
+        console.log('Skipping admin notification for order_created event - using direct notifyAdminOrderCreated instead')
+        return
+      }
+      
       console.log(`Processing admin notification for event: ${record.event}`)
 
       // Get admin recipients from database with category filtering

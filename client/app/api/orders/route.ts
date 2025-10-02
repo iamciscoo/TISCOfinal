@@ -463,10 +463,26 @@ export async function POST(req: Request) {
       })
       console.log('✅ Order confirmation email sent successfully')
 
-      // NOTE: Admin notifications are automatically sent by the order_created event above
-      // This triggers the "Admin Alert 🔔" email with professional design
-      // No need for separate admin notification call to avoid duplicates
-      console.log('✅ Admin will be notified via order_created event (Admin Alert email)')
+      // Send admin notification for all orders (including "Pay at Office")
+      // This ensures office payments get admin notifications just like mobile payments do via webhooks
+      console.log('=== SENDING ADMIN ORDER NOTIFICATION ===')
+      try {
+        const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+        await notifyAdminOrderCreated({
+          order_id: order.id,
+          customer_email: emailValue!,
+          customer_name: customerName || 'Customer',
+          total_amount: total_amount.toString(),
+          currency,
+          payment_method,
+          payment_status: payment_method === 'Mobile Money' ? 'paid' : 'pending',
+          items_count: validatedItems.length
+        })
+        console.log('✅ Admin order notification sent successfully')
+      } catch (adminEmailError) {
+        console.error('❌ Failed to send admin order notification:', adminEmailError)
+        // Continue without failing the order creation
+      }
     } catch (emailError) {
       console.error('❌ Failed to send order confirmation email:', emailError)
       // Don't fail the order creation if email fails
