@@ -67,6 +67,8 @@ const CATEGORIES = [
   'bookings',         // Simplified category for booking events  
   'contact_message_received', // ✅ Used for contact forms (customer notifications)
   'contact',          // Simplified category for contact events
+  'user_registered',  // ✅ Used for welcome emails to new users (customer notifications)
+  'users',            // Simplified category for user events
   'admin_order_created' // ✅ Used for admin order notifications (admin notifications)
 ]
 const MODULES = ['orders', 'products', 'users', 'payments', 'inventory', 'analytics', 'system']
@@ -359,6 +361,7 @@ export default function NotificationsPage() {
                   <SelectItem value="order_created">Order Created</SelectItem>
                   <SelectItem value="booking_created">Booking Created</SelectItem>
                   <SelectItem value="contact_message_received">Contact Message</SelectItem>
+                  <SelectItem value="user_registered">User Registered</SelectItem>
                   <SelectItem value="payment_success">Payment Success</SelectItem>
                   <SelectItem value="payment_failed">Payment Failed</SelectItem>
                   <SelectItem value="admin_order_created">Admin Order Created</SelectItem>

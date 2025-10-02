@@ -27,6 +27,7 @@ export type NotificationEvent =
   | 'payment_failed'          // ✅ Used for failed payments (customer notifications)  
   | 'booking_created'         // ✅ Used for service bookings (customer notifications)
   | 'contact_message_received' // ✅ Used for contact form submissions (customer notifications)
+  | 'user_registered'         // ✅ Used for welcome emails to new users (customer notifications)
   | 'admin_order_created'     // ✅ Used for admin order notifications (admin notifications)
 
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app'
@@ -70,6 +71,7 @@ class NotificationService {
       payment_failed: 'payment_failed',
       booking_created: 'booking_confirmation',
       contact_message_received: 'admin_notification',
+      user_registered: 'welcome_email',
       admin_order_created: 'admin_notification',
     }
     return eventTemplateMap[event]
@@ -361,6 +363,7 @@ class NotificationService {
           'payment_failed': ['payment_failed', 'payments'],
           'booking_created': ['booking_created', 'bookings'],
           'contact_message_received': ['contact_message_received', 'contact'],
+          'user_registered': ['user_registered', 'users'],
         }
         
         const eventCategories = eventCategoryMap[record.event] || [record.event]
@@ -539,6 +542,7 @@ class NotificationService {
       payment_failed: 'Payment Failed',
       booking_created: 'Booking Created',
       contact_message_received: 'Contact Message Received',
+      user_registered: 'User Registered',
       admin_order_created: 'Admin Order Created'
     }
     return eventNames[event] || event.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -955,8 +959,20 @@ export async function notifyBookingCreated(bookingData: {
   })
 }
 
-// Removed notifyUserRegistered - welcome emails are handled by Supabase Auth
-// This was creating redundant notifications to users themselves
+export async function notifyUserRegistered(userData: {
+  email: string
+  name?: string
+}): Promise<string> {
+  return notificationService.sendNotification({
+    event: 'user_registered',
+    recipient_email: userData.email,
+    recipient_name: userData.name,
+    data: {
+      customer_name: userData.name,
+    },
+    priority: 'low',
+  })
+}
 
 export async function notifyContactMessageReceived(messageData: {
   admin_email: string
