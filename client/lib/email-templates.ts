@@ -1398,7 +1398,7 @@ export async function renderEmailTemplate(
   // Add default values
   const defaultData = {
     company_name: 'TISCOマーケット',
-    support_email: 'info@tiscmarket.store',
+    support_email: 'info@tiscomarket.store',
     support_phone: '+255748624684',
     ...data
   }

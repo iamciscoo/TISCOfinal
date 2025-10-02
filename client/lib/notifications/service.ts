@@ -241,7 +241,7 @@ class NotificationService {
         to: record.recipient_email,
         subject: record.subject,
         html: record.content,
-        replyTo: 'info@tiscmarket.store',
+        replyTo: 'info@tiscomarket.store',
       }
 
       console.log(`Sending HTML email to ${record.recipient_email} with subject: ${record.subject}`)
@@ -322,6 +322,13 @@ class NotificationService {
   // Notify admin recipients about new user notifications with category filtering
   private async notifyAdminsOfNewNotification(record: NotificationRecord): Promise<void> {
     try {
+      // Skip admin notifications for admin_order_created events to prevent duplicates
+      // These events ARE the admin notifications, so they shouldn't trigger additional admin emails
+      if (record.event === 'admin_order_created') {
+        console.log('Skipping admin notification for admin_order_created event to prevent duplicates')
+        return
+      }
+
       // Get admin recipients from database with category filtering
       const { data: recipients, error } = await supabase
         .from('notification_recipients')
@@ -330,8 +337,8 @@ class NotificationService {
       
       if (error || !recipients || recipients.length === 0) {
         console.warn('No admin recipients found, using fallback emails for event:', record.event)
-        // Use fallback admin emails only for critical events
-        const criticalEvents: NotificationEvent[] = ['payment_failed', 'order_created', 'admin_order_created']
+        // Use fallback admin emails only for critical events (excluding admin_order_created to prevent duplicates)
+        const criticalEvents: NotificationEvent[] = ['payment_failed', 'order_created', 'user_registered']
         if (criticalEvents.includes(record.event)) {
           const adminEmails = [
             'francisjacob08@gmail.com',
@@ -594,6 +601,12 @@ class NotificationService {
       message += '\n• Confirm appointment availability'
       message += '\n• Contact customer to schedule'
       message += '\n• Prepare service requirements'
+    } else if (record.event === 'user_registered') {
+      message += '\n\n👤 NEW USER REGISTRATION:'
+      message += '\n• Welcome new customer to TISCO platform'
+      message += '\n• Monitor user engagement and first purchase'
+      message += '\n• Consider sending personalized product recommendations'
+      message += '\n• Add to newsletter and marketing campaigns'
     }
     
     return message
@@ -611,7 +624,9 @@ class NotificationService {
     } else if (record.event === 'payment_failed') {
       return `${adminBaseUrl}/orders?status=payment_failed` // Failed payments
     } else if (record.event === 'booking_created') {
-      return `${adminBaseUrl}/bookings` // Admin bookings page
+      return `${adminBaseUrl}/service-bookings` // Admin bookings page
+    } else if (record.event === 'user_registered') {
+      return `${adminBaseUrl}/users` // Admin users page
     }
     return undefined
   }

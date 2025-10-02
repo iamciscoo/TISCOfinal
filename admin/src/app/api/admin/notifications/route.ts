@@ -325,7 +325,7 @@ async function sendViaSendPulse(params: { to: string; subject: string; html: str
       to: [{ email: params.to }],
       html: htmlB64,
       text: params.html.replace(/<[^>]*>/g, '').slice(0, 500) + '...',
-      reply_to: { email: 'info@tiscmarket.store' },
+      reply_to: { email: 'info@tiscomarket.store' },
     },
   }
   const res = await fetch(url, {

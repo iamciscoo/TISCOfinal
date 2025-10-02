@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       const { notifyContactMessageReceived } = await import('@/lib/notifications/service')
       
       await notifyContactMessageReceived({
-        admin_email: process.env.ADMIN_EMAIL || 'info@tiscmarket.store',
+        admin_email: process.env.ADMIN_EMAIL || 'info@tiscomarket.store',
         customer_name: name,
         customer_email: email,
         subject: subject,
