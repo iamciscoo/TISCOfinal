@@ -62,12 +62,14 @@ function SelectContent({
         data-slot="select-content"
         className={cn(
           "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-lg",
-          // Enhanced z-index for mobile layering
-          "z-[100]",
+          // Enhanced z-index for mobile layering - higher than all overlays (z-50)
+          "z-[9999]",
           // Better mobile max-height handling
           "max-h-[min(var(--radix-select-content-available-height),80vh)]",
           // Touch-friendly spacing on mobile
           "sm:max-h-[var(--radix-select-content-available-height)]",
+          // Ensure proper touch behavior on mobile Safari/Chrome
+          "touch-auto",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
@@ -115,12 +117,16 @@ function SelectItem({
       data-slot="select-item"
       className={cn(
         "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        // Enhanced mobile touch target size
-        "py-2.5 pr-8 pl-2 sm:py-1.5",
+        // Enhanced mobile touch target size (minimum 44px for iOS)
+        "py-3 pr-8 pl-2 sm:py-1.5 min-h-[44px] flex items-center",
         // Better touch interaction on mobile
         "touch-manipulation",
         // Active state for mobile tap feedback
         "active:bg-accent/80",
+        // Prevent double-tap zoom on mobile
+        "user-select-none",
+        // Ensure proper pointer events
+        "pointer-events-auto",
         className
       )}
       {...props}

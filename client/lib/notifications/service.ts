@@ -328,6 +328,9 @@ class NotificationService {
         console.log('Skipping admin notification for admin_order_created event to prevent duplicates')
         return
       }
+      
+      // Allow order_created events to trigger Admin Alert emails (good design)
+      console.log(`Processing admin notification for event: ${record.event}`)
 
       // Get admin recipients from database with category filtering
       const { data: recipients, error } = await supabase

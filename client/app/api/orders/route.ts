@@ -442,7 +442,7 @@ export async function POST(req: Request) {
       console.log('Order ID:', order.id)
 
       // Import notification service directly to avoid external HTTP dependency
-      const { notifyOrderCreated, notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+      const { notifyOrderCreated } = await import('@/lib/notifications/service')
       await notifyOrderCreated({
         order_id: order.id,
         customer_email: emailValue!,
@@ -463,30 +463,14 @@ export async function POST(req: Request) {
       })
       console.log('✅ Order confirmation email sent successfully')
 
-      // Send admin notification for all orders (including "Pay at Office")
-      // This ensures office payments get admin notifications just like mobile payments do via webhooks
-      console.log('=== SENDING ADMIN ORDER NOTIFICATION ===')
-      try {
-        await notifyAdminOrderCreated({
-          order_id: order.id,
-          customer_email: emailValue!,
-          customer_name: customerName || 'Customer',
-          total_amount: total_amount.toString(),
-          currency,
-          payment_method,
-          payment_status: 'pending', // Office payments start as pending
-          items_count: validatedItems.length
-        })
-        console.log('✅ Admin order notification sent successfully')
-      } catch (adminEmailError) {
-        console.error('❌ Failed to send admin order notification:', adminEmailError)
-        // Don't fail the order creation if admin email fails
-      }
+      // NOTE: Admin notifications are automatically sent by the order_created event above
+      // This triggers the "Admin Alert 🔔" email with professional design
+      // No need for separate admin notification call to avoid duplicates
+      console.log('✅ Admin will be notified via order_created event (Admin Alert email)')
     } catch (emailError) {
       console.error('❌ Failed to send order confirmation email:', emailError)
       // Don't fail the order creation if email fails
     }
-
     console.log('=== ORDER CREATION SUCCESS ===', order.id)
     return NextResponse.json({ order: orderWithItems }, { status: 201 })
   } catch (error: unknown) {
