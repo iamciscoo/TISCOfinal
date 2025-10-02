@@ -225,15 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
             ? `${metadata.first_name} ${metadata.last_name}`    // Full name if available
             : (metadata?.first_name as string) || 'New Customer'  // First name or generic fallback
             
-          // Send welcome email via notification API (fire-and-forget)
-          await fetch('/api/notifications/welcome', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: result.data.user.email,  // User's email address
-              name: userName                   // Personalized name for email
-            })
-          })
+          // Note: Welcome emails are now handled automatically by Supabase Auth
+          // Removed redundant user_registered notification that sent emails to users themselves
         } catch (error) {
           // Log error but don't fail the signup process
           console.error('Failed to send welcome notification:', error)

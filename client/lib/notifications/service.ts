@@ -20,21 +20,14 @@ const getSupabaseClient = () => {
 
 const supabase = getSupabaseClient()
 
+// Only include notification events that are actually implemented and make logical sense
 export type NotificationEvent = 
-  | 'order_created'
-  | 'order_status_changed'
-  | 'order_confirmation'
-  | 'order_status_update'
-  | 'payment_success'
-  | 'payment_failed'
-  | 'booking_created'
-  | 'booking_status_changed'
-  | 'user_registered'
-  | 'contact_message_received'
-  | 'contact_message_replied'
-  | 'contact_reply'
-  | 'password_reset_requested'
-  | 'admin_order_created'
+  | 'order_created'           // ✅ Used in checkout/order creation (customer notifications)
+  | 'payment_success'         // ✅ Used for successful payments (customer notifications)
+  | 'payment_failed'          // ✅ Used for failed payments (customer notifications)  
+  | 'booking_created'         // ✅ Used for service bookings (customer notifications)
+  | 'contact_message_received' // ✅ Used for contact form submissions (customer notifications)
+  | 'admin_order_created'     // ✅ Used for admin order notifications (admin notifications)
 
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app'
 
@@ -69,22 +62,14 @@ export interface NotificationRecord {
 class NotificationService {
   private config = getSendPulseConfig()
 
-  // Map notification events to email templates
+  // Map active notification events to email templates
   private getTemplateForEvent(event: NotificationEvent): TemplateType | null {
     const eventTemplateMap: Record<NotificationEvent, TemplateType | null> = {
       order_created: 'order_confirmation',
-      order_confirmation: 'order_confirmation',
-      order_status_changed: 'order_status_update',
-      order_status_update: 'order_status_update',
       payment_success: 'payment_success',
       payment_failed: 'payment_failed',
-      booking_created: 'booking_confirmation', // Use dedicated booking template
-      booking_status_changed: 'booking_status_update',
-      user_registered: 'welcome_email',
-      contact_message_received: 'admin_notification', // Use admin-styled template
-      contact_message_replied: 'contact_reply',
-      contact_reply: 'contact_reply',
-      password_reset_requested: 'password_reset',
+      booking_created: 'booking_confirmation',
+      contact_message_received: 'admin_notification',
       admin_order_created: 'admin_notification',
     }
     return eventTemplateMap[event]
@@ -332,50 +317,73 @@ class NotificationService {
     return true
   }
 
-  // Notify admin recipients about new user notifications
+  // Notify admin recipients about new user notifications with category filtering
   private async notifyAdminsOfNewNotification(record: NotificationRecord): Promise<void> {
     try {
-      // Only notify admins for important customer events, not admin events themselves
-      // Note: 'order_created' is handled by dedicated notifyAdminOrderCreated function
-      const adminNotificationEvents: NotificationEvent[] = [
-        'payment_failed', 
-        'contact_message_received',
-        'booking_created'
-      ]
-      
-      if (!adminNotificationEvents.includes(record.event)) {
-        console.log('Admin notification not needed for:', record.event)
-        return
-      }
-
-      // Get admin recipients from database
+      // Get admin recipients from database with category filtering
       const { data: recipients, error } = await supabase
         .from('notification_recipients')
-        .select('email, name')
+        .select('email, name, notification_categories')
         .eq('is_active', true)
       
       if (error || !recipients || recipients.length === 0) {
-        console.warn('No admin recipients found, using fallback emails')
-        // Use fallback admin emails
-        const adminEmails = [
-          'francisjacob08@gmail.com',
-          'info@tiscomarket.store',
-          ...(process.env.ADMIN_EMAIL?.split(',') || [])
-        ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim())
-        
-        for (const email of adminEmails) {
-          await this.sendAdminNotificationEmail(email.trim(), 'Admin', record)
-        }
-      } else {
-        // Send to database recipients with delay between sends
-        for (let i = 0; i < recipients.length; i++) {
-          const recipient = recipients[i]
-          await this.sendAdminNotificationEmail(recipient.email, recipient.name || 'Admin', record)
+        console.warn('No admin recipients found, using fallback emails for event:', record.event)
+        // Use fallback admin emails only for critical events
+        const criticalEvents: NotificationEvent[] = ['payment_failed', 'order_created', 'admin_order_created']
+        if (criticalEvents.includes(record.event)) {
+          const adminEmails = [
+            'francisjacob08@gmail.com',
+            'info@tiscomarket.store',
+            ...(process.env.ADMIN_EMAIL?.split(',') || [])
+          ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim())
           
-          // Add delay between emails to avoid API rate limits (except for last email)
-          if (i < recipients.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
+          for (const email of adminEmails) {
+            await this.sendAdminNotificationEmail(email.trim(), 'Admin', record)
           }
+        }
+        return
+      }
+
+      // Filter recipients based on their notification categories
+      const filteredRecipients = recipients.filter(recipient => {
+        const categories = recipient.notification_categories || ['all']
+        
+        // If recipient has 'all' category, they get all notifications
+        if (categories.includes('all')) {
+          return true
+        }
+        
+        // Map active events to their corresponding categories
+        const eventCategoryMap: Record<NotificationEvent, string[]> = {
+          'order_created': ['order_created', 'orders'],
+          'admin_order_created': ['order_created', 'orders', 'admin_order_created'],
+          'payment_success': ['payment_success', 'payments'],
+          'payment_failed': ['payment_failed', 'payments'],
+          'booking_created': ['booking_created', 'bookings'],
+          'contact_message_received': ['contact_message_received', 'contact'],
+        }
+        
+        const eventCategories = eventCategoryMap[record.event] || [record.event]
+        
+        // Check if recipient's categories intersect with event categories
+        return categories.some((category: string) => eventCategories.includes(category))
+      })
+
+      if (filteredRecipients.length === 0) {
+        console.log(`No recipients subscribed to event '${record.event}' categories`)
+        return
+      }
+
+      console.log(`Sending admin notifications to ${filteredRecipients.length} recipients for event: ${record.event}`)
+
+      // Send to filtered recipients with delay between sends
+      for (let i = 0; i < filteredRecipients.length; i++) {
+        const recipient = filteredRecipients[i]
+        await this.sendAdminNotificationEmail(recipient.email, recipient.name || 'Admin', record)
+        
+        // Add delay between emails to avoid API rate limits (except for last email)
+        if (i < filteredRecipients.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
         }
       }
     } catch (error) {
@@ -515,13 +523,11 @@ class NotificationService {
 
   // Get priority level for admin notifications based on event type
   private getAdminNotificationPriority(event: NotificationEvent): 'low' | 'medium' | 'high' | 'urgent' {
-    const highPriorityEvents: NotificationEvent[] = ['payment_failed', 'order_status_update', 'contact_reply']
     const urgentEvents: NotificationEvent[] = ['payment_failed']
-    const lowPriorityEvents: NotificationEvent[] = ['user_registered']
+    const highPriorityEvents: NotificationEvent[] = ['payment_failed', 'admin_order_created']
     
     if (urgentEvents.includes(event)) return 'urgent'
     if (highPriorityEvents.includes(event)) return 'high'
-    if (lowPriorityEvents.includes(event)) return 'low'
     return 'medium'
   }
 
@@ -529,18 +535,10 @@ class NotificationService {
   private getEventDisplayName(event: NotificationEvent): string {
     const eventNames: Record<NotificationEvent, string> = {
       order_created: 'Order Created',
-      order_confirmation: 'Order Confirmation',
-      order_status_changed: 'Order Status Changed',
-      order_status_update: 'Order Status Update',
       payment_success: 'Payment Success',
       payment_failed: 'Payment Failed',
       booking_created: 'Booking Created',
-      booking_status_changed: 'Booking Status Changed',
-      user_registered: 'User Registered',
       contact_message_received: 'Contact Message Received',
-      contact_message_replied: 'Contact Message Replied',
-      contact_reply: 'Contact Reply',
-      password_reset_requested: 'Password Reset Requested',
       admin_order_created: 'Admin Order Created'
     }
     return eventNames[event] || event.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -602,12 +600,14 @@ class NotificationService {
     // Production admin panel URLs
     const adminBaseUrl = 'https://admin.tiscomarket.store'
     
-    if (record.event === 'order_created' || record.event === 'order_confirmation' || record.event === 'order_status_changed' || record.event === 'order_status_update') {
+    if (record.event === 'order_created' || record.event === 'admin_order_created') {
       return `${adminBaseUrl}/orders` // Admin orders page
-    } else if (record.event === 'contact_message_replied' || record.event === 'contact_reply') {
+    } else if (record.event === 'contact_message_received') {
       return `${adminBaseUrl}/messages` // Admin messages page
     } else if (record.event === 'payment_failed') {
       return `${adminBaseUrl}/orders?status=payment_failed` // Failed payments
+    } else if (record.event === 'booking_created') {
+      return `${adminBaseUrl}/bookings` // Admin bookings page
     }
     return undefined
   }
@@ -753,26 +753,26 @@ export async function notifyAdminOrderCreated(orderData: {
   items_count: number
 }) {
   try {
-    // Get admin recipients from database using Supabase MCP
+    // Get admin recipients from database with category filtering
     const { data: recipients, error } = await supabase
       .from('notification_recipients')
-      .select('email, name')
+      .select('email, name, notification_categories')
       .eq('is_active', true)
     
     if (error) {
       console.warn('Failed to fetch admin recipients, using fallback:', error)
-      // Use hardcoded admin emails - can be expanded to database-driven later
+      // Use hardcoded admin emails as fallback
       const adminEmails = [
         'francisjacob08@gmail.com',  // Primary admin
         'info@tiscomarket.store',     // Business email
         ...(process.env.ADMIN_EMAIL?.split(',') || [])
-      ].filter((email, index, arr) => arr.indexOf(email) === index) // Remove duplicates
+      ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim()) // Remove duplicates and empty
       
-      console.log('Sending admin notifications to:', adminEmails)
+      console.log('Sending admin order notifications to fallback emails:', adminEmails)
       const notifications = adminEmails.map(email => 
         notificationService.sendNotification({
           event: 'admin_order_created',
-          recipient_email: email.trim(),
+          recipient_email: email,
           recipient_name: 'Admin',
           data: {
             ...orderData,
@@ -789,7 +789,7 @@ export async function notifyAdminOrderCreated(orderData: {
     if (!recipients || recipients.length === 0) {
       console.warn('No admin recipients found in database, using fallback')
       const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
-      const notifications = adminEmails.map(email => 
+      const notifications = adminEmails.filter(email => email.trim()).map(email => 
         notificationService.sendNotification({
           event: 'admin_order_created',
           recipient_email: email.trim(),
@@ -806,8 +806,44 @@ export async function notifyAdminOrderCreated(orderData: {
       return await Promise.allSettled(notifications)
     }
     
-    // Send to all admin recipients from database
-    const notifications = recipients.map(recipient => 
+    // Filter recipients based on their notification categories
+    const filteredRecipients = recipients.filter(recipient => {
+      const categories = recipient.notification_categories || ['all']
+      
+      // If recipient has 'all' category, they get all notifications
+      if (categories.includes('all')) {
+        return true
+      }
+      
+      // Check if they're subscribed to order-related categories
+      const orderCategories = ['order_created', 'orders', 'admin_order_created']
+      return categories.some((category: string) => orderCategories.includes(category))
+    })
+
+    if (filteredRecipients.length === 0) {
+      console.warn('No recipients subscribed to order notifications, using fallback')
+      const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
+      const notifications = adminEmails.map(email => 
+        notificationService.sendNotification({
+          event: 'admin_order_created',
+          recipient_email: email,
+          recipient_name: 'Admin',
+          data: {
+            ...orderData,
+            title: 'New Order Created',
+            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+            action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+          },
+          priority: 'high'
+        })
+      )
+      return await Promise.allSettled(notifications)
+    }
+
+    console.log(`Sending order notifications to ${filteredRecipients.length} recipients with order categories`)
+
+    // Send to filtered recipients from database
+    const notifications = filteredRecipients.map(recipient => 
       notificationService.sendNotification({
         event: 'admin_order_created',
         recipient_email: recipient.email,
@@ -919,20 +955,8 @@ export async function notifyBookingCreated(bookingData: {
   })
 }
 
-export async function notifyUserRegistered(userData: {
-  email: string
-  name?: string
-}): Promise<string> {
-  return notificationService.sendNotification({
-    event: 'user_registered',
-    recipient_email: userData.email,
-    recipient_name: userData.name,
-    data: {
-      customer_name: userData.name,
-    },
-    priority: 'low',
-  })
-}
+// Removed notifyUserRegistered - welcome emails are handled by Supabase Auth
+// This was creating redundant notifications to users themselves
 
 export async function notifyContactMessageReceived(messageData: {
   admin_email: string
@@ -1074,11 +1098,15 @@ export async function notifyOrderStatusChanged(orderData: {
   total_amount?: string
   currency?: string
 }): Promise<string> {
+  // Use order_created event for status updates since order_status_changed was removed
   return notificationService.sendNotification({
-    event: 'order_status_changed',
+    event: 'order_created',
     recipient_email: orderData.customer_email,
     recipient_name: orderData.customer_name,
-    data: orderData,
+    data: {
+      ...orderData,
+      order_status_update: true, // Flag to indicate this is a status update
+    },
     priority: 'medium',
   })
 }

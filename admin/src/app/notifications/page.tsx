@@ -56,15 +56,18 @@ const priorityColors = {
   urgent: 'bg-red-100 text-red-800'
 }
 
+// Only include categories that are actually implemented and make logical sense
 const CATEGORIES = [
-  'order_created',
-  'booking_created', 
-  'contact_message_received',
-  'user_registered',
-  'payment_success',
-  'payment_failed',
-  'admin_notification',
-  'system_alert'
+  'order_created',    // ✅ Used in checkout/order creation (customer notifications)
+  'orders',           // Simplified category for all order events
+  'payment_success',  // ✅ Used for successful payments (customer notifications)
+  'payment_failed',   // ✅ Used for failed payments (customer notifications)
+  'payments',         // Simplified category for all payment events
+  'booking_created',  // ✅ Used for service bookings (customer notifications)
+  'bookings',         // Simplified category for booking events  
+  'contact_message_received', // ✅ Used for contact forms (customer notifications)
+  'contact',          // Simplified category for contact events
+  'admin_order_created' // ✅ Used for admin order notifications (admin notifications)
 ]
 const MODULES = ['orders', 'products', 'users', 'payments', 'inventory', 'analytics', 'system']
 const PRIORITY_OPTIONS = ['all', 'low', 'medium', 'high', 'urgent'] as const
@@ -356,9 +359,9 @@ export default function NotificationsPage() {
                   <SelectItem value="order_created">Order Created</SelectItem>
                   <SelectItem value="booking_created">Booking Created</SelectItem>
                   <SelectItem value="contact_message_received">Contact Message</SelectItem>
-                  <SelectItem value="user_registered">User Registered</SelectItem>
                   <SelectItem value="payment_success">Payment Success</SelectItem>
                   <SelectItem value="payment_failed">Payment Failed</SelectItem>
+                  <SelectItem value="admin_order_created">Admin Order Created</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -693,9 +696,11 @@ export default function NotificationsPage() {
                         size="sm"
                         onClick={() => {
                           if (selectedEvents.has('all')) {
+                            // When deselecting "All Events", clear selection to allow individual category selection
                             setSelectedEvents(new Set())
                             setNewRecipient(prev => ({ ...prev, notification_categories: [] }))
                           } else {
+                            // When selecting "All Events", clear other selections and set to 'all'
                             setSelectedEvents(new Set(['all']))
                             setNewRecipient(prev => ({ ...prev, notification_categories: ['all'] }))
                           }
@@ -722,7 +727,8 @@ export default function NotificationsPage() {
                             
                             setSelectedEvents(newSelected)
                             const categories = Array.from(newSelected)
-                            setNewRecipient(prev => ({ ...prev, notification_categories: categories.length > 0 ? categories : ['all'] }))
+                            // Don't automatically fall back to 'all' - let user make empty selection
+                            setNewRecipient(prev => ({ ...prev, notification_categories: categories }))
                           }}
                         >
                           {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -749,7 +755,7 @@ export default function NotificationsPage() {
                         email: newRecipient.email, 
                         name: newRecipient.name,
                         department: newRecipient.department || undefined,
-                        notification_categories: newRecipient.notification_categories
+                        notification_categories: newRecipient.notification_categories.length > 0 ? newRecipient.notification_categories : ['all']
                       })
                     })
                     if (res.ok) {
