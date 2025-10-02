@@ -169,25 +169,25 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
+        <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 mb-6 sm:mb-8">
           <Link href="/account/orders" className="hover:text-blue-600 flex items-center gap-1">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             Orders
           </Link>
           <span>/</span>
-          <span className="text-gray-900">Order #{id.slice(0, 8)}</span>
+          <span className="text-gray-900 truncate">Order #{id.slice(0, 8)}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Summary */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <span>Order Details</span>
-                  <Badge variant="secondary" className={`${statusColor(order.status)} border-0`}>
+                <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <span className="text-base sm:text-lg">Order Details</span>
+                  <Badge variant="secondary" className={`${statusColor(order.status)} border-0 text-xs sm:text-sm`}>
                     <span className="flex items-center gap-1">
                       <StatusIcon status={order.status} />
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -195,9 +195,9 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-gray-700">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><span className="font-medium">Order ID:</span> {order.id}</div>
+              <CardContent className="space-y-3 text-xs sm:text-sm text-gray-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="truncate"><span className="font-medium">Order ID:</span> <span className="text-xs">{order.id}</span></div>
                   <div><span className="font-medium">Placed on:</span> {new Date(order.created_at).toLocaleString()}</div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Payment:</span> 
@@ -230,17 +230,17 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 {order.order_items?.map((item: OrderItem) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-md">
-                    <div className="flex items-center gap-3">
+                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-md gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                       {item.products?.image_url && (
-                        <Image src={item.products.image_url} alt={item.products.name} width={56} height={56} className="rounded" />
+                        <Image src={item.products.image_url} alt={item.products.name} width={48} height={48} className="rounded flex-shrink-0 w-12 h-12" />
                       )}
-                      <div>
-                        <div className="font-medium">{item.products?.name}</div>
-                        <div className="text-sm text-gray-600">Qty: {item.quantity}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm sm:text-base truncate">{item.products?.name}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Qty: {item.quantity}</div>
                       </div>
                     </div>
-                    <div className="text-right font-semibold">
+                    <div className="text-right font-semibold text-sm sm:text-base flex-shrink-0">
                       {formatPrice((item.price * item.quantity))}
                     </div>
                   </div>

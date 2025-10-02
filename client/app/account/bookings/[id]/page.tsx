@@ -243,32 +243,32 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
       <Navbar />
       <CartSidebar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6">
           <Link href="/account/bookings">
-            <Button variant="ghost" className="mb-4">
+            <Button variant="ghost" className="mb-4" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Bookings
             </Button>
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Service Booking Details</h1>
-              <p className="text-gray-600 mt-1">Booking #{booking.id.slice(-8)}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Service Booking Details</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Booking #{booking.id.slice(-8)}</p>
             </div>
             <div className="flex items-center gap-2">
               {getStatusIcon(booking.status || 'pending')}
-              <Badge variant={getStatusBadgeVariant(booking.status || 'pending') as 'default' | 'secondary' | 'outline' | 'destructive'}>
+              <Badge variant={getStatusBadgeVariant(booking.status || 'pending') as 'default' | 'secondary' | 'outline' | 'destructive'} className="text-xs sm:text-sm">
                 {(booking.status || 'pending').replace('_', ' ')}
               </Badge>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Service Information */}
             <Card>
               <CardHeader>
@@ -278,9 +278,9 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {booking.service?.image ? (
-                    <div className="w-20 h-20 rounded-lg overflow-hidden relative bg-gray-100">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden relative bg-gray-100 flex-shrink-0">
                       <Image
                         src={booking.service.image}
                         alt={booking.service?.title || 'Service'}
@@ -294,10 +294,10 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                       <span className="text-xs text-gray-500">No image</span>
                     </div>
                   )}
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold">{booking.service?.title || 'Unknown Service'}</h3>
-                    <p className="text-gray-600 mt-1">{booking.service?.description || 'No description available'}</p>
-                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg sm:text-xl font-semibold">{booking.service?.title || 'Unknown Service'}</h3>
+                    <p className="text-sm sm:text-base text-gray-600 mt-1">{booking.service?.description || 'No description available'}</p>
+                    <div className="flex items-center gap-2 sm:gap-4 mt-3 text-xs sm:text-sm text-gray-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {booking.service?.duration || 'Duration not specified'}
@@ -317,7 +317,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Preferred Date</label>
                     <p className="text-gray-900 mt-1">
@@ -358,7 +358,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Payment Summary */}
             <Card>
               <CardHeader>

@@ -141,26 +141,28 @@ export default function BookingsPage() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/account">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Account
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <Link href="/account">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2">
+              {refreshing && <LoadingSpinner size="sm" />}
+              <Button onClick={() => fetchBookings()} variant="outline" size="sm">
+                Refresh
               </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Service Bookings</h1>
-              <p className="text-gray-600 mt-1">
-                Manage your service appointments and bookings
-              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {refreshing && <LoadingSpinner size="sm" />}
-            <Button onClick={() => fetchBookings()} variant="outline" size="sm">
-              Refresh
-            </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Service Bookings</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
+              Manage your service appointments and bookings
+            </p>
           </div>
         </div>
 
@@ -223,11 +225,11 @@ export default function BookingsPage() {
           <div className="space-y-4">
             {filteredBookings.map((booking) => (
               <Card key={booking.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 w-full">
                       {/* Service Image */}
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                         {booking.services?.image ? (
                           <Image
                             src={booking.services.image}
@@ -245,22 +247,22 @@ export default function BookingsPage() {
 
                       {/* Booking Details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 truncate">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                               {booking.services?.title || 'Service Booking'}
                             </h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-xs sm:text-sm text-gray-600">
                               Booking #{booking.id.slice(0, 8)}
                             </p>
                           </div>
-                          <Badge className={`${getStatusBadge(booking.status)} border`}>
+                          <Badge className={`${getStatusBadge(booking.status)} border text-xs sm:text-sm whitespace-nowrap`}>
                             {getStatusIcon(booking.status)}
                             <span className="ml-1 capitalize">{booking.status.replace('_', ' ')}</span>
                           </Badge>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
                           <div>
                             <span className="font-medium">Service Type:</span> {booking.service_type}
                           </div>
@@ -276,23 +278,23 @@ export default function BookingsPage() {
                         </div>
 
                         <div className="mb-3">
-                          <span className="font-medium text-sm text-gray-600">Description:</span>
-                          <p className="text-sm text-gray-800 mt-1">{booking.description}</p>
+                          <span className="font-medium text-xs sm:text-sm text-gray-600">Description:</span>
+                          <p className="text-xs sm:text-sm text-gray-800 mt-1 line-clamp-2">{booking.description}</p>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <div className="text-xs text-gray-500">
                             Booked on {new Date(booking.created_at).toLocaleDateString()}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Link href={`/account/bookings/${booking.id}`}>
+                            <Link href={`/account/bookings/${booking.id}`} className="w-full sm:w-auto">
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300"
+                                className="flex items-center justify-center gap-2 hover:bg-blue-50 hover:border-blue-300 w-full sm:w-auto"
                               >
                                 <Eye className="h-4 w-4" />
-                                View Details
+                                <span className="text-xs sm:text-sm">View Details</span>
                               </Button>
                             </Link>
                           </div>

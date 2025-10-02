@@ -142,20 +142,20 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
   return (
     <Card className="shadow-xl">
-      <CardContent className="p-8">
+      <CardContent className="p-4 sm:p-6 md:p-8">
         <form ref={formRef} onSubmit={(e) => {
           e.preventDefault()
           const formData = new FormData(e.currentTarget)
           onSubmit(formData)
-        }} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        }} className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-2">
-              <Label htmlFor="service_id">Service *</Label>
+              <Label htmlFor="service_id" className="text-sm font-medium">Service *</Label>
               <Select key={`service-${resetKey}`} value={selectedService || undefined} onValueChange={setSelectedService}>
-                <SelectTrigger id="service_id" aria-required="true" className="w-full">
+                <SelectTrigger id="service_id" aria-required="true" className="w-full touch-manipulation">
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]" position="popper">
                   {servicesLoading && (
                     <SelectItem value="__loading__" disabled>Loading services…</SelectItem>
                   )}
@@ -171,27 +171,27 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_email">Email *</Label>
-              <Input id="contact_email" name="contact_email" type="email" autoComplete="email" required />
+              <Label htmlFor="contact_email" className="text-sm font-medium">Email *</Label>
+              <Input id="contact_email" name="contact_email" type="email" autoComplete="email" required className="touch-manipulation" />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_phone">Phone</Label>
-              <Input id="contact_phone" name="contact_phone" type="tel" autoComplete="tel" placeholder="+255 700 000 000" />
+              <Label htmlFor="contact_phone" className="text-sm font-medium">Phone</Label>
+              <Input id="contact_phone" name="contact_phone" type="tel" autoComplete="tel" placeholder="+255 700 000 000" className="touch-manipulation" />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preferred_date">Preferred Date *</Label>
-              <Input id="preferred_date" name="preferred_date" type="date" min={today} required />
+              <Label htmlFor="preferred_date" className="text-sm font-medium">Preferred Date *</Label>
+              <Input id="preferred_date" name="preferred_date" type="date" min={today} required className="touch-manipulation" />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preferred_time">Preferred Time Range *</Label>
+              <Label htmlFor="preferred_time" className="text-sm font-medium">Preferred Time Range *</Label>
               <Select key={`time-${resetKey}`} value={selectedTime || undefined} onValueChange={setSelectedTime}>
-                <SelectTrigger id="preferred_time" aria-required="true" className="w-full">
+                <SelectTrigger id="preferred_time" aria-required="true" className="w-full touch-manipulation">
                   <SelectValue placeholder="Select time range" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]" position="popper">
                   {TIME_RANGES.map((r) => (
                     <SelectItem key={r.id} value={r.value}>{r.label}</SelectItem>
                   ))}
@@ -201,17 +201,17 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer_name">Full Name *</Label>
-              <Input id="customer_name" name="customer_name" type="text" autoComplete="name" placeholder="Your full name" required />
+              <Label htmlFor="customer_name" className="text-sm font-medium">Full Name *</Label>
+              <Input id="customer_name" name="customer_name" type="text" autoComplete="name" placeholder="Your full name" required className="touch-manipulation" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Service Description *</Label>
-            <Textarea id="description" name="description" placeholder="Briefly describe the issue or request...  (Swahili, English or French feel free)" required className="min-h-[120px]" />
+            <Label htmlFor="description" className="text-sm font-medium">Service Description *</Label>
+            <Textarea id="description" name="description" placeholder="Briefly describe the issue or request...  (Swahili, English or French feel free)" required className="min-h-[100px] sm:min-h-[120px] touch-manipulation" />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full md:w-auto bg-gray-900 hover:bg-gray-800">{loading ? 'Submitting…' : 'Submit Service Request'}</Button>
+          <Button type="submit" disabled={loading} className="w-full md:w-auto bg-gray-900 hover:bg-gray-800 touch-manipulation py-2.5 sm:py-2">{loading ? 'Submitting…' : 'Submit Service Request'}</Button>
         </form>
       </CardContent>
       
