@@ -52,12 +52,22 @@ type ServiceBooking = {
     features?: string[]
     gallery?: string[]
   }
-  serviceCosts?: Array<{
+  serviceCosts?: {
     id: string
-    description: string
-    amount: number
-    created_at?: string
-  }>
+    service_fee: number
+    discount: number
+    currency: string
+    subtotal: number
+    total: number
+    notes: string | null
+    items: Array<{
+      id: string
+      name: string
+      unit_price: number
+      quantity: number
+      unit: string
+    }>
+  } | null
 }
 
 const getServiceBooking = async (id: string, userId: string): Promise<ServiceBooking | null> => {
@@ -96,10 +106,25 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
 
   // Also fetch service costs for this booking
   const { data: serviceCosts, error: costsError } = await supabase
-    .from('service_costs')
-    .select('*')
-    .eq('service_booking_id', id)
-    .order('created_at', { ascending: true })
+    .from('service_booking_costs')
+    .select(`
+      id,
+      service_fee,
+      discount,
+      currency,
+      subtotal,
+      total,
+      notes,
+      service_booking_cost_items(
+        id,
+        name,
+        unit_price,
+        quantity,
+        unit
+      )
+    `)
+    .eq('booking_id', id)
+    .single()
 
   if (error) {
     console.error('Error fetching booking:', error)
@@ -140,7 +165,16 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
       features: [],
       gallery: []
     },
-    serviceCosts: costsError ? [] : (serviceCosts || [])
+    serviceCosts: costsError || !serviceCosts ? null : {
+      id: serviceCosts.id,
+      service_fee: serviceCosts.service_fee,
+      discount: serviceCosts.discount,
+      currency: serviceCosts.currency,
+      subtotal: serviceCosts.subtotal,
+      total: serviceCosts.total,
+      notes: serviceCosts.notes,
+      items: serviceCosts.service_booking_cost_items || []
+    }
   }
 
   return booking
@@ -382,36 +416,73 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Base Service Cost */}
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Base Service</span>
-                  <span className="text-sm">{formatTZS(Number(booking.total_amount ?? 0))}</span>
-                </div>
-                
-                {/* Additional Service Costs */}
-                {booking.serviceCosts && booking.serviceCosts.length > 0 && (
-                  <div className="space-y-2">
-                    {booking.serviceCosts.map((cost) => (
-                      <div key={cost.id} className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">{cost.description}</span>
-                        <span className="text-sm">{formatTZS(cost.amount)}</span>
+                {booking.serviceCosts ? (
+                  <>
+                    {/* Items */}
+                    {booking.serviceCosts.items && booking.serviceCosts.items.length > 0 ? (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm text-gray-700">Items</h4>
+                        <div className="space-y-2">
+                          {booking.serviceCosts.items.map((item) => (
+                            <div key={item.id} className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600">
+                                {item.name} ({item.quantity} {item.unit})
+                              </span>
+                              <span>{formatTZS(item.unit_price * item.quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Divider */}
-                <div className="border-t pt-2">
-                  <div className="flex justify-between items-center text-lg font-semibold">
-                    <span>Total Amount</span>
-                    <span>
-                      {formatTZS(
-                        Number(booking.total_amount ?? 0) + 
-                        (booking.serviceCosts?.reduce((sum, cost) => sum + cost.amount, 0) ?? 0)
+                    ) : (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm text-gray-700">Items</h4>
+                        <p className="text-sm text-gray-500 italic">No items yet. Add materials/resources used.</p>
+                      </div>
+                    )}
+
+                    {/* Cost Breakdown */}
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span>{formatTZS(booking.serviceCosts.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>+ Service Fee</span>
+                        <span>{formatTZS(booking.serviceCosts.service_fee)}</span>
+                      </div>
+                      {booking.serviceCosts.discount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>- Discount</span>
+                          <span>{formatTZS(booking.serviceCosts.discount)}</span>
+                        </div>
                       )}
-                    </span>
-                  </div>
-                </div>
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between font-semibold">
+                          <span>Total</span>
+                          <span>{formatTZS(booking.serviceCosts.total)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {booking.serviceCosts.notes && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm text-gray-700">Notes</h4>
+                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          {booking.serviceCosts.notes}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Fallback to basic total_amount */}
+                    <div className="flex justify-between items-center text-lg font-semibold">
+                      <span>Total Amount</span>
+                      <span>{formatTZS(Number(booking.total_amount ?? 0))}</span>
+                    </div>
+                  </>
+                )}
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment Status</span>
