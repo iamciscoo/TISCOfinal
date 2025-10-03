@@ -904,7 +904,8 @@ type PaymentSession = {
 }
 
 async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
-  console.log('🔄 === HANDLING SESSION PAYMENT SUCCESS ===', {
+  const debugId = `session-${session.id.substring(0, 8)}-${Date.now()}`
+  console.log(`🔄 [${debugId}] === HANDLING SESSION PAYMENT SUCCESS ===`, {
     session_id: session.id,
     transaction_reference: session.transaction_reference,
     user_id: session.user_id,
@@ -921,7 +922,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
     }
 
     // Enhanced idempotency check with detailed logging
-    console.log('🔍 Checking for existing transactions/orders...')
+    console.log(`🔍 [${debugId}] Checking for existing transactions/orders for session:`, session.id)
     const { data: existingTx } = await supabase
       .from('payment_transactions')
       .select('id, order_id, status, created_at')
@@ -930,33 +931,51 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       .maybeSingle()
       
     if (existingTx?.id) {
-      console.log('⚠️  IDEMPOTENCY: Transaction already exists, preventing duplicate processing:', {
+      console.log(`⚠️  [${debugId}] IDEMPOTENCY: Transaction already exists for this session:`, {
         existing_transaction_id: existingTx.id,
         existing_order_id: existingTx.order_id,
         existing_status: existingTx.status,
         created_at: existingTx.created_at,
+        session_id: session.id,
         session_reference: session.transaction_reference
       })
       
-      // Ensure session marked completed  
-      await supabase
-        .from('payment_sessions')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
-        .eq('id', session.id)
+      // Check if this is genuinely a duplicate webhook or a new session
+      const timeDiff = new Date().getTime() - new Date(existingTx.created_at).getTime()
+      const minutesDiff = Math.floor(timeDiff / (1000 * 60))
+      
+      console.log(`🕐 [${debugId}] Time analysis:`, {
+        existing_transaction_age_minutes: minutesDiff,
+        is_recent_duplicate: minutesDiff < 10, // Less than 10 minutes = likely duplicate
+        session_id: session.id,
+        transaction_created: existingTx.created_at
+      })
+      
+      // Only prevent if this is a recent duplicate (< 10 minutes)
+      if (minutesDiff < 10) {
+        console.log(`🚫 [${debugId}] BLOCKING: Recent duplicate detected (${minutesDiff} minutes old)`)
         
-      // Log detailed duplicate webhook info for debugging
-      try {
+        // Ensure session marked completed  
         await supabase
-          .from('payment_logs')
-          .insert({
-            session_id: session.id,
-            transaction_id: existingTx.id,
-            event_type: 'duplicate_webhook_success_prevented',
-            data: { 
-              message: 'Prevented duplicate order creation - transaction already exists',
-              existing_transaction: existingTx,
-              webhook_data: webhookData,
-              prevention_timestamp: new Date().toISOString()
+          .from('payment_sessions')
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
+          .eq('id', session.id)
+          
+        // Log detailed duplicate webhook info for debugging
+        try {
+          await supabase
+            .from('payment_logs')
+            .insert({
+              session_id: session.id,
+              transaction_id: existingTx.id,
+              event_type: 'duplicate_webhook_success_prevented',
+              data: { 
+                message: 'Prevented duplicate order creation - recent transaction exists',
+                existing_transaction: existingTx,
+                webhook_data: webhookData,
+                prevention_timestamp: new Date().toISOString(),
+                time_difference_minutes: minutesDiff,
+                debug_id: debugId
             },
             user_id: session.user_id
           })
@@ -964,11 +983,16 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         console.warn('Failed to log duplicate prevention:', logError)
       }
       
-      console.log('✅ Duplicate prevented - session marked completed')
-      return
+        console.log('✅ Duplicate prevented - session marked completed')
+        return
+      } else {
+        console.log(`✅ [${debugId}] ALLOWING: Old transaction (${minutesDiff} minutes old) - treating as new order`)
+        console.log(`📝 [${debugId}] This might be a legitimate new order for same product`)
+        // Continue to order creation below
+      }
+    } else {
+      console.log(`✅ [${debugId}] No existing transaction found, proceeding with order creation`)
     }
-
-    console.log('✅ No existing transaction found, proceeding with order creation')
 
     // If webhook included a specific order_id (e.g., from client mock webhook), link to that order instead of creating a new one
     const linkOrderId = (webhookData as Record<string, unknown>)?.order_id || (webhookData?.data as Record<string, unknown>)?.order_id
