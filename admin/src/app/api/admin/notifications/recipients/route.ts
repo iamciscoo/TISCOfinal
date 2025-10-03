@@ -65,11 +65,41 @@ export async function POST(req: NextRequest) {
         ? String(categoriesInput).split(',').map((c) => c.trim()).filter(Boolean)
         : ['all']
     
-    // Handle product filtering
+    // Enhanced product filtering with validation and deduplication
     const productIdsInput = body?.assigned_product_ids
-    const assigned_product_ids: string[] | null = Array.isArray(productIdsInput) && productIdsInput.length > 0
-      ? productIdsInput.map((id: string) => String(id).trim()).filter(Boolean)
-      : null
+    let assigned_product_ids: string[] | null = null
+    
+    if (Array.isArray(productIdsInput) && productIdsInput.length > 0) {
+      // Clean, validate and deduplicate product IDs
+      const cleanedIds = productIdsInput
+        .map((id: any) => String(id).trim())
+        .filter(Boolean)
+        .filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
+      
+      // Validate that product IDs exist in the database
+      if (cleanedIds.length > 0) {
+        const { data: existingProducts, error: productError } = await sb
+          .from('products')
+          .select('id')
+          .in('id', cleanedIds)
+        
+        if (productError) {
+          console.warn('Failed to validate product IDs:', productError)
+          assigned_product_ids = cleanedIds // Still allow assignment even if validation fails
+        } else {
+          const existingIds = existingProducts?.map(p => p.id) || []
+          const invalidIds = cleanedIds.filter(id => !existingIds.includes(id))
+          
+          if (invalidIds.length > 0) {
+            console.warn('Invalid product IDs found:', invalidIds)
+            // Only keep valid IDs
+            assigned_product_ids = cleanedIds.filter(id => existingIds.includes(id))
+          } else {
+            assigned_product_ids = cleanedIds
+          }
+        }
+      }
+    }
 
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })

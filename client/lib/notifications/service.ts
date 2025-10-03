@@ -836,48 +836,107 @@ export async function notifyAdminOrderCreated(orderData: {
       return await Promise.allSettled(notifications)
     }
     
-    // Filter recipients based on their notification categories AND product filters
-    const filteredRecipients = recipients.filter(recipient => {
-      // If recipient has product filters, check product match first
-      if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
-        if (!orderData.items || orderData.items.length === 0) {
-          // No order items provided - can't match product filter, skip this recipient
+    // ENHANCED FIX: Product-specific filtering logic with comprehensive validation
+    // If ANY recipients have product assignments that match this order, 
+    // ONLY notify those recipients (exclusive filtering)
+    
+    // Enhanced product ID extraction with multiple fallback strategies
+    const orderProductIds = [
+      // Strategy 1: Direct product_id from items
+      ...(orderData.items?.map(item => item.product_id).filter(Boolean) || []),
+      // Strategy 2: Fallback to productId field (backward compatibility)
+      ...(orderData.items?.map(item => (item as any).productId).filter(Boolean) || []),
+      // Strategy 3: Extract from any nested product object
+      ...(orderData.items?.map(item => (item as any).product?.id).filter(Boolean) || [])
+    ].filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
+    
+    console.log('🔍 DEBUG: Order Product ID Extraction:', {
+      orderData_items: orderData.items,
+      extracted_product_ids: orderProductIds,
+      items_count: orderData.items?.length || 0
+    })
+    
+    // Step 1: Find all recipients with product assignments that match this order
+    const productSpecificRecipients = recipients.filter(recipient => {
+      if (!recipient.assigned_product_ids || recipient.assigned_product_ids.length === 0) {
+        console.log(`⚪ No product assignment for ${recipient.email}`)
+        return false // This recipient has no product assignments
+      }
+      
+      if (orderProductIds.length === 0) {
+        console.log('⚠️  No product IDs found in order - product filtering will be skipped')
+        return false // No order items to match against
+      }
+      
+      const hasMatchingProduct = orderProductIds.some(productId => 
+        recipient.assigned_product_ids?.includes(productId)
+      )
+      
+      console.log(`🔍 Product matching for ${recipient.email}:`, {
+        recipient_products: recipient.assigned_product_ids,
+        order_products: orderProductIds,
+        has_match: hasMatchingProduct
+      })
+      
+      if (hasMatchingProduct) {
+        console.log(`✅ Product-specific match: ${recipient.email} assigned to products [${recipient.assigned_product_ids.join(', ')}]`)
+      }
+      
+      return hasMatchingProduct
+    })
+    
+    let filteredRecipients = []
+    
+    // Step 2: Enhanced filtering strategy with detailed logging
+    if (productSpecificRecipients.length > 0) {
+      // EXCLUSIVE: Only notify product-specific recipients
+      console.log(`🎯 Using EXCLUSIVE product filtering: ${productSpecificRecipients.length} recipients with matching products`)
+      console.log(`📦 Order products: [${orderProductIds.join(', ')}]`)
+      console.log('📋 Product-specific recipients:', productSpecificRecipients.map(r => `${r.email} (products: [${r.assigned_product_ids?.join(', ')}])`))
+      filteredRecipients = productSpecificRecipients
+    } else {
+      // FALLBACK: No product matches, use category-based filtering  
+      console.log('📂 No product-specific matches, falling back to category-based recipients')
+      console.log('🔍 Available recipients for category filtering:', recipients.map(r => `${r.email} (products: ${r.assigned_product_ids?.length || 0}, categories: [${r.notification_categories?.join(', ') || 'none'}])`))
+      
+      filteredRecipients = recipients.filter(recipient => {
+        // Skip recipients with product assignments (they already didn't match)
+        if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
+          console.log(`⏭️  Skipping ${recipient.email} - has product assignments but no match`)
           return false
         }
         
-        // Check if any order items match the recipient's assigned products
-        const orderProductIds = orderData.items
-          .map(item => item.product_id)
-          .filter(Boolean) // Remove undefined/null product_ids
+        // Use category-based filtering for recipients without product assignments
+        const categories = recipient.notification_categories || ['all']
         
-        const hasMatchingProduct = orderProductIds.some(productId => 
-          recipient.assigned_product_ids?.includes(productId)
-        )
-        
-        if (!hasMatchingProduct) {
-          return false // No products match - don't notify this recipient
+        // If recipient has 'all' category, they get all notifications
+        if (categories.includes('all')) {
+          console.log(`✅ Including ${recipient.email} - has 'all' category`)
+          return true
         }
         
-        // Product match found - notify regardless of categories
-        console.log(`Product filter match found for ${recipient.email}: products [${recipient.assigned_product_ids.join(', ')}]`)
-        return true
-      }
+        // Check if they're subscribed to order-related categories
+        const orderCategories = ['order_created', 'orders', 'admin_order_created']
+        const hasOrderCategory = categories.some((category: string) => orderCategories.includes(category))
+        console.log(`${hasOrderCategory ? '✅' : '❌'} ${recipient.email} - order categories match: ${hasOrderCategory}`)
+        return hasOrderCategory
+      })
       
-      // No product filters - use category-based filtering (existing logic)
-      const categories = recipient.notification_categories || ['all']
-      
-      // If recipient has 'all' category, they get all notifications
-      if (categories.includes('all')) {
-        return true
-      }
-      
-      // Check if they're subscribed to order-related categories
-      const orderCategories = ['order_created', 'orders', 'admin_order_created']
-      return categories.some((category: string) => orderCategories.includes(category))
-    })
+      console.log('📋 Category-based recipients selected:', filteredRecipients.map(r => r.email))
+    }
 
+    // Enhanced fallback with detailed logging and validation
     if (filteredRecipients.length === 0) {
-      console.warn('No recipients subscribed to order notifications, using fallback')
+      console.warn('⚠️  CRITICAL: No recipients found for order notifications!')
+      console.warn('🔍 DEBUG INFO:', {
+        total_recipients: recipients.length,
+        recipients_with_products: recipients.filter(r => r.assigned_product_ids && r.assigned_product_ids.length > 0).length,
+        recipients_with_categories: recipients.filter(r => !r.assigned_product_ids || r.assigned_product_ids.length === 0).length,
+        order_product_ids: orderProductIds,
+        all_recipient_emails: recipients.map(r => r.email)
+      })
+      
+      console.warn('🚨 Using emergency fallback admin emails')
       const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
       const notifications = adminEmails.map(email => 
         notificationService.sendNotification({
@@ -886,8 +945,8 @@ export async function notifyAdminOrderCreated(orderData: {
           recipient_name: 'Admin',
           data: {
             ...orderData,
-            title: 'New Order Created',
-            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+            title: 'New Order Created (Fallback)',
+            message: `⚠️ FALLBACK NOTIFICATION: A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}. Note: Product-specific recipients may not have been notified correctly.`,
             action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
@@ -896,11 +955,43 @@ export async function notifyAdminOrderCreated(orderData: {
       return await Promise.allSettled(notifications)
     }
 
-    console.log(`Sending order notifications to ${filteredRecipients.length} recipients with order categories`)
+    // Enhanced recipient validation and deduplication
+    const validatedRecipients = filteredRecipients.filter(recipient => {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(recipient.email)) {
+        console.warn(`❌ Invalid email format: ${recipient.email}`)
+        return false
+      }
+      
+      // Validate recipient is active (handle case where is_active might not exist)
+      const isActive = (recipient as any).is_active !== false // Default to true if undefined
+      if (!isActive) {
+        console.log(`⏭️  Skipping inactive recipient: ${recipient.email}`)
+        return false
+      }
+      
+      return true
+    })
+
+    // Deduplicate by email (handle case where same email might be in database multiple times)
+    const uniqueRecipients = validatedRecipients.reduce((unique, recipient) => {
+      const existingIndex = unique.findIndex(r => r.email.toLowerCase() === recipient.email.toLowerCase())
+      if (existingIndex === -1) {
+        unique.push(recipient)
+      } else {
+        // Keep the most recent entry (assuming they're sorted by created_at desc)
+        console.log(`🔄 Deduplicating ${recipient.email} - keeping most recent entry`)
+      }
+      return unique
+    }, [] as typeof validatedRecipients)
+
+    console.log(`📧 Sending order notifications to ${uniqueRecipients.length} validated unique recipients`)
+    console.log('📋 Final recipient list:', uniqueRecipients.map(r => `${r.email} (${r.assigned_product_ids?.length || 0} products, categories: [${r.notification_categories?.join(', ') || 'all'}])`))
 
     // Send to filtered recipients from database with audit logging and idempotency
     const notifications = []
-    for (const recipient of filteredRecipients) {
+    for (const recipient of uniqueRecipients) {
       // Generate unique notification key for idempotency
       const notificationKey = notificationAudit.generateNotificationKey(
         'admin_order_created',

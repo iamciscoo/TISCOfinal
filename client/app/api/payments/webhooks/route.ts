@@ -1121,14 +1121,15 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
             payment_method: 'Mobile Money',
             payment_status: 'paid', // Mobile payments are already paid when webhook fires
             items_count: orderItems.length,
+            // CRITICAL: Ensure items array includes product_id for product-specific filtering
             items: orderItems.map(oi => ({
-              product_id: oi.product_id,
+              product_id: oi.product_id,  // Essential for product-specific notifications
               name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
               quantity: oi.quantity,
               price: oi.price.toString()
             }))
           })
-          console.log('✅ Admin order notification sent for mobile payment')
+          console.log('✅ Admin order notification sent for mobile payment with product IDs:', orderItems.map(oi => oi.product_id))
         } catch (adminEmailError) {
           console.error('❌ Failed to send admin order notification for mobile payment:', adminEmailError)
           // Don't fail the order creation if admin email fails
