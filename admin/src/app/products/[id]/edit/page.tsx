@@ -182,9 +182,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         if (!res.ok) throw new Error(json?.error || "Failed to load product");
         setProduct(json.data);
         setImages(json.data?.product_images || []);
-        // Extract category IDs from the categories array
-        const categoryIds = json.data.categories?.map((cat: any) => 
-          String(cat.category?.id || cat.id || '')
+        // Extract category IDs from the product_categories structure
+        // API returns: product_categories(categories(id, name, description))
+        const categoryIds = json.data.product_categories?.map((productCat: any) => 
+          String(productCat.categories?.id || '')
         ).filter(Boolean) || [];
         
         form.reset({
