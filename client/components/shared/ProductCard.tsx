@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useCallback, memo } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart } from 'lucide-react'
-import { useCartStore } from '@/lib/store'
+import { truncateWithLineBreaks } from '@/lib/text-utils'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { Product } from '@/lib/types'
 import { getImageUrl, getCategoryName, isInStock, getDealPricing } from '@/lib/shared-utils'
+import { useCartStore } from '@/lib/store'
 
 interface ProductCardProps {
   product: Product
@@ -114,7 +115,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               {/* Product Description */}
               {product.description && (
                 <p className="text-gray-600 mb-4 line-clamp-2 text-sm">
-                  {product.description}
+                  {truncateWithLineBreaks(product.description, 100)}
                 </p>
               )}
 

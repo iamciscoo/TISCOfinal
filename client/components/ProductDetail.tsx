@@ -24,6 +24,7 @@ import { ProductCard } from '@/components/shared/ProductCard'
 import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
 import { LoadingSpinner } from '@/components/shared'
+import { preserveLineBreaks } from '@/lib/text-utils'
 
 interface ProductDetailProps {
   product: Product
@@ -461,7 +462,10 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           <div>
             <h3 className="text-lg font-semibold mb-3">Description</h3>
             <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-              {product.description || 'This is a high-quality product designed to meet your needs. With excellent craftsmanship and attention to detail, this item offers great value and performance.'}
+              {product.description 
+                ? preserveLineBreaks(product.description)
+                : 'This is a high-quality product designed to meet your needs. With excellent craftsmanship and attention to detail, this item offers great value and performance.'
+              }
             </p>
           </div>
 
