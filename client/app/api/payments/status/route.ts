@@ -160,56 +160,15 @@ export async function POST(req: NextRequest) {
           else if (failSet.has(raw)) statusRaw = 'FAILED'
         }
 
-        // If remote indicates success for a session-based transaction, proactively trigger our internal admin
-        // finalization endpoint (secured) to complete the order flow in both production and local environments.
-        if (statusRaw === 'COMPLETED' && isSession) {
-          try {
-            const base = req.nextUrl.origin
-            const adminUrl = `${base}/api/payments/admin/trigger`
-            const webhookUrl = `${base}/api/payments/webhooks`
-            const adminKey = process.env.ADMIN_DEBUG_KEY || ''
-            if (adminKey) {
-              const res = await fetch(adminUrl, {
-                method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'x-admin-key': adminKey,
-                },
-                body: JSON.stringify({ 
-                  transaction_reference: txn.transaction_reference, 
-                  status: 'COMPLETED' 
-                }),
-                cache: 'no-store',
-              })
-              if (!res.ok) {
-                const text = await res.text().catch(() => '')
-                console.warn('Admin trigger from status route failed:', res.status, text)
-              }
-            } else {
-              // Fallback: call webhook route directly using API key auth
-              const payload = {
-                order_id: txn.transaction_reference,
-                payment_status: 'COMPLETED',
-                reference: `status_sync_${Date.now()}`,
-              }
-              const res = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-api-key': process.env.ZENOPAY_API_KEY || '',
-                },
-                body: JSON.stringify(payload),
-                cache: 'no-store',
-              })
-              if (!res.ok) {
-                const text = await res.text().catch(() => '')
-                console.warn('Direct webhook finalize from status route failed:', res.status, text)
-              }
-            }
-          } catch (e) {
-            console.warn('Auto-finalize via admin trigger failed:', (e as Error)?.message)
-          }
-        }
+        // DISABLED: Auto-completion from status API (causes race conditions)
+        // Let webhooks handle completion naturally to ensure proper USSD flow
+        // 
+        // Previous auto-trigger logic removed to fix mobile payment flow issues:
+        // - Was bypassing USSD push verification
+        // - Created race conditions with webhook processing  
+        // - Caused "jumping too quickly" from processing to completed
+        //
+        // Now only webhooks can trigger order creation after proper payment confirmation
       } catch {
         // Ignore remote errors; fall back to DB status
       }

@@ -767,43 +767,71 @@ type PaymentSession = {
 }
 
 async function handleSessionPaymentSuccess(session: PaymentSession, webhookData: WebhookData) {
-  console.log('=== HANDLING SESSION PAYMENT SUCCESS ===', session.id)
+  console.log('🔄 === HANDLING SESSION PAYMENT SUCCESS ===', {
+    session_id: session.id,
+    transaction_reference: session.transaction_reference,
+    user_id: session.user_id,
+    amount: session.amount,
+    currency: session.currency,
+    provider: session.provider
+  })
+  
   try {
     const supabase = getAdminSupabase()
     if (!supabase) {
-      console.error('No supabase client available for session success')
+      console.error('❌ No supabase client available for session success')
       return
     }
 
-    // Idempotency: if we already recorded a completed/processing transaction for this session reference, skip
+    // Enhanced idempotency check with detailed logging
+    console.log('🔍 Checking for existing transactions/orders...')
     const { data: existingTx } = await supabase
       .from('payment_transactions')
-      .select('id, order_id, status')
+      .select('id, order_id, status, created_at')
       .eq('transaction_reference', session.transaction_reference)
       .in('status', ['completed', 'processing'])
       .maybeSingle()
+      
     if (existingTx?.id) {
-      console.log('Transaction already exists for session, skipping order creation:', existingTx.id)
-      // Ensure session marked completed
+      console.log('⚠️  IDEMPOTENCY: Transaction already exists, preventing duplicate processing:', {
+        existing_transaction_id: existingTx.id,
+        existing_order_id: existingTx.order_id,
+        existing_status: existingTx.status,
+        created_at: existingTx.created_at,
+        session_reference: session.transaction_reference
+      })
+      
+      // Ensure session marked completed  
       await supabase
         .from('payment_sessions')
         .update({ status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', session.id)
-      // Log duplicate webhook success for observability
+        
+      // Log detailed duplicate webhook info for debugging
       try {
         await supabase
           .from('payment_logs')
           .insert({
             session_id: session.id,
-            event_type: 'duplicate_webhook_success',
-            data: { message: 'Existing transaction found for session', transaction_id: existingTx.id, webhookData },
-            user_id: session.user_id,
+            transaction_id: existingTx.id,
+            event_type: 'duplicate_webhook_success_prevented',
+            data: { 
+              message: 'Prevented duplicate order creation - transaction already exists',
+              existing_transaction: existingTx,
+              webhook_data: webhookData,
+              prevention_timestamp: new Date().toISOString()
+            },
+            user_id: session.user_id
           })
-      } catch {}
+      } catch (logError) {
+        console.warn('Failed to log duplicate prevention:', logError)
+      }
+      
+      console.log('✅ Duplicate prevented - session marked completed')
       return
     }
 
-    console.log('No existing transaction found, proceeding with order creation')
+    console.log('✅ No existing transaction found, proceeding with order creation')
 
     // If webhook included a specific order_id (e.g., from client mock webhook), link to that order instead of creating a new one
     const linkOrderId = (webhookData as Record<string, unknown>)?.order_id || (webhookData?.data as Record<string, unknown>)?.order_id
@@ -881,21 +909,33 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       }
     }
 
-    // Parse order data from session (client-provided); we will recompute totals and prices server-side
-    console.log('Parsing order data from session:', session.order_data)
+    // Parse order data from session (client-provided) with enhanced validation
+    console.log('📋 Parsing order data from session...')
+    console.log('Raw order_data type:', typeof session.order_data)
+    console.log('Raw order_data preview:', JSON.stringify(session.order_data).substring(0, 200) + '...')
+    
     let orderData: Record<string, unknown> = {}
     try {
       const raw = (session as unknown as { order_data?: unknown }).order_data
       if (raw && typeof raw === 'string') {
         orderData = JSON.parse(raw)
+        console.log('✅ Parsed order data from JSON string')
       } else if (raw && typeof raw === 'object') {
         orderData = raw as Record<string, unknown>
+        console.log('✅ Used order data as object')
       } else {
         orderData = {}
+        console.warn('⚠️  No valid order data found, using empty object')
       }
-      console.log('Parsed order data:', orderData)
+      console.log('📋 Final parsed order data:', {
+        has_items: Array.isArray(orderData.items),
+        items_count: Array.isArray(orderData.items) ? orderData.items.length : 0,
+        payment_method: orderData.payment_method,
+        shipping_address: !!orderData.shipping_address,
+        notes: !!orderData.notes
+      })
     } catch (e) {
-      console.error('Failed to parse order data from session:', e)
+      console.error('❌ Failed to parse order data from session:', e)
       orderData = {}
     }
 
@@ -919,23 +959,69 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       return
     }
 
-    // Fetch current product prices and basic availability
+    // Enhanced product fetching with validation and logging
+    console.log('🛍️  Fetching current product prices and availability...')
     const productIds = items.map(i => i.product_id)
+    console.log('Product IDs to fetch:', productIds)
+    
     const { data: productsData, error: productsErr } = await supabase
       .from('products')
-      .select('id, price, stock_quantity')
+      .select('id, name, price, stock_quantity, is_active')
       .in('id', productIds)
+      
     if (productsErr) {
-      console.error('Products fetch failed for session order:', productsErr)
+      console.error('❌ Products fetch failed for session order:', {
+        error: productsErr,
+        product_ids: productIds,
+        session_id: session.id
+      })
+      
+      // Update session with failure reason
+      await supabase
+        .from('payment_sessions')
+        .update({ 
+          status: 'failed', 
+          failure_reason: `Product fetch failed: ${productsErr.message}`,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', session.id)
+        
       return
     }
-    const productMap = new Map<string, { id: string; price: number; stock_quantity?: number | null }>()
+    
+    console.log(`✅ Fetched ${productsData?.length || 0} products from database`)
+    
+    const productMap = new Map<string, { id: string; name: string; price: number; stock_quantity?: number | null; is_active?: boolean }>()
     for (const p of productsData || []) {
       productMap.set(p.id as string, {
         id: p.id as string,
+        name: p.name as string || 'Unknown Product',
         price: Number(p.price) || 0,
         stock_quantity: (p as Record<string, unknown>)?.stock_quantity as number ?? null,
+        is_active: (p as Record<string, unknown>)?.is_active as boolean ?? true
       })
+    }
+    
+    // Validate all requested products exist
+    const missingProducts = productIds.filter(id => !productMap.has(id))
+    if (missingProducts.length > 0) {
+      console.error('❌ Missing products detected:', {
+        missing_product_ids: missingProducts,
+        session_id: session.id,
+        requested_ids: productIds,
+        found_ids: Array.from(productMap.keys())
+      })
+      
+      await supabase
+        .from('payment_sessions')
+        .update({ 
+          status: 'failed', 
+          failure_reason: `Products not found: ${missingProducts.join(', ')}`,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', session.id)
+        
+      return
     }
 
     let total_amount = 0
@@ -960,17 +1046,26 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       return
     }
 
-    // Create the order using server-computed total
+    // Create the order using server-computed total with enhanced logging
     const insertOrderPayload: Record<string, unknown> = {
       user_id: session.user_id,
       total_amount,
       currency: session.currency,
-      payment_method: orderData.payment_method,
-      shipping_address: orderData.shipping_address,
-      notes: orderData.notes,
+      payment_method: orderData.payment_method || 'Mobile Money',
+      shipping_address: orderData.shipping_address || 'Will be contacted for delivery arrangements',
+      notes: orderData.notes || null,
       status: 'processing',
       payment_status: 'paid',
     }
+
+    console.log('📝 Creating order with payload:', {
+      user_id: insertOrderPayload.user_id,
+      total_amount: insertOrderPayload.total_amount,
+      currency: insertOrderPayload.currency,
+      payment_method: insertOrderPayload.payment_method,
+      items_count: orderItems.length,
+      session_reference: session.transaction_reference
+    })
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -979,17 +1074,52 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       .single()
 
     if (orderError || !order) {
-      console.error('Failed to create order after successful payment:', orderError)
+      console.error('❌ CRITICAL: Failed to create order after successful payment:', {
+        error: orderError,
+        session_id: session.id,
+        transaction_reference: session.transaction_reference,
+        user_id: session.user_id,
+        total_amount,
+        payload: insertOrderPayload
+      })
+      
+      // Update session with detailed failure reason
       await supabase
         .from('payment_sessions')
         .update({
           status: 'failed',
-          failure_reason: 'Order creation failed after payment success',
+          failure_reason: `Order creation failed: ${orderError?.message || 'Unknown error'}`,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id)
+        
+      // Log critical failure for monitoring
+      try {
+        await supabase
+          .from('payment_logs')
+          .insert({
+            session_id: session.id,
+            event_type: 'critical_order_creation_failure',
+            data: { 
+              error: orderError,
+              payload: insertOrderPayload,
+              items: orderItems,
+              failure_timestamp: new Date().toISOString()
+            },
+            user_id: session.user_id
+          })
+      } catch {}
+      
       return
     }
+
+    console.log('✅ Order created successfully:', {
+      order_id: order.id,
+      total_amount: order.total_amount,
+      currency: order.currency,
+      payment_status: order.payment_status,
+      status: order.status
+    })
 
     // Insert order items (server-verified prices)
     const insertItems = orderItems.map(oi => ({ ...oi, order_id: order.id }))
@@ -1058,61 +1188,99 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         user_id: session.user_id
       })
 
-    // Send payment success and order confirmation notifications for mobile payment
+    // Enhanced notification flow with comprehensive tracking and logging
+    console.log('📧 === STARTING NOTIFICATION FLOW ===')
+    console.log('Getting user details for notifications...')
+    
     try {
-      // Get user details for notification
-      const { data: authUser } = await supabase.auth.admin.getUserById(session.user_id)
+      // Get user details for notification with error handling
+      const { data: authUser, error: userFetchError } = await supabase.auth.admin.getUserById(session.user_id)
+      
+      if (userFetchError) {
+        console.error('❌ Failed to fetch user details for notifications:', {
+          error: userFetchError,
+          user_id: session.user_id,
+          session_id: session.id
+        })
+        // Continue with order completion even if notifications fail
+      }
+      
       const userEmail = authUser?.user?.email
       const userName = authUser?.user?.user_metadata?.full_name || authUser?.user?.user_metadata?.name
       
+      console.log('👤 User details for notifications:', {
+        user_id: session.user_id,
+        email: userEmail ? 'present' : 'missing',
+        name: userName ? 'present' : 'missing',
+        has_user_data: !!authUser?.user
+      })
+      
       if (userEmail) {
-        // Send payment success notification
-        await notifyPaymentSuccess({
-          order_id: order.id,
-          customer_email: userEmail,
-          customer_name: userName || 'Customer',
-          amount: total_amount.toString(),
-          currency: session.currency,
-          payment_method: 'Mobile Money',
-          transaction_id: session.transaction_reference
-        })
-        console.log('Mobile payment success notification sent')
+        console.log('✅ Valid user email found, proceeding with notifications...')
+        // Step 1: Send payment success notification to customer
+        console.log('📧 Step 1: Sending payment success notification to customer...')
+        try {
+          await notifyPaymentSuccess({
+            order_id: order.id,
+            customer_email: userEmail,
+            customer_name: userName || 'Customer',
+            amount: total_amount.toString(),
+            currency: session.currency,
+            payment_method: 'Mobile Money',
+            transaction_id: session.transaction_reference
+          })
+          console.log('✅ Payment success notification sent to customer')
+        } catch (paymentNotifyError) {
+          console.error('❌ Failed to send payment success notification:', paymentNotifyError)
+          // Continue with other notifications
+        }
 
-        // Send order confirmation email to customer
-        const { notifyOrderCreated } = await import('@/lib/notifications/service')
-        
-        // Get actual product names for better order confirmation
-        const { data: productDetails } = await supabase
-          .from('products')
-          .select('id, name')
-          .in('id', orderItems.map(oi => oi.product_id))
-        
-        const productMap = new Map(productDetails?.map(p => [p.id, p.name]) || [])
-        const items = orderItems.map(oi => ({
-          name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
-          quantity: oi.quantity,
-          price: oi.price.toString()
-        }))
+        // Step 2: Send order confirmation email to customer
+        console.log('📧 Step 2: Preparing order confirmation email...')
+        try {
+          const { notifyOrderCreated } = await import('@/lib/notifications/service')
+          
+          // Get actual product names for better order confirmation
+          console.log('🛍️  Fetching product names for order confirmation...')
+          const { data: productDetails } = await supabase
+            .from('products')
+            .select('id, name')
+            .in('id', orderItems.map(oi => oi.product_id))
+          
+          const productMap = new Map(productDetails?.map(p => [p.id, p.name]) || [])
+          const items = orderItems.map(oi => ({
+            name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
+            quantity: oi.quantity,
+            price: oi.price.toString()
+          }))
 
-        await notifyOrderCreated({
-          order_id: order.id,
-          customer_email: userEmail,
-          customer_name: userName || 'Customer',
-          total_amount: total_amount.toString(),
-          currency: session.currency,
-          items,
-          order_date: new Date().toLocaleDateString(),
-          payment_method: 'Mobile Money',
-          shipping_address: (orderData.shipping_address || 'Will be contacted for delivery arrangements') as string
-        })
-        console.log('Order confirmation email sent to customer')
+          console.log('📧 Sending order confirmation with items:', items.map(i => `${i.name} x${i.quantity}`))
 
-        // Send admin notification for mobile payment orders (NEW)
-        // Unlike "pay at office" orders, mobile payment orders are created directly in webhook
-        // so they need admin notifications here
+          await notifyOrderCreated({
+            order_id: order.id,
+            customer_email: userEmail,
+            customer_name: userName || 'Customer',
+            total_amount: total_amount.toString(),
+            currency: session.currency,
+            items,
+            order_date: new Date().toLocaleDateString(),
+            payment_method: 'Mobile Money',
+            shipping_address: (orderData.shipping_address || 'Will be contacted for delivery arrangements') as string
+          })
+          console.log('✅ Order confirmation email sent to customer')
+        } catch (orderNotifyError) {
+          console.error('❌ Failed to send order confirmation email:', orderNotifyError)
+          // Continue with admin notifications
+        }
+
+        // Step 3: Send admin notification for mobile payment orders
+        console.log('📧 Step 3: Sending admin notifications for mobile payment order...')
+        console.log('💡 Note: Mobile payment orders created directly in webhook require admin notifications here')
         try {
           const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
-          await notifyAdminOrderCreated({
+          
+          console.log('📧 Preparing admin notification with product details...')
+          const adminNotificationData = {
             order_id: order.id,
             customer_email: userEmail,
             customer_name: userName || 'Customer',
@@ -1124,30 +1292,86 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
             // CRITICAL: Ensure items array includes product_id for product-specific filtering
             items: orderItems.map(oi => ({
               product_id: oi.product_id,  // Essential for product-specific notifications
-              name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
+              name: productMap.get(oi.product_id)?.name || `Product ${oi.product_id}`,
               quantity: oi.quantity,
               price: oi.price.toString()
             }))
+          }
+          
+          console.log('📧 Admin notification data prepared:', {
+            order_id: adminNotificationData.order_id,
+            customer_email: adminNotificationData.customer_email,
+            items_count: adminNotificationData.items_count,
+            product_ids: adminNotificationData.items.map(i => i.product_id),
+            total_amount: adminNotificationData.total_amount
           })
-          console.log('✅ Admin order notification sent for mobile payment with product IDs:', orderItems.map(oi => oi.product_id))
+          
+          await notifyAdminOrderCreated(adminNotificationData)
+          console.log('✅ Admin order notification sent successfully for mobile payment')
+          console.log('🛍️  Product IDs included:', orderItems.map(oi => oi.product_id))
+          
         } catch (adminEmailError) {
-          console.error('❌ Failed to send admin order notification for mobile payment:', adminEmailError)
-          // Don't fail the order creation if admin email fails
+          console.error('❌ FAILED to send admin order notification for mobile payment:', {
+            error: adminEmailError,
+            order_id: order.id,
+            session_id: session.id,
+            user_email: userEmail
+          })
+          
+          // Log admin notification failure for monitoring
+          try {
+            await supabase
+              .from('payment_logs')
+              .insert({
+                session_id: session.id,
+                transaction_id: transaction?.id,
+                event_type: 'admin_notification_failure',
+                data: { 
+                  error: adminEmailError instanceof Error ? adminEmailError.message : String(adminEmailError),
+                  order_id: order.id,
+                  failure_step: 'admin_notification',
+                  failure_timestamp: new Date().toISOString()
+                },
+                user_id: session.user_id
+              })
+          } catch {}
+          
+          // Don't fail the order creation if admin email fails - this is non-critical
+          console.log('⚠️  Continuing despite admin notification failure - order creation successful')
         }
       }
     } catch (emailError) {
       console.error('Failed to send mobile payment notifications:', emailError)
     }
 
-    console.log('Session payment completed successfully, order created:', session.transaction_reference)
+    // Final success logging and cache invalidation
+    console.log('🎉 === MOBILE PAYMENT FLOW COMPLETED SUCCESSFULLY ===')
+    console.log('📊 Final Summary:', {
+      session_id: session.id,
+      transaction_reference: session.transaction_reference,
+      order_id: order.id,
+      user_id: session.user_id,
+      total_amount: total_amount,
+      currency: session.currency,
+      items_count: orderItems.length,
+      payment_method: 'Mobile Money',
+      order_status: 'processing',
+      payment_status: 'paid',
+      completion_timestamp: new Date().toISOString()
+    })
+    
+    console.log('🔄 Invalidating caches...')
     try {
       revalidateTag('orders')
       revalidateTag('admin:orders')
       revalidateTag(`order:${order.id}`)
-      revalidateTag(`user-orders:${session.user_id}`)
+      revalidateTag(`user-orders:${session.user_id}`)  
+      console.log('✅ Cache invalidation completed')
     } catch (e) {
-      console.warn('Revalidation error (non-fatal):', e)
+      console.warn('⚠️  Cache revalidation error (non-fatal):', e)
     }
+    
+    console.log('✅ Mobile payment session completed successfully:', session.transaction_reference)
   } catch (error) {
     console.error('Error handling session payment success:', error)
   }
