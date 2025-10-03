@@ -127,6 +127,16 @@ export default function DealsPage() {
             if (ar == null) return -1
             return br - ar
           }
+        case 'newest':
+          // Sort by created_at date, newest first
+          const aDate = new Date(a.created_at || 0).getTime()
+          const bDate = new Date(b.created_at || 0).getTime()
+          return bDate - aDate
+        case 'oldest':
+          // Sort by created_at date, oldest first
+          const aDateOld = new Date(a.created_at || 0).getTime()
+          const bDateOld = new Date(b.created_at || 0).getTime()
+          return aDateOld - bDateOld
         default:
           return 0
       }
@@ -197,6 +207,8 @@ export default function DealsPage() {
             <SelectItem value="price-low">Price: Low to High</SelectItem>
             <SelectItem value="price-high">Price: High to Low</SelectItem>
             <SelectItem value="rating">Highest Rated</SelectItem>
+            <SelectItem value="newest">Newest First</SelectItem>
+            <SelectItem value="oldest">Oldest First</SelectItem>
           </SelectContent>
         </Select>
       </div>

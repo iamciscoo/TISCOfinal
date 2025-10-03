@@ -243,6 +243,16 @@ function ProductsContent() {
           return b.price - a.price
         case 'name':
           return a.name.localeCompare(b.name)
+        case 'newest':
+          // Sort by created_at date, newest first
+          const aDate = new Date(a.created_at || 0).getTime()
+          const bDate = new Date(b.created_at || 0).getTime()
+          return bDate - aDate
+        case 'oldest':
+          // Sort by created_at date, oldest first
+          const aDateOld = new Date(a.created_at || 0).getTime()
+          const bDateOld = new Date(b.created_at || 0).getTime()
+          return aDateOld - bDateOld
         default:
           return 0
       }
@@ -318,6 +328,8 @@ function ProductsContent() {
             <SelectItem value="name">Name A-Z</SelectItem>
             <SelectItem value="price-low">Price: Low to High</SelectItem>
             <SelectItem value="price-high">Price: High to Low</SelectItem>
+            <SelectItem value="newest">Newest First</SelectItem>
+            <SelectItem value="oldest">Oldest First</SelectItem>
           </SelectContent>
         </Select>
       </div>
