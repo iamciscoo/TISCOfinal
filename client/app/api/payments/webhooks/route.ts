@@ -43,6 +43,23 @@ function getAdminSupabase() {
 }
 
 export async function POST(req: NextRequest) {
+  // 🚨 PRODUCTION DEBUGGING - Enhanced logging for troubleshooting
+  const debugId = `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  console.log(`🔥 [${debugId}] WEBHOOK RECEIVED - Starting processing`)
+  
+  // Log all environment info for debugging
+  console.log(`🔍 [${debugId}] Production Environment Check:`, {
+    nodeEnv: process.env.NODE_ENV,
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE,
+    hasZenoPayKey: !!process.env.ZENOPAY_API_KEY,
+    hasWebhookSecret: !!process.env.WEBHOOK_SECRET,
+    timestamp: new Date().toISOString(),
+    userAgent: req.headers.get('user-agent'),
+    origin: req.headers.get('origin'),
+    host: req.headers.get('host')
+  })
+  
   logger.webhook('webhook_received', 'zenopay', false)
   
   try {
@@ -70,12 +87,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('Webhook headers:', {
+    console.log(`📡 [${debugId}] Webhook headers:`, {
       signatureHeader: sigHeaderUsed || 'none',
       contentType: req.headers.get('content-type'),
-      userAgent: req.headers.get('user-agent')
+      userAgent: req.headers.get('user-agent'),
+      allHeaders: Object.fromEntries(req.headers.entries())
     })
-    console.log('Webhook raw body:', rawBody)
+    console.log(`📦 [${debugId}] Webhook raw body length:`, rawBody.length)
+    console.log(`📦 [${debugId}] Webhook raw body preview:`, rawBody.substring(0, 500))
     
     // Verify authentication:
     // - Primary: HMAC signature with WEBHOOK_SECRET
@@ -144,7 +163,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 })
     }
 
-    console.log('📥 ZenoPay Webhook Received:', {
+    console.log(`📥 [${debugId}] ZenoPay Webhook Received:`, {
       order_id: body?.order_id,
       payment_status: body?.payment_status, 
       reference: body?.reference,
@@ -158,7 +177,7 @@ export async function POST(req: NextRequest) {
     const gw = String(body?.reference || '').trim()  // ZenoPay's internal reference
     const paymentStatus = String(body?.payment_status || '').toUpperCase()
 
-    console.log('🔍 Extracted ZenoPay data:', { 
+    console.log(`🔍 [${debugId}] Extracted ZenoPay data:`, { 
       transaction_reference: ref,
       zenopay_reference: gw, 
       payment_status: paymentStatus
@@ -179,8 +198,8 @@ export async function POST(req: NextRequest) {
     let txnData: { id: string; user_id: string; order_id?: string; transaction_reference: string; status: string } | null = null
     let isSession = false
 
-    console.log('🔍 Enhanced session lookup with multiple strategies...')
-    console.log('🔍 Lookup parameters:', {
+    console.log(`🔍 [${debugId}] Enhanced session lookup with multiple strategies...`)
+    console.log(`🔍 [${debugId}] Lookup parameters:`, {
       order_id_from_zenopay: ref,
       reference_from_zenopay: gw,
       webhook_payload_keys: Object.keys(body || {})
@@ -188,7 +207,7 @@ export async function POST(req: NextRequest) {
 
     // Strategy 1: Direct transaction_reference match (most common)
     if (ref) {
-      console.log('🔍 Strategy 1: Looking up by transaction_reference:', ref)
+      console.log(`🔍 [${debugId}] Strategy 1: Looking up by transaction_reference:`, ref)
       
       // Check payment_sessions first (new mobile payment flow)
       const { data: sessionResult } = await supabase
@@ -198,7 +217,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
         
       if (sessionResult) {
-        console.log('✅ Found payment session by transaction_reference:', sessionResult.id)
+        console.log(`✅ [${debugId}] Found payment session by transaction_reference:`, sessionResult.id)
         txnData = sessionResult
         isSession = true
       } else {
@@ -213,7 +232,7 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
           
         if (txnResult) {
-          console.log('✅ Found payment transaction by transaction_reference:', txnResult.id)
+          console.log(`✅ [${debugId}] Found payment transaction by transaction_reference:`, txnResult.id)
           txnData = txnResult
         }
       }
@@ -221,7 +240,7 @@ export async function POST(req: NextRequest) {
     
     // Strategy 2: Gateway transaction ID match
     if (!txnData && gw) {
-      console.log('🔍 Strategy 2: Looking up by gateway_transaction_id:', gw)
+      console.log(`🔍 [${debugId}] Strategy 2: Looking up by gateway_transaction_id:`, gw)
       
       // Check payment_sessions
       const { data: sessionResult } = await supabase
