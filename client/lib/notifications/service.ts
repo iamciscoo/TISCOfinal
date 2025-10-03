@@ -782,39 +782,51 @@ export async function notifyAdminOrderCreated(orderData: {
   items_count: number
   items?: Array<{ product_id?: string; name: string; quantity: number; price: string }> // Add items for product filtering
 }) {
+  // CRITICAL: Wrap entire function in try-catch to prevent blocking
   try {
-    // Get admin recipients from database with category and product filtering
-    const { data: recipients, error } = await supabase
-      .from('notification_recipients')
-      .select('email, name, notification_categories, assigned_product_ids')
-      .eq('is_active', true)
+    console.log('🔄 Starting notifyAdminOrderCreated with timeout protection...')
     
-    if (error) {
-      console.warn('Failed to fetch admin recipients, using fallback:', error)
-      // Use hardcoded admin emails as fallback
-      const adminEmails = [
-        'francisjacob08@gmail.com',  // Primary admin
-        'info@tiscomarket.store',     // Business email
-        ...(process.env.ADMIN_EMAIL?.split(',') || [])
-      ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim()) // Remove duplicates and empty
-      
-      console.log('Sending admin order notifications to fallback emails:', adminEmails)
-      const notifications = adminEmails.map(email => 
-        notificationService.sendNotification({
-          event: 'admin_order_created',
-          recipient_email: email,
-          recipient_name: 'Admin',
-          data: {
-            ...orderData,
-            title: 'New Order Created',
-            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-            action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
-          },
-          priority: 'high'
-        })
-      )
-      return await Promise.allSettled(notifications)
-    }
+    // Add timeout protection to prevent infinite hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Admin notification timeout after 30 seconds')), 30000)
+    })
+    
+    const notificationPromise = async () => {
+      // Get admin recipients from database with category and product filtering
+      const { data: recipients, error } = await supabase
+        .from('notification_recipients')
+        .select('email, name, notification_categories, assigned_product_ids')
+        .eq('is_active', true)
+    
+      if (error) {
+        console.warn('Failed to fetch admin recipients, using fallback:', error)
+        // Use hardcoded admin emails as fallback
+        const adminEmails = [
+          'francisjacob08@gmail.com',  // Primary admin
+          'info@tiscomarket.store',     // Business email
+          ...(process.env.ADMIN_EMAIL?.split(',') || [])
+        ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim()) // Remove duplicates and empty
+        
+        console.log('Sending admin order notifications to fallback emails:', adminEmails)
+        const notifications = adminEmails.map(email => 
+          Promise.resolve(notificationService.sendNotification({
+            event: 'admin_order_created',
+            recipient_email: email,
+            recipient_name: 'Admin',
+            data: {
+              ...orderData,
+              title: 'New Order Created',
+              message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+              action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+            },
+            priority: 'high'
+          }).catch(err => {
+            console.error(`Failed to send notification to ${email}:`, err)
+            return `failed-${email}`
+          }))
+        )
+        return await Promise.allSettled(notifications)
+      }
     
     if (!recipients || recipients.length === 0) {
       console.warn('No admin recipients found in database, using fallback')
@@ -1052,26 +1064,44 @@ export async function notifyAdminOrderCreated(orderData: {
       }
     }
     
-    return await Promise.allSettled(notifications)
+      return await Promise.allSettled(notifications)
+    }
+    
+    // Race between notification logic and timeout
+    return await Promise.race([notificationPromise(), timeoutPromise])
+    
   } catch (error) {
-    console.error('Error in notifyAdminOrderCreated:', error)
-    // Final fallback
-    const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
-    const notifications = adminEmails.map(email => 
-      notificationService.sendNotification({
-        event: 'admin_order_created',
-        recipient_email: email.trim(),
-        recipient_name: 'Admin',
-        data: {
-          ...orderData,
-          title: 'New Order Created',
-          message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-          action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
-        },
-        priority: 'high'
+    console.error('Error in notifyAdminOrderCreated (with timeout protection):', error)
+    
+    // GUARANTEED SIMPLE FALLBACK - No complex logic, just send basic emails
+    console.log('🚨 Using GUARANTEED simple fallback for admin notifications')
+    try {
+      const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
+      const simpleNotifications = adminEmails.map(async email => {
+        try {
+          return await notificationService.sendNotification({
+            event: 'admin_order_created',
+            recipient_email: email,
+            recipient_name: 'Admin',
+            data: {
+              ...orderData,
+              title: 'New Order Created (Simple)',
+              message: `SIMPLE FALLBACK: Order ${orderData.order_id} from ${orderData.customer_name} for ${orderData.currency} ${orderData.total_amount}`,
+              action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+            },
+            priority: 'high'
+          })
+        } catch (err) {
+          console.error(`Simple fallback failed for ${email}:`, err)
+          return `failed-${email}`
+        }
       })
-    )
-    return await Promise.allSettled(notifications)
+      
+      return await Promise.allSettled(simpleNotifications)
+    } catch (finalError) {
+      console.error('🚨 CRITICAL: All notification methods failed:', finalError)
+      return []
+    }
   }
 }
 

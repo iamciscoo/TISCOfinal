@@ -1096,15 +1096,66 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
       session_reference: session.transaction_reference
     })
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert(insertOrderPayload)
-      .select()
-      .single()
+    // CRITICAL: Enhanced order creation with detailed error handling
+    let order: Record<string, unknown> | null = null
+    let orderError: unknown = null
+    
+    try {
+      const { data: orderResult, error: orderInsertError } = await supabase
+        .from('orders')
+        .insert(insertOrderPayload)
+        .select()
+        .single()
+      
+      order = orderResult
+      orderError = orderInsertError
+      
+    } catch (criticalOrderError) {
+      console.error('❌ CRITICAL ORDER CREATION EXCEPTION:', {
+        error: criticalOrderError,
+        message: criticalOrderError instanceof Error ? criticalOrderError.message : String(criticalOrderError),
+        stack: criticalOrderError instanceof Error ? criticalOrderError.stack : undefined,
+        payload: insertOrderPayload,
+        session_id: session.id,
+        user_id: session.user_id
+      })
+      
+      orderError = criticalOrderError
+      order = null
+    }
 
     if (orderError || !order) {
+      // ENHANCED ERROR ANALYSIS
+      let errorAnalysis = 'Unknown error'
+      let errorCode = ''
+      let errorDetails = ''
+      
+      if (orderError && typeof orderError === 'object') {
+        const errObj = orderError as Record<string, unknown>
+        errorCode = String(errObj.code || '')
+        errorDetails = String(errObj.message || errObj.details || '')
+        
+        // Analyze common database constraint errors
+        if (errorCode === '23502') {
+          errorAnalysis = 'NOT NULL constraint violation - missing required field'
+        } else if (errorCode === '23505') {
+          errorAnalysis = 'UNIQUE constraint violation - duplicate entry'
+        } else if (errorCode === '23514') {
+          errorAnalysis = 'CHECK constraint violation - invalid data format'
+        } else if (errorCode === '23503') {
+          errorAnalysis = 'FOREIGN KEY constraint violation - invalid reference'
+        } else if (errorDetails.includes('user_id')) {
+          errorAnalysis = 'User ID issue - user may not exist in database'
+        } else if (errorDetails.includes('phone')) {
+          errorAnalysis = 'Phone number constraint violation - use NULL instead of empty string'
+        }
+      }
+      
       console.error('❌ CRITICAL: Failed to create order after successful payment:', {
         error: orderError,
+        error_code: errorCode,
+        error_details: errorDetails,
+        error_analysis: errorAnalysis,
         session_id: session.id,
         transaction_reference: session.transaction_reference,
         user_id: session.user_id,
@@ -1112,17 +1163,20 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         payload: insertOrderPayload
       })
       
+      // Enhanced failure reason with analysis
+      const failureReason = `Order creation failed: ${errorAnalysis} (${errorCode}: ${errorDetails})`
+      
       // Update session with detailed failure reason
       await supabase
         .from('payment_sessions')
         .update({
           status: 'failed',
-          failure_reason: `Order creation failed: ${orderError?.message || 'Unknown error'}`,
+          failure_reason: failureReason,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id)
         
-      // Log critical failure for monitoring
+      // Log critical failure for monitoring with enhanced details
       try {
         await supabase
           .from('payment_logs')
@@ -1131,6 +1185,9 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
             event_type: 'critical_order_creation_failure',
             data: { 
               error: orderError,
+              error_code: errorCode,
+              error_details: errorDetails,
+              error_analysis: errorAnalysis,
               payload: insertOrderPayload,
               items: orderItems,
               failure_timestamp: new Date().toISOString()
@@ -1250,7 +1307,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         console.log('📧 Step 1: Sending payment success notification to customer...')
         try {
           await notifyPaymentSuccess({
-            order_id: order.id,
+            order_id: String(order.id),
             customer_email: userEmail,
             customer_name: userName || 'Customer',
             amount: total_amount.toString(),
@@ -1286,7 +1343,7 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
           console.log('📧 Sending order confirmation with items:', items.map(i => `${i.name} x${i.quantity}`))
 
           await notifyOrderCreated({
-            order_id: order.id,
+            order_id: String(order.id),
             customer_email: userEmail,
             customer_name: userName || 'Customer',
             total_amount: total_amount.toString(),
@@ -1302,61 +1359,64 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
           // Continue with admin notifications
         }
 
-        // Step 3: Send admin notification for mobile payment orders with GUARANTEED fallback
+        // Step 3: Send admin notification for mobile payment orders (NON-BLOCKING)
         console.log('📧 Step 3: Sending admin notifications for mobile payment order...')
         console.log('💡 Note: Mobile payment orders created directly in webhook require admin notifications here')
         
-        // EMERGENCY FIX: Always send basic notifications regardless of complex filtering
-        let notificationSuccess = false
+        // CRITICAL FIX: Run notifications asynchronously to prevent blocking order creation
+        // Order creation MUST complete even if notifications fail
         
-        try {
-          // First try the complex notification system
-          const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+        setImmediate(async () => {
+          let notificationSuccess = false
           
-          console.log('📧 Preparing admin notification with product details...')
-          const adminNotificationData = {
-            order_id: order.id,
-            customer_email: userEmail,
-            customer_name: userName || 'Customer',
-            total_amount: total_amount.toString(),
-            currency: session.currency,
-            payment_method: 'Mobile Money',
-            payment_status: 'paid',
-            items_count: orderItems.length,
-            items: orderItems.map(oi => ({
-              product_id: oi.product_id,
-              name: productMap.get(oi.product_id)?.name || `Product ${oi.product_id}`,
-              quantity: oi.quantity,
-              price: oi.price.toString()
-            }))
-          }
-          
-          console.log('📧 Calling notifyAdminOrderCreated...')
-          await notifyAdminOrderCreated(adminNotificationData)
-          console.log('✅ Complex admin notification system succeeded')
-          notificationSuccess = true
-          
-        } catch (adminEmailError) {
-          console.error('❌ Complex notification system failed:', adminEmailError)
-          
-          // GUARANTEED FALLBACK: Send simple email notifications directly
-          console.log('🚨 Using GUARANTEED fallback notification system for mobile payment')
           try {
-            const fallbackEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
-            console.log('📧 Sending fallback notifications to:', fallbackEmails)
+            // First try the complex notification system
+            const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
             
-            for (const email of fallbackEmails) {
-              try {
-                // Import notification service directly for simple sending
-                const { notificationService } = await import('@/lib/notifications/service')
-                await notificationService.sendNotification({
-                  event: 'admin_order_created',
-                  recipient_email: email,
-                  recipient_name: 'Admin',
-                  data: {
-                    title: 'Mobile Payment Order Created',
-                    message: `🎉 Mobile payment order successfully processed!
-                    
+            console.log('📧 Preparing admin notification with product details...')
+            const adminNotificationData = {
+              order_id: String(order.id),
+              customer_email: userEmail,
+              customer_name: userName || 'Customer',
+              total_amount: total_amount.toString(),
+              currency: session.currency,
+              payment_method: 'Mobile Money',
+              payment_status: 'paid',
+              items_count: orderItems.length,
+              items: orderItems.map(oi => ({
+                product_id: oi.product_id,
+                name: productMap.get(oi.product_id)?.name || `Product ${oi.product_id}`,
+                quantity: oi.quantity,
+                price: oi.price.toString()
+              }))
+            }
+            
+            console.log('📧 Calling notifyAdminOrderCreated...')
+            await notifyAdminOrderCreated(adminNotificationData)
+            console.log('✅ Complex admin notification system succeeded')
+            notificationSuccess = true
+            
+          } catch (adminEmailError) {
+            console.error('❌ Complex notification system failed:', adminEmailError)
+            
+            // GUARANTEED FALLBACK: Send simple email notifications directly
+            console.log('🚨 Using GUARANTEED fallback notification system for mobile payment')
+            try {
+              const fallbackEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
+              console.log('📧 Sending fallback notifications to:', fallbackEmails)
+              
+              for (const email of fallbackEmails) {
+                try {
+                  // Import notification service directly for simple sending
+                  const { notificationService } = await import('@/lib/notifications/service')
+                  await notificationService.sendNotification({
+                    event: 'admin_order_created',
+                    recipient_email: email,
+                    recipient_name: 'Admin',
+                    data: {
+                      title: 'Mobile Payment Order Created',
+                      message: `🎉 Mobile payment order successfully processed!
+                      
 Order Details:
 • Order ID: ${order.id}
 • Customer: ${userName} (${userEmail})
@@ -1366,48 +1426,51 @@ Order Details:
 • Status: Paid & Processing
 
 View Order: https://admin.tiscomarket.store/orders/${order.id}`,
-                    order_id: order.id,
-                    customer_email: userEmail,
-                    customer_name: userName || 'Customer',
-                    total_amount: total_amount.toString(),
-                    currency: session.currency,
-                    payment_method: 'Mobile Money',
-                    action_url: `https://admin.tiscomarket.store/orders/${order.id}`
-                  },
-                  priority: 'high'
-                })
-                console.log(`✅ Fallback notification sent to ${email}`)
-              } catch (fallbackError) {
-                console.error(`❌ Failed to send fallback notification to ${email}:`, fallbackError)
+                      order_id: String(order.id),
+                      customer_email: userEmail,
+                      customer_name: userName || 'Customer',
+                      total_amount: total_amount.toString(),
+                      currency: session.currency,
+                      payment_method: 'Mobile Money',
+                      action_url: `https://admin.tiscomarket.store/orders/${order.id}`
+                    },
+                    priority: 'high'
+                  })
+                  console.log(`✅ Fallback notification sent to ${email}`)
+                } catch (fallbackError) {
+                  console.error(`❌ Failed to send fallback notification to ${email}:`, fallbackError)
+                }
               }
+              notificationSuccess = true
+              console.log('✅ GUARANTEED fallback notifications completed')
+              
+            } catch (guaranteedFallbackError) {
+              console.error('❌ Even guaranteed fallback failed:', guaranteedFallbackError)
             }
-            notificationSuccess = true
-            console.log('✅ GUARANTEED fallback notifications completed')
             
-          } catch (guaranteedFallbackError) {
-            console.error('❌ Even guaranteed fallback failed:', guaranteedFallbackError)
+            // Log the original notification failure
+            try {
+              await supabase
+                .from('payment_logs')
+                .insert({
+                  session_id: session.id,
+                  transaction_id: transaction?.id,
+                  event_type: 'admin_notification_failure_with_fallback',
+                  data: { 
+                    original_error: adminEmailError instanceof Error ? adminEmailError.message : String(adminEmailError),
+                    order_id: order.id,
+                    fallback_used: notificationSuccess,
+                    failure_timestamp: new Date().toISOString()
+                  },
+                  user_id: session.user_id
+                })
+            } catch {}
           }
           
-          // Log the original notification failure
-          try {
-            await supabase
-              .from('payment_logs')
-              .insert({
-                session_id: session.id,
-                transaction_id: transaction?.id,
-                event_type: 'admin_notification_failure_with_fallback',
-                data: { 
-                  original_error: adminEmailError instanceof Error ? adminEmailError.message : String(adminEmailError),
-                  order_id: order.id,
-                  fallback_used: notificationSuccess,
-                  failure_timestamp: new Date().toISOString()
-                },
-                user_id: session.user_id
-              })
-          } catch {}
-        }
+          console.log(`📧 Admin notification result: ${notificationSuccess ? 'SUCCESS' : 'FAILED'} for order ${order.id}`)
+        })
         
-        console.log(`📧 Admin notification result: ${notificationSuccess ? 'SUCCESS' : 'FAILED'} for order ${order.id}`)
+        console.log('✅ Admin notifications queued asynchronously - order creation proceeding')
       }
     } catch (emailError) {
       console.error('Failed to send mobile payment notifications:', emailError)
