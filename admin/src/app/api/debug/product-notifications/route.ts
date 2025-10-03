@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
 
     const debug = {
       timestamp: new Date().toISOString(),
-      recipients: [],
-      products: [],
-      orders: [],
+      recipients: [] as any[],
+      products: [] as any[],
+      orders: [] as any[],
       simulation: null as any
     }
 
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch recipients', details: recipientsError }, { status: 500 })
     }
 
-    debug.recipients = recipients || []
+    debug.recipients = (recipients as any) || []
 
     // 2. Fetch sample products
     const { data: products, error: productsError } = await sb
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       .limit(20)
 
     if (!productsError) {
-      debug.products = products || []
+      debug.products = (products as any) || []
     }
 
     // 3. Fetch recent orders
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       .limit(10)
 
     if (!ordersError) {
-      debug.orders = orders || []
+      debug.orders = (orders as any) || []
     }
 
     // 4. Simulation logic
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
       if (simulateOrderId) {
         // Find specific order
-        simulationOrder = debug.orders.find(o => o.id === simulateOrderId)
+        simulationOrder = debug.orders.find((o: any) => o.id === simulateOrderId)
         if (simulationOrder) {
           simulationProductIds = simulationOrder.order_items?.map((item: any) => item.product_id) || []
         }
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
           product_matches: productMatches.map(r => ({
             email: r.email,
             assigned_products: r.assigned_product_ids,
-            matching_products: r.assigned_product_ids?.filter(pid => simulationProductIds.includes(pid)) || []
+            matching_products: r.assigned_product_ids?.filter((pid: string) => simulationProductIds.includes(pid)) || []
           })),
           category_matches: categoryMatches.map(r => ({
             email: r.email,
@@ -220,15 +220,20 @@ export async function POST(req: NextRequest) {
 
     console.log('🧪 Testing product-specific notifications with data:', testOrderData)
 
-    // Import and call the notification service
-    const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
-    const result = await notifyAdminOrderCreated(testOrderData)
+    // Note: This is a debug endpoint, in production this would call the client API
+    console.log('⚠️ Debug endpoint: Would call notifyAdminOrderCreated with:', testOrderData)
+    
+    // Simulate the result for debugging purposes
+    const result = { 
+      message: 'Debug mode: Notification would be sent in production',
+      recipients_that_would_be_notified: 'See debug output above' 
+    }
 
     return NextResponse.json({
       success: true,
       test_data: testOrderData,
       notification_result: result,
-      message: 'Test notifications sent successfully'
+      message: 'Debug simulation completed (no actual notifications sent from admin)'
     })
 
   } catch (error) {

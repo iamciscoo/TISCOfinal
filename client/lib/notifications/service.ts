@@ -845,9 +845,12 @@ export async function notifyAdminOrderCreated(orderData: {
       // Strategy 1: Direct product_id from items
       ...(orderData.items?.map(item => item.product_id).filter(Boolean) || []),
       // Strategy 2: Fallback to productId field (backward compatibility)
-      ...(orderData.items?.map(item => (item as any).productId).filter(Boolean) || []),
+      ...(orderData.items?.map(item => (item as Record<string, unknown>).productId).filter(Boolean) || []),
       // Strategy 3: Extract from any nested product object
-      ...(orderData.items?.map(item => (item as any).product?.id).filter(Boolean) || [])
+      ...(orderData.items?.map(item => {
+        const product = (item as Record<string, unknown>).product as Record<string, unknown> | undefined
+        return product?.id
+      }).filter(Boolean) || [])
     ].filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
     
     console.log('🔍 DEBUG: Order Product ID Extraction:', {
@@ -965,7 +968,7 @@ export async function notifyAdminOrderCreated(orderData: {
       }
       
       // Validate recipient is active (handle case where is_active might not exist)
-      const isActive = (recipient as any).is_active !== false // Default to true if undefined
+      const isActive = (recipient as Record<string, unknown>).is_active !== false // Default to true if undefined
       if (!isActive) {
         console.log(`⏭️  Skipping inactive recipient: ${recipient.email}`)
         return false
