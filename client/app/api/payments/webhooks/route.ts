@@ -4,25 +4,23 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { notifyPaymentSuccess, notifyPaymentFailed } from '@/lib/notifications/service'
-import { logger } from '../../../../../shared/lib/logger'
+// import { logger } from '../../../../../shared/lib/logger' // Removed - causing module not found error
+
+// Simple console logger replacement
+const logger = {
+  debug: console.log,
+  error: console.error,
+  info: console.log,
+  warn: console.warn,
+  webhook: (event: string, source: string, success: boolean) => {
+    console.log(`📡 Webhook [${source}] ${event}: ${success ? '✅' : '❌'}`)
+  },
+  payment: (event: string, data: Record<string, unknown>) => {
+    console.log(`💰 Payment ${event}:`, data)
+  }
+}
 
 export const runtime = 'nodejs'
-
-interface WebhookPayload {
-  order_id?: string
-  reference?: string
-  transaction_reference?: string
-  transaction_id?: string
-  gateway_transaction_id?: string
-  status?: string
-  payment_status?: string
-  event_type?: string
-  event?: string
-  type?: string
-  failure_reason?: string
-  data?: WebhookPayload | Record<string, unknown>
-  [key: string]: unknown
-}
 
 function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
@@ -138,7 +136,7 @@ export async function POST(req: NextRequest) {
     console.log('✅ Webhook authentication passed')
     
     // Parse ZenoPay webhook payload
-    let body: any
+    let body: Record<string, unknown>
     try {
       body = JSON.parse(rawBody)
     } catch (parseError) {
@@ -177,92 +175,183 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing payment_status field' }, { status: 400 })
     }
 
-    // Check both payment_transactions (existing orders) and payment_sessions (new flow)
+    // ENHANCED: Check both payment_transactions and payment_sessions with multiple lookup strategies
     let txnData: { id: string; user_id: string; order_id?: string; transaction_reference: string; status: string } | null = null
     let isSession = false
 
-    // First try payment_transactions (existing flow)
-    let query = supabase
-      .from('payment_transactions')
-      .select(`
-        *,
-        orders(id, user_id, status)
-      `)
-      .limit(1)
+    console.log('🔍 Enhanced session lookup with multiple strategies...')
+    console.log('🔍 Lookup parameters:', {
+      order_id_from_zenopay: ref,
+      reference_from_zenopay: gw,
+      webhook_payload_keys: Object.keys(body || {})
+    })
 
+    // Strategy 1: Direct transaction_reference match (most common)
     if (ref) {
-      console.log('Looking up transaction/session for ref:', ref)
-      const { data: txnResult } = await query.or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`).maybeSingle()
-      if (txnResult) {
-        console.log('Found payment transaction:', txnResult.id)
-        txnData = txnResult
+      console.log('🔍 Strategy 1: Looking up by transaction_reference:', ref)
+      
+      // Check payment_sessions first (new mobile payment flow)
+      const { data: sessionResult } = await supabase
+        .from('payment_sessions')
+        .select('*')
+        .eq('transaction_reference', ref)
+        .maybeSingle()
+        
+      if (sessionResult) {
+        console.log('✅ Found payment session by transaction_reference:', sessionResult.id)
+        txnData = sessionResult
+        isSession = true
       } else {
-        // Try payment_sessions (new flow)
-        console.log('No payment transaction found, checking payment sessions')
-        const { data: sessionResult } = await supabase
-          .from('payment_sessions')
-          .select('*')
-          .or(`transaction_reference.eq.${ref},gateway_transaction_id.eq.${ref}`)
+        // Fallback to payment_transactions
+        const { data: txnResult } = await supabase
+          .from('payment_transactions')
+          .select(`
+            *,
+            orders(id, user_id, status)
+          `)
+          .eq('transaction_reference', ref)
           .maybeSingle()
-        if (sessionResult) {
-          console.log('Found payment session:', sessionResult.id)
-          txnData = sessionResult
-          isSession = true
-        } else {
-          console.log('No payment session found for ref:', ref)
+          
+        if (txnResult) {
+          console.log('✅ Found payment transaction by transaction_reference:', txnResult.id)
+          txnData = txnResult
         }
       }
-    } else if (gw) {
-      query = query.eq('gateway_transaction_id', gw)
-      const { data: txnResult } = await query.maybeSingle()
-      if (txnResult) {
-        txnData = txnResult
+    }
+    
+    // Strategy 2: Gateway transaction ID match
+    if (!txnData && gw) {
+      console.log('🔍 Strategy 2: Looking up by gateway_transaction_id:', gw)
+      
+      // Check payment_sessions
+      const { data: sessionResult } = await supabase
+        .from('payment_sessions')
+        .select('*')
+        .eq('gateway_transaction_id', gw)
+        .maybeSingle()
+        
+      if (sessionResult) {
+        console.log('✅ Found payment session by gateway_transaction_id:', sessionResult.id)
+        txnData = sessionResult
+        isSession = true
       } else {
-        // Try payment_sessions (new flow)
-        let sessionQuery = supabase
-          .from('payment_sessions')
-          .select('*')
-          .limit(1)
-        sessionQuery = sessionQuery.eq('gateway_transaction_id', gw)
-        const { data: sessionResult } = await sessionQuery.maybeSingle()
-        if (sessionResult) {
-          txnData = sessionResult
-          isSession = true
+        // Check payment_transactions
+        const { data: txnResult } = await supabase
+          .from('payment_transactions')
+          .select(`
+            *,
+            orders(id, user_id, status)
+          `)
+          .eq('gateway_transaction_id', gw)
+          .maybeSingle()
+          
+        if (txnResult) {
+          console.log('✅ Found payment transaction by gateway_transaction_id:', txnResult.id)
+          txnData = txnResult
+        }
+      }
+    }
+    
+    // Strategy 3: Fuzzy matching for recent sessions (within last hour)
+    if (!txnData && (ref || gw)) {
+      console.log('🔍 Strategy 3: Fuzzy matching recent sessions...')
+      
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      
+      const { data: recentSessions } = await supabase
+        .from('payment_sessions')
+        .select('*')
+        .gte('created_at', oneHourAgo)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (recentSessions && recentSessions.length > 0) {
+        console.log('🔍 Checking', recentSessions.length, 'recent sessions for fuzzy match')
+        
+        // Try to match by partial reference or similar patterns
+        for (const session of recentSessions) {
+          const sessionRef = session.transaction_reference
+          const sessionGw = session.gateway_transaction_id
+          
+          // Check for partial matches or similar patterns
+          if (ref && sessionRef && (
+            sessionRef.includes(ref) || 
+            ref.includes(sessionRef) ||
+            sessionRef.toLowerCase() === ref.toLowerCase()
+          )) {
+            console.log('✅ Found session by fuzzy transaction_reference match:', session.id)
+            txnData = session
+            isSession = true
+            break
+          }
+          
+          if (gw && sessionGw && (
+            sessionGw.includes(gw) || 
+            gw.includes(sessionGw) ||
+            sessionGw.toLowerCase() === gw.toLowerCase()
+          )) {
+            console.log('✅ Found session by fuzzy gateway_transaction_id match:', session.id)
+            txnData = session
+            isSession = true
+            break
+          }
         }
       }
     }
 
     if (!txnData) {
-      console.error('🚨 CRITICAL: Transaction/Session not found in database!')
-      console.error('🔍 Lookup details:', {
+      console.error('🚨 CRITICAL: Transaction/Session not found in database after ALL strategies!')
+      console.error('🔍 Exhaustive lookup details:', {
         transaction_reference_searched: ref,
         gateway_reference_searched: gw,
         zenopay_order_id: body?.order_id,
         zenopay_reference: body?.reference,
-        webhook_payload: body
+        webhook_payload: body,
+        strategies_attempted: ['transaction_reference_exact', 'gateway_transaction_id_exact', 'fuzzy_matching_recent']
       })
       
-      // Log this lookup failure for debugging
+      // Enhanced debugging: Show recent sessions for manual verification
       try {
         const supabase = getAdminSupabase()
         if (supabase) {
+          const { data: recentSessions } = await supabase
+            .from('payment_sessions')
+            .select('id, transaction_reference, gateway_transaction_id, status, created_at')
+            .order('created_at', { ascending: false })
+            .limit(10)
+          
+          console.error('🔍 Recent payment sessions for comparison:', recentSessions)
+          
+          // Log comprehensive failure for debugging
           await supabase
             .from('payment_logs')
             .insert({
-              event_type: 'webhook_session_lookup_failure',
+              event_type: 'webhook_session_lookup_failure_enhanced',
               data: {
                 zenopay_order_id: body?.order_id,
                 zenopay_reference: body?.reference,
                 transaction_reference_searched: ref,
                 gateway_reference_searched: gw,
                 webhook_payload: body,
-                failure_timestamp: new Date().toISOString()
+                recent_sessions: recentSessions,
+                failure_timestamp: new Date().toISOString(),
+                strategies_attempted: 3
               }
             })
         }
-      } catch {}
+      } catch (logError) {
+        console.error('Failed to log lookup failure:', logError)
+      }
       
-      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'Transaction not found', 
+        debug: {
+          searched_transaction_reference: ref,
+          searched_gateway_reference: gw,
+          strategies_attempted: 3,
+          suggestion: 'Check payment_logs table for webhook_session_lookup_failure_enhanced events'
+        }
+      }, { status: 404 })
     }
 
     console.log('Processing webhook for:', { 
