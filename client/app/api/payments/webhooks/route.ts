@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV === 'production' && !apiKey) {
       console.warn('⚠️  ALLOWING webhook in production due to missing ZENOPAY_API_KEY configuration')
       console.warn('🚨 SECURITY WARNING: Configure ZENOPAY_API_KEY immediately!')
+      console.warn('🔧 Temporary bypass enabled for ZenoPay integration testing')
     } else if (!authPassed) {
       return NextResponse.json({ 
         error: 'Webhook authentication failed', 
