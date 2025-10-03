@@ -100,101 +100,80 @@ export async function POST(req: NextRequest) {
 
     console.log('Authentication check:', { hmacOk, apiKeyOk, nodeEnv: process.env.NODE_ENV })
 
-  // Enhanced authentication logic to fix webhook processing issues
+  // ZenoPay webhook authentication per documentation
+  // "Verify the request by checking the x-api-key header to ensure it comes from ZenoPay"
   const authPassed = hmacOk || apiKeyOk
   
-  console.log('🔐 Webhook Authentication Analysis:', {
+  console.log('🔐 ZenoPay Webhook Authentication:', {
+    x_api_key_verified: apiKeyOk,
     hmac_verified: hmacOk,
-    api_key_verified: apiKeyOk,
     authentication_passed: authPassed,
-    has_signature_header: !!sig,
-    signature_header_used: sigHeaderUsed || 'none',
-    has_webhook_secret: !!process.env.WEBHOOK_SECRET,
-    has_zenopay_api_key: !!apiKey,
-    token_candidates_count: tokenCandidates.length,
+    zenopay_api_key_configured: !!apiKey,
+    x_api_key_header_present: !!req.headers.get('x-api-key'),
     node_env: process.env.NODE_ENV
   })
 
   if (!authPassed) {
-    console.error('❌ Webhook authentication failed - this may be why mobile payments are not processing!')
-    console.error('🔍 Debug info:', {
-      provided_signature: sig ? 'present' : 'missing',
-      webhook_secret_configured: !!process.env.WEBHOOK_SECRET,
-      zenopay_api_key_configured: !!apiKey,
-      auth_header: req.headers.get('authorization') ? 'present' : 'missing',
-      x_api_key_header: req.headers.get('x-api-key') ? 'present' : 'missing'
+    console.error('❌ ZenoPay webhook authentication failed!')
+    console.error('🔍 Authentication details:', {
+      x_api_key_header: req.headers.get('x-api-key') ? 'present' : 'missing',
+      zenopay_api_key_env: !!apiKey ? 'configured' : 'missing',
+      matches: apiKeyOk
     })
     
-    // TEMPORARY FIX: Allow webhooks in production if either authentication method is partially configured
-    // This addresses the critical issue where mobile payments aren't processing due to auth failures
-    const allowWebhookForRecovery = (
-      process.env.NODE_ENV === 'production' && 
-      (!process.env.WEBHOOK_SECRET || !apiKey)
-    ) || process.env.NODE_ENV !== 'production'
-    
-    if (allowWebhookForRecovery) {
-      console.warn('⚠️  ALLOWING webhook despite auth failure for payment processing recovery')
-      console.warn('🔧 Recommendation: Configure WEBHOOK_SECRET and ZENOPAY_API_KEY properly')
-    } else {
-      return NextResponse.json({ error: 'Invalid webhook authentication' }, { status: 401 })
+    // For production, be more lenient during the transition period
+    if (process.env.NODE_ENV === 'production' && !apiKey) {
+      console.warn('⚠️  ALLOWING webhook in production due to missing ZENOPAY_API_KEY configuration')
+      console.warn('🚨 SECURITY WARNING: Configure ZENOPAY_API_KEY immediately!')
+    } else if (!authPassed) {
+      return NextResponse.json({ 
+        error: 'Webhook authentication failed', 
+        message: 'x-api-key header must match ZENOPAY_API_KEY' 
+      }, { status: 401 })
     }
   } else {
-    console.log('✅ Webhook authentication successful')
+    console.log('✅ ZenoPay webhook authentication verified')
   }  
-    console.log('Webhook authentication passed')
-    const body = JSON.parse(rawBody) as WebhookPayload
-
-    // ZenoPay actual format: { "data": [{ "order_id": "TXREF", "payment_status": "COMPLETED", "reference": "0982403775" }] }
-    // Also handle simple webhook format: { "order_id": "TXREF", "payment_status": "COMPLETED", "reference": "REF" }
-    const dataArray = Array.isArray(body?.data) ? body.data : []
-    const firstDataItem = dataArray[0] || {}
-    const data = (body?.data || {}) as WebhookPayload
+    console.log('✅ Webhook authentication passed')
     
-    const refCandidates = [
-      body?.order_id,                    // Simple webhook format
-      firstDataItem?.order_id,           // API response format: data[0].order_id contains our transaction_reference
-      body?.transaction_reference, 
-      data?.order_id, 
-      data?.transaction_reference,
-      body?.reference
-    ].filter(Boolean)
-    
-    const gwCandidates = [
-      firstDataItem?.reference,          // API response format: data[0].reference is ZenoPay's internal reference
-      firstDataItem?.transid,            // API response format: data[0].transid is transaction ID
-      body?.reference,                   // Simple webhook format: reference is ZenoPay's internal reference
-      body?.transaction_id, 
-      data?.transaction_id, 
-      body?.gateway_transaction_id,
-      data?.reference
-    ].filter(Boolean)
+    // Parse ZenoPay webhook payload
+    let body: any
+    try {
+      body = JSON.parse(rawBody)
+    } catch (parseError) {
+      console.error('❌ Failed to parse webhook JSON:', parseError)
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 })
+    }
 
-    const ref = String(refCandidates[0] || '')
-    const gw = String(gwCandidates[0] || '')
-
-    // Extract payment status from various possible locations
-    const paymentStatusCandidates = [
-      firstDataItem?.payment_status,     // API response format: data[0].payment_status
-      body?.payment_status,              // Simple webhook format
-      data?.payment_status,
-      body?.status,
-      data?.status
-    ].filter(Boolean)
-    const paymentStatus = String(paymentStatusCandidates[0] || '').toUpperCase()
-
-    console.log('Webhook payload parsed:', { 
-      ref, 
-      gw, 
-      payment_status: paymentStatus,
-      raw_body_keys: Object.keys(body || {}),
-      has_data_array: Array.isArray(body?.data),
-      data_array_length: dataArray.length,
-      first_data_item_keys: Object.keys(firstDataItem)
+    console.log('📥 ZenoPay Webhook Received:', {
+      order_id: body?.order_id,
+      payment_status: body?.payment_status, 
+      reference: body?.reference,
+      metadata: body?.metadata,
+      full_payload: body
     })
 
-    if (!ref && !gw) {
-      console.error('No transaction reference found in webhook payload')
-      return NextResponse.json({ error: 'No transaction reference found' }, { status: 400 })
+    // Extract data according to ZenoPay documentation format
+    // Expected: { "order_id": "our_transaction_ref", "payment_status": "COMPLETED", "reference": "zenopay_ref" }
+    const ref = String(body?.order_id || '').trim()  // Our transaction_reference
+    const gw = String(body?.reference || '').trim()  // ZenoPay's internal reference
+    const paymentStatus = String(body?.payment_status || '').toUpperCase()
+
+    console.log('🔍 Extracted ZenoPay data:', { 
+      transaction_reference: ref,
+      zenopay_reference: gw, 
+      payment_status: paymentStatus
+    })
+
+    // Validate required fields per ZenoPay documentation
+    if (!ref) {
+      console.error('❌ Missing order_id (transaction_reference) in ZenoPay webhook')
+      return NextResponse.json({ error: 'Missing order_id field' }, { status: 400 })
+    }
+
+    if (!paymentStatus) {
+      console.error('❌ Missing payment_status in ZenoPay webhook')
+      return NextResponse.json({ error: 'Missing payment_status field' }, { status: 400 })
     }
 
     // Check both payment_transactions (existing orders) and payment_sessions (new flow)
@@ -264,15 +243,11 @@ export async function POST(req: NextRequest) {
       current_status: txnData.status 
     })
 
-    // Process webhook by normalized status/event
+    // Process webhook by normalized status/event (ZenoPay format)
     const rawStatusCandidates = [
+      paymentStatus,  // Already extracted from body?.payment_status
       body?.status,
-      data?.status,
-      body?.payment_status,
-      data?.payment_status,
-      // Some providers use `result` to indicate status
-      (data as Record<string, unknown>)?.result,
-      (body as Record<string, unknown>)?.result,
+      body?.result,
       body?.event_type,
       body?.event,
       body?.type,
