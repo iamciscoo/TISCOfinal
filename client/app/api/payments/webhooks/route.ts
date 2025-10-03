@@ -1120,7 +1120,13 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
             currency: session.currency,
             payment_method: 'Mobile Money',
             payment_status: 'paid', // Mobile payments are already paid when webhook fires
-            items_count: orderItems.length
+            items_count: orderItems.length,
+            items: orderItems.map(oi => ({
+              product_id: oi.product_id,
+              name: productMap.get(oi.product_id) || `Product ${oi.product_id}`,
+              quantity: oi.quantity,
+              price: oi.price.toString()
+            }))
           })
           console.log('✅ Admin order notification sent for mobile payment')
         } catch (adminEmailError) {

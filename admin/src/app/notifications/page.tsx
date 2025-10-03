@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check, ExternalLink, X } from 'lucide-react'
+import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check, ExternalLink, X, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ProductMultiSelect } from '@/components/ui/product-multi-select'
 
 interface NotificationRecord {
   id: string
@@ -91,9 +92,9 @@ export default function NotificationsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Recipients state
-  type Recipient = { id: string; email: string; name?: string; is_active: boolean; department?: string | null; notification_categories?: string[] | null; created_at: string }
+  type Recipient = { id: string; email: string; name?: string; is_active: boolean; department?: string | null; notification_categories?: string[] | null; assigned_product_ids?: string[] | null; created_at: string }
   const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [newRecipient, setNewRecipient] = useState<{ email: string; name: string; department: string; notification_categories: string[] }>({ email: '', name: '', department: '', notification_categories: ['all'] })
+  const [newRecipient, setNewRecipient] = useState<{ email: string; name: string; department: string; notification_categories: string[]; assigned_product_ids: string[] }>({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(['all']))
 
   // Manual notification form
@@ -650,8 +651,8 @@ export default function NotificationsPage() {
               <CardTitle>Admin Recipients</CardTitle>
               <CardDescription>Manage admins who receive notification updates by email</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="recipient_email">Admin Email</Label>
                   <Input
@@ -660,6 +661,7 @@ export default function NotificationsPage() {
                     value={newRecipient.email}
                     onChange={(e) => setNewRecipient(prev => ({ ...prev, email: e.target.value }))}
                     placeholder="admin@example.com"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
@@ -669,12 +671,14 @@ export default function NotificationsPage() {
                     value={newRecipient.name}
                     onChange={(e) => setNewRecipient(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Admin Name"
+                    className="w-full"
                   />
                 </div>
               </div>
 
               {/* Department and Categories */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Department Field */}
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
                   <Select value={newRecipient.department} onValueChange={(value) => setNewRecipient(prev => ({ ...prev, department: value }))}>
@@ -689,15 +693,58 @@ export default function NotificationsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Product Filter Section */}
                 <div className="space-y-2">
-                  <Label htmlFor="categories">Notification Categories</Label>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    <Label htmlFor="product-filter">Product-Specific Notifications</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Optional: Select specific products to receive notifications for. When products are selected, this recipient will only receive order creation notifications for these products (category filters will be disabled).
+                  </p>
+                  <ProductMultiSelect
+                    selectedProductIds={newRecipient.assigned_product_ids}
+                    onSelectionChange={(productIds) => {
+                      setNewRecipient(prev => ({ ...prev, assigned_product_ids: productIds }))
+                    }}
+                    placeholder="Search and select products for notifications..."
+                  />
+                  {newRecipient.assigned_product_ids.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-amber-800">Product Filter Active</p>
+                          <p className="text-amber-700 mt-1">
+                            This recipient will only receive order creation notifications for the selected products. Category-based notifications are disabled when product filters are active.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Selection - Disabled when products are selected */}
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    <Label htmlFor="categories">Notification Categories</Label>
+                    {newRecipient.assigned_product_ids.length > 0 && (
+                      <p className="text-sm text-muted-foreground italic">
+                        Category selection is disabled because product filters are active.
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-h-48 overflow-y-auto">
                       <Button
                         type="button"
                         variant={selectedEvents.has('all') ? 'default' : 'outline'}
                         size="sm"
+                        disabled={newRecipient.assigned_product_ids.length > 0}
+                        className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3"
                         onClick={() => {
+                          if (newRecipient.assigned_product_ids.length > 0) return // Don't allow changes when product filter is active
+                          
                           if (selectedEvents.has('all')) {
                             // When deselecting "All Events", clear selection to allow individual category selection
                             setSelectedEvents(new Set())
@@ -717,7 +764,8 @@ export default function NotificationsPage() {
                           type="button"
                           variant={selectedEvents.has(category) ? 'default' : 'outline'}
                           size="sm"
-                          disabled={selectedEvents.has('all')}
+                          disabled={selectedEvents.has('all') || newRecipient.assigned_product_ids.length > 0}
+                          className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3 col-span-1"
                           onClick={() => {
                             const newSelected = new Set(selectedEvents)
                             newSelected.delete('all') // Remove 'all' when selecting specific events
@@ -745,6 +793,7 @@ export default function NotificationsPage() {
                         ).join(', ') || 'None (will default to All Events)'}
                     </div>
                   </div>
+                  </div>
                 </div>
               </div>
 
@@ -758,12 +807,13 @@ export default function NotificationsPage() {
                         email: newRecipient.email, 
                         name: newRecipient.name,
                         department: newRecipient.department || undefined,
-                        notification_categories: newRecipient.notification_categories.length > 0 ? newRecipient.notification_categories : ['all']
+                        notification_categories: newRecipient.assigned_product_ids.length > 0 ? [] : (newRecipient.notification_categories.length > 0 ? newRecipient.notification_categories : ['all']),
+                        assigned_product_ids: newRecipient.assigned_product_ids.length > 0 ? newRecipient.assigned_product_ids : null
                       })
                     })
                     if (res.ok) {
                       toast.success('Recipient saved')
-                      setNewRecipient({ email: '', name: '', department: '', notification_categories: ['all'] })
+                      setNewRecipient({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
                       setSelectedEvents(new Set(['all']))
                       fetchRecipients()
                     } else {
@@ -784,26 +834,36 @@ export default function NotificationsPage() {
                   <div className="p-4 text-sm text-muted-foreground">No recipients added yet.</div>
                 ) : (
                   recipients.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between p-4">
-                      <div>
-                        <div className="font-medium">{r.name || 'Admin'}</div>
-                        <div className="text-sm text-muted-foreground">{r.email}</div>
-                        <div className="flex gap-2 mt-1">
+                    <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm sm:text-base truncate">{r.name || 'Admin'}</div>
+                        <div className="text-sm text-muted-foreground truncate">{r.email}</div>
+                        <div className="flex gap-1 sm:gap-2 mt-2 flex-wrap">
                           {r.department && (
-                            <Badge variant="outline">{r.department}</Badge>
+                            <Badge variant="outline" className="text-xs">{r.department}</Badge>
                           )}
-                          {Array.isArray(r.notification_categories) && r.notification_categories.length > 0 && (
-                            <Badge variant="secondary">{r.notification_categories.join(', ')}</Badge>
+                          {r.assigned_product_ids && r.assigned_product_ids.length > 0 ? (
+                            <Badge variant="default" className="bg-orange-100 text-orange-800 text-xs">
+                              <Package className="h-3 w-3 mr-1" />
+                              {r.assigned_product_ids.length} product{r.assigned_product_ids.length === 1 ? '' : 's'}
+                            </Badge>
+                          ) : (
+                            Array.isArray(r.notification_categories) && r.notification_categories.length > 0 && (
+                              <Badge variant="secondary" className="text-xs max-w-[200px] truncate" title={r.notification_categories.join(', ')}>
+                                {r.notification_categories.join(', ')}
+                              </Badge>
+                            )
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={r.is_active ? 'default' : 'secondary'}>
+                      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                        <Badge variant={r.is_active ? 'default' : 'secondary'} className="text-xs">
                           {r.is_active ? 'active' : 'inactive'}
                         </Badge>
                         <Button
                           variant="destructive"
                           size="sm"
+                          className="text-xs px-2 py-1 h-auto"
                           onClick={async () => {
                             if (!confirm(`Remove ${r.email}?`)) return
                             const url = `/api/admin/notifications/recipients?id=${encodeURIComponent(r.id)}`

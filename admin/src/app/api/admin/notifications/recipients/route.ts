@@ -34,7 +34,7 @@ export async function GET() {
 
     const { data, error } = await sb
       .from('notification_recipients')
-      .select('id, email, name, is_active, department, notification_categories, created_at')
+      .select('id, email, name, is_active, department, notification_categories, assigned_product_ids, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -64,6 +64,12 @@ export async function POST(req: NextRequest) {
       : typeof categoriesInput === 'string'
         ? String(categoriesInput).split(',').map((c) => c.trim()).filter(Boolean)
         : ['all']
+    
+    // Handle product filtering
+    const productIdsInput = body?.assigned_product_ids
+    const assigned_product_ids: string[] | null = Array.isArray(productIdsInput) && productIdsInput.length > 0
+      ? productIdsInput.map((id: string) => String(id).trim()).filter(Boolean)
+      : null
 
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
@@ -72,8 +78,8 @@ export async function POST(req: NextRequest) {
     // Upsert to notification_recipients table only
     const { data, error } = await sb
       .from('notification_recipients')
-      .upsert({ email, name, is_active: true, department, notification_categories }, { onConflict: 'email' })
-      .select('id, email, name, is_active, department, notification_categories, created_at')
+      .upsert({ email, name, is_active: true, department, notification_categories, assigned_product_ids }, { onConflict: 'email' })
+      .select('id, email, name, is_active, department, notification_categories, assigned_product_ids, created_at')
       .single()
 
     if (error) {

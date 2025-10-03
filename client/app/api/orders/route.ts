@@ -216,19 +216,20 @@ export async function POST(req: Request) {
 
     const { data: productsData, error: productsErr } = await supabase
       .from('products')
-      .select('id, price, stock_quantity')
+      .select('id, name, price, stock_quantity')
       .in('id', productIds)
 
     if (productsErr) {
       return NextResponse.json({ error: productsErr.message }, { status: 500 })
     }
 
-    type ProductRow = { id: string; price: number; stock_quantity: number | null }
+    type ProductRow = { id: string; name: string; price: number; stock_quantity: number | null }
     const productsDataTyped = (productsData || []) as ProductRow[]
-    const productMap = new Map<string, { id: string; price: number; stock_quantity?: number | null }>()
+    const productMap = new Map<string, { id: string; name: string; price: number; stock_quantity?: number | null }>()
     for (const p of productsDataTyped) {
       productMap.set(p.id, {
         id: p.id,
+        name: p.name,
         price: Number(p.price) || 0,
         stock_quantity: p.stock_quantity ?? null,
       })
@@ -452,7 +453,7 @@ export async function POST(req: Request) {
         items: validatedItems.map(item => {
           const product = productMap.get(item.product_id)
           return {
-            name: product?.id || 'Product',  // Use product ID as name since we don't fetch names in the query
+            name: product?.name || `Product ${item.product_id}`,
             quantity: item.quantity,
             price: item.price.toString()
           }
@@ -476,7 +477,16 @@ export async function POST(req: Request) {
           currency,
           payment_method,
           payment_status: payment_method === 'Mobile Money' ? 'paid' : 'pending',
-          items_count: validatedItems.length
+          items_count: validatedItems.length,
+          items: validatedItems.map(item => {
+            const product = productMap.get(item.product_id)
+            return {
+              product_id: item.product_id,
+              name: product?.name || `Product ${item.product_id}`,
+              quantity: item.quantity,
+              price: item.price.toString()
+            }
+          })
         })
         console.log('✅ Admin order notification sent successfully')
       } catch (adminEmailError) {

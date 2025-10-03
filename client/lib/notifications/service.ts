@@ -1,6 +1,7 @@
 import { sendEmailViaSendPulse, getSendPulseConfig, type SendPulseEmail } from './sendpulse'
 import { renderEmailTemplate, getDefaultSubject, type TemplateType } from '../email-templates'
 import { createClient } from '@supabase/supabase-js'
+import { notificationAudit } from './audit'
 
 // Supabase client for notifications
 const getSupabaseClient = () => {
@@ -779,12 +780,13 @@ export async function notifyAdminOrderCreated(orderData: {
   payment_method: string
   payment_status: string
   items_count: number
+  items?: Array<{ product_id?: string; name: string; quantity: number; price: string }> // Add items for product filtering
 }) {
   try {
-    // Get admin recipients from database with category filtering
+    // Get admin recipients from database with category and product filtering
     const { data: recipients, error } = await supabase
       .from('notification_recipients')
-      .select('email, name, notification_categories')
+      .select('email, name, notification_categories, assigned_product_ids')
       .eq('is_active', true)
     
     if (error) {
@@ -834,8 +836,34 @@ export async function notifyAdminOrderCreated(orderData: {
       return await Promise.allSettled(notifications)
     }
     
-    // Filter recipients based on their notification categories
+    // Filter recipients based on their notification categories AND product filters
     const filteredRecipients = recipients.filter(recipient => {
+      // If recipient has product filters, check product match first
+      if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
+        if (!orderData.items || orderData.items.length === 0) {
+          // No order items provided - can't match product filter, skip this recipient
+          return false
+        }
+        
+        // Check if any order items match the recipient's assigned products
+        const orderProductIds = orderData.items
+          .map(item => item.product_id)
+          .filter(Boolean) // Remove undefined/null product_ids
+        
+        const hasMatchingProduct = orderProductIds.some(productId => 
+          recipient.assigned_product_ids?.includes(productId)
+        )
+        
+        if (!hasMatchingProduct) {
+          return false // No products match - don't notify this recipient
+        }
+        
+        // Product match found - notify regardless of categories
+        console.log(`Product filter match found for ${recipient.email}: products [${recipient.assigned_product_ids.join(', ')}]`)
+        return true
+      }
+      
+      // No product filters - use category-based filtering (existing logic)
       const categories = recipient.notification_categories || ['all']
       
       // If recipient has 'all' category, they get all notifications
@@ -870,21 +898,61 @@ export async function notifyAdminOrderCreated(orderData: {
 
     console.log(`Sending order notifications to ${filteredRecipients.length} recipients with order categories`)
 
-    // Send to filtered recipients from database
-    const notifications = filteredRecipients.map(recipient => 
-      notificationService.sendNotification({
-        event: 'admin_order_created',
+    // Send to filtered recipients from database with audit logging and idempotency
+    const notifications = []
+    for (const recipient of filteredRecipients) {
+      // Generate unique notification key for idempotency
+      const notificationKey = notificationAudit.generateNotificationKey(
+        'admin_order_created',
+        recipient.email,
+        orderData.order_id
+      )
+
+      // Create audit log entry (will skip if duplicate)
+      const auditLogId = await notificationAudit.logNotificationAttempt({
+        notification_key: notificationKey,
+        event_type: 'admin_order_created',
         recipient_email: recipient.email,
-        recipient_name: recipient.name || 'Admin',
-        data: {
+        order_id: orderData.order_id,
+        customer_email: orderData.customer_email,
+        notification_data: {
           ...orderData,
-          title: 'New Order Created',
-          message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
-          action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+          recipient_name: recipient.name || 'Admin'
         },
-        priority: 'high'
+        status: 'pending'
       })
-    )
+
+      // Skip if duplicate detected
+      if (!auditLogId) {
+        console.log(`Skipping duplicate notification for ${recipient.email}`)
+        continue
+      }
+
+      try {
+        const notificationPromise = notificationService.sendNotification({
+          event: 'admin_order_created',
+          recipient_email: recipient.email,
+          recipient_name: recipient.name || 'Admin',
+          data: {
+            ...orderData,
+            title: 'New Order Created',
+            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+            action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
+          },
+          priority: 'high'
+        })
+
+        // Update audit log on success/failure
+        notificationPromise
+          .then(() => notificationAudit.updateAuditStatus(notificationKey, 'sent'))
+          .catch((error) => notificationAudit.updateAuditStatus(notificationKey, 'failed', error.message))
+
+        notifications.push(notificationPromise)
+      } catch (error) {
+        await notificationAudit.updateAuditStatus(notificationKey, 'failed', (error as Error).message)
+        console.error(`Failed to send notification to ${recipient.email}:`, error)
+      }
+    }
     
     return await Promise.allSettled(notifications)
   } catch (error) {
