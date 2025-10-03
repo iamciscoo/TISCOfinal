@@ -888,45 +888,49 @@ export async function notifyAdminOrderCreated(orderData: {
       return hasMatchingProduct
     })
     
-    let filteredRecipients = []
+    // Step 2: ADDITIVE filtering strategy - combine product-specific AND general recipients
+    console.log('🔄 Using ADDITIVE filtering strategy: product-specific + general recipients')
     
-    // Step 2: Enhanced filtering strategy with detailed logging
-    if (productSpecificRecipients.length > 0) {
-      // EXCLUSIVE: Only notify product-specific recipients
-      console.log(`🎯 Using EXCLUSIVE product filtering: ${productSpecificRecipients.length} recipients with matching products`)
-      console.log(`📦 Order products: [${orderProductIds.join(', ')}]`)
-      console.log('📋 Product-specific recipients:', productSpecificRecipients.map(r => `${r.email} (products: [${r.assigned_product_ids?.join(', ')}])`))
-      filteredRecipients = productSpecificRecipients
-    } else {
-      // FALLBACK: No product matches, use category-based filtering  
-      console.log('📂 No product-specific matches, falling back to category-based recipients')
-      console.log('🔍 Available recipients for category filtering:', recipients.map(r => `${r.email} (products: ${r.assigned_product_ids?.length || 0}, categories: [${r.notification_categories?.join(', ') || 'none'}])`))
+    // Find recipients who should get notifications based on categories (including "all")
+    const categoryBasedRecipients = recipients.filter(recipient => {
+      // Skip recipients with product assignments - they're handled separately
+      if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
+        console.log(`⏭️  Skipping ${recipient.email} for category filtering - has product assignments`)
+        return false
+      }
       
-      filteredRecipients = recipients.filter(recipient => {
-        // Skip recipients with product assignments (they already didn't match)
-        if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
-          console.log(`⏭️  Skipping ${recipient.email} - has product assignments but no match`)
-          return false
-        }
-        
-        // Use category-based filtering for recipients without product assignments
-        const categories = recipient.notification_categories || ['all']
-        
-        // If recipient has 'all' category, they get all notifications
-        if (categories.includes('all')) {
-          console.log(`✅ Including ${recipient.email} - has 'all' category`)
-          return true
-        }
-        
-        // Check if they're subscribed to order-related categories
-        const orderCategories = ['order_created', 'orders', 'admin_order_created']
-        const hasOrderCategory = categories.some((category: string) => orderCategories.includes(category))
-        console.log(`${hasOrderCategory ? '✅' : '❌'} ${recipient.email} - order categories match: ${hasOrderCategory}`)
-        return hasOrderCategory
-      })
+      // Use category-based filtering for recipients without product assignments
+      const categories = recipient.notification_categories || ['all']
       
-      console.log('📋 Category-based recipients selected:', filteredRecipients.map(r => r.email))
-    }
+      // If recipient has 'all' category, they get all notifications
+      if (categories.includes('all')) {
+        console.log(`✅ Including ${recipient.email} - has 'all' category`)
+        return true
+      }
+      
+      // Check if they're subscribed to order-related categories
+      const orderCategories = ['order_created', 'orders', 'admin_order_created']
+      const hasOrderCategory = categories.some((category: string) => orderCategories.includes(category))
+      console.log(`${hasOrderCategory ? '✅' : '❌'} ${recipient.email} - order categories match: ${hasOrderCategory}`)
+      return hasOrderCategory
+    })
+    
+    // Combine product-specific recipients + category-based recipients
+    const allEligibleRecipients = [
+      ...productSpecificRecipients,
+      ...categoryBasedRecipients
+    ]
+    
+    // Remove duplicates by email (shouldn't happen, but defensive programming)
+    const filteredRecipients = allEligibleRecipients.filter((recipient, index, array) => 
+      array.findIndex(r => r.email.toLowerCase() === recipient.email.toLowerCase()) === index
+    )
+    
+    console.log(`📊 ADDITIVE FILTERING RESULTS:`)
+    console.log(`   🎯 Product-specific recipients: ${productSpecificRecipients.length}`)
+    console.log(`   📂 Category-based recipients: ${categoryBasedRecipients.length}`) 
+    console.log(`   📧 Total unique recipients: ${filteredRecipients.length}`)
+    console.log(`   📋 Final recipient list: ${filteredRecipients.map(r => r.email).join(', ')}`)
 
     // Enhanced fallback with detailed logging and validation
     if (filteredRecipients.length === 0) {
