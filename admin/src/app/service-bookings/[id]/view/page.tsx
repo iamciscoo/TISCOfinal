@@ -56,19 +56,28 @@ interface BookingDetailsData {
       address_line_1?: string;
       address_line_2?: string;
       city?: string;
-      state?: string;
       postal_code?: string;
       country?: string;
       created_at: string;
     };
   };
-  serviceCosts: Array<{
+  serviceCosts: {
     id: string;
-    description: string;
-    amount: number;
-    created_at: string;
-  }>;
-}
+    service_fee: number;
+    discount: number;
+    currency: string;
+    subtotal: number;
+    total: number;
+    notes: string | null;
+    items: Array<{
+      id: string;
+      name: string;
+      unit_price: number;
+      quantity: number;
+      unit: string;
+    }>;
+  } | null;
+};
 
 async function getBookingDetails(id: string): Promise<BookingDetailsData | null> {
   try {
@@ -128,10 +137,25 @@ async function getBookingDetails(id: string): Promise<BookingDetailsData | null>
 
     // Fetch any service costs associated with this booking
     const { data: serviceCosts, error: costsError } = await supabase
-      .from("service_costs")
-      .select("*")
-      .eq("service_booking_id", id)
-      .order("created_at", { ascending: false });
+      .from("service_booking_costs")
+      .select(`
+        id,
+        service_fee,
+        discount,
+        currency,
+        subtotal,
+        total,
+        notes,
+        service_booking_cost_items(
+          id,
+          name,
+          unit_price,
+          quantity,
+          unit
+        )
+      `)
+      .eq("booking_id", id)
+      .single();
 
     if (costsError) {
       console.warn("Service costs fetch error:", costsError);
@@ -143,7 +167,10 @@ async function getBookingDetails(id: string): Promise<BookingDetailsData | null>
         services: Array.isArray(booking.services) ? booking.services[0] || null : booking.services,
         users: Array.isArray(booking.users) ? booking.users[0] : booking.users
       },
-      serviceCosts: serviceCosts || []
+      serviceCosts: costsError || !serviceCosts ? null : {
+        ...serviceCosts,
+        items: serviceCosts.service_booking_cost_items || []
+      }
     };
   } catch (error) {
     console.error("Error fetching booking details:", error);
@@ -186,11 +213,10 @@ export default async function BookingDetailsPage({
   const service = booking.services;
 
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || customer.email;
-  const fullAddress = [
+  const customerAddress = [
     customer.address_line_1,
     customer.address_line_2,
     customer.city,
-    customer.state,
     customer.postal_code,
     customer.country
   ].filter(Boolean).join(", ");
@@ -198,7 +224,7 @@ export default async function BookingDetailsPage({
   const scheduledDateTime = booking.preferred_date && booking.preferred_time ? 
     `${booking.preferred_date}T${booking.preferred_time}` : null;
 
-  const totalWithCosts = booking.total_amount + (serviceCosts.reduce((sum, cost) => sum + cost.amount, 0));
+  const totalWithCosts = serviceCosts ? serviceCosts.total : booking.total_amount;
 
   return (
     <div className="space-y-6 p-6">
@@ -315,12 +341,12 @@ export default async function BookingDetailsPage({
               </div>
             )}
 
-            {fullAddress && (
+            {customerAddress && (
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
                   <span className="font-medium">Address:</span>
-                  <p className="text-sm text-muted-foreground">{fullAddress}</p>
+                  <p className="text-sm text-muted-foreground">{customerAddress}</p>
                 </div>
               </div>
             )}
@@ -405,7 +431,7 @@ export default async function BookingDetailsPage({
       )}
 
       {/* Service Costs Breakdown */}
-      {serviceCosts.length > 0 && (
+      {serviceCosts && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -414,24 +440,61 @@ export default async function BookingDetailsPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span>Base Service Fee:</span>
-                <span>{formatTZS(booking.total_amount)}</span>
-              </div>
-              
-              {serviceCosts.map((cost) => (
-                <div key={cost.id} className="flex justify-between">
-                  <span>{cost.description}:</span>
-                  <span>{formatTZS(cost.amount)}</span>
+            <div className="space-y-4">
+              {/* Items */}
+              {serviceCosts.items && serviceCosts.items.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-gray-700">Items</h4>
+                  <div className="space-y-2">
+                    {serviceCosts.items.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">
+                          {item.name} ({item.quantity} {item.unit})
+                        </span>
+                        <span>{formatTZS(item.unit_price * item.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-              
-              <Separator />
-              <div className="flex justify-between font-bold">
-                <span>Total:</span>
-                <span>{formatTZS(totalWithCosts)}</span>
+              ) : (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-gray-700">Items</h4>
+                  <p className="text-sm text-gray-500 italic">No items yet. Add materials/resources used.</p>
+                </div>
+              )}
+
+              {/* Cost Summary */}
+              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>{formatTZS(serviceCosts.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>+ Service Fee</span>
+                  <span>{formatTZS(serviceCosts.service_fee)}</span>
+                </div>
+                {serviceCosts.discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>- Discount</span>
+                    <span>{formatTZS(serviceCosts.discount)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>{formatTZS(serviceCosts.total)}</span>
+                </div>
               </div>
+
+              {/* Notes */}
+              {serviceCosts.notes && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm text-gray-700">Notes</h4>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                    {serviceCosts.notes}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

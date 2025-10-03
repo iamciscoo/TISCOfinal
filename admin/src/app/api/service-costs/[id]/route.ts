@@ -64,7 +64,13 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       }, { status: 200 });
     }
 
-    return NextResponse.json({ data: cost }, { status: 200 });
+    // Transform the data to match expected structure in GET response
+    const transformedCost = {
+      ...cost,
+      items: cost.service_booking_cost_items || []
+    };
+    
+    return NextResponse.json({ data: transformedCost }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -212,7 +218,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       revalidateTag(`service-booking:${bookingId}`);
     } catch {}
 
-    return NextResponse.json({ data: cost }, { status: 200 });
+    // Transform the data to match expected structure in PATCH response
+    const transformedCost = {
+      ...cost,
+      items: cost.service_booking_cost_items || []
+    };
+    
+    return NextResponse.json({ data: transformedCost }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
