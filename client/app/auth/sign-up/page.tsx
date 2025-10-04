@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Check, X } from 'lucide-react'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
@@ -18,26 +18,63 @@ export default function SignUpPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { signUp } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
+  // Password validation helpers (same as ProfileDialog)
+  const isPasswordValid = password.length >= 8
+  const hasLowerCase = /[a-z]/.test(password)
+  const hasUpperCase = /[A-Z]/.test(password)
+  const hasNumbers = /\d/.test(password)
+  const passwordsMatch = password === confirmPassword && password.length > 0
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (password !== confirmPassword) {
+    // Enhanced password validation
+    if (password.length < 8) {
       toast({
-        title: 'Password mismatch',
-        description: 'Passwords do not match. Please try again.',
+        title: 'Password too short',
+        description: 'Password must be at least 8 characters long.',
         variant: 'destructive',
       })
       return
     }
 
-    if (password.length < 6) {
+    if (!hasLowerCase) {
       toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters long.',
+        title: 'Password requirement',
+        description: 'Password must contain at least one lowercase letter.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!hasUpperCase) {
+      toast({
+        title: 'Password requirement',
+        description: 'Password must contain at least one uppercase letter.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!hasNumbers) {
+      toast({
+        title: 'Password requirement',
+        description: 'Password must contain at least one number.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Password mismatch',
+        description: 'Passwords do not match. Please try again.',
         variant: 'destructive',
       })
       return
@@ -60,9 +97,10 @@ export default function SignUpPage() {
       } else {
         toast({
           title: 'Account created!',
-          description: 'Please check your email to verify your account.',
+          description: 'Welcome to TISCO Market! You are now signed in.',
         })
-        router.push('/auth/sign-in')
+        // Redirect to homepage, user is already signed in
+        router.push('/')
       }
     } catch (err) {
       console.error('Sign up error:', err)
@@ -127,27 +165,75 @@ export default function SignUpPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {password && (
+                <div className="mt-2 space-y-1 text-sm">
+                  <div className={`flex items-center gap-2 ${isPasswordValid ? 'text-green-600' : 'text-gray-500'}`}>
+                    {isPasswordValid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>At least 8 characters</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                    {hasLowerCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One lowercase letter</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                    {hasUpperCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One uppercase letter</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${hasNumbers ? 'text-green-600' : 'text-gray-500'}`}>
+                    {hasNumbers ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One number</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {confirmPassword && (
+                <div className={`flex items-center gap-2 text-sm mt-1 ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
+                  {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
+                </div>
+              )}
             </div>
             <Button
               type="submit"

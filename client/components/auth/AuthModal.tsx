@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Check, X } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
 
 interface AuthModalProps {
@@ -24,10 +24,18 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
+
+  // Password validation helpers (same as sign-up page)
+  const isPasswordValid = password.length >= 8
+  const hasLowerCase = /[a-z]/.test(password)
+  const hasUpperCase = /[A-Z]/.test(password)
+  const hasNumbers = /\d/.test(password)
+  const passwordsMatch = password === confirmPassword && password.length > 0
 
   const resetForm = () => {
     setEmail('')
@@ -82,6 +90,19 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         })
         onClose()
       } else if (mode === 'signup') {
+        // Enhanced password validation
+        if (password.length < 8) {
+          throw new Error('Password must be at least 8 characters long')
+        }
+        if (!hasLowerCase) {
+          throw new Error('Password must contain at least one lowercase letter')
+        }
+        if (!hasUpperCase) {
+          throw new Error('Password must contain at least one uppercase letter')
+        }
+        if (!hasNumbers) {
+          throw new Error('Password must contain at least one number')
+        }
         if (password !== confirmPassword) {
           throw new Error("Passwords don't match")
         }
@@ -94,7 +115,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         
         toast({
           title: "Success", 
-          description: "Account created! Please check your email to verify your account."
+          description: "Welcome to TISCO Market! You are now signed in."
         })
         onClose()
       } else if (mode === 'reset') {
@@ -208,16 +229,59 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
             </div>
           )}
 
+          {mode === 'signup' && password && (
+            <div className="space-y-1 text-sm px-1">
+              <div className={`flex items-center gap-2 ${isPasswordValid ? 'text-green-600' : 'text-gray-500'}`}>
+                {isPasswordValid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                <span>At least 8 characters</span>
+              </div>
+              <div className={`flex items-center gap-2 ${hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+                {hasLowerCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                <span>One lowercase letter</span>
+              </div>
+              <div className={`flex items-center gap-2 ${hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+                {hasUpperCase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                <span>One uppercase letter</span>
+              </div>
+              <div className={`flex items-center gap-2 ${hasNumbers ? 'text-green-600' : 'text-gray-500'}`}>
+                {hasNumbers ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                <span>One number</span>
+              </div>
+            </div>
+          )}
+
           {mode === 'signup' && (
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+              {confirmPassword && (
+                <div className={`flex items-center gap-2 text-sm ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
+                  {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
+                </div>
+              )}
             </div>
           )}
 
