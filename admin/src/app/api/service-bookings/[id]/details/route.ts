@@ -82,9 +82,29 @@ export async function GET(
 
     // Fetch any service costs associated with this booking
     const { data: serviceCosts, error: costsError } = await supabase
-      .from("service_costs")
-      .select("*")
-      .eq("service_booking_id", bookingId)
+      .from("service_booking_costs")
+      .select(`
+        id,
+        service_fee,
+        discount,
+        tax,
+        currency,
+        subtotal,
+        total,
+        notes,
+        created_at,
+        updated_at,
+        service_booking_cost_items(
+          id,
+          name,
+          description,
+          unit_price,
+          quantity,
+          unit,
+          created_at
+        )
+      `)
+      .eq("booking_id", bookingId)
       .order("created_at", { ascending: false });
 
     if (costsError) {

@@ -24,6 +24,10 @@ const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").the
   loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded-lg" />
 })
 
+const ServicesPromoGrid = dynamic(() => import("@/components/ServicesPromoGrid").then(mod => ({ default: mod.ServicesPromoGrid })), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
+})
+
 export default function Home() {
   return (
     <div className="min-h-screen">
@@ -39,6 +43,9 @@ export default function Home() {
           <FeaturedProducts />
           <BrandSlider />
           <ServicesPreview />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <ServicesPromoGrid />
+          </div>
         </div>
       </main>
       <Footer />
