@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now()
   const debugId = `webhook-${startTime}`
   
-  console.log(`🎯 [${debugId}] ZENOPAY WEBHOOK RECEIVED`)
+  console.log(`🚨 [${debugId}] ZENOPAY WEBHOOK RECEIVED - PROCESSING IMMEDIATELY`)
   console.log(`📍 [${debugId}] Timestamp: ${new Date().toISOString()}`)
+  console.log(`📍 [${debugId}] Headers:`, Object.fromEntries(req.headers.entries()))
   
   try {
     // Parse webhook body
@@ -149,29 +150,27 @@ export async function POST(req: NextRequest) {
       console.log(`✅ [${debugId}] Payment session updated to completed`)
     }
     
-    // Send admin notification asynchronously (don't block response)
-    setImmediate(async () => {
-      try {
-        console.log(`📧 [${debugId}] Sending admin notification...`)
-        
-        const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
-        await notifyAdminOrderCreated({
-          order_id: order.id,
-          customer_email: String(orderData.email || 'customer@example.com'),
-          customer_name: `${String(orderData.first_name || '')} ${String(orderData.last_name || '')}`.trim() || 'Customer',
-          total_amount: totalAmount.toString(),
-          currency: session.currency,
-          payment_method: 'Mobile Money',
-          payment_status: 'paid',
-          items_count: orderItems.length
-        })
-        
-        console.log(`✅ [${debugId}] Admin notification sent`)
-      } catch (emailError) {
-        console.error(`❌ [${debugId}] Admin notification failed:`, emailError)
-        // Don't fail the webhook for email issues
-      }
-    })
+    // Send admin notification IMMEDIATELY (synchronous for instant emails)
+    console.log(`📧 [${debugId}] Sending admin notification IMMEDIATELY...`)
+    try {
+      const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+      await notifyAdminOrderCreated({
+        order_id: order.id,
+        customer_email: String(orderData.email || 'customer@example.com'),
+        customer_name: `${String(orderData.first_name || '')} ${String(orderData.last_name || '')}`.trim() || 'Customer',
+        total_amount: totalAmount.toString(),
+        currency: session.currency,
+        payment_method: 'Mobile Money',
+        payment_status: 'paid',
+        items_count: orderItems.length
+      })
+      
+      console.log(`✅ [${debugId}] Admin notification sent IMMEDIATELY`)
+    } catch (emailError) {
+      console.error(`❌ [${debugId}] Admin notification failed:`, emailError)
+      // Don't fail the webhook for email issues - but log extensively
+      console.error(`❌ [${debugId}] Email error details:`, emailError)
+    }
     
     // Log success
     const { error: successLogError } = await supabase
