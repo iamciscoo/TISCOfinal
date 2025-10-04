@@ -160,6 +160,7 @@ export default function NotificationsPage() {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [newRecipient, setNewRecipient] = useState<{ email: string; name: string; department: string; notification_categories: string[]; assigned_product_ids: string[] }>({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(['all']))
+  const [isEditing, setIsEditing] = useState(false)
 
   // Manual notification form
   const [manualNotification, setManualNotification] = useState({
@@ -876,9 +877,10 @@ export default function NotificationsPage() {
                       })
                     })
                     if (res.ok) {
-                      toast.success('Recipient saved')
+                      toast.success(isEditing ? 'Recipient updated' : 'Recipient added')
                       setNewRecipient({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
                       setSelectedEvents(new Set(['all']))
+                      setIsEditing(false)
                       fetchRecipients()
                     } else {
                       const j = await res.json().catch(() => ({}))
@@ -890,8 +892,21 @@ export default function NotificationsPage() {
                 }}
                 disabled={!newRecipient.email}
               >
-                Add / Update Recipient
+                {isEditing ? 'Update Recipient' : 'Add Recipient'}
               </Button>
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNewRecipient({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
+                    setSelectedEvents(new Set(['all']))
+                    setIsEditing(false)
+                    toast.info('Edit cancelled')
+                  }}
+                >
+                  Cancel Edit
+                </Button>
+              )}
 
               <div className="divide-y rounded border">
                 {recipients.length === 0 ? (
@@ -923,10 +938,30 @@ export default function NotificationsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                      <div className="flex items-center gap-2">
                         <Badge variant={r.is_active ? 'default' : 'secondary'} className="text-xs">
                           {r.is_active ? 'active' : 'inactive'}
                         </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs px-2 py-1 h-auto"
+                          onClick={() => {
+                            setNewRecipient({
+                              email: r.email,
+                              name: r.name || '',
+                              department: r.department || '',
+                              notification_categories: r.notification_categories || ['all'],
+                              assigned_product_ids: r.assigned_product_ids || []
+                            })
+                            setSelectedEvents(new Set(r.notification_categories || ['all']))
+                            setIsEditing(true)
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                            toast.info(`Editing ${r.name || r.email}. You can now add/remove products.`)
+                          }}
+                        >
+                          Edit
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
