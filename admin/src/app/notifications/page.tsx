@@ -339,65 +339,65 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-6 max-w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Notifications</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Manage system notifications and email communications</p>
+          <h1 className="text-xl sm:text-3xl font-bold">Notifications</h1>
+          <p className="text-muted-foreground text-xs sm:text-base line-clamp-2">Manage system notifications and email communications</p>
         </div>
-        <Button onClick={refreshData} disabled={isRefreshing} variant="outline" className="w-full sm:w-auto">
-          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
+        <Button onClick={refreshData} disabled={isRefreshing} variant="outline" size="sm" className="w-full sm:w-auto shrink-0">
+          <RefreshCw className={`w-4 h-4 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Notifications</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate">Total</CardTitle>
+              <Bell className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sent</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate">Sent</CardTitle>
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.sent}</div>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.sent}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Failed</CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-500" />
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate">Failed</CardTitle>
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.failed}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate">Pending</CardTitle>
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pending}</div>
             </CardContent>
           </Card>
         </div>
       )}
 
       <Tabs defaultValue="notifications" className="w-full">
-        <TabsList>
-          <TabsTrigger value="notifications">All Notifications</TabsTrigger>
-          <TabsTrigger value="send">Send Notification</TabsTrigger>
-          <TabsTrigger value="recipients">Admin Recipients</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="notifications" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">All Notifications</TabsTrigger>
+          <TabsTrigger value="send" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">Send Notification</TabsTrigger>
+          <TabsTrigger value="recipients" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">Admin Recipients</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notifications" className="space-y-4">
@@ -472,34 +472,35 @@ export default function NotificationsPage() {
 
             {/* Bulk Actions */}
             {notifications.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <Checkbox
                     checked={selectedIds.size === notifications.length && notifications.length > 0}
                     onCheckedChange={handleSelectAll}
-                    className="mr-2"
+                    id="select-all"
                   />
-                  <span className="text-sm font-medium">
-                    Select All ({notifications.length})
-                  </span>
+                  <Label htmlFor="select-all" className="text-xs sm:text-sm font-semibold cursor-pointer">
+                    Select All <span className="text-muted-foreground">({notifications.length})</span>
+                  </Label>
                 </div>
                 
                 {selectedIds.size > 0 && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <Badge variant="secondary" className="text-xs font-semibold">
                       {selectedIds.size} selected
-                    </span>
+                    </Badge>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={handleBulkDelete}
                       disabled={isDeleting}
-                      className="w-full sm:w-auto"
+                      className="flex-1 sm:flex-initial"
                     >
                       {isDeleting ? (
                         <>
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Deleting...
+                          <span className="hidden sm:inline">Deleting...</span>
+                          <span className="sm:hidden">Deleting</span>
                         </>
                       ) : (
                         <>
@@ -524,18 +525,18 @@ export default function NotificationsPage() {
               </Card>
             ) : (
               notifications.map((notification) => (
-                <Card key={notification.id}>
-                  <CardHeader>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
+                <Card key={notification.id} className="overflow-hidden">
+                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex items-start gap-2 sm:gap-3">
                         <Checkbox
                           checked={selectedIds.has(notification.id)}
                           onCheckedChange={() => handleSelectNotification(notification.id)}
-                          className="mt-1"
+                          className="mt-1 shrink-0"
                         />
                         <div className="flex items-start gap-2 min-w-0 flex-1">
-                          <div className="shrink-0 mt-1">{statusIcons[notification.status]}</div>
-                          <CardTitle className="text-base sm:text-lg leading-tight break-words hyphens-auto overflow-wrap-anywhere">{notification.subject}</CardTitle>
+                          <div className="shrink-0 mt-0.5">{statusIcons[notification.status]}</div>
+                          <CardTitle className="text-sm sm:text-lg leading-snug break-words">{notification.subject}</CardTitle>
                         </div>
                         <Button
                           variant="destructive"
@@ -551,49 +552,49 @@ export default function NotificationsPage() {
                               toast.error('Failed to delete notification')
                             }
                           }}
-                          className="shrink-0"
+                          className="shrink-0 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
                         >
-                          <X className="w-4 h-4 sm:hidden" />
-                          <span className="hidden sm:inline">Delete</span>
+                          <X className="w-4 h-4" />
+                          <span className="hidden sm:inline sm:ml-1">Delete</span>
                         </Button>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className={priorityColors[notification.priority]}>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        <Badge className={`${priorityColors[notification.priority]} text-xs`}>
                           {notification.priority}
                         </Badge>
-                        <Badge variant="outline" className="text-xs">{notification.event}</Badge>
+                        <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">{notification.event}</Badge>
                         {notification.category && (
-                          <Badge variant="outline" className="text-xs">{notification.category}</Badge>
+                          <Badge variant="outline" className="text-xs truncate max-w-[100px] sm:max-w-none">{notification.category}</Badge>
                         )}
                         {notification.platform_module && (
-                          <Badge variant="secondary" className="text-xs">{notification.platform_module}</Badge>
+                          <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">{notification.platform_module}</Badge>
                         )}
                       </div>
                     </div>
-                    <CardDescription className="mt-2">
-                      To: {notification.recipient_name || notification.recipient_email} 
-                      {notification.recipient_name && ` (${notification.recipient_email})`}
+                    <CardDescription className="mt-2 text-xs sm:text-sm break-all">
+                      <span className="font-medium">To:</span> {notification.recipient_name || notification.recipient_email} 
+                      {notification.recipient_name && <span className="hidden sm:inline"> ({notification.recipient_email})</span>}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                     <div className="space-y-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                        <span className="whitespace-nowrap">Created: {new Date(notification.created_at).toLocaleString()}</span>
+                      <div className="flex flex-col gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                        <span className="truncate">Created: {new Date(notification.created_at).toLocaleDateString()} {new Date(notification.created_at).toLocaleTimeString()}</span>
                         {notification.sent_at && (
-                          <span className="whitespace-nowrap">Sent: {new Date(notification.sent_at).toLocaleString()}</span>
+                          <span className="truncate">Sent: {new Date(notification.sent_at).toLocaleDateString()} {new Date(notification.sent_at).toLocaleTimeString()}</span>
                         )}
                         {notification.scheduled_at && (
-                          <span className="whitespace-nowrap">Scheduled: {new Date(notification.scheduled_at).toLocaleString()}</span>
+                          <span className="truncate">Scheduled: {new Date(notification.scheduled_at).toLocaleDateString()} {new Date(notification.scheduled_at).toLocaleTimeString()}</span>
                         )}
                       </div>
                       {notification.error_message && (
-                        <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                          Error: {notification.error_message}
+                        <div className="text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded break-words">
+                          <span className="font-semibold">Error:</span> {notification.error_message}
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        <span className="text-sm">Channels: {notification.channels.join(', ')}</span>
+                        <Mail className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                        <span className="text-xs sm:text-sm truncate">Channels: {notification.channels.join(', ')}</span>
                       </div>
                       {notification.action_url && (
                         <div>
@@ -601,9 +602,9 @@ export default function NotificationsPage() {
                             href={notification.action_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-sm text-blue-600 hover:underline"
+                            className="inline-flex items-center text-xs sm:text-sm text-blue-600 hover:underline"
                           >
-                            <ExternalLink className="w-4 h-4 mr-1" />
+                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                             Open action
                           </a>
                         </div>
