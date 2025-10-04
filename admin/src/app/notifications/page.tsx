@@ -28,11 +28,26 @@ function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
       }
 
       try {
-        // Fetch product details for the assigned IDs
-        const response = await fetch(`/api/admin/products?ids=${productIds.join(',')}`)
+        // Fetch ALL products first, then filter on client side
+        // This ensures we get the exact products that match the IDs
+        const response = await fetch('/api/admin/products?limit=1000')
         if (response.ok) {
           const data = await response.json()
-          setProducts(Array.isArray(data.products) ? data.products : [])
+          const allProducts = Array.isArray(data.products) ? data.products : []
+          
+          // Filter to only include products with matching IDs
+          const matchedProducts = allProducts.filter((p: { id: string }) => 
+            productIds.includes(p.id)
+          )
+          
+          console.log('Product filtering:', {
+            requestedIds: productIds,
+            totalProducts: allProducts.length,
+            matchedProducts: matchedProducts.length,
+            matched: matchedProducts.map((p: { id: string; name: string }) => p.name)
+          })
+          
+          setProducts(matchedProducts)
         }
       } catch (error) {
         console.error('Failed to fetch product details:', error)
@@ -45,20 +60,19 @@ function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
   }, [productIds])
 
   if (loading) {
-    return <span className="text-xs text-muted-foreground">Loading products...</span>
+    return <span className="text-xs text-muted-foreground">Loading...</span>
   }
 
   if (products.length === 0) {
-    return <span className="text-xs text-muted-foreground">No products found</span>
+    return <span className="text-xs text-red-500">⚠️ No matching products found</span>
   }
 
   return (
-    <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-      {products.map((product, index) => (
-        <span key={product.id} className="bg-muted px-2 py-0.5 rounded">
-          {product.name}
-          {index < products.length - 1 && ''}
-        </span>
+    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground mt-1">
+      {products.map((product) => (
+        <div key={product.id} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+          📦 {product.name}
+        </div>
       ))}
     </div>
   )
