@@ -561,7 +561,7 @@ export default function CheckoutPage() {
           }
           
           // First create a temporary payment session without order
-          const procRes = await fetch('/api/payments/initiate', {
+          const procRes = await fetch('/api/payments/mobile/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -591,7 +591,7 @@ export default function CheckoutPage() {
           })
 
           // Poll our status endpoint with enhanced timeout and retry mechanism
-          const reference: string | undefined = procJson?.transaction?.transaction_reference
+          const reference: string | undefined = procJson?.transaction_reference
           if (!reference) {
             console.error('No payment reference returned from initiation')
             toast({
@@ -665,7 +665,7 @@ export default function CheckoutPage() {
     
     while (Date.now() - start < timeoutMs && attempt < maxAttempts) {
       try {
-        const sres = await fetch('/api/payments/status', {
+        const sres = await fetch('/api/payments/mobile/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reference })
@@ -677,12 +677,12 @@ export default function CheckoutPage() {
         }
         
         const sjson = await sres.json()
-        const st = String(sjson?.status || '').toUpperCase()
+        const st = String(sjson?.status || '').toLowerCase()
         
         console.log(`Payment status check ${attempt + 1}: ${st}`)
 
-        const successSet = new Set(['SUCCESS', 'SETTLED', 'COMPLETED', 'APPROVED', 'SUCCESSFUL'])
-        const failureSet = new Set(['FAILED', 'DECLINED', 'CANCELLED', 'ERROR', 'TIMEOUT'])
+        const successSet = new Set(['success', 'settled', 'completed', 'approved', 'successful'])
+        const failureSet = new Set(['failed', 'declined', 'cancelled', 'error', 'timeout'])
 
         if (successSet.has(st)) {
           console.log('Payment confirmed as successful')
@@ -768,7 +768,7 @@ export default function CheckoutPage() {
       }
       
       // Retry payment initiation
-      const procRes = await fetch('/api/payments/initiate', {
+      const procRes = await fetch('/api/payments/mobile/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -800,7 +800,7 @@ export default function CheckoutPage() {
       })
 
       // Poll for payment status again
-      const reference: string | undefined = procJson?.transaction?.transaction_reference
+      const reference: string | undefined = procJson?.transaction_reference
       if (reference) {
         const success = await pollPaymentStatus(reference)
         if (!success) {
