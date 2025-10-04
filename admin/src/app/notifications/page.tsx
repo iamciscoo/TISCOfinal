@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +14,55 @@ import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, C
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ProductMultiSelect } from '@/components/ui/product-multi-select'
+
+// Component to display assigned products for a recipient
+function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
+  const [products, setProducts] = React.useState<Array<{ id: string; name: string }>>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const fetchProducts = async () => {
+      if (!productIds || productIds.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        // Fetch product details for the assigned IDs
+        const response = await fetch(`/api/admin/products?ids=${productIds.join(',')}`)
+        if (response.ok) {
+          const data = await response.json()
+          setProducts(Array.isArray(data.products) ? data.products : [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch product details:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [productIds])
+
+  if (loading) {
+    return <span className="text-xs text-muted-foreground">Loading products...</span>
+  }
+
+  if (products.length === 0) {
+    return <span className="text-xs text-muted-foreground">No products found</span>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+      {products.map((product, index) => (
+        <span key={product.id} className="bg-muted px-2 py-0.5 rounded">
+          {product.name}
+          {index < products.length - 1 && ''}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 interface NotificationRecord {
   id: string
@@ -843,10 +893,13 @@ export default function NotificationsPage() {
                             <Badge variant="outline" className="text-xs">{r.department}</Badge>
                           )}
                           {r.assigned_product_ids && r.assigned_product_ids.length > 0 ? (
-                            <Badge variant="default" className="bg-orange-100 text-orange-800 text-xs">
-                              <Package className="h-3 w-3 mr-1" />
-                              {r.assigned_product_ids.length} product{r.assigned_product_ids.length === 1 ? '' : 's'}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="default" className="bg-orange-100 text-orange-800 text-xs w-fit">
+                                <Package className="h-3 w-3 mr-1" />
+                                {r.assigned_product_ids.length} product{r.assigned_product_ids.length === 1 ? '' : 's'}
+                              </Badge>
+                              <ProductAssignmentDisplay productIds={r.assigned_product_ids} />
+                            </div>
                           ) : (
                             Array.isArray(r.notification_categories) && r.notification_categories.length > 0 && (
                               <Badge variant="secondary" className="text-xs max-w-[200px] truncate" title={r.notification_categories.join(', ')}>

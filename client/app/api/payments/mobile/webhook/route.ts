@@ -194,7 +194,14 @@ export async function POST(req: NextRequest) {
           console.log(`✅ [${webhookId}] Customer notification sent to ${customerEmail}`)
         }
         
-        // Send admin notification
+        // Send admin notification with items for product-specific filtering
+        const itemsWithProductIds = (orderItems || []).map((item: any) => ({
+          product_id: item.product_id || (item.products?.id),
+          name: item.products?.name || 'Product',
+          quantity: item.quantity,
+          price: item.price.toString()
+        }))
+        
         await notifyAdminOrderCreated({
           order_id,
           customer_email: customerEmail,
@@ -203,7 +210,8 @@ export async function POST(req: NextRequest) {
           currency: session.currency,
           payment_method: 'Mobile Money',
           payment_status: 'paid',
-          items_count
+          items_count,
+          items: itemsWithProductIds // CRITICAL: Pass items with product_id for filtering
         })
         
         console.log(`✅ [${webhookId}] Admin notifications sent`)
