@@ -84,8 +84,11 @@ export async function generateStaticParams() {
 
 // Enable ISR with fallback for orders not pre-generated
 export const dynamicParams = true
+export const revalidate = 0 // Always fetch fresh data for order details
 
 async function getOrder(orderId: string, userId: string): Promise<Order | null> {
+  console.log(`[Order Details] Fetching order ${orderId} for user ${userId}`)
+  
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -110,10 +113,17 @@ async function getOrder(orderId: string, userId: string): Promise<Order | null> 
     .order('sort_order', { ascending: true, foreignTable: 'order_items.products.product_images' })
     .single()
   
-  if (error || !data) {
+  if (error) {
+    console.error(`[Order Details] Error fetching order ${orderId}:`, error)
     return null
   }
   
+  if (!data) {
+    console.warn(`[Order Details] No order found with id ${orderId} for user ${userId}`)
+    return null
+  }
+  
+  console.log(`[Order Details] Successfully fetched order ${orderId}`)
   return data as Order
 }
 

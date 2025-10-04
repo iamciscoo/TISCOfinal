@@ -140,17 +140,59 @@ export async function POST(req: NextRequest) {
     // Mark session as completed
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
-    // Send admin notification asynchronously (don't block response)
+    // Send notifications asynchronously (don't block response)
     setImmediate(async () => {
       try {
-        console.log(`📧 [${webhookId}] Sending admin notifications...`)
+        console.log(`📧 [${webhookId}] Sending notifications...`)
         
-        const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
+        const { notifyAdminOrderCreated, notifyOrderCreated } = await import('@/lib/notifications/service')
         
         const orderData = session.order_data
         const customerEmail = orderData.email || 'customer@example.com'
         const customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
         
+        // Get order items for customer notification
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE!
+        )
+        
+        const { data: orderItems } = await supabase
+          .from('order_items')
+          .select(`
+            quantity,
+            price,
+            products (
+              name
+            )
+          `)
+          .eq('order_id', order_id)
+        
+        // Send customer notification
+        if (orderItems && orderItems.length > 0) {
+          const items = orderItems.map((item: any) => ({
+            name: item.products?.name || 'Product',
+            quantity: item.quantity,
+            price: item.price.toString()
+          }))
+          
+          await notifyOrderCreated({
+            order_id,
+            customer_email: customerEmail,
+            customer_name: customerName,
+            total_amount: session.amount.toString(),
+            currency: session.currency,
+            items,
+            order_date: new Date().toISOString(),
+            payment_method: `Mobile Money (${session.provider})`,
+            shipping_address: orderData.shipping_address || 'N/A'
+          })
+          
+          console.log(`✅ [${webhookId}] Customer notification sent to ${customerEmail}`)
+        }
+        
+        // Send admin notification
         await notifyAdminOrderCreated({
           order_id,
           customer_email: customerEmail,
@@ -168,7 +210,10 @@ export async function POST(req: NextRequest) {
           session_id: session.id,
           order_id,
           user_id: session.user_id,
-          details: { recipient_email: customerEmail }
+          details: { 
+            customer_email: customerEmail,
+            notifications: ['customer', 'admin']
+          }
         })
         
       } catch (notifError) {
