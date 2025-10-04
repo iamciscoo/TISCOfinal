@@ -1193,7 +1193,11 @@ async function handleSessionPaymentSuccess(session: PaymentSession, webhookData:
         console.error('Product not found during session order creation:', it.product_id)
         continue
       }
-      // Note: is_active column doesn't exist in current schema, so we skip this validation
+      // Check if product is active before processing
+      if (prod.is_active === false) {
+        console.warn('Inactive product in payment session:', it.product_id)
+        // Still allow processing for backward compatibility, but log the warning
+      }
       const serverPrice = prod.price
       orderItems.push({ product_id: it.product_id, quantity: it.quantity, price: serverPrice })
       total_amount += serverPrice * it.quantity
