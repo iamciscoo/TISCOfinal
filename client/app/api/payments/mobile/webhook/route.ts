@@ -140,8 +140,10 @@ export async function POST(req: NextRequest) {
     // Mark session as completed
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
-    // Send notifications asynchronously (don't block response)
-    setImmediate(async () => {
+    // Send notifications synchronously but with timeout protection
+    // CRITICAL: In Vercel serverless functions, we must await async operations
+    // setImmediate doesn't work reliably - the function returns before it executes
+    const notificationPromise = (async () => {
       try {
         console.log(`📧 [${webhookId}] Sending notifications...`)
         
@@ -218,6 +220,7 @@ export async function POST(req: NextRequest) {
         
       } catch (notifError) {
         console.error(`⚠️ [${webhookId}] Notification failed (non-blocking):`, notifError)
+        console.error(`⚠️ [${webhookId}] Notification error stack:`, (notifError as Error).stack)
         
         await logPaymentEvent('notification_failed', {
           session_id: session.id,
@@ -226,7 +229,20 @@ export async function POST(req: NextRequest) {
           error: (notifError as Error).message
         })
       }
-    })
+    })()
+    
+    // Wait for notifications with timeout (don't block indefinitely)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Notification timeout after 25 seconds')), 25000)
+    )
+    
+    try {
+      await Promise.race([notificationPromise, timeoutPromise])
+      console.log(`📧 [${webhookId}] Notifications completed successfully`)
+    } catch (timeoutError) {
+      console.warn(`⚠️ [${webhookId}] Notification timeout (non-critical):`, (timeoutError as Error).message)
+      // Continue - order is created, notifications will retry via database
+    }
 
     const processingTime = Date.now() - startTime
     console.log(`🎉 [${webhookId}] SUCCESS in ${processingTime}ms`)
