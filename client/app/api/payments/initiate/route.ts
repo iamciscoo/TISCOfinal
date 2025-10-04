@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ZenoPayClient } from '@/lib/zenopay'
 import { getUser } from '@/lib/supabase-server'
-import crypto from 'node:crypto'
+// crypto import removed - simplified idempotency system
 export const runtime = 'nodejs'
 
 function normalizeTzMsisdn(raw: string): string {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       provider,
       phone_number,
       order_data,
-      idempotency_key: bodyIdempotencyKey,
+      // idempotency_key removed - using simplified approach
     } = await req.json()
 
     if (!amount || !provider || !phone_number || !order_data) {
@@ -76,102 +76,29 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Idempotency: accept Idempotency-Key header/body or compute a stable fallback
-    const headerIdemKey = req.headers.get('idempotency-key') || req.headers.get('x-idempotency-key')
-    const providedIdem = (headerIdemKey || '').trim() || (bodyIdempotencyKey ? String(bodyIdempotencyKey) : '')
-
-    const hashHex = (s: string) => crypto.createHash('sha256').update(s).digest('hex').toUpperCase()
-    const deriveRefFromKey = (k: string) => `TX${hashHex(k).slice(0, 24)}` // alphanumeric, stable
-
-    let computedIdem: string | null = null
-    try {
-      // Compute a deterministic key from user + normalized payload for fallback
-      const od = (order_data || {}) as Record<string, unknown>
-      const itemsRaw = Array.isArray(od?.items) ? od.items as Array<Record<string, unknown>> : []
-      const items = itemsRaw
-        .map((it) => {
-          const pid = String(it.product_id || it.productId || it.id || '')
-          const qty = Number(it.quantity || 0)
-          return { product_id: pid, quantity: qty }
-        })
-        .filter((it) => it.product_id && it.quantity > 0)
-        .sort((a, b) => a.product_id.localeCompare(b.product_id))
-      let e164 = ''
-      try { e164 = toE164Tz(phone_number) } catch { e164 = String(phone_number || '') }
-      const channel = mapChannel(provider) || provider
-      const fingerprint = JSON.stringify({ user_id: user.id, amount: Number(amount), currency, channel, phone: e164, items })
-      computedIdem = hashHex(fingerprint)
-    } catch { computedIdem = null }
-
-    const idemKey = providedIdem || computedIdem || ''
-    const deterministicRef = idemKey ? deriveRefFromKey(idemKey) : null
-
-    // If deterministic ref exists and a session already exists, reuse it (idempotent)
-    if (deterministicRef) {
-      const { data: existing } = await supabase
-        .from('payment_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('transaction_reference', deterministicRef)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (existing) {
-        // Only reuse if the existing session is successful or still processing
-        // Allow retries for failed sessions
-        if (existing.status === 'failed') {
-          console.log('Previous session failed, allowing retry:', {
-            existing_session: existing.id,
-            failure_reason: existing.failure_reason,
-            transaction_reference: deterministicRef
-          })
-          
-          // Log retry attempt
-          try {
-            await supabase
-              .from('payment_logs')
-              .insert({
-                session_id: existing.id,
-                event_type: 'failed_session_retry_attempt',
-                data: { 
-                  message: 'Retrying failed payment session', 
-                  previous_failure: existing.failure_reason,
-                  idemKey, 
-                  transaction_reference: deterministicRef 
-                },
-                user_id: existing.user_id,
-              })
-          } catch {}
-          
-          // Continue to create new session for retry
-        } else {
-          // Reuse existing successful/processing session
-          try {
-            await supabase
-              .from('payment_logs')
-              .insert({
-                session_id: existing.id,
-                event_type: 'duplicate_initiate_attempt',
-                data: { message: 'Idempotent reuse', idemKey, transaction_reference: deterministicRef },
-                user_id: existing.user_id,
-              })
-          } catch {}
-
-          return NextResponse.json({
-            transaction: {
-              transaction_reference: deterministicRef,
-              status: existing.status || 'processing',
-            },
-            payment_response: null,
-            reused: true,
-          }, { status: 200 })
-        }
-      }
+    // Generate unique transaction reference for this payment attempt
+    const transactionRef = generateOrderReference()
+    
+    // Simple duplicate check: prevent multiple sessions within 5 minutes with same transaction reference
+    const { data: recentSession } = await supabase
+      .from('payment_sessions')
+      .select('id, status, created_at, transaction_reference')
+      .eq('transaction_reference', transactionRef)
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // 5 minutes ago
+      .maybeSingle()
+    
+    if (recentSession) {
+      console.log('Recent duplicate session found, returning existing:', recentSession.id)
+      return NextResponse.json({
+        transaction: {
+          transaction_reference: recentSession.transaction_reference,
+          status: recentSession.status || 'processing',
+        },
+        payment_response: null,
+        reused: true,
+      }, { status: 200 })
     }
-
-    // Use deterministic ref when present; otherwise generate a fresh one
-    const cleanRef = deterministicRef || generateOrderReference()
 
     // Create payment session record (without order_id since order doesn't exist yet)
     const { data: session, error: sessionError } = await supabase
@@ -182,7 +109,7 @@ export async function POST(req: NextRequest) {
         currency,
         provider,
         phone_number,
-        transaction_reference: cleanRef,
+        transaction_reference: transactionRef,
         order_data,
         status: 'pending',
         created_at: new Date().toISOString()
@@ -206,7 +133,7 @@ export async function POST(req: NextRequest) {
       
       return NextResponse.json({ 
         transaction: {
-          transaction_reference: cleanRef,
+          transaction_reference: transactionRef,
           status: 'processing'
         },
         payment_response: paymentResponse
@@ -248,7 +175,7 @@ export async function POST(req: NextRequest) {
               error: errorMessage, 
               stack: (error as Error).stack,
               user_friendly_error: userFriendlyError,
-              session_reference: cleanRef
+              session_reference: transactionRef
             },
             user_id: session.user_id
           })
@@ -259,7 +186,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         error: userFriendlyError,
         technical_error: errorMessage,
-        session_reference: cleanRef,
+        session_reference: transactionRef,
         retry_allowed: true
       }, { status: 500 })
     }

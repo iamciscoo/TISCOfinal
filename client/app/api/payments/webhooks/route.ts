@@ -96,6 +96,14 @@ export async function POST(req: NextRequest) {
     console.log(`📦 [${debugId}] Webhook raw body length:`, rawBody.length)
     console.log(`📦 [${debugId}] Webhook raw body preview:`, rawBody.substring(0, 500))
     
+    // Enhanced webhook debugging
+    console.log(`🔍 [${debugId}] Environment check:`, {
+      hasZenoPayKey: !!process.env.ZENOPAY_API_KEY,
+      keyPrefix: process.env.ZENOPAY_API_KEY?.substring(0, 10),
+      nodeEnv: process.env.NODE_ENV,
+      origin: req.nextUrl.origin
+    })
+    
     // Verify authentication:
     // - Primary: HMAC signature with WEBHOOK_SECRET
     // - Fallback: API key provided via x-api-key or Authorization: Bearer <key>
