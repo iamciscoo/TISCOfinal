@@ -118,26 +118,55 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
 
       if (existing) {
-        // Log duplicate attempt for observability
-        try {
-          await supabase
-            .from('payment_logs')
-            .insert({
-              session_id: existing.id,
-              event_type: 'duplicate_initiate_attempt',
-              data: { message: 'Idempotent reuse', idemKey, transaction_reference: deterministicRef },
-              user_id: existing.user_id,
-            })
-        } catch {}
+        // Only reuse if the existing session is successful or still processing
+        // Allow retries for failed sessions
+        if (existing.status === 'failed') {
+          console.log('Previous session failed, allowing retry:', {
+            existing_session: existing.id,
+            failure_reason: existing.failure_reason,
+            transaction_reference: deterministicRef
+          })
+          
+          // Log retry attempt
+          try {
+            await supabase
+              .from('payment_logs')
+              .insert({
+                session_id: existing.id,
+                event_type: 'failed_session_retry_attempt',
+                data: { 
+                  message: 'Retrying failed payment session', 
+                  previous_failure: existing.failure_reason,
+                  idemKey, 
+                  transaction_reference: deterministicRef 
+                },
+                user_id: existing.user_id,
+              })
+          } catch {}
+          
+          // Continue to create new session for retry
+        } else {
+          // Reuse existing successful/processing session
+          try {
+            await supabase
+              .from('payment_logs')
+              .insert({
+                session_id: existing.id,
+                event_type: 'duplicate_initiate_attempt',
+                data: { message: 'Idempotent reuse', idemKey, transaction_reference: deterministicRef },
+                user_id: existing.user_id,
+              })
+          } catch {}
 
-        return NextResponse.json({
-          transaction: {
-            transaction_reference: deterministicRef,
-            status: existing.status || 'processing',
-          },
-          payment_response: null,
-          reused: true,
-        }, { status: 200 })
+          return NextResponse.json({
+            transaction: {
+              transaction_reference: deterministicRef,
+              status: existing.status || 'processing',
+            },
+            payment_response: null,
+            reused: true,
+          }, { status: 200 })
+        }
       }
     }
 
@@ -186,12 +215,24 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error('Mobile payment initiation failed:', error)
       
+      const errorMessage = (error as Error).message
+      let userFriendlyError = errorMessage
+      
+      // Provide user-friendly error messages
+      if (errorMessage.includes('Invalid API key') || errorMessage.includes('403')) {
+        userFriendlyError = 'Payment service temporarily unavailable. Please try again later or contact support.'
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        userFriendlyError = 'Network timeout. Please check your connection and try again.'
+      } else if (errorMessage.includes('phone') || errorMessage.includes('msisdn')) {
+        userFriendlyError = 'Invalid phone number format. Please use the format 07XXXXXXXX.'
+      }
+      
       // Update session as failed
       await supabase
         .from('payment_sessions')
         .update({ 
           status: 'failed', 
-          failure_reason: (error as Error).message,
+          failure_reason: errorMessage,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id)
@@ -203,7 +244,12 @@ export async function POST(req: NextRequest) {
           .insert({
             session_id: session.id,
             event_type: 'payment_initiation_failed',
-            data: { error: (error as Error).message, stack: (error as Error).stack },
+            data: { 
+              error: errorMessage, 
+              stack: (error as Error).stack,
+              user_friendly_error: userFriendlyError,
+              session_reference: cleanRef
+            },
             user_id: session.user_id
           })
       } catch {
@@ -211,7 +257,10 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ 
-        error: 'Payment processing failed: ' + (error as Error).message 
+        error: userFriendlyError,
+        technical_error: errorMessage,
+        session_reference: cleanRef,
+        retry_allowed: true
       }, { status: 500 })
     }
 
