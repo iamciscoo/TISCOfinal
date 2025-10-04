@@ -372,6 +372,8 @@ export async function GET(req: NextRequest) {
     const priorityFilter = searchParams.get('priority')
     const limit = Number(searchParams.get('limit') || '50')
 
+    console.log('[GET] Fetching notifications with filters:', { status, event, category, platform_module, priorityFilter, limit })
+
     // First, try email_notifications (preferred)
     const emailCols = 'id, template_type, recipient_email, subject, status, priority, sent_at, scheduled_for, created_at, updated_at'
     const emailFilters = (q: any) => {
@@ -462,8 +464,17 @@ export async function GET(req: NextRequest) {
       return bTime - aTime
     })
 
-    return NextResponse.json({ notifications })
+    console.log(`[GET] Returning ${notifications.length} notifications`)
+
+    return NextResponse.json({ notifications }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (e: any) {
+    console.error('[GET] Fetch error:', e)
     return NextResponse.json({ error: e?.message || 'Failed to fetch notifications' }, { status: 500 })
   }
 }
@@ -569,6 +580,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const sb = await getSupabase()
+    if (!sb) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
+    }
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     const bulk = searchParams.get('bulk')
@@ -589,66 +604,86 @@ export async function DELETE(req: NextRequest) {
       let deletedCount = 0
       const errors: string[] = []
 
-      if (sb) {
-        // Try email_notifications table first
+      console.log(`[DELETE] Attempting to delete ${ids.length} notifications:`, ids)
+
+      // Delete from ALL notification tables to ensure complete removal
+      const tables = ['email_notifications', 'notifications']
+      
+      for (const table of tables) {
         try {
-          const { error: emailErr, count } = await sb
-            .from('email_notifications')
+          const { error, count } = await sb
+            .from(table)
             .delete({ count: 'exact' })
             .in('id', ids)
           
-          if (!emailErr && count !== null) {
+          if (error) {
+            console.error(`[DELETE] Error deleting from ${table}:`, error)
+            errors.push(`${table}: ${error.message}`)
+          } else if (count !== null && count > 0) {
+            console.log(`[DELETE] Deleted ${count} records from ${table}`)
             deletedCount += count
           }
         } catch (e: any) {
-          errors.push(`Email notifications: ${e.message}`)
-        }
-
-        // Try legacy notifications table for remaining IDs
-        if (deletedCount < ids.length) {
-          try {
-            const { error: legacyErr, count } = await sb
-              .from('notifications')
-              .delete({ count: 'exact' })
-              .in('id', ids)
-            
-            if (!legacyErr && count !== null) {
-              deletedCount += count
-            }
-          } catch (e: any) {
-            errors.push(`Legacy notifications: ${e.message}`)
-          }
+          console.error(`[DELETE] Exception deleting from ${table}:`, e)
+          errors.push(`${table}: ${e.message}`)
         }
       }
+
+      console.log(`[DELETE] Bulk delete complete. Deleted: ${deletedCount}, Requested: ${ids.length}`)
 
       return NextResponse.json({ 
         success: true, 
         deletedCount,
         totalRequested: ids.length,
         errors: errors.length > 0 ? errors : undefined
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       })
     }
 
     // Handle single delete
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
+    console.log(`[DELETE] Attempting to delete single notification: ${id}`)
+
     let deleted = false
-    if (sb) {
+    const tables = ['email_notifications', 'notifications']
+    
+    for (const table of tables) {
       try {
-        const { error: emailErr } = await sb.from('email_notifications').delete().eq('id', id)
-        if (!emailErr) deleted = true
-      } catch {}
-      if (!deleted) {
-        try {
-          const { error: legacyErr } = await sb.from('notifications').delete().eq('id', id)
-          if (!legacyErr) deleted = true
-        } catch {}
+        const { error, count } = await sb
+          .from(table)
+          .delete({ count: 'exact' })
+          .eq('id', id)
+        
+        if (!error && count && count > 0) {
+          console.log(`[DELETE] Deleted from ${table}`)
+          deleted = true
+        }
+      } catch (e) {
+        console.error(`[DELETE] Error deleting from ${table}:`, e)
       }
     }
 
-    if (!deleted) return NextResponse.json({ error: 'Delete failed or record not found' }, { status: 404 })
-    return NextResponse.json({ success: true })
+    if (!deleted) {
+      console.log(`[DELETE] No records found with id: ${id}`)
+      return NextResponse.json({ error: 'Delete failed or record not found' }, { status: 404 })
+    }
+
+    console.log(`[DELETE] Single delete successful: ${id}`)
+    return NextResponse.json({ success: true }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (e: any) {
+    console.error('[DELETE] Deletion error:', e)
     return NextResponse.json({ error: e?.message || 'Failed to delete notification' }, { status: 500 })
   }
 }

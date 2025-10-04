@@ -182,9 +182,19 @@ export default function NotificationsPage() {
       if (moduleFilter !== 'all') params.append('platform_module', moduleFilter)
       if (priorityFilter !== 'all') params.append('priority', priorityFilter)
       
-      const response = await fetch(`/api/admin/notifications?${params}`)
+      // Add cache busting timestamp
+      params.append('_t', Date.now().toString())
+      
+      const response = await fetch(`/api/admin/notifications?${params}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
+        console.log('[FETCH] Received notifications:', data.notifications.length)
         setNotifications(data.notifications)
       }
     } catch (error) {
@@ -292,17 +302,28 @@ export default function NotificationsPage() {
 
     setIsDeleting(true)
     try {
+      console.log('[DELETE] Deleting notifications:', Array.from(selectedIds))
       const response = await fetch('/api/admin/notifications?bulk=true', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds) })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        cache: 'no-store'
       })
 
       if (response.ok) {
         const result = await response.json()
+        console.log('[DELETE] Delete result:', result)
         toast.success(`Successfully deleted ${result.deletedCount} notification${result.deletedCount > 1 ? 's' : ''}`)
         setSelectedIds(new Set())
-        refreshData()
+        
+        // Force immediate UI update
+        setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)))
+        
+        // Then refresh from server
+        await refreshData()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to delete notifications')
