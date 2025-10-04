@@ -320,7 +320,7 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
 </html>`
 
 // Resolve base URL for links inside emails - always use production URL for email links
-const appBaseUrl = 'https://www.tiscomarket.store'
+const appBaseUrl = 'https://tiscomarket.store'
 // Public asset host for images inside emails (must be publicly reachable by email clients)
 // Note: Using production URL ensures email assets are accessible from email clients
 
@@ -643,10 +643,10 @@ export const emailTemplates = {
                   <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
                 </td>
                 <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/shop" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Continue Shopping</a>
+                  <a href="${appBaseUrl}/products" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Continue Shopping</a>
                 </td>` : `
                 <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/shop" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Continue Shopping</a>
+                  <a href="${appBaseUrl}/products" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Continue Shopping</a>
                 </td>`}
               </tr>
             </table>
@@ -822,7 +822,7 @@ export const emailTemplates = {
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
               <tr>
                 <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/shop" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Browse Products</a>
+                  <a href="${appBaseUrl}/products" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Browse Products</a>
                 </td>
                 <td style="padding: 0 8px;">
                   <a href="${appBaseUrl}/services" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">View Services</a>
