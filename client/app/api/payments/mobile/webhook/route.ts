@@ -163,13 +163,24 @@ export async function POST(req: NextRequest) {
         const { data: orderItems } = await supabase
           .from('order_items')
           .select(`
+            product_id,
             quantity,
             price,
             products (
+              id,
               name
             )
           `)
           .eq('order_id', order_id)
+        
+        console.log(`🔍 [${webhookId}] Order items query result:`, {
+          items_count: orderItems?.length || 0,
+          items: orderItems?.map((item: any) => ({
+            product_id: item.product_id,
+            products_id: item.products?.id,
+            name: item.products?.name
+          }))
+        })
         
         // Send customer notification
         if (orderItems && orderItems.length > 0) {
