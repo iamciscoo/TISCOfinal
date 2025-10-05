@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
-import { cache, cacheInvalidation } from '@/lib/cache'
+import { cache } from '@/lib/cache'
 
 export const runtime = 'nodejs'
 

@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
-import { unstable_cache } from 'next/cache'
 import { withMiddleware, withValidation, withErrorHandler, createSuccessResponse } from '@/lib/middleware'
 
 export const runtime = 'nodejs'
@@ -69,23 +68,18 @@ export const GET = withMiddleware(
     return data
   }
 
-  // Use Next.js cache with tags for invalidation support
-  const getCachedFeaturedProducts = unstable_cache(
-    getFeaturedProductsQuery,
-    [`featured-products-${validatedData.limit}`],
-    {
-      tags: ['products', 'featured-products'],
-      revalidate: 600 // 10 minutes cache
-    }
-  )
-
-  const data = await getCachedFeaturedProducts()
+  // **CACHING DISABLED FOR REAL-TIME UPDATES**
+  // Always fetch fresh data for instant admin updates
+  console.log('🔄 Fetching fresh featured products (caching disabled for real-time updates)')
+  const data = await getFeaturedProductsQuery()
 
   const response = Response.json(createSuccessResponse(data))
   
-  // Add cache headers for CDN and browser caching
-  response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=300')
-  response.headers.set('CDN-Cache-Control', 'public, s-maxage=600')
+  // Set no-cache headers to ensure fresh data always
+  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  response.headers.set('CDN-Cache-Control', 'no-cache')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
   response.headers.set('Vary', 'Accept-Encoding')
   
   return response

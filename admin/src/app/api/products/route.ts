@@ -135,76 +135,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: categoryError.message }, { status: 500 });
     }
 
-    // **FIX: Invalidate client-side cache using dedicated cache invalidation API**
-    try {
-      const clientBaseUrl = process.env.CLIENT_BASE_URL || process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
-      
-      console.log('🔄 Starting REAL-TIME client cache invalidation for new product:', product.id)
-      
-      const invalidateClientCache = async () => {
-        try {
-          // Build list of server cache tags to invalidate for new product
-          const tagsToInvalidate = [
-            'products',              // Main products listing  
-            'featured-products',     // Featured products (in case this is featured)
-            'homepage'               // Homepage (might show new products)
-          ]
-
-          // Build list of client cache keys to invalidate
-          const clientCacheKeysToInvalidate = [
-            'products:all',
-            'products:9',
-            'products:20',
-            'featured:all',
-            'featured:9',
-            'featured:6'
-          ]
-
-          // Add category-specific cache tags
-          if (payload.category_id) {
-            tagsToInvalidate.push('categories')
-            tagsToInvalidate.push(`category:${payload.category_id}`)
-            clientCacheKeysToInvalidate.push(`products:category:${payload.category_id}`)
-          }
-
-          // Add deals cache if this is a deal product
-          if (payload.is_deal) {
-            tagsToInvalidate.push('deals')
-          }
-
-          console.log('🏷️ Server cache tags to invalidate for new product:', tagsToInvalidate)
-          console.log('🔑 Client cache keys to invalidate for new product:', clientCacheKeysToInvalidate)
-
-          // Call the dedicated cache invalidation API with BOTH server and client cache
-          const response = await fetch(`${clientBaseUrl}/api/cache/invalidate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              tags: tagsToInvalidate,
-              cacheKeys: clientCacheKeysToInvalidate,
-              source: 'admin-product-create'
-            })
-          })
-
-          if (!response.ok) {
-            throw new Error(`Cache invalidation API returned ${response.status}: ${await response.text()}`)
-          }
-
-          const result = await response.json()
-          console.log('🎉 Client cache invalidation result for new product:', result)
-
-        } catch (clientCacheError) {
-          console.error('💥 Client cache invalidation failed:', clientCacheError)
-        }
-      }
-
-      // Run client cache invalidation IMMEDIATELY for real-time sync
-      await invalidateClientCache()
-    } catch (e) {
-      console.warn('⚠️ Client cache invalidation setup failed (non-fatal):', e)
-    }
+    // **CACHING DISABLED - No cache invalidation needed**
+    // Products now always fetch fresh data for instant updates
+    console.log('✅ Product created successfully - no cache invalidation needed (caching disabled):', product.id)
 
     return NextResponse.json({ data: product }, { status: 201 });
   } catch (e: unknown) {

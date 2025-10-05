@@ -91,12 +91,18 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // **CACHING DISABLED FOR REAL-TIME UPDATES**
+      // Products and categories must always be fresh for instant admin sync
       {
         source: '/api/products/(.*)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, s-maxage=300, stale-while-revalidate=600',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'CDN-Cache-Control',
+            value: 'no-cache',
           },
         ],
       },
@@ -105,7 +111,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, s-maxage=600, stale-while-revalidate=1200',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'CDN-Cache-Control',
+            value: 'no-cache',
           },
         ],
       },
@@ -114,7 +124,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, s-maxage=60, stale-while-revalidate=300',
+            value: 'no-cache, no-store, must-revalidate',
           },
         ],
       },

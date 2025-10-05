@@ -68,14 +68,16 @@ export const cacheKeys = {
 }
 
 // Cache TTL constants (in seconds)
+// **CACHING DISABLED FOR REAL-TIME UPDATES**
+// Set to 0 for instant updates, or very short TTL for minimal caching
 export const cacheTTL = {
-  products: 300, // 5 minutes
-  categories: 600, // 10 minutes
-  orders: 60, // 1 minute
-  cart: 30, // 30 seconds
-  reviews: 180, // 3 minutes
-  services: 600, // 10 minutes
-  addresses: 300 // 5 minutes
+  products: 0, // No cache - instant updates
+  categories: 0, // No cache - instant updates
+  orders: 0, // No cache - instant updates
+  cart: 0, // No cache - instant updates
+  reviews: 0, // No cache - instant updates
+  services: 0, // No cache - instant updates
+  addresses: 0 // No cache - instant updates
 }
 
 // Cache wrapper function
@@ -86,6 +88,14 @@ export function withCache<T>(
 ): Promise<T> {
   return new Promise(async (resolve, reject) => {
     try {
+      // **SKIP CACHING IF TTL IS 0 (disabled for real-time updates)**
+      if (ttlSeconds === 0) {
+        console.log(`⚡ Cache disabled (TTL=0) - fetching fresh data for: ${key}`)
+        const data = await fetcher()
+        resolve(data)
+        return
+      }
+
       // Try to get from cache first
       const cached = cache.get<T>(key)
       if (cached !== null) {
