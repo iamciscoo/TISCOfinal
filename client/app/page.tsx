@@ -4,6 +4,7 @@ import { CartSidebar } from "@/components/CartSidebar"
 import dynamic from 'next/dynamic'
 import RareFinds from "@/components/RareFindsSection"
 import { PasswordResetRedirectHandler } from "@/components/PasswordResetRedirectHandler"
+import { MobileSearchBar } from "@/components/MobileSearchBar"
 
 // Dynamic imports for non-critical components
 const HomepageHeroCarousel = dynamic(() => import("@/components/HomepageHeroCarousel").then(mod => ({ default: mod.HomepageHeroCarousel })), {
@@ -34,7 +35,8 @@ export default function Home() {
       <PasswordResetRedirectHandler />
       <Navbar />
       <main className="overflow-x-hidden bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 pb-8 sm:pb-12">
+        <MobileSearchBar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 md:pt-2 lg:pt-4 pb-8 sm:pb-12">
           <HomepageHeroCarousel />
         </div>
         <div className="space-y-8 sm:space-y-12 md:space-y-16">

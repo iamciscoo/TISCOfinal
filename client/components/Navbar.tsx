@@ -274,7 +274,7 @@ export const Navbar = () => {
                 type="search"
                 autoComplete="off"
                 enterKeyHint="search"
-                placeholder="Search products..."
+                placeholder="Search TISCO..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -432,21 +432,6 @@ export const Navbar = () => {
                 exit={{ y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-              {/* Mobile Search */}
-              <div className="relative mb-3">
-                <Input
-                  type="search"
-                  autoComplete="off"
-                  enterKeyHint="search"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="pl-10 pr-4 py-2 w-full"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-
               {/* Mobile Currency Toggle */}
               <div className="px-3 py-2 mb-2">
                 <CurrencyToggle />

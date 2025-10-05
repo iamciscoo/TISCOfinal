@@ -175,6 +175,7 @@ export async function POST(req: NextRequest) {
         
         console.log(`🔍 [${webhookId}] Order items query result:`, {
           items_count: orderItems?.length || 0,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           items: orderItems?.map((item: any) => ({
             product_id: item.product_id,
             products_id: item.products?.id,
@@ -184,6 +185,7 @@ export async function POST(req: NextRequest) {
         
         // Send customer notification
         if (orderItems && orderItems.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const items = orderItems.map((item: any) => ({
             name: item.products?.name || 'Product',
             quantity: item.quantity,
@@ -206,6 +208,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Send admin notification with items for product-specific filtering
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const itemsWithProductIds = (orderItems || []).map((item: any) => ({
           product_id: item.product_id || (item.products?.id),
           name: item.products?.name || 'Product',

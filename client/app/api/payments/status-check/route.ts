@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
 
     // Check status with ZenoPay
     const zenoClient = new ZenoPayClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let zenoStatus: any = null
     
     try {

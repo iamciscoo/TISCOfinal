@@ -146,8 +146,8 @@ export default function DealsPage() {
     setCurrentPage(1)
   }, [searchTerm, selectedCategory, sortBy, deals])
 
-  // Pagination (align with shop page: 12 items for grid, 3 for list)
-  const itemsPerPage = viewMode === 'grid' ? 12 : 3
+  // Pagination (align with shop page: 12 items for grid, 6 for list)
+  const itemsPerPage = viewMode === 'grid' ? 12 : 6
   const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)

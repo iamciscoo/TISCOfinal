@@ -263,7 +263,7 @@ function ProductsContent() {
   }, [products, debouncedSearchTerm, selectedCategory, sortBy])
 
   // Pagination (4 rows per page in grid view)
-  const itemsPerPage = viewMode === 'grid' ? 12 : 3
+  const itemsPerPage = viewMode === 'grid' ? 12 : 6
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
