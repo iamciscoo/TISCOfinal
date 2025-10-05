@@ -37,21 +37,37 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Order is already marked as paid' }, { status: 400 })
     }
 
-    // Get customer details
-    const { data: userData } = await supabase
-      .from('users')
-      .select('email, first_name, last_name')
-      .eq('auth_user_id', orderData.user_id)
-      .single()
+    // Get customer details (handle both registered and guest customers)
+    let customerEmail: string
+    let customerName: string
+    
+    if (orderData.user_id) {
+      // Registered customer - fetch from users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('auth_user_id', orderData.user_id)
+        .single()
 
-    if (!userData?.email) {
-      console.error('Customer not found for order:', id)
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+      if (!userData?.email) {
+        console.error('Registered customer not found for order:', id)
+        return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+      }
+
+      customerEmail = userData.email
+      customerName = userData.first_name && userData.last_name 
+        ? `${userData.first_name} ${userData.last_name}` 
+        : 'Customer'
+    } else {
+      // Guest customer - use guest fields from order
+      if (!orderData.customer_email && !orderData.customer_name) {
+        console.error('Guest customer information missing for order:', id)
+        return NextResponse.json({ error: 'Customer information missing' }, { status: 404 })
+      }
+
+      customerEmail = orderData.customer_email || 'no-email@guest.order'
+      customerName = orderData.customer_name || 'Guest Customer'
     }
-
-    const customerName = userData.first_name && userData.last_name 
-      ? `${userData.first_name} ${userData.last_name}` 
-      : 'Customer'
 
     // Update order payment status
     const { data: updatedOrder, error: updateError } = await supabase
@@ -91,7 +107,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     try {
       const notificationData = {
         order_id: id,
-        customer_email: userData.email,
+        customer_email: customerEmail,
         customer_name: customerName,
         amount: orderData.total_amount?.toString() || '0',
         currency: orderData.currency || 'TZS',
@@ -104,7 +120,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         .from('notifications')
         .insert({
           event: 'payment_success',
-          recipient_email: userData.email,
+          recipient_email: customerEmail,
           recipient_name: customerName,
           subject: 'Payment Confirmed - Order Processing',
           content: `Your payment for order #${id.slice(0, 8)} has been confirmed. Order is now processing.`,

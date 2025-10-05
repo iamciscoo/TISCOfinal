@@ -90,13 +90,13 @@ export const columns: ColumnDef<User>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(user.id)}
+              onClick={() => navigator.clipboard.writeText(user.id || 'No ID')}
             >
               Copy user ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link href={`/users/${user.id}`}>View customer</Link>
+              <Link href={`/users/${user.id || 'guest'}`}>View customer</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -105,7 +105,7 @@ export const columns: ColumnDef<User>[] = [
                 const confirmed = window.confirm(`Delete user ${user.fullName}? This cannot be undone.`);
                 if (!confirmed) return;
                 try {
-                  const res = await fetch(`/api/users/${user.id}` , { method: "DELETE" });
+                  const res = await fetch(`/api/users/${user.id || 'guest'}` , { method: "DELETE" });
                   if (!res.ok) {
                     const json = await res.json().catch(() => ({}));
                     throw new Error(json?.error || "Failed to delete user");

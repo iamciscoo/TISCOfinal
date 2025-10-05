@@ -32,7 +32,7 @@ export type ProductColumn = {
 
 export type OrderColumn = {
   id: string;
-  customerId: string;
+  customerId: string | null; // Nullable for guest orders
   customerName: string;
   customerEmail: string;
   total: number;
@@ -50,7 +50,7 @@ export type OrderColumn = {
 };
 
 export type UserColumn = {
-  id: string;
+  id: string | null; // Nullable to match User interface
   avatar: string;
   fullName: string;
   email: string;

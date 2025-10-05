@@ -47,7 +47,7 @@ export interface ProductImage {
 }
 
 export interface User {
-  id: string
+  id: string | null
   email: string
   first_name?: string
   last_name?: string
@@ -57,10 +57,12 @@ export interface User {
   is_admin?: boolean
   is_active?: boolean
   last_login?: string
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
   // Relations (admin computed)
   default_shipping_address?: Address
+  // Guest customer flag
+  is_guest?: boolean
 }
 
 export interface Address {
@@ -84,12 +86,16 @@ export interface Address {
 
 export interface Order {
   id: string | number
-  user_id: string
+  user_id: string | null
+  // Guest customer fields (for orders where user_id is null)
+  customer_name?: string | null
+  customer_email?: string | null
+  customer_phone?: string | null
   order_number?: string
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   total_amount: number
-  shipping_amount: number
-  tax_amount: number
+  shipping_amount?: number
+  tax_amount?: number
   currency: string
   payment_method?: string
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'

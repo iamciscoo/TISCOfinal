@@ -15,6 +15,12 @@ import type {
 // Product Functions
 export async function getProducts(limit?: number): Promise<Product[]> {
   try {
+    // Check Supabase connection first
+    if (!supabase) {
+      console.error('Supabase client not initialized')
+      return []
+    }
+
     let query = supabase
       .from('products')
       .select(`
@@ -40,13 +46,18 @@ export async function getProducts(limit?: number): Promise<Product[]> {
     const { data, error } = await query
     
     if (error) {
-      console.error('Error in getProducts:', error)
-      throw error
+      console.error('Supabase error in getProducts:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+      return []
     }
     
     return data || []
   } catch (error) {
-    console.error('[ Server ] Error fetching products:', error)
+    console.error('Network/Connection error in getProducts:', error)
     return []
   }
 }
@@ -160,19 +171,39 @@ export async function deleteCategory(id: string | number): Promise<void> {
 
 // User Functions
 export async function getUsers(limit?: number): Promise<User[]> {
-  const query = supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false })
+  try {
+    // Check Supabase connection first
+    if (!supabase) {
+      console.error('Supabase client not initialized for getUsers')
+      return []
+    }
 
-  if (limit) {
-    query.limit(limit)
+    let query = supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (limit) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Supabase error in getUsers:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+      return []
+    }
+    
+    return data || []
+  } catch (error) {
+    console.error('Network/Connection error in getUsers:', error)
+    return []
   }
-
-  const { data, error } = await query
-
-  if (error) throw error
-  return data || []
 }
 
 export async function getUserById(id: string): Promise<User | null> {
@@ -280,55 +311,84 @@ export async function getUsersByIds(ids: string[]): Promise<Record<string, User>
 
 // Order Functions
 export async function getOrders(limit?: number): Promise<Order[]> {
-  let query = supabase
-    .from('orders')
-    .select(`
-      *,
-      order_items(
-        id,
-        quantity,
-        price,
-        products(
+  try {
+    // Check Supabase connection first
+    if (!supabase) {
+      console.error('Supabase client not initialized for getOrders')
+      return []
+    }
+
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items(
           id,
-          name,
+          quantity,
           price,
-          image_url
+          products(
+            id,
+            name,
+            price,
+            image_url
+          )
         )
-      )
-    `)
-    .order('created_at', { ascending: false })
+      `)
+      .order('created_at', { ascending: false })
 
-  if (limit) {
-    query = query.limit(limit)
-  }
+    if (limit) {
+      query = query.limit(limit)
+    }
 
-  const { data, error } = await query
+    const { data, error } = await query
 
-  if (error) {
-    console.error('getOrders: Supabase error', {
-      message: error.message,
-      code: (error as any).code,
-      details: (error as any).details,
-      hint: (error as any).hint,
-    })
-    // Return empty array instead of throwing to prevent dashboard crashes
+    if (error) {
+      console.error('getOrders: Supabase error', {
+        message: error.message,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+      })
+      // Return empty array instead of throwing to prevent dashboard crashes
+      return []
+    }
+
+    const orders = (data || []) as any[]
+
+    // Batch user fetching for better performance
+    const userIds = Array.from(new Set(orders.map(o => o?.user_id).filter(Boolean))) as string[]
+    let usersById: Record<string, User> = {}
+    if (userIds.length > 0) {
+      try {
+        usersById = await getUsersByIds(userIds)
+      } catch (e) {
+        console.warn('getOrders: failed to fetch users for orders', e)
+      }
+    }
+
+    return orders.map(o => {
+      if (o.user_id) {
+        // Registered customer - use user data
+        return { ...o, user: usersById[String(o.user_id)] }
+      } else {
+        // Guest customer - create a user-like object from guest fields
+        return { 
+          ...o, 
+          user: {
+            id: null,
+            email: o.customer_email || 'No email',
+            first_name: o.customer_name?.split(' ')[0] || 'Guest',
+            last_name: o.customer_name?.split(' ').slice(1).join(' ') || 'Customer',
+            phone: o.customer_phone || null,
+            is_guest: true
+          }
+        }
+      }
+    }) as unknown as Order[]
+  } catch (error) {
+    console.error('Network/Connection error in getOrders:', error)
     return []
   }
-
-  const orders = (data || []) as any[]
-
-  // Batch user fetching for better performance
-  const userIds = Array.from(new Set(orders.map(o => o?.user_id).filter(Boolean))) as string[]
-  let usersById: Record<string, User> = {}
-  if (userIds.length > 0) {
-    try {
-      usersById = await getUsersByIds(userIds)
-    } catch (e) {
-      console.warn('getOrders: failed to fetch users for orders', e)
-    }
-  }
-
-  return orders.map(o => ({ ...o, user: usersById[String(o.user_id)] })) as unknown as Order[]
 }
 
 export async function getOrdersByUser(userId: string): Promise<Order[]> {

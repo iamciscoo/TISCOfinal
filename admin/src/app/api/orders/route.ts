@@ -21,14 +21,35 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { user_id, status, payment_method, payment_status, shipping_address, notes, currency, total_amount } = body ?? {};
+    const { 
+      user_id, 
+      customer_name, 
+      customer_email, 
+      customer_phone,
+      status, 
+      payment_method, 
+      payment_status, 
+      shipping_address, 
+      notes, 
+      currency, 
+      total_amount 
+    } = body ?? {};
 
-    if (!user_id || !shipping_address) {
-      return NextResponse.json({ error: "'user_id' and 'shipping_address' are required" }, { status: 400 });
+    // For guest orders, we need at least customer_name and shipping_address
+    // For registered orders, we need user_id and shipping_address
+    if (!shipping_address) {
+      return NextResponse.json({ error: "'shipping_address' is required" }, { status: 400 });
+    }
+
+    if (!user_id && !customer_name) {
+      return NextResponse.json({ error: "Either 'user_id' or 'customer_name' is required" }, { status: 400 });
     }
 
     const payload = {
-      user_id,
+      user_id: user_id || null,
+      customer_name: customer_name || null,
+      customer_email: customer_email || null,
+      customer_phone: customer_phone || null,
       status: typeof status === "string" ? status : "pending",
       total_amount: typeof total_amount === "number" ? total_amount : 0,
       currency: typeof currency === "string" && currency.length ? currency : "TZS",

@@ -21,11 +21,12 @@ const FeaturedProducts = dynamic(() => import("@/components/FeaturedProducts").t
 
 import { BrandSlider } from "@/components/BrandSlider"
 
-const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").then(mod => ({ default: mod.ServicesPreview })), {
-  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded-lg" />
-})
 
 const ServicesPromoGrid = dynamic(() => import("@/components/ServicesPromoGrid").then(mod => ({ default: mod.ServicesPromoGrid })), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
+})
+
+const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").then(mod => ({ default: mod.ServicesPreview })), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
 })
 

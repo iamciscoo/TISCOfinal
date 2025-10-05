@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Cpu, Monitor, Settings } from "lucide-react";
+import { CheckCircle, Cpu, Monitor, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -91,7 +90,7 @@ export const ServicesPreview = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Our Services
+            Top Services
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             We handle the builds, the installs, and the headaches.
@@ -130,31 +129,6 @@ export const ServicesPreview = () => {
           ))}
         </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Ready to Transform Your Tech Setup?
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Get professional tech services tailored to your specific needs.
-              From custom builds to complete setups, we&apos;ve got you covered.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="rounded-full">
-                <Link href="/services">
-                  View All Services
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
-
-              <Button variant="outline" size="lg" asChild className="rounded-full">
-                <Link href="/contact">Contact Us</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

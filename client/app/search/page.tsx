@@ -88,14 +88,13 @@ function SearchResults() {
     updateUrlDebounced(searchTerm)
   }, [searchTerm, updateUrlDebounced])
 
-  // Fetch real search results from database
+  // Fetch and filter search results from database
   useEffect(() => {
     const fetchSearchResults = async () => {
       setLoading(true)
       
       try {
         const qs = new URLSearchParams({ q: query || '' })
-        // Remove category from API call - let frontend handle filtering like shop page
         const response = await fetch('/api/products/search?' + qs.toString())
         
         if (!response.ok) {
@@ -103,8 +102,51 @@ function SearchResults() {
         }
         
         const data = await response.json()
-        setProducts(data || [])
-        setFilteredProducts(data || [])
+        let results = data || []
+        
+        // Enhanced client-side category search for initial query results
+        // This includes category names AND descriptions for more comprehensive search
+        if (query) {
+          const queryLower = query.toLowerCase()
+          
+          // Helper function to check if product matches category search
+          const matchesCategory = (product: Product) => {
+            let hasMatch = false
+            if (product.categories) {
+              if (Array.isArray(product.categories)) {
+                hasMatch = product.categories.some((cat) => {
+                  const catName = cat.category?.name?.toLowerCase() || ''
+                  const catDesc = ((cat.category as { description?: string })?.description || '').toLowerCase()
+                  const nameMatch = catName.includes(queryLower)
+                  const descMatch = catDesc.includes(queryLower)
+                  return nameMatch || descMatch
+                })
+              } else {
+                const catName = product.categories.name?.toLowerCase() || ''
+                const catDesc = ((product.categories as { description?: string })?.description || '').toLowerCase()
+                hasMatch = catName.includes(queryLower) || catDesc.includes(queryLower)
+              }
+            }
+            
+            return hasMatch
+          }
+          
+          // Separate products into direct matches and category matches
+          const directMatches = results.filter((product: Product) => 
+            product.name.toLowerCase().includes(queryLower) || 
+            (product.description || '').toLowerCase().includes(queryLower)
+          )
+          
+          const categoryMatches = results.filter((product: Product) => 
+            !directMatches.some((dp: Product) => dp.id === product.id) && matchesCategory(product)
+          )
+          
+          // Combine results with direct matches first (better relevance)
+          results = [...directMatches, ...categoryMatches]
+        }
+        
+        setProducts(results)
+        setFilteredProducts(results)
       } catch (error) {
         console.error('Search error:', error)
         setProducts([])
@@ -115,18 +157,36 @@ function SearchResults() {
     }
     
     fetchSearchResults()
-  }, [query]) // Remove selectedCategory dependency since API doesn't filter by category anymore
+  }, [query])
 
   // Filter and sort products
   useEffect(() => {
     let filtered = [...products]
 
-    // Search filter
+    // Enhanced search filter - include category names AND descriptions for refined search
     if (searchTerm && searchTerm !== query) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(product => {
+        // Check product name and description
+        const nameMatch = product.name.toLowerCase().includes(searchLower)
+        const descMatch = (product.description || '').toLowerCase().includes(searchLower)
+        
+        // Check category names and descriptions
+        let categoryMatch = false
+        if (product.categories && Array.isArray(product.categories)) {
+          categoryMatch = product.categories.some(cat => {
+            const catName = cat.category?.name?.toLowerCase() || ''
+            const catDesc = ((cat.category as { description?: string })?.description || '').toLowerCase()
+            return catName.includes(searchLower) || catDesc.includes(searchLower)
+          })
+        } else if (product.categories && !Array.isArray(product.categories)) {
+          const catName = product.categories.name?.toLowerCase() || ''
+          const catDesc = ((product.categories as { description?: string })?.description || '').toLowerCase()
+          categoryMatch = catName.includes(searchLower) || catDesc.includes(searchLower)
+        }
+        
+        return nameMatch || descMatch || categoryMatch
+      })
     }
 
     // Category filter - now supports multiple categories per product
@@ -395,7 +455,7 @@ function SearchResults() {
               <>
                 {/* Products Grid */}
                 <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
+                  ? 'grid grid-cols-3 gap-2' 
                   : 'space-y-4'
                 }>
                   {displayedProducts.map((product) => (
@@ -403,6 +463,7 @@ function SearchResults() {
                       key={product.id}
                       product={product}
                       variant={viewMode}
+                      compact
                     />
                   ))}
                 </div>
