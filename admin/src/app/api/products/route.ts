@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         image_url,
         stock_quantity,
         is_featured,
+        is_new,
         is_deal,
         deal_price,
         original_price,
@@ -77,7 +78,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, image_url, is_deal, original_price, deal_price } = body ?? {};
+    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, is_new, image_url, is_deal, original_price, deal_price } = body ?? {};
 
     if (!name || !description || typeof price !== "number") {
       return NextResponse.json({ error: "Missing required fields: name, description, price" }, { status: 400 });
@@ -101,6 +102,7 @@ export async function POST(req: Request) {
       category_id: categories[0], // Keep primary category for backward compatibility
       stock_quantity: typeof stock_quantity === "number" ? stock_quantity : 0,
       is_featured: !!is_featured,
+      is_new: !!is_new,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
       // deal/sale fields
       is_deal: !!is_deal,

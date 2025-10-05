@@ -10,6 +10,7 @@ export type ProductWithRelations = {
   image_url?: string | null
   stock_quantity?: number | null
   is_featured?: boolean | null
+  is_new?: boolean | null
   is_deal?: boolean | null
   deal_price?: number | null
   original_price?: number | null
@@ -45,6 +46,7 @@ export function normalizeToProduct(p: ProductWithRelations): UIProduct {
     rating: p.rating ?? null,
     reviews_count: p.reviews_count ?? null,
     is_featured: p.is_featured ?? undefined,
+    is_new: p.is_new ?? undefined,
     is_deal: p.is_deal ?? undefined,
     original_price: p.original_price ?? undefined,
     deal_price: p.deal_price ?? undefined,

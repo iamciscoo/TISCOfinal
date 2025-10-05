@@ -30,6 +30,7 @@ export const GET = withMiddleware(
         image_url,
         stock_quantity,
         is_featured,
+        is_new,
         is_deal,
         deal_price,
         original_price,

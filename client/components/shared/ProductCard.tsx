@@ -99,7 +99,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               
               {/* New Badge */}
               {product.is_new && (
-                <Badge className="absolute bottom-2 left-2 bg-blue-600 text-white font-semibold text-xs px-2 py-1 z-10">
+                <Badge className="absolute bottom-2 left-2 bg-black/70 text-white font-medium text-base px-3 py-1.5 z-10 rounded-md backdrop-blur-sm">
                   New
                 </Badge>
               )}
@@ -198,7 +198,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           
           {/* New Badge */}
           {product.is_new && (
-            <Badge className="absolute bottom-2 left-2 bg-blue-600 text-white font-semibold text-xs px-2 py-1 z-10">
+            <Badge className="absolute bottom-2 left-2 bg-black/70 text-white font-medium text-base px-3 py-1.5 z-10 rounded-md backdrop-blur-sm">
               New
             </Badge>
           )}

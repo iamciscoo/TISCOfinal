@@ -61,6 +61,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       "category_id",
       "stock_quantity",
       "is_featured",
+      "is_new",
       "is_deal",
       "original_price",
       "deal_price",

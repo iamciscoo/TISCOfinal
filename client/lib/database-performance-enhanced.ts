@@ -231,6 +231,7 @@ export async function searchProductsOptimized(searchQuery: string, options: {
           price,
           image_url,
           is_featured,
+          is_new,
           is_deal,
           deal_price,
           rating,

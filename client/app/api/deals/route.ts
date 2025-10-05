@@ -49,6 +49,8 @@ export async function GET() {
         rating: product.rating ?? null,
         reviews_count: product.reviews_count ?? null,
         stock_quantity: product.stock_quantity,
+        is_featured: product.is_featured,
+        is_new: product.is_new,
         slug: product.slug,
         tags: product.tags || [],
         created_at: product.created_at
