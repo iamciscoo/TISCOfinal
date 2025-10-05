@@ -42,21 +42,21 @@ export const Footer = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white p-2"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
               >
                 <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white p-2"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
               >
                 <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white p-2"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
               >
                 <Instagram className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>

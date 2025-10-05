@@ -92,8 +92,15 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               </Link>
               {/* Stock Status Badge */}
               {!inStock && (
-                <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+                <Badge className="absolute top-2 left-2 bg-red-500 text-white z-10">
                   Out of Stock
+                </Badge>
+              )}
+              
+              {/* New Badge */}
+              {product.is_new && (
+                <Badge className="absolute bottom-2 left-2 bg-blue-600 text-white font-semibold text-xs px-2 py-1 z-10">
+                  New
                 </Badge>
               )}
             </div>
@@ -184,8 +191,15 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           
           {/* Stock Status Badge */}
           {!inStock && (
-            <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+            <Badge className="absolute top-2 left-2 bg-red-500 text-white z-10">
               Out of Stock
+            </Badge>
+          )}
+          
+          {/* New Badge */}
+          {product.is_new && (
+            <Badge className="absolute bottom-2 left-2 bg-blue-600 text-white font-semibold text-xs px-2 py-1 z-10">
+              New
             </Badge>
           )}
         </Link>

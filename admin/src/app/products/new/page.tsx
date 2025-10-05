@@ -23,6 +23,7 @@ const formSchema = z.object({
   category_ids: z.array(z.string()).min(1, { message: "At least one category is required!" }).max(5, { message: "Maximum 5 categories allowed!" }),
   stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean(),
+  is_new: z.boolean(),
   is_deal: z.boolean(),
   original_price: z.number().min(0.01).optional(),
   deal_price: z.number().min(0.01).optional(),
@@ -55,6 +56,7 @@ const AddProductPage = () => {
       category_ids: [],
       stock_quantity: 0,
       is_featured: false,
+      is_new: false,
       is_deal: false,
       original_price: 0,
       deal_price: 0,
@@ -369,6 +371,24 @@ const AddProductPage = () => {
                 <div className="space-y-1 leading-none">
                   <FormLabel>Featured Product</FormLabel>
                   <FormDescription>Mark this product as featured on the homepage.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="is_new"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>New Product</FormLabel>
+                  <FormDescription>Display a "New" badge on this product.</FormDescription>
                 </div>
               </FormItem>
             )}

@@ -28,6 +28,7 @@ const formSchema = z.object({
     .max(MAX_CATEGORIES, { message: `Maximum ${MAX_CATEGORIES} categories allowed!` }),
   stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean().optional(),
+  is_new: z.boolean().optional(),
   is_deal: z.boolean().optional(),
   original_price: z.number().optional(),
   deal_price: z.number().optional(),
@@ -65,6 +66,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       category_ids: [],
       stock_quantity: 0,
       is_featured: false,
+      is_new: false,
       is_deal: false,
       original_price: 0,
       deal_price: 0,
@@ -195,6 +197,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           category_ids: categoryIds,
           stock_quantity: json.data.stock_quantity || 0,
           is_featured: json.data.is_featured || false,
+          is_new: json.data.is_new || false,
           is_deal: json.data.is_deal || false,
           original_price: json.data.original_price || 0,
           deal_price: json.data.deal_price || 0,
@@ -496,6 +499,24 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <div className="space-y-1 leading-none">
                   <FormLabel>Featured Product</FormLabel>
                   <FormDescription>Mark this product as featured on the homepage.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="is_new"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>New Product</FormLabel>
+                  <FormDescription>Display a "New" badge on this product.</FormDescription>
                 </div>
               </FormItem>
             )}

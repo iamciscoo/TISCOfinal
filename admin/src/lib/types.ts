@@ -16,6 +16,7 @@ export interface Product {
   category_id: string | number
   stock_quantity?: number
   is_featured: boolean
+  is_new?: boolean
   is_active: boolean
   // deal fields
   is_deal?: boolean

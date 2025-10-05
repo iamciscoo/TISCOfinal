@@ -20,6 +20,7 @@ export interface Product {
   rating?: number | null
   reviews_count?: number | null
   is_featured?: boolean
+  is_new?: boolean
   // Deal pricing fields
   is_deal?: boolean
   original_price?: number
