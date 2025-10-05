@@ -175,33 +175,54 @@ export const GET = withMiddleware(
   withValidation(getProductsSchema),    // Validate and parse query parameters
   withErrorHandler                      // Handle errors and format responses
 )(async (req: NextRequest, validatedData: z.infer<typeof getProductsSchema>) => {
-  // Create a cache key that includes all query parameters for accurate caching
-  const cacheKey = `products-${validatedData.limit}-${validatedData.offset}-${validatedData.category || 'all'}-${validatedData.featured || 'all'}`
+  // Check if this is a cache invalidation request from admin
+  const isCacheInvalidation = req.headers.get('X-Cache-Invalidation') === 'true'
+  const bypassCache = isCacheInvalidation || req.headers.get('Cache-Control') === 'no-cache'
   
-  // Determine cache tags based on request parameters
-  const cacheTags = ['products']
-  if (validatedData.featured) cacheTags.push('featured-products')
-  if (validatedData.category) cacheTags.push(`category:${validatedData.category}`)
+  let products
   
-  // Use Next.js cache with tags for invalidation support
-  const getCachedProducts = unstable_cache(
-    async () => await getProductsQuery(validatedData),
-    [cacheKey],
-    {
-      tags: cacheTags,
-      revalidate: 600 // 10 minutes cache
-    }
-  )
+  if (bypassCache) {
+    // Force fresh data for cache invalidation or no-cache requests
+    console.log('🔄 Bypassing cache - fetching fresh product data')
+    products = await getProductsQuery(validatedData)
+  } else {
+    // Use cached data for normal requests
+    const cacheKey = `products-${validatedData.limit}-${validatedData.offset}-${validatedData.category || 'all'}-${validatedData.featured || 'all'}`
+    
+    // Determine cache tags based on request parameters
+    const cacheTags = ['products']
+    if (validatedData.featured) cacheTags.push('featured-products')
+    if (validatedData.category) cacheTags.push(`category:${validatedData.category}`)
+    
+    // Use Next.js cache with tags for invalidation support
+    const getCachedProducts = unstable_cache(
+      async () => await getProductsQuery(validatedData),
+      [cacheKey],
+      {
+        tags: cacheTags,
+        revalidate: 600 // 10 minutes cache
+      }
+    )
+    
+    products = await getCachedProducts()
+  }
   
-  // Execute cached product query
-  const products = await getCachedProducts()
-  
-  // Return successful response with products data and cache headers
+  // Return successful response with products data
   const response = Response.json(createSuccessResponse(products))
   
-  // Add cache headers for CDN and browser caching
-  response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=300')
-  response.headers.set('CDN-Cache-Control', 'public, s-maxage=600')
+  // Set appropriate cache headers based on request type
+  if (bypassCache) {
+    // No cache for invalidation requests - force fresh data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('CDN-Cache-Control', 'no-cache')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+  } else {
+    // Standard cache headers for normal requests
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=300')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=600')
+  }
+  
   response.headers.set('Vary', 'Accept-Encoding')
   
   return response

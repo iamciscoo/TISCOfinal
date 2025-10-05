@@ -160,7 +160,93 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         revalidateTag('deals')                   // Deals page
       }
       
-      console.log('✅ Cache invalidation completed for product:', id)
+      console.log('✅ Admin cache invalidation completed for product:', id)
+
+      // **FIX: Invalidate client-side cache using dedicated cache invalidation API**
+      const clientBaseUrl = process.env.CLIENT_BASE_URL || process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
+      
+      console.log('🔄 Starting REAL-TIME client cache invalidation for product:', id)
+      
+      const invalidateClientCache = async () => {
+        try {
+          // Build list of server cache tags to invalidate
+          const tagsToInvalidate = [
+            'products',              // Main products listing
+            'featured-products',     // Featured products listing
+            `product:${id}`,         // This specific product
+            'homepage'               // Homepage (might show this product)
+          ]
+
+          // Build list of client cache keys to invalidate (for homepage real-time updates)
+          const clientCacheKeysToInvalidate = [
+            'products:all',          // General products list
+            'products:9',            // Products with limit 9
+            'products:20',           // Products with limit 20
+            'featured:all',          // All featured products
+            'featured:9',            // Featured products for homepage (limit 9)
+            'featured:6'             // Featured products with limit 6
+          ]
+
+          // Add category-specific tags if categories were updated
+          if (category_ids || updates.category_id) {
+            console.log('📂 Categories updated - adding category cache tags')
+            tagsToInvalidate.push('categories')
+            
+            if (updates.category_id) {
+              tagsToInvalidate.push(`category:${updates.category_id}`)
+              clientCacheKeysToInvalidate.push(`products:category:${updates.category_id}`)
+            }
+            if (category_ids) {
+              category_ids.forEach((catId: string) => {
+                tagsToInvalidate.push(`category:${catId}`)
+                clientCacheKeysToInvalidate.push(`products:category:${catId}`)
+              })
+            }
+          }
+
+          // Add deals cache if deal status changed
+          if (updates.is_deal !== undefined) {
+            tagsToInvalidate.push('deals')
+          }
+
+          console.log('🏷️ Server cache tags to invalidate:', tagsToInvalidate)
+          console.log('🔑 Client cache keys to invalidate:', clientCacheKeysToInvalidate)
+
+          // Call the dedicated cache invalidation API with BOTH server tags and client cache keys
+          const response = await fetch(`${clientBaseUrl}/api/cache/invalidate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              tags: tagsToInvalidate,           // Server-side Next.js cache tags
+              cacheKeys: clientCacheKeysToInvalidate,  // Client-side in-memory cache keys
+              source: 'admin-product-update'
+            })
+          })
+
+          if (!response.ok) {
+            throw new Error(`Cache invalidation API returned ${response.status}: ${await response.text()}`)
+          }
+
+          const result = await response.json()
+          console.log('🎉 Client cache invalidation result:', result)
+
+          if (result.success) {
+            console.log(`✅ Successfully invalidated ${result.message}`)
+          } else {
+            console.error('❌ Cache invalidation reported errors:', result)
+          }
+
+        } catch (clientCacheError) {
+          console.error('💥 Client cache invalidation failed:', clientCacheError)
+          // Don't fail the update if client cache invalidation fails
+        }
+      }
+
+      // Run client cache invalidation IMMEDIATELY for real-time sync
+      await invalidateClientCache()
+      
     } catch (cacheError) {
       console.warn('⚠️ Cache invalidation failed (non-fatal):', cacheError)
       // Don't fail the update if cache invalidation fails
@@ -196,7 +282,66 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       revalidateTag('homepage')             // Homepage
       revalidateTag('deals')                // Deals page
       
-      console.log('✅ Cache invalidation completed for deleted product:', id)
+      console.log('✅ Admin cache invalidation completed for deleted product:', id)
+
+      // **FIX: Invalidate client-side cache using dedicated cache invalidation API**
+      const clientBaseUrl = process.env.CLIENT_BASE_URL || process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
+      
+      console.log('🔄 Starting REAL-TIME client cache invalidation for deleted product:', id)
+      
+      const invalidateClientCache = async () => {
+        try {
+          // Build comprehensive list of server cache tags to invalidate for deleted product
+          const tagsToInvalidate = [
+            'products',              // Main products listing
+            'featured-products',     // Featured products listing  
+            `product:${id}`,         // This specific product
+            'categories',            // Categories (product count might change)
+            'homepage',              // Homepage content
+            'deals'                  // Deals page (in case this was a deal)
+          ]
+
+          // Build comprehensive list of client cache keys to invalidate
+          const clientCacheKeysToInvalidate = [
+            'products:all',
+            'products:9', 
+            'products:20',
+            'featured:all',
+            'featured:9',
+            'featured:6'
+          ]
+
+          console.log('🏷️ Server cache tags to invalidate for deleted product:', tagsToInvalidate)
+          console.log('🔑 Client cache keys to invalidate for deleted product:', clientCacheKeysToInvalidate)
+
+          // Call the dedicated cache invalidation API with BOTH server and client cache
+          const response = await fetch(`${clientBaseUrl}/api/cache/invalidate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              tags: tagsToInvalidate,
+              cacheKeys: clientCacheKeysToInvalidate,
+              source: 'admin-product-delete'
+            })
+          })
+
+          if (!response.ok) {
+            throw new Error(`Cache invalidation API returned ${response.status}: ${await response.text()}`)
+          }
+
+          const result = await response.json()
+          console.log('🎉 Client cache invalidation result for deleted product:', result)
+
+        } catch (clientCacheError) {
+          console.error('💥 Client cache invalidation failed:', clientCacheError)
+        }
+      }
+
+      // Run client cache invalidation IMMEDIATELY for real-time sync
+      await invalidateClientCache()
+      
     } catch (cacheError) {
       console.warn('⚠️ Cache invalidation failed (non-fatal):', cacheError)
     }
