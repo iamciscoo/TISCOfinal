@@ -185,23 +185,34 @@ export const Navbar = () => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden'
       
+      let hasMoved = false
+      
       // Add global touch handlers for swipe up anywhere on page
       const handleGlobalTouchStart = (e: TouchEvent) => {
         touchStartY.current = e.touches[0].clientY
+        touchCurrentY.current = e.touches[0].clientY
+        hasMoved = false
       }
       
       const handleGlobalTouchMove = (e: TouchEvent) => {
         touchCurrentY.current = e.touches[0].clientY
+        const distance = Math.abs(touchStartY.current - touchCurrentY.current)
+        // Mark as moved if distance > 10px (distinguishes swipe from tap)
+        if (distance > 10) {
+          hasMoved = true
+        }
       }
       
       const handleGlobalTouchEnd = () => {
         const swipeDistance = touchStartY.current - touchCurrentY.current
+        // Only close on swipe up if there was actual movement (not a tap)
         // Swipe up to close (positive distance means swipe up)
-        if (swipeDistance > 50) {
+        if (hasMoved && swipeDistance > 50) {
           closeMenu()
         }
         touchStartY.current = 0
         touchCurrentY.current = 0
+        hasMoved = false
       }
       
       document.addEventListener('touchstart', handleGlobalTouchStart, { passive: true })
