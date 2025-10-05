@@ -146,8 +146,9 @@ export const Navbar = () => {
 
   const handleTouchEnd = useCallback(() => {
     const swipeDistance = touchStartY.current - touchCurrentY.current
-    // Swipe up to close (negative distance means swipe up)
-    if (swipeDistance < -50) {
+    // Swipe up to close (positive distance means swipe up)
+    // touchStartY (lower) - touchCurrentY (higher) = positive value
+    if (swipeDistance > 50) {
       closeMenu()
     }
     touchStartY.current = 0
@@ -179,17 +180,47 @@ export const Navbar = () => {
     }
   }, [isMenuOpen, closeMenu])
 
-  // Prevent body scroll when menu is open
+  // Prevent body scroll when menu is open and add global swipe handlers
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden'
+      
+      // Add global touch handlers for swipe up anywhere on page
+      const handleGlobalTouchStart = (e: TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY
+      }
+      
+      const handleGlobalTouchMove = (e: TouchEvent) => {
+        touchCurrentY.current = e.touches[0].clientY
+      }
+      
+      const handleGlobalTouchEnd = () => {
+        const swipeDistance = touchStartY.current - touchCurrentY.current
+        // Swipe up to close (positive distance means swipe up)
+        if (swipeDistance > 50) {
+          closeMenu()
+        }
+        touchStartY.current = 0
+        touchCurrentY.current = 0
+      }
+      
+      document.addEventListener('touchstart', handleGlobalTouchStart, { passive: true })
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: true })
+      document.addEventListener('touchend', handleGlobalTouchEnd)
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.removeEventListener('touchstart', handleGlobalTouchStart)
+        document.removeEventListener('touchmove', handleGlobalTouchMove)
+        document.removeEventListener('touchend', handleGlobalTouchEnd)
+      }
     } else {
       document.body.style.overflow = ''
     }
     return () => {
       document.body.style.overflow = ''
     }
-  }, [isMenuOpen])
+  }, [isMenuOpen, closeMenu])
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
