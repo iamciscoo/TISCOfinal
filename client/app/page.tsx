@@ -30,10 +30,10 @@ const ServicesPromoGrid = dynamic(() => import("@/components/ServicesPromoGrid")
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       <PasswordResetRedirectHandler />
       <Navbar />
-      <main className="overflow-x-hidden">
+      <main className="overflow-x-hidden bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 pb-8 sm:pb-12">
           <HomepageHeroCarousel />
         </div>
@@ -42,10 +42,10 @@ export default function Home() {
           <RareFinds />
           <FeaturedProducts />
           <BrandSlider />
-          <ServicesPreview />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <ServicesPromoGrid />
           </div>
+          <ServicesPreview />
         </div>
       </main>
       <Footer />

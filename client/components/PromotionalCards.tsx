@@ -48,7 +48,7 @@ const promotionalCards: PromoCard[] = [
 
 export const PromotionalCards = () => {
   return (
-    <section className="py-5 sm:py-10 bg-gray-50 relative">
+    <section className="py-5 sm:py-10 bg-white relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop/Tablet Grid */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-3">
