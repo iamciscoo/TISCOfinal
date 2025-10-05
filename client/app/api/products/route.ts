@@ -17,6 +17,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { withMiddleware, withValidation, withErrorHandler, createSuccessResponse } from '@/lib/middleware'
 
 // Run on Node.js runtime for access to secure environment variables
@@ -174,8 +175,26 @@ export const GET = withMiddleware(
   withValidation(getProductsSchema),    // Validate and parse query parameters
   withErrorHandler                      // Handle errors and format responses
 )(async (req: NextRequest, validatedData: z.infer<typeof getProductsSchema>) => {
-  // Execute optimized product query with validated parameters
-  const products = await getProductsQuery(validatedData)
+  // Create a cache key that includes all query parameters for accurate caching
+  const cacheKey = `products-${validatedData.limit}-${validatedData.offset}-${validatedData.category || 'all'}-${validatedData.featured || 'all'}`
+  
+  // Determine cache tags based on request parameters
+  const cacheTags = ['products']
+  if (validatedData.featured) cacheTags.push('featured-products')
+  if (validatedData.category) cacheTags.push(`category:${validatedData.category}`)
+  
+  // Use Next.js cache with tags for invalidation support
+  const getCachedProducts = unstable_cache(
+    async () => await getProductsQuery(validatedData),
+    [cacheKey],
+    {
+      tags: cacheTags,
+      revalidate: 600 // 10 minutes cache
+    }
+  )
+  
+  // Execute cached product query
+  const products = await getCachedProducts()
   
   // Return successful response with products data and cache headers
   const response = Response.json(createSuccessResponse(products))

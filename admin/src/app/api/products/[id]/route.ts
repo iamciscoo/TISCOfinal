@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { revalidateTag } from 'next/cache';
 
 export const runtime = 'nodejs';
 
@@ -129,6 +130,42 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
     }
 
+    // Invalidate all relevant caches to ensure frontend reflects changes
+    try {
+      // Core product caches
+      revalidateTag('products')                    // All products listing
+      revalidateTag('featured-products')          // Featured products (if is_featured changed)
+      revalidateTag(`product:${id}`)             // Specific product page
+      
+      // Category-related caches (if categories were updated)
+      if (category_ids || updates.category_id) {
+        revalidateTag('categories')              // Categories list
+        if (updates.category_id) {
+          revalidateTag(`category:${updates.category_id}`)  // Specific category page
+        }
+        if (category_ids) {
+          category_ids.forEach((catId: string) => {
+            revalidateTag(`category:${catId}`)   // Each updated category
+          })
+        }
+      }
+      
+      // Homepage cache (for featured/new products)
+      if (updates.is_featured !== undefined || updates.is_new !== undefined) {
+        revalidateTag('homepage')                // Homepage product sections
+      }
+      
+      // Search and deals caches
+      if (updates.is_deal !== undefined) {
+        revalidateTag('deals')                   // Deals page
+      }
+      
+      console.log('✅ Cache invalidation completed for product:', id)
+    } catch (cacheError) {
+      console.warn('⚠️ Cache invalidation failed (non-fatal):', cacheError)
+      // Don't fail the update if cache invalidation fails
+    }
+
     return NextResponse.json({ data }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
@@ -149,6 +186,21 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       .eq("id", id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    // Invalidate caches after product deletion
+    try {
+      revalidateTag('products')              // All products listing
+      revalidateTag('featured-products')     // Featured products
+      revalidateTag(`product:${id}`)        // Specific product page
+      revalidateTag('categories')           // Categories (in case this was the last product in a category)
+      revalidateTag('homepage')             // Homepage
+      revalidateTag('deals')                // Deals page
+      
+      console.log('✅ Cache invalidation completed for deleted product:', id)
+    } catch (cacheError) {
+      console.warn('⚠️ Cache invalidation failed (non-fatal):', cacheError)
+    }
+    
     return new Response(null, { status: 204 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
