@@ -14,6 +14,7 @@ import { UserButton } from '@/components/auth/UserButton'
 import { useCartStore } from '@/lib/store'
 import { CurrencyToggle } from '@/components/CurrencyToggle'
 import { debounce } from '@/lib/shared-utils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 /**
  * Maximum number of search suggestions to display
@@ -47,6 +48,9 @@ export const Navbar = () => {
   
   // Refs
   const searchRef = useRef<HTMLDivElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef<number>(0)
+  const touchCurrentY = useRef<number>(0)
   
   // cartCount derived via selector above; remains reactive to store changes
 
@@ -130,6 +134,62 @@ export const Navbar = () => {
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false)
   }, [])
+
+  // Touch gesture handlers for mobile menu
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchCurrentY.current = e.touches[0].clientY
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    const swipeDistance = touchStartY.current - touchCurrentY.current
+    // Swipe up to close (negative distance means swipe up)
+    if (swipeDistance < -50) {
+      closeMenu()
+    }
+    touchStartY.current = 0
+    touchCurrentY.current = 0
+  }, [closeMenu])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!isMenuOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        // Check if click is not on the menu button itself
+        const target = event.target as HTMLElement
+        if (!target.closest('[aria-label*="navigation menu"]')) {
+          closeMenu()
+        }
+      }
+    }
+
+    // Small delay to prevent immediate close on menu open
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMenuOpen, closeMenu])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMenuOpen])
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -306,9 +366,30 @@ export const Navbar = () => {
         </div>
 
         {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 animate-in slide-in-from-top-2">
-            <nav className="px-2 pt-2 pb-3 space-y-1" role="navigation">
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              ref={mobileMenuRef}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ 
+                duration: 0.3, 
+                ease: [0.4, 0.0, 0.2, 1] // Smooth easing
+              }}
+              className="md:hidden border-t border-gray-200 overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <motion.nav 
+                className="px-2 pt-2 pb-3 space-y-1"
+                role="navigation"
+                initial={{ y: -20 }}
+                animate={{ y: 0 }}
+                exit={{ y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
               {/* Mobile Search */}
               <div className="relative mb-3">
                 <Input
@@ -382,9 +463,10 @@ export const Navbar = () => {
                   </button>
                 </SignInButton>
               )}
-            </nav>
-          </div>
-        )}
+              </motion.nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </nav>
   )
