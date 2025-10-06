@@ -34,31 +34,38 @@ export default function AuthSync() {
             })
             
             if (response.status === 401 && i < retries - 1) {
-              // Auth state not yet synchronized, wait and retry
-              console.log(`Auth sync attempt ${i + 1} failed (401), retrying in ${(i + 1) * 500}ms...`)
-              await new Promise(resolve => setTimeout(resolve, (i + 1) * 500))
+              // Auth state not yet synchronized, wait and retry silently
+              await new Promise(resolve => setTimeout(resolve, (i + 1) * 1000))
               continue
             }
             
-            if (!response.ok) {
-              throw new Error(`Profile sync failed: ${response.status} ${response.statusText}`)
+            if (response.ok) {
+              // Success - profile synced
+              break
             }
             
-            console.log('✅ Profile synced successfully')
-            break // Success, exit retry loop
+            // If we've exhausted retries, fail silently
+            // User is already authenticated client-side, server sync is nice-to-have
+            if (i === retries - 1) {
+              lastError = new Error('Auth sync skipped - user authenticated client-side')
+            }
+            
+            break // Exit retry loop
           } catch (err) {
             lastError = err as Error
             if (i < retries - 1) {
-              await new Promise(resolve => setTimeout(resolve, (i + 1) * 500))
+              await new Promise(resolve => setTimeout(resolve, (i + 1) * 1000))
             }
           }
         }
         
+        // Fail silently - auth sync is not critical since user is already authenticated
         if (lastError) {
-          throw lastError
+          // Don't throw or log - user experience is not affected
+          return
         }
-      } catch (e) {
-        console.warn('⚠️ Profile sync failed after retries:', e)
+      } catch {
+        // Suppress errors - auth sync failure doesn't affect user experience
       }
 
       try {

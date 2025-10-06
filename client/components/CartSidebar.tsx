@@ -3,7 +3,7 @@
 import React from 'react'
 import { Plus, Minus, ShoppingCart, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCartStore } from '@/lib/store'
@@ -41,6 +41,9 @@ export const CartSidebar = () => {
               <ShoppingCart className="h-5 w-5" />
               Shopping Cart ({totalItems})
             </SheetTitle>
+            <SheetDescription>
+              Review and manage items in your shopping cart
+            </SheetDescription>
           </SheetHeader>
         </div>
 
