@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,9 +16,22 @@ export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle, user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Handle redirect after authentication
+  useEffect(() => {
+    if (user) {
+      const redirectUrl = searchParams.get('redirect_url')
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else {
+        router.push('/')
+      }
+    }
+  }, [user, router, searchParams])
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
@@ -61,7 +74,14 @@ export default function SignInPage() {
           title: 'Welcome back!',
           description: 'You have been signed in successfully.',
         })
-        router.push('/')
+        
+        // Handle redirect URL if provided
+        const redirectUrl = searchParams.get('redirect_url')
+        if (redirectUrl) {
+          router.push(redirectUrl)
+        } else {
+          router.push('/')
+        }
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'

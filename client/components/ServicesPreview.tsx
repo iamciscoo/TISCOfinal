@@ -48,6 +48,7 @@ const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
             fill
             sizes="(min-width: 1024px) 33vw, 100vw"
             className="object-cover transition-transform duration-300 group-hover:scale-110"
+            priority={service.image === "/services/pcbuild.jpeg"}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 

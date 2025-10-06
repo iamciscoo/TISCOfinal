@@ -92,6 +92,7 @@ export function ServicesPromoGrid() {
                   src={card.image}
                   alt={card.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -142,6 +143,7 @@ export function ServicesPromoGrid() {
                 src={card.image}
                 alt={card.title}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
@@ -187,6 +189,7 @@ export function ServicesPromoGrid() {
               src={promoCards[0].image}
               alt={promoCards[0].title}
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Shadow overlay only at bottom */}
@@ -226,6 +229,7 @@ export function ServicesPromoGrid() {
               src={promoCards[1].image}
               alt={promoCards[1].title}
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Shadow overlay only at bottom */}
@@ -268,6 +272,7 @@ export function ServicesPromoGrid() {
                   src={card.image}
                   alt={card.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 {/* Shadow overlay only at bottom - smaller for compact cards */}

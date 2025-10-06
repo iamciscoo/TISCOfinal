@@ -206,6 +206,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                             src={service.image}
                             alt={service.title}
                             fill
+                            sizes="(max-width: 640px) 85vw, (max-width: 1024px) 70vw, 50vw"
                             className="object-cover transition-transform duration-300 hover:scale-110"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -265,6 +266,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                       src={service.image}
                       alt={service.title}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-300 hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -318,6 +320,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 src="/services/customservice.webp"
                 alt="Describe your issue - custom service"
                 fill
+                sizes="100vw"
                 className="object-contain object-center"
                 priority
               />

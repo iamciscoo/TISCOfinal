@@ -31,15 +31,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
 
-  // Simple approach - just use the original onClose but with error checking
+  // Allow modal to close always, but show confirmation for errors if needed
   const handleModalClose = () => {
-    // Only close if no error
-    if (!error && !loading) {
-      resetForm()
-      onClose()
-    } else {
-      console.log('❌ Modal close blocked - error:', !!error, 'loading:', loading)
-    }
+    // Clear any errors and always allow closing
+    setError('')
+    setLoading(false)
+    resetForm()
+    onClose()
   }
 
   // Password validation helpers (same as sign-up page)
@@ -233,17 +231,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           handleModalClose()
         }
       }}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
-        // Prevent closing when clicking outside if form is loading or has errors
-        if (loading || error) {
-          e.preventDefault()
-        }
-      }} onEscapeKeyDown={(e) => {
-        // Prevent closing with Escape key if form is loading or has errors
-        if (loading || error) {
-          e.preventDefault()
-        }
-      }}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
         </DialogHeader>

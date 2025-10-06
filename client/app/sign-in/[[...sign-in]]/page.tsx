@@ -6,7 +6,9 @@ export const metadata: Metadata = {
   description: 'Access your TISCO Market account securely.',
 }
 
-export default function Page() {
-  // Redirect to the new auth sign-in page
-  redirect('/auth/sign-in')
+export default function Page({ searchParams }: { searchParams: { redirect_url?: string } }) {
+  // Preserve redirect URL when redirecting to the proper auth sign-in page
+  const redirectUrl = searchParams?.redirect_url
+  const newPath = redirectUrl ? `/auth/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}` : '/auth/sign-in'
+  redirect(newPath)
 }

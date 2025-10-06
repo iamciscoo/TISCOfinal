@@ -480,14 +480,12 @@ export const Navbar = () => {
 
               {/* Mobile Sign In */}
               {isLoaded && !isSignedIn && (
-                <SignInButton>
-                  <button 
-                    type="button"
-                    className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
-                  >
-                    <User className="h-4 w-4 inline mr-2" />
-                    Sign In
-                  </button>
+                <SignInButton 
+                  className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                  variant="ghost"
+                >
+                  <User className="h-4 w-4 inline mr-2" />
+                  Sign In
                 </SignInButton>
               )}
               </motion.nav>

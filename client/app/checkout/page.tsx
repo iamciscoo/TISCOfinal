@@ -114,10 +114,10 @@ export default function CheckoutPage() {
     }
   }, [mounted, items.length, router])
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated - use proper auth page
   useEffect(() => {
     if (!user) {
-      router.push('/sign-in?redirect_url=/checkout')
+      router.push('/auth/sign-in?redirect_url=/checkout')
     }
   }, [user, router])
 
