@@ -122,7 +122,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" style={{scrollBehavior: 'smooth'}} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Structured Data for Rich Search Results */}
         <OrganizationSchema />
