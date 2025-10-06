@@ -85,14 +85,19 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
 
     try {
       if (mode === 'signin') {
-        const { error } = await signIn(email, password)
+        const { data, error } = await signIn(email, password)
         if (error) throw error
         
-        toast({
-          title: "Success",
-          description: "Signed in successfully!"
-        })
-        onClose()
+        // Only close and show success if sign in was actually successful
+        if (data.user && data.session) {
+          toast({
+            title: "Success",
+            description: "Signed in successfully!"
+          })
+          onClose()
+        } else {
+          throw new Error('Invalid email or password. Please check your credentials and try again.')
+        }
       } else if (mode === 'signup') {
         // Enhanced password validation
         if (password.length < 8) {
@@ -166,14 +171,6 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
-              <div className="flex items-center gap-2">
-                <X className="h-4 w-4 text-red-600 shrink-0" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
 
           {mode === 'signup' && (
             <div className="grid grid-cols-2 gap-4">
@@ -217,6 +214,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               }}
               required
             />
+            {/* Show error below email field for reset mode */}
+            {mode === 'reset' && error && (
+              <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <X className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
           </div>
 
           {mode !== 'reset' && (
@@ -247,6 +251,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   )}
                 </Button>
               </div>
+              {/* Show authentication error below password field for signin mode */}
+              {mode === 'signin' && error && (
+                <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                  <X className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -306,6 +317,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
                 </div>
               )}
+              {/* Show signup errors below confirm password field */}
+              {mode === 'signup' && error && (
+                <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                  <X className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -336,6 +354,14 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                 <FcGoogle className="h-4 w-4 mr-2" />
                 Continue with Google
               </Button>
+              
+              {/* Show Google authentication errors */}
+              {error && error.includes('Google') && (
+                <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                  <X className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
             </>
           )}
 
