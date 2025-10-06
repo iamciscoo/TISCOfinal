@@ -4,7 +4,7 @@ import { cacheInvalidation } from './cache'
 
 // Type for Supabase realtime payload (using actual Supabase types)
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
-type RealtimePayload<T extends Record<string, any> = Record<string, any>> = RealtimePostgresChangesPayload<T>
+type RealtimePayload<T extends Record<string, unknown> = Record<string, unknown>> = RealtimePostgresChangesPayload<T>
 
 // Real-time subscription manager
 class RealtimeManager {

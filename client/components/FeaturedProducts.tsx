@@ -1,7 +1,6 @@
 "use client";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api-client";
 import type { Product } from "@/lib/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
