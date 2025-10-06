@@ -39,11 +39,12 @@ export default function LoginPage() {
         return
       }
       
-      // Success - show success message and redirect
+      // Success - redirect immediately for better UX
       setSuccess('You have successfully logged in! Redirecting to dashboard...')
-      setTimeout(() => {
+      // Use requestAnimationFrame for smooth transition without blocking
+      requestAnimationFrame(() => {
         router.push('/')
-      }, 1500)
+      })
     } catch {
       setError('An error occurred during authentication. Please try again.')
     } finally {

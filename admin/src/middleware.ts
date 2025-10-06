@@ -59,8 +59,8 @@ function checkIpAllowlist(req: NextRequest): boolean {
 }
 
 function rateLimitApi(req: NextRequest): NextResponse | null {
-  // Simple cookie-based sliding window limiter (best-effort)
-  // 60 requests per 60 seconds per client (approximate)
+  // **PERFORMANCE FIX: Increased rate limit for better admin responsiveness**
+  // 120 requests per 60 seconds per client (doubled for admin operations)
   const now = Date.now()
   const key = 'api-rl'
   const cookie = req.cookies.get(key)?.value
@@ -83,11 +83,11 @@ function rateLimitApi(req: NextRequest): NextResponse | null {
     count = 0
   }
   count += 1
-  if (count > 60) {
+  if (count > 120) {
     return new NextResponse('Too Many Requests', { status: 429 })
   }
   const res = NextResponse.next()
-  res.cookies.set(key, `${start}:${count}`, { path: '/', sameSite: 'lax' })
+  res.cookies.set(key, `${start}:${count}`, { path: '/', sameSite: 'lax', httpOnly: true })
   return res
 }
 

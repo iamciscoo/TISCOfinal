@@ -48,6 +48,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [categories, setCategories] = useState<Category[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [images, setImages] = useState<ProductImage[]>([]);
   const [id, setId] = useState<string>('');
   const { toast } = useToast();
@@ -87,6 +88,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const handleUploadImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    setImageLoading(true);
     try {
       const formData = new FormData();
       formData.append('productId', id);
@@ -101,10 +103,13 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       toast({ title: 'Images uploaded', description: 'Gallery updated.' });
     } catch (e: any) {
       toast({ title: 'Upload failed', description: e?.message || 'Could not upload images', variant: 'destructive' });
+    } finally {
+      setImageLoading(false);
     }
   };
 
   const handleSetMain = async (imageId: string) => {
+    setImageLoading(true);
     try {
       const res = await fetch(`/api/product-images/${imageId}`, {
         method: 'PATCH',
@@ -118,6 +123,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       await reloadProduct();
     } catch (e: any) {
       toast({ title: 'Action failed', description: e?.message || 'Could not set main image', variant: 'destructive' });
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -127,6 +134,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       return;
     }
     
+    setImageLoading(true);
     try {
       const res = await fetch(`/api/product-images/${imageId}`, { method: 'DELETE' });
       
@@ -138,6 +146,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       toast({ title: 'Success', description: 'Image deleted successfully' });
     } catch (e: any) {
       toast({ title: 'Delete failed', description: e?.message || 'Could not delete image', variant: 'destructive' });
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -149,14 +159,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     if (swapIdx < 0 || swapIdx >= sorted.length) return;
     const a = sorted[idx];
     const b = sorted[swapIdx];
+    
+    setImageLoading(true);
     try {
-      // swap sort_order between a and b
-      const res1 = await fetch(`/api/product-images/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: b.sort_order }) });
-      const res2 = await fetch(`/api/product-images/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: a.sort_order }) });
+      // PERFORMANCE FIX: Make API calls in parallel instead of sequential
+      const [res1, res2] = await Promise.all([
+        fetch(`/api/product-images/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: b.sort_order }) }),
+        fetch(`/api/product-images/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: a.sort_order }) })
+      ]);
       if (!res1.ok || !res2.ok) throw new Error('Failed to reorder');
       await reloadProduct();
     } catch (e: any) {
       toast({ title: 'Reorder failed', description: e?.message || 'Could not reorder images', variant: 'destructive' });
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -214,7 +230,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     fetchCategories();
     if (id) fetchProduct();
-  }, [id, toast, form]);
+  }, [id, toast]);
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);

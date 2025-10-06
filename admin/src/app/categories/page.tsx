@@ -5,6 +5,10 @@ import { Category } from "@/lib/types";
 import Link from "next/link";
 import { getCategories } from "@/lib/database";
 
+// **PERFORMANCE FIX: Disable caching for real-time admin updates**
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getData(): Promise<Category[]> {
   try {
     const categories = await getCategories();

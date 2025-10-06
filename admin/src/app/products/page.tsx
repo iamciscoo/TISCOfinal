@@ -2,6 +2,10 @@ import { Product, columns } from "./columns";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { getProducts } from "@/lib/database";
 
+// **PERFORMANCE FIX: Disable caching for real-time admin updates**
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const getData = async (): Promise<Product[]> => {
   try {
     const products = await getProducts();
