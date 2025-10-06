@@ -94,7 +94,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     setLoading(true)
     setError('')
     
-    console.log('🔐 Sign-in attempt started...')
+    // CRITICAL: Force this log to appear - timestamp to verify code is loading
+    console.log('🔐🔐🔐 SIGN-IN ATTEMPT STARTED - Build timestamp:', new Date().toISOString())
+    console.log('MODE:', mode, 'EMAIL:', email, 'HAS PASSWORD:', !!password)
 
     try {
       if (mode === 'signin') {
@@ -111,9 +113,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         
         // Check for authentication errors first
         if (error) {
-          console.error('❌ Sign-in error detected:', error)
+          console.error('❌❌❌ SIGN-IN ERROR DETECTED:', error)
+          console.error('ERROR MESSAGE:', error.message)
+          console.error('SETTING LOADING TO FALSE AND ERROR STATE')
           setLoading(false) // Stop loading immediately
-          throw new Error(error.message || 'Invalid email or password. Please check your credentials and try again.')
+          setError(error.message || 'Invalid email or password. Please check your credentials and try again.')
+          // DO NOT throw - just return to keep modal open
+          return
         }
         
         // Verify we have valid session data before considering it successful
