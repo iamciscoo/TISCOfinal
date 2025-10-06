@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { formatToEAT } from '@/lib/utils'
 import { CartSidebar } from '@/components/CartSidebar'
 import { useCurrency } from '@/lib/currency-context'
 import { LoadingSpinner } from '@/components/shared'
@@ -296,7 +297,7 @@ function OrdersContent() {
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm text-gray-600 mb-4">
                         <div>
-                          <span className="font-medium">Date:</span> {new Date(order.created_at).toLocaleDateString()}
+                          <span className="font-medium">Date:</span> {formatToEAT(order.created_at, { dateStyle: 'medium', includeTime: false })}
                         </div>
                         <div>
                           <span className="font-medium">Total:</span> {formatPrice(order.total_amount ?? 0)}

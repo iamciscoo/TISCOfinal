@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import { formatToEAT } from '@/lib/utils'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -208,7 +209,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               <CardContent className="space-y-3 text-xs sm:text-sm text-gray-700">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="truncate"><span className="font-medium">Order ID:</span> <span className="text-xs">{order.id}</span></div>
-                  <div><span className="font-medium">Placed on:</span> {new Date(order.created_at).toLocaleString()}</div>
+                  <div><span className="font-medium">Placed on:</span> {formatToEAT(order.created_at)}</div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Payment:</span> 
                     <Badge 

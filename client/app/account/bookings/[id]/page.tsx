@@ -20,6 +20,7 @@ import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { createClient } from '@supabase/supabase-js'
+import { formatToEAT } from '@/lib/utils'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -369,7 +370,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                   <div>
                     <label className="text-sm font-medium text-gray-700">Preferred Date</label>
                     <p className="text-gray-900 mt-1">
-                      {booking.preferred_date ? new Date(booking.preferred_date).toLocaleDateString() : 'Not specified'}
+                      {booking.preferred_date ? formatToEAT(booking.preferred_date, { includeTime: false, dateStyle: 'medium' }) : 'Not specified'}
                     </p>
                   </div>
                   <div>
@@ -382,7 +383,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">Scheduled Appointment</h4>
                     <p className="text-blue-800">
-                      {new Date(scheduledDateTime).toLocaleString()}
+                      {formatToEAT(scheduledDateTime)}
                     </p>
                   </div>
                 )}
@@ -505,7 +506,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                     <div>
                       <p className="text-sm font-medium">Booking Created</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(booking.created_at).toLocaleString()}
+                        {formatToEAT(booking.created_at)}
                       </p>
                     </div>
                   </div>
@@ -516,7 +517,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                       <div>
                         <p className="text-sm font-medium">Last Updated</p>
                         <p className="text-xs text-gray-500">
-                          {new Date(booking.updated_at).toLocaleString()}
+                          {formatToEAT(booking.updated_at)}
                         </p>
                       </div>
                     </div>

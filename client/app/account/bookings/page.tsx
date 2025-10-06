@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import { formatToEAT } from '@/lib/utils'
 import { CartSidebar } from '@/components/CartSidebar'
 import { LoadingSpinner } from '@/components/shared'
 
@@ -270,7 +271,7 @@ export default function BookingsPage() {
                             <span className="font-medium">Duration:</span> {booking.services?.duration || 'N/A'}
                           </div>
                           <div>
-                            <span className="font-medium">Preferred Date:</span> {new Date(booking.preferred_date).toLocaleDateString()}
+                            <span className="font-medium">Preferred Date:</span> {formatToEAT(booking.preferred_date, { includeTime: false, dateStyle: 'medium' })}
                           </div>
                           <div>
                             <span className="font-medium">Preferred Time:</span> {booking.preferred_time}
@@ -284,7 +285,7 @@ export default function BookingsPage() {
 
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <div className="text-xs text-gray-500">
-                            Booked on {new Date(booking.created_at).toLocaleDateString()}
+                            Booked on {formatToEAT(booking.created_at, { includeTime: false, dateStyle: 'medium' })}
                           </div>
                           <div className="flex items-center gap-2">
                             <Link href={`/account/bookings/${booking.id}`} className="w-full sm:w-auto">
