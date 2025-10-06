@@ -22,7 +22,7 @@ export default function AuthSync() {
       try {
         // 1) Ensure profile exists/updated in local DB
         // Add retry logic for auth state synchronization
-        let retries = 3
+        const retries = 3
         let lastError: Error | null = null
         
         for (let i = 0; i < retries; i++) {
