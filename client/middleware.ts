@@ -46,6 +46,7 @@ const publicRoutes = [
   '/api/payments',
   '/api/notifications',
   '/api/admin',
+  '/api/auth/sync', // Auth sync endpoint should be accessible to authenticated users
 ]
 
 // Check if route is public
@@ -149,8 +150,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Allow webhooks to pass through without auth
-  if (pathname.startsWith('/api/payments/webhooks') || pathname.startsWith('/api/webhooks')) {
+  // Allow webhooks and auth endpoints to pass through without middleware auth check
+  if (pathname.startsWith('/api/payments/webhooks') || 
+      pathname.startsWith('/api/webhooks') ||
+      pathname.startsWith('/api/auth/')) {
+    console.log('🎯 Bypassing middleware auth for:', pathname)
     return response
   }
 
@@ -168,16 +172,27 @@ export async function middleware(request: NextRequest) {
   // For protected routes, check authentication
   try {
     console.log('🛡️ Middleware checking auth for:', pathname)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    console.log('🔍 Auth check result:', { 
+    // Try to get session first, then user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log('🔑 Session check:', { hasSession: !!session, sessionError: sessionError?.message })
+    
+    // If we have a session, verify the user
+    let user = session?.user || null
+    if (!user && session) {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+      user = authUser
+      console.log('👤 User from getUser():', { hasUser: !!user, userError: userError?.message })
+    }
+    
+    console.log('🔍 Final auth result:', { 
       hasUser: !!user, 
-      userEmail: user?.email, 
-      authError: authError?.message 
+      userEmail: user?.email,
+      hasSession: !!session
     })
 
     if (!user) {
-      console.log('❌ No user found, redirecting to sign-in')
+      console.log('❌ No user found, blocking access to:', pathname)
       // Redirect to sign in for protected pages
       if (!pathname.startsWith('/api/')) {
         const redirectUrl = new URL('/auth/sign-in', request.url)
