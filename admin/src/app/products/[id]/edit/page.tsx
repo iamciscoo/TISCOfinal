@@ -206,15 +206,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           String(productCat.categories?.id || '')
         ).filter(Boolean) || [];
         
+        // **FIX: Explicitly convert booleans to ensure checkbox state persists**
         form.reset({
           name: json.data.name || "",
           description: json.data.description || "",
           price: json.data.price || 0,
           category_ids: categoryIds,
           stock_quantity: json.data.stock_quantity || 0,
-          is_featured: json.data.is_featured || false,
-          is_new: json.data.is_new || false,
-          is_deal: json.data.is_deal || false,
+          is_featured: Boolean(json.data.is_featured),
+          is_new: Boolean(json.data.is_new),
+          is_deal: Boolean(json.data.is_deal),
           original_price: json.data.original_price || 0,
           deal_price: json.data.deal_price || 0,
         });
@@ -508,7 +509,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={Boolean(field.value)}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
@@ -526,7 +527,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={Boolean(field.value)}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
@@ -544,7 +545,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={Boolean(field.value)}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
