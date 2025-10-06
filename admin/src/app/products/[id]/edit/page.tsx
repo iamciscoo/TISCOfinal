@@ -206,7 +206,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           String(productCat.categories?.id || '')
         ).filter(Boolean) || [];
         
-        // **FIX: Explicitly convert booleans to ensure checkbox state persists**
+        // **FIX: Explicitly convert booleans to ensure checkbox state persists**  
         form.reset({
           name: json.data.name || "",
           description: json.data.description || "",
