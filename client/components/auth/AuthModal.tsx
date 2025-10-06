@@ -27,21 +27,18 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [blockClose, setBlockClose] = useState(false)
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
 
-  // Simple: If there's an error, block ALL closing
-  const shouldClose = !error && !loading && !blockClose
-
-  // Override the onClose function completely
+  // Simple approach - just use the original onClose but with error checking
   const handleModalClose = () => {
-    if (shouldClose) {
+    // Only close if no error
+    if (!error && !loading) {
       resetForm()
       onClose()
     } else {
-      console.log('BLOCKED: Modal close attempt blocked due to error or loading state')
+      console.log('❌ Modal close blocked - error:', !!error, 'loading:', loading)
     }
   }
 
@@ -65,7 +62,6 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const clearError = () => {
     if (error) {
       setError('')
-      setBlockClose(false) // Allow closing again when user starts typing
     }
   }
 
@@ -89,6 +85,15 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       onClose()
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to sign in with Google"
+      
+      // Show user-friendly toast for Google sign-in errors
+      toast({
+        title: "Google sign-in issue",
+        description: "There was a problem signing in with Google. Please try again or use email/password.",
+        variant: "default",
+        duration: 6000,
+      })
+      
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -120,13 +125,19 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         // Check for authentication errors first
         if (error) {
           console.error('❌❌❌ SIGN-IN ERROR DETECTED:', error)
-          console.error('ERROR MESSAGE:', error.message)
-          console.error('SETTING LOADING TO FALSE AND ERROR STATE')
           setLoading(false) // Stop loading immediately
-          setBlockClose(true) // FORCE modal to stay open
+          
+          // Show user-friendly toast notification for the error
+          toast({
+            title: "Oops! Check your credentials",
+            description: "The email or password you entered is incorrect. Please double-check and try again.",
+            variant: "default", // Use white background instead of red
+            duration: 6000, // Show longer for mobile users
+          })
+          
+          // Also set inline error for modal display
           setError(error.message || 'Invalid email or password. Please check your credentials and try again.')
-          console.log('MODAL IS NOW BLOCKED FROM CLOSING')
-          // DO NOT throw - just return to keep modal open
+          console.log('🔒 Error shown via toast and inline - modal should stay open')
           return
         }
         
@@ -213,13 +224,15 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      console.log('🚪 Dialog onOpenChange triggered:', { open, loading, error, shouldClose })
-      // Use our custom close handler that respects the shouldClose flag
-      if (!open) {
-        handleModalClose()
-      }
-    }}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        console.log('🚪 Dialog onOpenChange triggered:', { open, isOpen, loading, error: !!error })
+        // Use our handleModalClose which checks for errors
+        if (!open) {
+          handleModalClose()
+        }
+      }}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
         // Prevent closing when clicking outside if form is loading or has errors
         if (loading || error) {
