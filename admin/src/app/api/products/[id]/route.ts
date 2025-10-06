@@ -38,7 +38,16 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ data }, { status: 200 });
+    
+    // **NO-CACHE HEADERS: Prevent browser/CDN caching for real-time updates**
+    return NextResponse.json({ data }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });

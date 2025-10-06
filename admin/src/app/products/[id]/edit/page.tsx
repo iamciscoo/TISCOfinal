@@ -77,7 +77,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   // Gallery helpers
   const reloadProduct = async () => {
     try {
-      const res = await fetch(`/api/products/${id}`);
+      const res = await fetch(`/api/products/${id}`, { cache: 'no-store' });
       const json = await res.json();
       if (res.ok) {
         setProduct(json.data);
@@ -179,7 +179,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch("/api/categories");
+        const res = await fetch("/api/categories", { cache: 'no-store' });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || "Failed to load categories");
         setCategories(json.data || []);
@@ -195,7 +195,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`/api/products/${id}`);
+        const res = await fetch(`/api/products/${id}`, { cache: 'no-store' });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || "Failed to load product");
         setProduct(json.data);
