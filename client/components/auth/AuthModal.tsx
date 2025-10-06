@@ -86,18 +86,24 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     try {
       if (mode === 'signin') {
         const { data, error } = await signIn(email, password)
-        if (error) throw error
         
-        // Only close and show success if sign in was actually successful
-        if (data.user && data.session) {
-          toast({
-            title: "Success",
-            description: "Signed in successfully!"
-          })
-          onClose()
-        } else {
+        // Check for authentication errors first
+        if (error) {
+          console.error('Sign-in error:', error)
+          throw new Error(error.message || 'Invalid email or password. Please check your credentials and try again.')
+        }
+        
+        // Verify we have valid session data before considering it successful
+        if (!data.user || !data.session) {
           throw new Error('Invalid email or password. Please check your credentials and try again.')
         }
+        
+        // Only close and show success if sign in was actually successful
+        toast({
+          title: "Success",
+          description: "Signed in successfully!"
+        })
+        onClose()
       } else if (mode === 'signup') {
         // Enhanced password validation
         if (password.length < 8) {
@@ -140,7 +146,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      console.error('Authentication error caught:', errorMessage)
       setError(errorMessage)
+      // DO NOT call onClose() here - keep modal open to show error
     } finally {
       setLoading(false)
     }
