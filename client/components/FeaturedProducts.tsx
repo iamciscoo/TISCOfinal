@@ -8,20 +8,48 @@ import { useEffect, useState } from "react";
 
 export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        const data = await api.getFeaturedProducts(9);
+        // **PERFORMANCE FIX: Add cache-busting for real-time updates**
+        // Fetch directly from API with no-cache header to bypass browser cache
+        const timestamp = Date.now();
+        const response = await fetch(`/api/products/featured?limit=9&_t=${timestamp}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch featured products');
+        }
+        
+        const result = await response.json();
+        const data = result.data || result;
+        
         if (isMounted) setProducts(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error("Failed to load featured products", e);
+        if (isMounted) setProducts([]);
       }
     })();
     return () => {
       isMounted = false;
     };
+  }, [refreshKey]);
+
+  // Refresh products when window gains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   return (
