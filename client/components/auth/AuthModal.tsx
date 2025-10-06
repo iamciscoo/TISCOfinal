@@ -26,6 +26,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
@@ -44,6 +45,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     setFirstName('')
     setLastName('')
     setShowPassword(false)
+    setError('')
+  }
+
+  const clearError = () => {
+    if (error) setError('')
   }
 
   const handleClose = () => {
@@ -53,6 +59,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
 
   const handleGoogleLogin = async () => {
     setLoading(true)
+    setError('')
     try {
       const { error } = await signInWithGoogle()
       
@@ -65,11 +72,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       onClose()
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to sign in with Google"
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      })
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -78,6 +81,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
       if (mode === 'signin') {
@@ -131,11 +135,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive'
-      })
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -166,6 +166,15 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+              <div className="flex items-center gap-2">
+                <X className="h-4 w-4 text-red-600 shrink-0" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
           {mode === 'signup' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -174,7 +183,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   id="firstName"
                   type="text"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => {
+                    setFirstName(e.target.value)
+                    clearError()
+                  }}
                   required
                 />
               </div>
@@ -184,7 +196,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   id="lastName"
                   type="text"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => {
+                    setLastName(e.target.value)
+                    clearError()
+                  }}
                 />
               </div>
             </div>
@@ -196,7 +211,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                clearError()
+              }}
               required
             />
           </div>
@@ -209,7 +227,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    clearError()
+                  }}
                   required
                 />
                 <Button
@@ -258,7 +279,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value)
+                    clearError()
+                  }}
                   required
                   className="pr-10"
                 />
