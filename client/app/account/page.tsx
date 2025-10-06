@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -65,7 +64,6 @@ type ServiceBooking = {
 export default function AccountDashboard() {
   const { user, loading: authLoading } = useAuth()
   const isLoaded = !authLoading
-  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [bookings, setBookings] = useState<ServiceBooking[]>([])
   const [bookingsLoading, setBookingsLoading] = useState(true)

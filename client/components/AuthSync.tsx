@@ -21,14 +21,44 @@ export default function AuthSync() {
     const run = async () => {
       try {
         // 1) Ensure profile exists/updated in local DB
-        await fetch('/api/auth/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sync_profile' })
-        })
-        // Profile sync completed via API - no client-side updates needed
+        // Add retry logic for auth state synchronization
+        let retries = 3
+        let lastError: Error | null = null
+        
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await fetch('/api/auth/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'sync_profile' })
+            })
+            
+            if (response.status === 401 && i < retries - 1) {
+              // Auth state not yet synchronized, wait and retry
+              console.log(`Auth sync attempt ${i + 1} failed (401), retrying in ${(i + 1) * 500}ms...`)
+              await new Promise(resolve => setTimeout(resolve, (i + 1) * 500))
+              continue
+            }
+            
+            if (!response.ok) {
+              throw new Error(`Profile sync failed: ${response.status} ${response.statusText}`)
+            }
+            
+            console.log('✅ Profile synced successfully')
+            break // Success, exit retry loop
+          } catch (err) {
+            lastError = err as Error
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, (i + 1) * 500))
+            }
+          }
+        }
+        
+        if (lastError) {
+          throw lastError
+        }
       } catch (e) {
-        console.warn('Profile sync failed', e)
+        console.warn('⚠️ Profile sync failed after retries:', e)
       }
 
       try {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -56,7 +55,6 @@ type ServiceBooking = {
 export default function BookingsPage() {
   const { user, loading } = useAuth()
   const isLoaded = !loading
-  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [bookings, setBookings] = useState<ServiceBooking[]>([])

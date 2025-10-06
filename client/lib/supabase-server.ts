@@ -90,25 +90,14 @@ export const getUser = async (retries = 2): Promise<User | null> => {
       const supabase = await createClient()
       
       // First try to get session, then user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      console.log('🔐 Server getUser() - Session check:', { 
-        hasSession: !!session, 
-        sessionError: sessionError?.message,
-        userEmail: session?.user?.email 
-      })
+      const { data: { session } } = await supabase.auth.getSession()
       
       if (session?.user) {
-        console.log('✅ Server getUser() - User found via session:', session.user.email)
         return session.user
       }
       
       // Fallback to getUser()
       const { data: { user }, error } = await supabase.auth.getUser()
-      console.log('🔍 Server getUser() - Fallback getUser():', { 
-        hasUser: !!user, 
-        userEmail: user?.email,
-        error: error?.message 
-      })
       
       if (error) {
         // If it's a retryable error and we have attempts left
@@ -117,7 +106,7 @@ export const getUser = async (retries = 2): Promise<User | null> => {
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
           continue
         }
-        console.error('❌ Auth error in getUser:', error)
+        console.error('Auth error in getUser:', error)
         return null
       }
       

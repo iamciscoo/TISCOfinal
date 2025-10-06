@@ -158,45 +158,29 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/payments/webhooks') || 
       pathname.startsWith('/api/webhooks') ||
       pathname.startsWith('/api/auth/')) {
-    console.log('🎯 Bypassing middleware auth for:', pathname)
     return response
   }
 
   // Check if route is public
   const isPublic = isPublicRoute(pathname)
-  console.log('🌐 Route check:', { pathname, isPublic })
   
   if (isPublic) {
-    console.log('✅ Public route, allowing access:', pathname)
     return response
   }
-  
-  console.log('🔒 Protected route detected:', pathname)
 
   // For protected routes, check authentication
   try {
-    console.log('🛡️ Middleware checking auth for:', pathname)
-    
     // Try to get session first, then user
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    console.log('🔑 Session check:', { hasSession: !!session, sessionError: sessionError?.message })
+    const { data: { session } } = await supabase.auth.getSession()
     
     // If we have a session, verify the user
     let user = session?.user || null
     if (!user && session) {
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       user = authUser
-      console.log('👤 User from getUser():', { hasUser: !!user, userError: userError?.message })
     }
-    
-    console.log('🔍 Final auth result:', { 
-      hasUser: !!user, 
-      userEmail: user?.email,
-      hasSession: !!session
-    })
 
     if (!user) {
-      console.log('❌ No user found, blocking access to:', pathname)
       // Redirect to sign in for protected pages
       if (!pathname.startsWith('/api/')) {
         const redirectUrl = new URL('/auth/sign-in', request.url)
@@ -210,8 +194,6 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       )
     }
-    
-    console.log('✅ User authenticated, allowing access to:', pathname)
   } catch (error) {
     console.error('Auth error in middleware:', error)
     

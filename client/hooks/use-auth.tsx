@@ -134,14 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
      */
     const getInitialSession = async () => {
       try {
-        console.log('🔍 Checking for existing session...')
         // Retrieve session from Supabase (checks stored tokens)
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('❌ Error getting initial session:', error)
-        } else {
-          console.log('📋 Initial session check:', !!session, session?.user?.email)
+          console.error('Error getting initial session:', error)
         }
         
         // Update component state with retrieved session data
@@ -149,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         setUser(session?.user ?? null)        // Extract user data from session
         setLoading(false)                      // Authentication check complete
       } catch (error) {
-        console.error('❌ Failed to get initial session:', error)
+        console.error('Failed to get initial session:', error)
         setLoading(false)                      // Clear loading even on error
       }
     }
@@ -168,8 +165,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
      */
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        console.log('🔐 Auth state change:', event, 'Session exists:', !!session, 'User exists:', !!session?.user)
-        
         // Update component state with new session data
         setSession(session)                  // Update session (may be null on signout)
         setUser(session?.user ?? null)      // Update user data (may be null on signout)
@@ -177,14 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
         // Handle explicit sign out events
         if (event === 'SIGNED_OUT') {
-          console.log('🚪 User signed out - clearing auth state')
           setUser(null)                      // Clear user data
           setSession(null)                   // Clear session data
           // Note: Component state is already updated above, this is for clarity
-        } else if (event === 'SIGNED_IN') {
-          console.log('✅ User signed in successfully:', session?.user?.email)
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Token refreshed for user:', session?.user?.email)
         }
       }
     )
