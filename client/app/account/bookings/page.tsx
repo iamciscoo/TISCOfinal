@@ -87,12 +87,8 @@ export default function BookingsPage() {
     }
   }
 
-  // Client-side redirect when not signed in to prevent hook-order mismatch
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.replace('/auth/sign-in?redirect_url=/account/bookings')
-    }
-  }, [isLoaded, user, router])
+  // Let middleware handle authentication redirect
+  // Removed client-side auth check to prevent redirect loops
 
   if (!isLoaded) {
     return (

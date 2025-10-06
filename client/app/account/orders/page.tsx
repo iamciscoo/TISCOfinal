@@ -106,12 +106,8 @@ function OrdersContent() {
     }
   }, [searchParams])
 
-  // Client-side redirect to sign-in when not authenticated
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.replace('/auth/sign-in?redirect_url=/account/orders')
-    }
-  }, [isLoaded, user, router])
+  // Let middleware handle authentication redirect
+  // Removed client-side auth check to prevent redirect loops
 
   if (!isLoaded) {
     return (

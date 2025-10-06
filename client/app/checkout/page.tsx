@@ -114,12 +114,8 @@ export default function CheckoutPage() {
     }
   }, [mounted, items.length, router])
 
-  // Redirect if not authenticated - use proper auth page
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/sign-in?redirect_url=/checkout')
-    }
-  }, [user, router])
+  // Let middleware handle authentication redirect
+  // Removed client-side auth check to prevent redirect loops
 
   // Autofill detection - check for autofilled values periodically and on events
   useEffect(() => {

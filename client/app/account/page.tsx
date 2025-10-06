@@ -81,12 +81,8 @@ export default function AccountDashboard() {
     fetchBookings()
   }, [])
 
-  // Client-side redirect to avoid hook-order mismatches in client components
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.replace('/auth/sign-in?redirect_url=/account')
-    }
-  }, [isLoaded, user, router])
+  // Let middleware handle authentication redirect
+  // Removed client-side auth check to prevent redirect loops
 
   const fetchOrders = async () => {
     try {

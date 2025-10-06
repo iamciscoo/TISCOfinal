@@ -19,6 +19,8 @@ const publicRoutes = [
   '/auth',
   '/cart', // Cart should be accessible without auth
   '/search', // Search should be accessible
+  '/checkout', // Let page handle auth UI
+  '/account', // Let page handle auth UI
   '/terms',
   '/privacy',
   '/cookies',
@@ -47,6 +49,8 @@ const publicRoutes = [
   '/api/notifications',
   '/api/admin',
   '/api/auth/sync', // Auth sync endpoint should be accessible to authenticated users
+  '/api/orders', // Let API handle auth check
+  '/api/auth', // Auth endpoints should be accessible
 ]
 
 // Check if route is public
