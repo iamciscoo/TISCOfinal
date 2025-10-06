@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,9 +27,20 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [shouldStayOpen, setShouldStayOpen] = useState(false)
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
+
+  // Force modal to stay open when there's an error
+  useEffect(() => {
+    if (error) {
+      setShouldStayOpen(true)
+      console.log('🔒 FORCING MODAL TO STAY OPEN - Error detected:', error)
+    } else {
+      setShouldStayOpen(false)
+    }
+  }, [error])
 
   // Password validation helpers (same as sign-up page)
   const isPasswordValid = password.length >= 8
@@ -189,9 +200,13 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      // Only close if the dialog is being set to closed AND not during a form submission
-      if (!open && !loading) {
+      console.log('🚪 Dialog onOpenChange triggered:', { open, loading, error, shouldStayOpen })
+      // Only close if explicitly requested AND not loading AND no error AND not forced to stay open
+      if (!open && !loading && !error && !shouldStayOpen) {
+        console.log('✅ Allowing dialog to close')
         handleClose()
+      } else if (!open) {
+        console.log('❌ BLOCKING dialog close - loading:', loading, 'error:', !!error, 'shouldStayOpen:', shouldStayOpen)
       }
     }}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
