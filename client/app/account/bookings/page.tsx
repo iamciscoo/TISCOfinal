@@ -90,7 +90,7 @@ export default function BookingsPage() {
   // Client-side redirect when not signed in to prevent hook-order mismatch
   useEffect(() => {
     if (isLoaded && !user) {
-      router.replace('/sign-in?redirect_url=/account/bookings')
+      router.replace('/auth/sign-in?redirect_url=/account/bookings')
     }
   }, [isLoaded, user, router])
 

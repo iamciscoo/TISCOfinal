@@ -84,7 +84,7 @@ export default function AccountDashboard() {
   // Client-side redirect to avoid hook-order mismatches in client components
   useEffect(() => {
     if (isLoaded && !user) {
-      router.replace('/sign-in?redirect_url=/account')
+      router.replace('/auth/sign-in?redirect_url=/account')
     }
   }, [isLoaded, user, router])
 

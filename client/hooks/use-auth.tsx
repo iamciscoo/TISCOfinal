@@ -133,13 +133,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
      * (localStorage/sessionStorage) and update component state.
      */
     const getInitialSession = async () => {
-      // Retrieve session from Supabase (checks stored tokens)
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      // Update component state with retrieved session data
-      setSession(session)                    // Set session data (tokens, metadata)
-      setUser(session?.user ?? null)        // Extract user data from session
-      setLoading(false)                      // Authentication check complete
+      try {
+        console.log('🔍 Checking for existing session...')
+        // Retrieve session from Supabase (checks stored tokens)
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('❌ Error getting initial session:', error)
+        } else {
+          console.log('📋 Initial session check:', !!session, session?.user?.email)
+        }
+        
+        // Update component state with retrieved session data
+        setSession(session)                    // Set session data (tokens, metadata)
+        setUser(session?.user ?? null)        // Extract user data from session
+        setLoading(false)                      // Authentication check complete
+      } catch (error) {
+        console.error('❌ Failed to get initial session:', error)
+        setLoading(false)                      // Clear loading even on error
+      }
     }
 
     // Execute initial session recovery
@@ -156,6 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
      */
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        console.log('🔐 Auth state change:', event, 'Session exists:', !!session, 'User exists:', !!session?.user)
+        
         // Update component state with new session data
         setSession(session)                  // Update session (may be null on signout)
         setUser(session?.user ?? null)      // Update user data (may be null on signout)
@@ -163,9 +177,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
         // Handle explicit sign out events
         if (event === 'SIGNED_OUT') {
+          console.log('🚪 User signed out - clearing auth state')
           setUser(null)                      // Clear user data
           setSession(null)                   // Clear session data
           // Note: Component state is already updated above, this is for clarity
+        } else if (event === 'SIGNED_IN') {
+          console.log('✅ User signed in successfully:', session?.user?.email)
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('🔄 Token refreshed for user:', session?.user?.email)
         }
       }
     )
@@ -189,9 +208,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     try {
       // Attempt authentication with Supabase
       const result = await supabase.auth.signInWithPassword({ email, password })
+      
+      // If successful, the loading state will be updated by the auth state change listener
+      // If failed, we need to clear loading state here
+      if (result.error) {
+        setLoading(false)
+      }
+      
       return result // Return authentication result (success or error)
-    } finally {
-      setLoading(false) // Always clear loading state
+    } catch (error) {
+      setLoading(false) // Clear loading state on error
+      throw error
     }
   }
 
@@ -242,9 +269,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         }
       }
       
+      // If there's an error, clear loading state immediately
+      if (result.error) {
+        setLoading(false)
+      }
+      
       return result // Return registration result
-    } finally {
-      setLoading(false) // Always clear loading state
+    } catch (error) {
+      setLoading(false) // Clear loading state on error
+      throw error
     }
   }
 
@@ -350,7 +383,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
    * @returns Promise<OAuthResponse> - OAuth authentication result with redirect URL
    */
   const handleSignInWithGoogle = async (): Promise<OAuthResponse> => {
-    return await signInWithGoogle()
+    setLoading(true) // Show loading state during OAuth
+    try {
+      const result = await signInWithGoogle()
+      // OAuth will redirect, so loading state will be cleared by page navigation
+      // or by the auth state change listener when user returns
+      return result
+    } catch (error) {
+      setLoading(false) // Clear loading state on error
+      throw error
+    }
   }
 
   const value = {
