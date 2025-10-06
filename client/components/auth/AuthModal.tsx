@@ -27,20 +27,23 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [shouldStayOpen, setShouldStayOpen] = useState(false)
+  const [blockClose, setBlockClose] = useState(false)
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
 
-  // Force modal to stay open when there's an error
-  useEffect(() => {
-    if (error) {
-      setShouldStayOpen(true)
-      console.log('🔒 FORCING MODAL TO STAY OPEN - Error detected:', error)
+  // Simple: If there's an error, block ALL closing
+  const shouldClose = !error && !loading && !blockClose
+
+  // Override the onClose function completely
+  const handleModalClose = () => {
+    if (shouldClose) {
+      resetForm()
+      onClose()
     } else {
-      setShouldStayOpen(false)
+      console.log('BLOCKED: Modal close attempt blocked due to error or loading state')
     }
-  }, [error])
+  }
 
   // Password validation helpers (same as sign-up page)
   const isPasswordValid = password.length >= 8
@@ -60,12 +63,15 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   }
 
   const clearError = () => {
-    if (error) setError('')
+    if (error) {
+      setError('')
+      setBlockClose(false) // Allow closing again when user starts typing
+    }
   }
 
+  // Legacy function - now just calls handleModalClose
   const handleClose = () => {
-    resetForm()
-    onClose()
+    handleModalClose()
   }
 
   const handleGoogleLogin = async () => {
@@ -117,7 +123,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           console.error('ERROR MESSAGE:', error.message)
           console.error('SETTING LOADING TO FALSE AND ERROR STATE')
           setLoading(false) // Stop loading immediately
+          setBlockClose(true) // FORCE modal to stay open
           setError(error.message || 'Invalid email or password. Please check your credentials and try again.')
+          console.log('MODAL IS NOW BLOCKED FROM CLOSING')
           // DO NOT throw - just return to keep modal open
           return
         }
@@ -206,13 +214,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      console.log('🚪 Dialog onOpenChange triggered:', { open, loading, error, shouldStayOpen })
-      // Only close if explicitly requested AND not loading AND no error AND not forced to stay open
-      if (!open && !loading && !error && !shouldStayOpen) {
-        console.log('✅ Allowing dialog to close')
-        handleClose()
-      } else if (!open) {
-        console.log('❌ BLOCKING dialog close - loading:', loading, 'error:', !!error, 'shouldStayOpen:', shouldStayOpen)
+      console.log('🚪 Dialog onOpenChange triggered:', { open, loading, error, shouldClose })
+      // Use our custom close handler that respects the shouldClose flag
+      if (!open) {
+        handleModalClose()
       }
     }}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
