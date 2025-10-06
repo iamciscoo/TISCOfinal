@@ -17,6 +17,11 @@ const publicRoutes = [
   '/delivery-guide',
   '/about',
   '/auth',
+  '/cart', // Cart should be accessible without auth
+  '/search', // Search should be accessible
+  '/terms',
+  '/privacy',
+  '/cookies',
   '/sitemap.xml',
   '/robots.txt',
   '/manifest.json',
@@ -150,15 +155,29 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check if route is public
-  if (isPublicRoute(pathname)) {
+  const isPublic = isPublicRoute(pathname)
+  console.log('🌐 Route check:', { pathname, isPublic })
+  
+  if (isPublic) {
+    console.log('✅ Public route, allowing access:', pathname)
     return response
   }
+  
+  console.log('🔒 Protected route detected:', pathname)
 
   // For protected routes, check authentication
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log('🛡️ Middleware checking auth for:', pathname)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    console.log('🔍 Auth check result:', { 
+      hasUser: !!user, 
+      userEmail: user?.email, 
+      authError: authError?.message 
+    })
 
     if (!user) {
+      console.log('❌ No user found, redirecting to sign-in')
       // Redirect to sign in for protected pages
       if (!pathname.startsWith('/api/')) {
         const redirectUrl = new URL('/auth/sign-in', request.url)
@@ -172,6 +191,8 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       )
     }
+    
+    console.log('✅ User authenticated, allowing access to:', pathname)
   } catch (error) {
     console.error('Auth error in middleware:', error)
     
