@@ -20,6 +20,7 @@ import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import type { OrderColumn as Order } from "@/lib/ui-types";
+import { formatToEAT } from "@/lib/utils";
 
 
 export const columns: ColumnDef<Order>[] = [
@@ -155,7 +156,7 @@ export const columns: ColumnDef<Order>[] = [
     },
     cell: ({ row }) => {
       const date = row.getValue("createdAt") as string;
-      return <div>{new Date(date).toLocaleDateString()}</div>;
+      return <div>{formatToEAT(date, { dateStyle: 'short', timeStyle: 'short' })}</div>;
     },
   },
   {

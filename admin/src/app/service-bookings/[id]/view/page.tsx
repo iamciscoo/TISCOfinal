@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import { formatToEAT } from "@/lib/utils";
 
 interface BookingDetailsData {
   booking: {
@@ -290,14 +291,14 @@ export default async function BookingDetailsPage({
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Scheduled:</span>
-                <span>{new Date(scheduledDateTime).toLocaleString()}</span>
+                <span>{formatToEAT(scheduledDateTime)}</span>
               </div>
             )}
 
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Created:</span>
-              <span>{new Date(booking.created_at).toLocaleString()}</span>
+              <span>{formatToEAT(booking.created_at)}</span>
             </div>
 
             {booking.notes && (
@@ -354,7 +355,7 @@ export default async function BookingDetailsPage({
             <div>
               <span className="font-medium">Customer Since:</span>
               <p className="text-sm text-muted-foreground">
-                {new Date(customer.created_at).toLocaleDateString()}
+                {formatToEAT(customer.created_at, { includeTime: false, dateStyle: 'medium' })}
               </p>
             </div>
           </CardContent>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getOrderById, getUserById } from '@/lib/database'
 import type { Order as DbOrder, OrderItem as DbOrderItem, Address, User } from '@/lib/types'
+import { formatToEAT } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,7 +85,7 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             Order #{String(order.id).slice(0, 8)}...
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Placed on {new Date(order.created_at).toLocaleDateString()}
+            Placed on {formatToEAT(order.created_at, { dateStyle: 'medium', timeStyle: 'short' })}
           </p>
         </div>
         <Link href="/orders" className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:underline">
@@ -126,7 +127,7 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             <CardTitle className="text-sm font-medium">Meta</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground space-y-1">
-            <div>Updated: {new Date(order.updated_at).toLocaleDateString()}</div>
+            <div>Updated: {formatToEAT(order.updated_at, { dateStyle: 'short', timeStyle: 'short' })}</div>
             {Boolean((order as any).tracking_number) && (
               <div>Tracking #: {(order as any).tracking_number as string}</div>
             )}

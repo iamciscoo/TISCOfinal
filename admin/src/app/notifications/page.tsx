@@ -14,6 +14,7 @@ import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, C
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ProductMultiSelect } from '@/components/ui/product-multi-select'
+import { formatToEAT } from '@/lib/utils'
 
 // Component to display assigned products for a recipient
 function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
@@ -600,12 +601,12 @@ export default function NotificationsPage() {
                   <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                     <div className="space-y-2">
                       <div className="flex flex-col gap-1.5 text-xs sm:text-sm text-muted-foreground">
-                        <span className="truncate">Created: {new Date(notification.created_at).toLocaleDateString()} {new Date(notification.created_at).toLocaleTimeString()}</span>
+                        <span className="truncate">Created: {formatToEAT(notification.created_at)}</span>
                         {notification.sent_at && (
-                          <span className="truncate">Sent: {new Date(notification.sent_at).toLocaleDateString()} {new Date(notification.sent_at).toLocaleTimeString()}</span>
+                          <span className="truncate">Sent: {formatToEAT(notification.sent_at)}</span>
                         )}
                         {notification.scheduled_at && (
-                          <span className="truncate">Scheduled: {new Date(notification.scheduled_at).toLocaleDateString()} {new Date(notification.scheduled_at).toLocaleTimeString()}</span>
+                          <span className="truncate">Scheduled: {formatToEAT(notification.scheduled_at)}</span>
                         )}
                       </div>
                       {notification.error_message && (

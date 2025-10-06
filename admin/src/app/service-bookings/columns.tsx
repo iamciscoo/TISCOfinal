@@ -21,6 +21,7 @@ import { MoreHorizontal } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import ServiceCostPanel from "@/components/ServiceCostPanel";
+import { formatToEAT } from "@/lib/utils";
 
 export type ServiceBookingRow = {
   id: string;
@@ -105,13 +106,8 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     header: "Scheduled",
     cell: ({ row }) => {
       const iso = row.getValue<string | undefined>("scheduledDate");
-      const formatted = iso ? new Date(iso).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : "-";
-      return <span className="text-sm whitespace-nowrap">{formatted}</span>;
+      const formatted = iso ? formatToEAT(iso, { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
+      return <div>{formatted}</div>;
     },
   },
   {
@@ -124,12 +120,8 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     header: "Created",
     cell: ({ row }) => {
       const iso = row.getValue<string>("createdAt");
-      const formatted = new Date(iso).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: '2-digit'
-      });
-      return <span className="text-sm whitespace-nowrap">{formatted}</span>;
+      const formatted = formatToEAT(iso, { dateStyle: 'short', timeStyle: 'short' });
+      return <div>{formatted}</div>;
     },
   },
   {

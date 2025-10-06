@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Receipt } from 'lucide-react'
 import { getOrderById, getUserById } from '@/lib/database'
+import { formatToEAT } from '@/lib/utils'
 
 function formatTZS(value: number | string | null | undefined): string {
   const n = Number(value ?? 0)
@@ -43,7 +44,7 @@ export default async function PaymentDetailsPage({ params }: { params: Promise<{
           <Receipt className="h-6 w-6 text-muted-foreground" />
           <div>
             <h1 className="text-2xl font-bold">Payment #{String(order.id)}</h1>
-            <p className="text-sm text-muted-foreground">Created on {new Date(order.created_at).toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Created on {formatToEAT(order.created_at)}</p>
           </div>
         </div>
         <Link href="/payments" className="inline-flex items-center text-sm text-muted-foreground hover:underline">
@@ -81,7 +82,7 @@ export default async function PaymentDetailsPage({ params }: { params: Promise<{
             <CardTitle>Meta</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-1">
-            <div>Updated: {new Date(order.updated_at).toLocaleString()}</div>
+            <div>Updated: {formatToEAT(order.updated_at)}</div>
             {orderNumber && <div>Order No: {orderNumber}</div>}
             <div>Order ID: {String(order.id)}</div>
             <Link href={`/orders/${order.id}`} className="text-primary hover:underline">View full order</Link>
