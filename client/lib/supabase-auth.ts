@@ -1,19 +1,8 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from './supabase'  // Use the main singleton client
 import { type User, type Session } from '@supabase/supabase-js'
 
-// Singleton browser client to prevent multiple GoTrueClient instances
-let browserClient: ReturnType<typeof createBrowserClient> | null = null
-
-// Create Supabase client for browser usage (singleton pattern)
-export const createClient = () => {
-  if (!browserClient) {
-    browserClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  }
-  return browserClient
-}
+// Use the main singleton client for all auth operations
+export const createClient = () => supabase
 
 // Auth helper functions
 export const supabaseAuth = {

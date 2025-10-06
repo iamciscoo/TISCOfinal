@@ -140,9 +140,7 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon.ico" />
         
-        {/* High-resolution logo for search engines */}
-        <link rel="preload" href="/logo-email.png" as="image" type="image/png" />
-        <link rel="preload" href="/favicon-512x512.png" as="image" type="image/png" />
+        {/* Images are loaded via OpenGraph metadata and favicons - no need to preload */}
         
         {/* Apple Touch Icons */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />

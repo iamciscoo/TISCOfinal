@@ -1,26 +1,14 @@
-import { createClient, RealtimeChannel } from '@supabase/supabase-js'
+import { RealtimeChannel } from '@supabase/supabase-js'
+import { supabase } from './supabase'  // Use the singleton client
 import { cacheInvalidation } from './cache'
 
-// Type for Supabase realtime payload
-interface RealtimePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
-  new: Record<string, unknown>
-  old: Record<string, unknown>
-  schema: string
-  table: string
-  commit_timestamp: string
-}
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Create Supabase client for real-time subscriptions
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Type for Supabase realtime payload (using actual Supabase types)
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+type RealtimePayload<T extends Record<string, any> = Record<string, any>> = RealtimePostgresChangesPayload<T>
 
 // Real-time subscription manager
 class RealtimeManager {
   private subscriptions = new Map<string, RealtimeChannel>()
-
   // Subscribe to cart changes
   subscribeToCart(userId: string, callback: (payload: RealtimePayload) => void) {
     const channelName = `cart:${userId}`
