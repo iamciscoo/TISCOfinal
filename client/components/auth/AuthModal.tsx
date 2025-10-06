@@ -82,23 +82,38 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     e.preventDefault()
     setLoading(true)
     setError('')
+    
+    console.log('🔐 Sign-in attempt started...')
 
     try {
       if (mode === 'signin') {
+        console.log('📧 Attempting sign-in with email:', email)
         const { data, error } = await signIn(email, password)
+        
+        console.log('📬 Sign-in response:', { 
+          hasData: !!data, 
+          hasUser: !!data?.user, 
+          hasSession: !!data?.session,
+          hasError: !!error,
+          errorMessage: error?.message 
+        })
         
         // Check for authentication errors first
         if (error) {
-          console.error('Sign-in error:', error)
+          console.error('❌ Sign-in error detected:', error)
+          setLoading(false) // Stop loading immediately
           throw new Error(error.message || 'Invalid email or password. Please check your credentials and try again.')
         }
         
         // Verify we have valid session data before considering it successful
         if (!data.user || !data.session) {
+          console.error('❌ Invalid session data - missing user or session')
+          setLoading(false) // Stop loading immediately
           throw new Error('Invalid email or password. Please check your credentials and try again.')
         }
         
         // Only close and show success if sign in was actually successful
+        console.log('✅ Sign-in successful! Closing modal...')
         toast({
           title: "Success",
           description: "Signed in successfully!"
@@ -146,11 +161,12 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-      console.error('Authentication error caught:', errorMessage)
+      console.error('🚨 Authentication error caught in catch block:', errorMessage)
+      console.log('📋 Current state - loading:', loading, 'error will be set to:', errorMessage)
       setError(errorMessage)
+      setLoading(false) // Ensure loading is false
       // DO NOT call onClose() here - keep modal open to show error
-    } finally {
-      setLoading(false)
+      console.log('🔒 Modal should remain open to display error')
     }
   }
 
@@ -172,8 +188,23 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Only close if the dialog is being set to closed AND not during a form submission
+      if (!open && !loading) {
+        handleClose()
+      }
+    }}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
+        // Prevent closing when clicking outside if form is loading or has errors
+        if (loading || error) {
+          e.preventDefault()
+        }
+      }} onEscapeKeyDown={(e) => {
+        // Prevent closing with Escape key if form is loading or has errors
+        if (loading || error) {
+          e.preventDefault()
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
         </DialogHeader>
