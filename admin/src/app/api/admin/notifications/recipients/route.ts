@@ -39,10 +39,22 @@ export async function GET() {
 
     if (error) {
       // If table missing or any other error, return empty list gracefully
-      return NextResponse.json({ recipients: [] })
+      return NextResponse.json({ recipients: [] }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      })
     }
 
-    return NextResponse.json({ recipients: data || [] })
+    return NextResponse.json({ recipients: data || [] }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    })
   } catch (e: any) {
     return NextResponse.json({ recipients: [] })
   }

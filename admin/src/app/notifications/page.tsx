@@ -30,7 +30,7 @@ function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
       try {
         // Fetch ALL products first, then filter on client side
         // This ensures we get the exact products that match the IDs
-        const response = await fetch('/api/admin/products?limit=1000')
+        const response = await fetch('/api/admin/products?limit=1000', { cache: 'no-store' })
         if (response.ok) {
           const data = await response.json()
           const allProducts = Array.isArray(data.products) ? data.products : []
@@ -205,7 +205,7 @@ export default function NotificationsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/notifications/stats')
+      const response = await fetch('/api/admin/notifications/stats', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setStats(data.stats)
@@ -217,7 +217,7 @@ export default function NotificationsPage() {
 
   const fetchRecipients = async () => {
     try {
-      const res = await fetch('/api/admin/notifications/recipients')
+      const res = await fetch('/api/admin/notifications/recipients', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setRecipients(Array.isArray(data.recipients) ? data.recipients : [])

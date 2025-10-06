@@ -35,7 +35,13 @@ export async function GET(_req: NextRequest) {
         const key = r.template_type || 'unknown'
         stats.by_event[key] = (stats.by_event[key] || 0) + 1
       }
-      return NextResponse.json({ stats })
+      return NextResponse.json({ stats }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      })
     }
 
     // Fallback to legacy notifications
@@ -51,10 +57,22 @@ export async function GET(_req: NextRequest) {
         const key = r.event || 'unknown'
         stats.by_event[key] = (stats.by_event[key] || 0) + 1
       }
-      return NextResponse.json({ stats })
+      return NextResponse.json({ stats }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      })
     }
 
-    return NextResponse.json({ stats: empty })
+    return NextResponse.json({ stats: empty }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to fetch stats' }, { status: 500 })
   }
