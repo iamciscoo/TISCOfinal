@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
@@ -336,6 +336,9 @@ export function NotificationCenter() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add Admin Recipient</DialogTitle>
+                <DialogDescription>
+                  Add a new admin recipient to receive system notifications
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -385,6 +388,9 @@ export function NotificationCenter() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create New Notification</DialogTitle>
+                <DialogDescription>
+                  Send a custom notification to admin recipients or users
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">

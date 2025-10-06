@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -234,6 +234,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
+          <DialogDescription>
+            {mode === 'signin' && 'Sign in to your account to access your orders and profile'}
+            {mode === 'signup' && 'Create a new account to start shopping with us'}
+            {mode === 'reset' && 'Enter your email to receive password reset instructions'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
