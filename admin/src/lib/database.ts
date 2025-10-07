@@ -245,7 +245,8 @@ export async function getUsersByIds(ids: string[]): Promise<Record<string, User>
   const unique = Array.from(new Set((ids || []).filter(Boolean))) as string[]
   if (unique.length === 0) return {}
   
-  console.log('getUsersByIds: Fetching users for IDs:', unique)
+  // Logging disabled to reduce console noise
+  // console.log('getUsersByIds: Fetching users for IDs:', unique)
   
   try {
     // Use the service role client to bypass RLS - only select columns that exist
@@ -297,10 +298,8 @@ export async function getUsersByIds(ids: string[]): Promise<Record<string, User>
       } as User
     }
     
-    console.log(`getUsersByIds: Direct query success - loaded ${Object.keys(map).length} users:`)
-    Object.values(map).forEach(user => {
-      console.log(`  - ${user.first_name} ${user.last_name} (${user.email})`)
-    })
+    // Logging disabled to reduce console noise
+    // console.log(`getUsersByIds: Direct query success - loaded ${Object.keys(map).length} users`)
     
     return map
   } catch (error) {

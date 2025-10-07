@@ -150,76 +150,90 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
   };
 
   return (
-    <SheetContent onOpenAutoFocus={onOpenAutoFocus} className="sm:max-w-xl">
+    <SheetContent onOpenAutoFocus={onOpenAutoFocus} className="w-full sm:max-w-xl overflow-y-auto">
       <SheetHeader>
-        <SheetTitle>Manage Costs</SheetTitle>
-        <SheetDescription>Materials, fees, and totals for this booking.</SheetDescription>
+        <SheetTitle className="text-lg sm:text-xl">Manage Costs</SheetTitle>
+        <SheetDescription className="text-sm">Materials, fees, and totals for this booking.</SheetDescription>
       </SheetHeader>
 
       {/* Items */}
-      <div className="px-4 space-y-4 overflow-y-auto">
+      <div className="px-3 sm:px-4 space-y-3 sm:space-y-4 mt-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">Items</h3>
-          <Button size="sm" variant="secondary" onClick={addItem} disabled={loading}>Add item</Button>
+          <h3 className="font-medium text-base sm:text-lg">Items</h3>
+          <Button size="sm" variant="secondary" onClick={addItem} disabled={loading} className="min-h-[44px] sm:min-h-0">Add item</Button>
         </div>
         <div className="space-y-2">
           {items.length === 0 && (
             <p className="text-sm text-muted-foreground">No items yet. Add materials/resources used.</p>
           )}
           {items.map((it, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-              <div className="col-span-5">
-                <Label className="text-xs">Name</Label>
-                <Input
-                  value={it.name}
-                  onChange={(e) => updateItem(idx, { name: e.target.value })}
-                  placeholder="e.g. Thermal paste"
+            <div key={idx} className="border rounded-lg p-3 sm:p-4 space-y-3 bg-card">
+              {/* Mobile: Stack vertically, Desktop: Grid */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <Label className="text-xs sm:text-sm font-medium">Name</Label>
+                  <Input
+                    value={it.name}
+                    onChange={(e) => updateItem(idx, { name: e.target.value })}
+                    placeholder="e.g. Thermal paste"
+                    disabled={loading}
+                    className="mt-1 min-h-[44px] sm:min-h-[36px]"
+                  />
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => removeItem(idx)} 
                   disabled={loading}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-xs">Unit Price</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={formatNumberForInput(it.unit_price)}
-                  onChange={(e) => {
-                    const validated = validatePositiveNumber(e.target.value);
-                    updateItem(idx, { unit_price: safeParseNumber(validated) });
-                  }}
-                  disabled={loading}
-                  placeholder="0"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-xs">Qty</Label>
-                <Input
-                  type="number"
-                  min={0.01}
-                  step="0.01"
-                  value={formatNumberForInput(it.quantity, false)}
-                  onChange={(e) => {
-                    const validated = validatePositiveNumber(e.target.value);
-                    updateItem(idx, { quantity: safeParseNumber(validated, 1) });
-                  }}
-                  disabled={loading}
-                  placeholder="1"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-xs">Unit</Label>
-                <Input
-                  value={it.unit || "unit"}
-                  onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                  placeholder="unit"
-                  disabled={loading}
-                />
-              </div>
-              <div className="col-span-1 flex items-center justify-end pb-1">
-                <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} disabled={loading}>
+                  className="min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] mt-5"
+                >
                   ✕
                 </Button>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                <div>
+                  <Label className="text-xs sm:text-sm font-medium">Unit Price</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={formatNumberForInput(it.unit_price)}
+                    onChange={(e) => {
+                      const validated = validatePositiveNumber(e.target.value);
+                      updateItem(idx, { unit_price: safeParseNumber(validated) });
+                    }}
+                    disabled={loading}
+                    placeholder="0"
+                    className="mt-1 min-h-[44px] sm:min-h-[36px]"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs sm:text-sm font-medium">Qty</Label>
+                  <Input
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    value={formatNumberForInput(it.quantity, false)}
+                    onChange={(e) => {
+                      const validated = validatePositiveNumber(e.target.value);
+                      updateItem(idx, { quantity: safeParseNumber(validated, 1) });
+                    }}
+                    disabled={loading}
+                    placeholder="1"
+                    className="mt-1 min-h-[44px] sm:min-h-[36px]"
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-2">
+                  <Label className="text-xs sm:text-sm font-medium">Unit</Label>
+                  <Input
+                    value={it.unit || "unit"}
+                    onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                    placeholder="unit"
+                    disabled={loading}
+                    className="mt-1 min-h-[44px] sm:min-h-[36px]"
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -228,9 +242,9 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
         <Separator className="my-4" />
 
         {/* Fees */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <Label className="text-xs">Service Fee</Label>
+            <Label className="text-xs sm:text-sm font-medium">Service Fee</Label>
             <Input 
               type="number" 
               min={0} 
@@ -242,10 +256,11 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
               }} 
               disabled={loading}
               placeholder="0"
+              className="mt-1 min-h-[44px] sm:min-h-[36px]"
             />
           </div>
           <div>
-            <Label className="text-xs">Discount</Label>
+            <Label className="text-xs sm:text-sm font-medium">Discount</Label>
             <Input 
               type="number" 
               min={0} 
@@ -257,31 +272,48 @@ const ServiceCostPanel = ({ bookingId }: ServiceCostPanelProps) => {
               }} 
               disabled={loading}
               placeholder="0"
+              className="mt-1 min-h-[44px] sm:min-h-[36px]"
             />
           </div>
-          <div>
-            <Label className="text-xs">Currency</Label>
-            <Input maxLength={3} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} disabled={loading} />
+          <div className="sm:col-span-2">
+            <Label className="text-xs sm:text-sm font-medium">Currency</Label>
+            <Input 
+              maxLength={3} 
+              value={currency} 
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())} 
+              disabled={loading}
+              className="mt-1 min-h-[44px] sm:min-h-[36px] w-full sm:w-32"
+            />
           </div>
         </div>
 
         <div>
-          <Label className="text-xs">Notes</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes (optional)" disabled={loading} />
+          <Label className="text-xs sm:text-sm font-medium">Notes</Label>
+          <Textarea 
+            value={notes} 
+            onChange={(e) => setNotes(e.target.value)} 
+            placeholder="Internal notes (optional)" 
+            disabled={loading}
+            className="mt-1 min-h-[80px]"
+          />
         </div>
 
         {/* Totals */}
-        <div className="bg-secondary rounded-md p-3 text-sm space-y-1">
-          <div className="flex justify-between"><span>Subtotal</span><span>{toMoney(subtotal, currency)}</span></div>
-          <div className="flex justify-between"><span>+ Service Fee</span><span>{toMoney(numberOrZero(serviceFee), currency)}</span></div>
-          <div className="flex justify-between"><span>- Discount</span><span>{toMoney(numberOrZero(discount), currency)}</span></div>
-          <Separator className="my-1" />
-          <div className="flex justify-between font-semibold"><span>Total</span><span>{toMoney(total, currency)}</span></div>
+        <div className="bg-secondary rounded-md p-3 sm:p-4 text-sm sm:text-base space-y-2">
+          <div className="flex justify-between"><span>Subtotal</span><span className="font-medium">{toMoney(subtotal, currency)}</span></div>
+          <div className="flex justify-between"><span>+ Service Fee</span><span className="font-medium">{toMoney(numberOrZero(serviceFee), currency)}</span></div>
+          <div className="flex justify-between"><span>- Discount</span><span className="font-medium">{toMoney(numberOrZero(discount), currency)}</span></div>
+          <Separator className="my-2" />
+          <div className="flex justify-between font-semibold text-base sm:text-lg"><span>Total</span><span>{toMoney(total, currency)}</span></div>
         </div>
       </div>
 
-      <SheetFooter>
-        <Button onClick={onSave} disabled={loading}>
+      <SheetFooter className="px-3 sm:px-4 py-3 sm:py-4">
+        <Button 
+          onClick={onSave} 
+          disabled={loading}
+          className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px]"
+        >
           {loading ? "Saving..." : "Save"}
         </Button>
       </SheetFooter>

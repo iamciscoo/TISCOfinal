@@ -3,8 +3,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+interface DebugInfo {
+  hasSession: boolean
+  hasUser: boolean
+  userId: string
+  userEmail: string
+  sessionError: string
+  userError: string
+  cookieCount: number
+  cookies: string[]
+  allCookies: string
+}
+
 export function AuthDebugger() {
-  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null)
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {

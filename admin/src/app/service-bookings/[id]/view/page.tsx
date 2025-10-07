@@ -156,10 +156,10 @@ async function getBookingDetails(id: string): Promise<BookingDetailsData | null>
         )
       `)
       .eq("booking_id", id)
-      .single();
+      .maybeSingle();
 
     if (costsError) {
-      console.warn("Service costs fetch error:", costsError);
+      console.error("Service costs fetch error:", costsError);
     }
 
     return {
@@ -228,27 +228,27 @@ export default async function BookingDetailsPage({
   const totalWithCosts = serviceCosts ? serviceCosts.total : booking.total_amount;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/service-bookings">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Service Bookings
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Booking Details</h1>
-            <p className="text-muted-foreground">ID: {booking.id}</p>
+      <div className="space-y-3 sm:space-y-4">
+        <Button variant="outline" size="sm" asChild className="w-fit">
+          <Link href="/service-bookings">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Service Bookings
+          </Link>
+        </Button>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Booking Details</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate" title={booking.id}>ID: {booking.id}</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/service-bookings/${booking.id}`}>
-              Edit Booking
-            </Link>
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" asChild className="min-h-[44px] sm:min-h-[36px]">
+              <Link href={`/service-bookings/${booking.id}`}>
+                Edit Booking
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
