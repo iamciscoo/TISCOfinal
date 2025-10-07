@@ -43,12 +43,10 @@ const publicRoutes = [
   '/api/deals',
   '/api/contact-messages',
   '/api/newsletter',
-  '/api/service-bookings',
   '/api/payments/webhooks',
   '/api/payments',
   '/api/notifications',
   '/api/admin',
-  '/api/auth/sync', // Auth sync endpoint should be accessible to authenticated users
   '/api/orders', // Let API handle auth check
   '/api/auth', // Auth endpoints should be accessible
 ]
@@ -154,10 +152,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Allow webhooks and auth endpoints to pass through without middleware auth check
+  // Allow webhooks and specific auth endpoints to pass through without middleware auth check
+  // But NOT /api/auth/sync which requires authentication
   if (pathname.startsWith('/api/payments/webhooks') || 
       pathname.startsWith('/api/webhooks') ||
-      pathname.startsWith('/api/auth/')) {
+      (pathname.startsWith('/api/auth/') && pathname !== '/api/auth/sync')) {
     return response
   }
 

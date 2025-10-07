@@ -492,6 +492,7 @@ export default function CheckoutPage() {
         // Non-mobile flows (card, office payment) - create order first
         const orderResponse = await fetch('/api/orders', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -516,6 +517,7 @@ export default function CheckoutPage() {
           // Send notifications via API route
           const notificationResponse = await fetch('/api/notifications', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'order_created',
@@ -559,6 +561,7 @@ export default function CheckoutPage() {
           // First create a temporary payment session without order
           const procRes = await fetch('/api/payments/mobile/initiate', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               amount: subtotal,
@@ -663,6 +666,7 @@ export default function CheckoutPage() {
       try {
         const sres = await fetch('/api/payments/mobile/status', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reference })
         })
@@ -766,6 +770,7 @@ export default function CheckoutPage() {
       // Retry payment initiation
       const procRes = await fetch('/api/payments/mobile/initiate', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: subtotal,

@@ -40,6 +40,7 @@ export default function AuthSync() {
             
             const response = await fetch('/api/auth/sync', {
               method: 'POST',
+              credentials: 'include',
               headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${session.access_token}`

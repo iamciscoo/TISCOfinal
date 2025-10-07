@@ -87,6 +87,7 @@ export default function AccountDashboard() {
       setLoading(true)
       const response = await fetch('/api/orders?fresh=1', {
         cache: 'no-store',
+        credentials: 'include',
         headers: { 'x-no-cache': '1' }
       })
       if (response.ok) {
