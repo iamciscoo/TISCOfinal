@@ -32,20 +32,20 @@ const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").the
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white w-full overflow-x-hidden">
       <PasswordResetRedirectHandler />
       <Navbar />
-      <main className="overflow-x-hidden bg-white">
+      <main className="w-full bg-white">
         <MobileSearchBar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 md:pt-2 lg:pt-4 pb-8 sm:pb-12">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 md:pt-2 lg:pt-4 pb-8 sm:pb-12">
           <HomepageHeroCarousel />
         </div>
-        <div className="space-y-8 sm:space-y-12 md:space-y-16">
+        <div className="w-full space-y-8 sm:space-y-12 md:space-y-16">
           <PromotionalCards />
           <RareFinds />
           <FeaturedProducts />
           <BrandSlider />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <ServicesPromoGrid />
           </div>
           <ServicesPreview />

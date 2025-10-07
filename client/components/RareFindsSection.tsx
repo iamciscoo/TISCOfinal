@@ -40,8 +40,8 @@ export function RareFindsSection() {
   const targetHref = "/products?category=rare-finds&query=Rare%20Finds";
 
   return (
-    <section aria-labelledby="rare-finds-heading" className="py-8 sm:py-10 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section aria-labelledby="rare-finds-heading" className="py-8 sm:py-10 bg-white w-full overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h2 id="rare-finds-heading" className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
             Discover rare finds

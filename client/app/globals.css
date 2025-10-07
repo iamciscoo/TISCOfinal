@@ -133,6 +133,10 @@
     /* Enhanced scroll performance */
     -webkit-overflow-scrolling: touch;
     scrollbar-gutter: stable;
+    /* Force full width */
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   
   body {
@@ -142,6 +146,10 @@
     /* Optimize scroll performance */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Force full width */
+    width: 100%;
+    max-width: 100vw;
+    min-width: 100%;
   }
   
   /* Enhanced scrollbar styling */

@@ -234,9 +234,9 @@ export const Navbar = () => {
   }, [isMenuOpen, closeMenu])
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 min-w-0 relative">
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16 w-full relative">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link
@@ -268,7 +268,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-lg mx-8">
+          <div className="hidden md:flex flex-1 max-w-xs lg:max-w-md xl:max-w-lg mx-3 lg:mx-6 xl:mx-8">
             <div ref={searchRef} className="relative w-full">
               <Input
                 type="search"
@@ -314,25 +314,25 @@ export const Navbar = () => {
           </div>
 
           {/* Navigation Links - Desktop */}
-          <nav className="hidden md:flex items-center space-x-8" role="navigation">
-            <Link href="/products" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+          <nav className="hidden md:flex items-center space-x-3 lg:space-x-6 xl:space-x-8" role="navigation">
+            <Link href="/products" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
               Shop
             </Link>
-            <Link href="/services" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+            <Link href="/services" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
               Services
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
               Contact
             </Link>
           </nav>
 
           {/* Right Side Icons */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-1 md:space-x-2 lg:space-x-3">
             {/* Currency Converter */}
-            <div className="hidden sm:block">
+            <div className="hidden lg:block">
               <CurrencyToggle />
             </div>
             
@@ -341,10 +341,10 @@ export const Navbar = () => {
               // Prevent layout shift during authentication initialization
               <div className="hidden sm:block h-9 w-24" aria-hidden="true" />
             ) : isSignedIn ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 <Link 
                   href="/account" 
-                  className="hidden sm:inline text-sm text-gray-800 hover:text-blue-600 transition-colors"
+                  className="hidden lg:inline text-sm text-gray-800 hover:text-blue-600 transition-colors"
                 >
                   Orders
                 </Link>
@@ -356,7 +356,7 @@ export const Navbar = () => {
               <SignInButton 
                 variant="ghost" 
                 size="sm" 
-                className="hidden sm:flex transition-colors"
+                className="hidden sm:flex transition-colors px-2 md:px-3"
               />
             )}
 

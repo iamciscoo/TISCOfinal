@@ -129,13 +129,13 @@ export function ServicesPromoGrid() {
       </div>
 
       {/* Tablet Grid */}
-      <div className="hidden md:grid lg:hidden grid-cols-2 gap-6">
+      <div className="hidden md:grid lg:hidden grid-cols-2 gap-4 md:gap-6">
         {promoCards.map((card) => (
           <Link 
             key={card.id} 
             href={card.href}
             className={`group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 ${
-              card.size === 'large' ? 'col-span-2 h-80' : 'h-60'
+              card.size === 'large' ? 'col-span-2 h-72 md:h-80' : 'h-56 md:h-64'
             }`}
           >
             <div className="relative w-full h-full">
@@ -144,30 +144,30 @@ export function ServicesPromoGrid() {
                 alt={card.title}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                style={{ objectFit: 'cover' }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
-              <div className="absolute inset-0 bg-black/30" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
               
               {/* Content Overlay */}
-              <div className="absolute inset-0 p-6 flex flex-col justify-end">
+              <div className="absolute inset-0 p-4 md:p-6 flex flex-col justify-end">
                 {card.subtitle && (
-                  <p className="text-xs font-semibold tracking-wider text-white mb-2 uppercase drop-shadow">
+                  <p className="text-xs font-semibold tracking-wider text-white mb-1 md:mb-2 uppercase drop-shadow">
                     {card.subtitle}
                   </p>
                 )}
                 
-                <h3 className={`font-bold mb-3 leading-tight text-white drop-shadow-lg ${
-                  card.size === 'large' ? 'text-xl xl:text-2xl' : 'text-lg'
+                <h3 className={`font-bold mb-2 md:mb-3 leading-tight text-white drop-shadow-lg ${
+                  card.size === 'large' ? 'text-lg md:text-xl' : 'text-base md:text-lg'
                 }`}>
                   {card.title}
                 </h3>
                 
-                <p className="text-sm mb-4 text-gray-100 drop-shadow">
+                <p className="text-xs md:text-sm mb-3 md:mb-4 text-gray-100 drop-shadow">
                   {card.description}
                 </p>
                 
-                <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm group-hover:text-blue-500 transition-colors drop-shadow">
+                <div className="flex items-center gap-2 font-semibold text-sm transition-colors drop-shadow" style={{color: '#60a5fa'}}>
                   {card.ctaText}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>

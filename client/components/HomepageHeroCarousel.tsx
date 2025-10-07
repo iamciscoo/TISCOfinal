@@ -144,7 +144,7 @@ export const HomepageHeroCarousel = () => {
     <section
       ref={heroRef}
       className="relative overflow-hidden bg-gray-900
-                 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 md:mt-4
+                 w-full
                  rounded-2xl md:rounded-3xl shadow-sm ring-1 ring-black/10
                  h-[28vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] xl:h-[60vh]"
       style={{

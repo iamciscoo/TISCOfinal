@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 31536000, // Cache images for 1 year
     dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Configure image quality values (required for Next.js 16+)
+    qualities: [60, 75, 85, 90, 100],
   },
   trailingSlash: false,
   output: 'standalone',

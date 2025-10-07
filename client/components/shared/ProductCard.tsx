@@ -81,7 +81,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           <div className="flex items-stretch">
             {/* Product Image */}
             <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex-shrink-0">
-              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`}>
+              <Link href={`/products/${product.id}`} aria-label={`View ${product.name} details`} className="relative block w-full h-full">
                 <Image
                   src={imageUrl}
                   alt={`${product.name} product image`}
