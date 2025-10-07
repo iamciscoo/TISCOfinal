@@ -4,15 +4,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface DebugInfo {
-  hasSession: boolean
-  hasUser: boolean
-  userId: string
-  userEmail: string
-  sessionError: string
-  userError: string
-  cookieCount: number
-  cookies: string[]
-  allCookies: string
+  hasSession?: boolean
+  hasUser?: boolean
+  userId?: string
+  userEmail?: string
+  sessionError?: string
+  userError?: string
+  cookieCount?: number
+  cookies?: string[]
+  allCookies?: string
+  error?: string
 }
 
 export function AuthDebugger() {
