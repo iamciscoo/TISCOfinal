@@ -55,7 +55,32 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [deleting, setDeleting] = React.useState(false)
+  const [isMobile, setIsMobile] = React.useState(false)
   const { handleBulkDelete } = useAdminActions()
+
+  // Detect mobile and auto-hide columns marked with hideOnMobile
+  React.useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      
+      if (mobile) {
+        // Auto-hide columns with hideOnMobile meta on mobile
+        const mobileVisibility: VisibilityState = {}
+        columns.forEach((column) => {
+          const columnMeta = (column as any).meta
+          if (columnMeta?.hideOnMobile && 'accessorKey' in column) {
+            mobileVisibility[column.accessorKey as string] = false
+          }
+        })
+        setColumnVisibility((prev) => ({ ...prev, ...mobileVisibility }))
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [columns])
 
   const table = useReactTable({
     data,
@@ -102,7 +127,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full max-w-full overflow-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center py-4 gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center py-3 sm:py-4 gap-2 sm:gap-3">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -110,17 +135,17 @@ export function DataTable<TData, TValue>({
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="w-full sm:max-w-sm"
+            className="w-full sm:max-w-sm h-10"
           />
         )}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto sm:ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto h-10 min-h-[44px] sm:min-h-0">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
@@ -143,7 +168,7 @@ export function DataTable<TData, TValue>({
           {deleteApiBase && Object.keys(rowSelection).length > 0 && (
             <Button
               variant="destructive"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-10 min-h-[44px] sm:min-h-0"
               onClick={handleDeleteSelected}
               disabled={deleting}
             >
@@ -165,7 +190,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="whitespace-nowrap">
+                    <TableHead key={header.id} className="whitespace-nowrap text-xs sm:text-sm">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -186,7 +211,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
+                    <TableCell key={cell.id} className="py-3 sm:py-4">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -208,18 +233,18 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 py-4">
-        <div className="text-sm text-muted-foreground order-2 sm:order-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 py-3 sm:py-4">
+        <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <div className="flex gap-2 order-1 sm:order-2">
+        <div className="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none h-10 min-h-[44px] sm:min-h-0"
           >
             Previous
           </Button>
@@ -228,7 +253,7 @@ export function DataTable<TData, TValue>({
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none h-10 min-h-[44px] sm:min-h-0"
           >
             Next
           </Button>

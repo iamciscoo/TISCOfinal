@@ -42,10 +42,16 @@ export const columns: ColumnDef<Payment>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "fullName",
     header: "User",
+    cell: ({ row }) => {
+      const name = row.getValue("fullName") as string;
+      return <div className="min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm font-medium">{name}</div>;
+    },
+    enableHiding: false,
   },
   {
     accessorKey: "email",
@@ -60,6 +66,12 @@ export const columns: ColumnDef<Payment>[] = [
         </Button>
       );
     },
+    cell: ({ row }) => {
+      const email = row.getValue("email") as string;
+      return <div className="text-xs sm:text-sm truncate max-w-[150px] sm:max-w-[200px]">{email}</div>;
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "status",
@@ -70,17 +82,18 @@ export const columns: ColumnDef<Payment>[] = [
       return (
         <div
           className={cn(
-            `p-1 rounded-md w-max text-xs`,
-            status === "pending" && "bg-yellow-500/40",
-            status === "paid" && "bg-green-500/40",
-            status === "failed" && "bg-red-500/40",
-            status === "refunded" && "bg-blue-500/30"
+            `p-1 rounded-md w-max text-xs whitespace-nowrap`,
+            status === "pending" && "bg-yellow-500/40 dark:bg-yellow-500/20",
+            status === "paid" && "bg-green-500/40 dark:bg-green-500/20",
+            status === "failed" && "bg-red-500/40 dark:bg-red-500/20",
+            status === "refunded" && "bg-blue-500/30 dark:bg-blue-500/20"
           )}
         >
           {status as string}
         </div>
       );
     },
+    enableHiding: false,
   },
   {
     accessorKey: "amount",
@@ -89,18 +102,20 @@ export const columns: ColumnDef<Payment>[] = [
       const amount = parseFloat(row.getValue("amount"));
       const formatted = `TZS ${Number(amount || 0).toLocaleString()}`;
 
-      return <div className="text-right font-medium">{formatted}</div>;
+      return <div className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">{formatted}</div>;
     },
+    enableHiding: false,
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const payment = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

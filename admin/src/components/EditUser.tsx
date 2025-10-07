@@ -2,7 +2,6 @@
 
 import {
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -83,12 +82,12 @@ const EditUser = ({ userId, defaultValues }: EditUserProps) => {
     }
   }
   return (
-    <SheetContent>
+    <SheetContent aria-describedby={undefined}>
       <SheetHeader>
         <SheetTitle className="mb-4">Edit User</SheetTitle>
-        <SheetDescription asChild>
-          <Form {...form}>
-            <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
+      </SheetHeader>
+      <Form {...form}>
+        <form className="space-y-8 mt-4" onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
                 control={form.control}
                 name="fullName"
@@ -169,13 +168,11 @@ const EditUser = ({ userId, defaultValues }: EditUserProps) => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save changes"}
-              </Button>
-            </form>
-          </Form>
-        </SheetDescription>
-      </SheetHeader>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Saving..." : "Save changes"}
+          </Button>
+        </form>
+      </Form>
     </SheetContent>
   );
 };

@@ -49,15 +49,15 @@ export default async function ServicesPage() {
   const data = await getServices()
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6 lg:py-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Services</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Services</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage your service offerings
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto h-11 sm:h-10 min-h-[44px] sm:min-h-0">
           <Link href="/services/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Service
@@ -65,7 +65,7 @@ export default async function ServicesPage() {
         </Button>
       </div>
       
-      <Suspense fallback={<div>Loading services...</div>}>
+      <Suspense fallback={<div className="text-center py-8 text-sm sm:text-base">Loading services...</div>}>
         {data.services && data.services.length > 0 ? (
           <DataTable 
             columns={columns} 
@@ -75,11 +75,11 @@ export default async function ServicesPage() {
             deleteApiBase="/api/services"
           />
         ) : (
-          <div className="text-center py-10">
-            <p className="text-muted-foreground mb-4">
+          <div className="text-center py-8 sm:py-10 px-4">
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               {data.services?.length === 0 ? "No services found." : "Failed to load services. Please try again later."}
             </p>
-            <Button asChild>
+            <Button asChild className="w-full sm:w-auto h-11 sm:h-10 min-h-[44px] sm:min-h-0">
               <Link href="/services/new">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Your First Service

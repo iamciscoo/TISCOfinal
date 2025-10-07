@@ -121,7 +121,7 @@ export default function ReviewsManagement() {
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
           onChange={(e) => table.toggleAllPageRowsSelected(!!e.target.checked)}
-          className="rounded border-gray-300"
+          className="rounded border-gray-300 w-4 h-4"
         />
       ),
       cell: ({ row }) => (
@@ -129,7 +129,7 @@ export default function ReviewsManagement() {
           type="checkbox"
           checked={row.getIsSelected()}
           onChange={(e) => row.toggleSelected(!!e.target.checked)}
-          className="rounded border-gray-300"
+          className="rounded border-gray-300 w-4 h-4"
         />
       ),
       enableSorting: false,
@@ -147,74 +147,90 @@ export default function ReviewsManagement() {
         // Handle both products (plural) and product (singular) naming
         const product = (row.original as any).products || (row.original as any).product
         return (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-[150px]">
             <img
               src={product?.image_url || '/circular.svg'}
               alt={product?.name || 'Product'}
-              className="w-10 h-10 rounded object-cover"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover flex-shrink-0"
             />
-            <div>
-              <p className="font-medium">{product?.name || 'Unknown Product'}</p>
-              <p className="text-sm text-gray-600">TZS {product?.price || 0}</p>
+            <div className="min-w-0">
+              <p className="font-medium text-xs sm:text-sm truncate">{product?.name || 'Unknown Product'}</p>
+              <p className="text-xs text-gray-600 hidden sm:block">TZS {product?.price || 0}</p>
             </div>
           </div>
         )
-      }
+      },
+      enableHiding: false,
     },
     {
       id: 'userEmail',
       accessorFn: (row) => row.user?.email ?? '',
       header: 'Customer',
       cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.user.first_name} {row.original.user.last_name}</p>
-          <p className="text-sm text-gray-600">{row.original.user.email}</p>
+        <div className="min-w-[120px]">
+          <p className="font-medium text-xs sm:text-sm">{row.original.user.first_name} {row.original.user.last_name}</p>
+          <p className="text-xs text-gray-600 hidden sm:block truncate">{row.original.user.email}</p>
         </div>
-      )
+      ),
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: 'rating',
       header: 'Rating',
-      cell: ({ row }) => renderStars(row.original.rating)
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          {renderStars(row.original.rating)}
+          <span className="text-xs sm:hidden ml-1">{row.original.rating}</span>
+        </div>
+      ),
+      enableHiding: false,
     },
     {
       accessorKey: 'comment',
       header: 'Comment',
       cell: ({ row }) => (
-        <div className="max-w-xs">
-          <p className="truncate">{row.original.comment}</p>
+        <div className="max-w-[150px] sm:max-w-xs">
+          <p className="truncate text-xs sm:text-sm">{row.original.comment}</p>
         </div>
-      )
+      ),
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: 'is_approved',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.is_approved ? 'default' : 'secondary'}>
+        <Badge variant={row.original.is_approved ? 'default' : 'secondary'} className="text-xs whitespace-nowrap">
           {row.original.is_approved ? 'Approved' : 'Pending'}
         </Badge>
-      )
+      ),
+      enableHiding: false,
     },
     {
       accessorKey: 'created_at',
       header: 'Date',
       cell: ({ row }) => (
-        <span className="text-sm">
+        <span className="text-xs sm:text-sm whitespace-nowrap">
           {new Date(row.original.created_at).toLocaleDateString()}
         </span>
-      )
+      ),
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       id: 'actions',
       header: 'Actions',
+      enableHiding: false,
       cell: ({ row }) => (
-        <div className="flex space-x-2">
+        <div className="flex gap-1 sm:gap-2">
           {!row.original.is_approved && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleReviewAction(row.original.id, 'approve')}
               disabled={actionLoading === `approve-${row.original.id}`}
+              className="h-9 w-9 sm:h-8 sm:w-8 p-0"
             >
               {actionLoading === `approve-${row.original.id}` ? 
                 <Loader2 className="w-4 h-4 animate-spin" /> : 
@@ -228,6 +244,7 @@ export default function ReviewsManagement() {
               size="sm"
               onClick={() => handleReviewAction(row.original.id, 'reject')}
               disabled={actionLoading === `reject-${row.original.id}`}
+              className="h-9 w-9 sm:h-8 sm:w-8 p-0"
             >
               {actionLoading === `reject-${row.original.id}` ? 
                 <Loader2 className="w-4 h-4 animate-spin" /> : 
@@ -249,57 +266,57 @@ export default function ReviewsManagement() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Reviews Management</h1>
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Reviews Management</h1>
         <Sheet open={addOpen} onOpenChange={setAddOpen}>
           <SheetTrigger asChild>
-            <Button onClick={() => setAddOpen(true)}>Add Review</Button>
+            <Button onClick={() => setAddOpen(true)} className="w-full sm:w-auto h-11 sm:h-10 min-h-[44px] sm:min-h-0">Add Review</Button>
           </SheetTrigger>
           <AddReview onCreated={() => { fetchReviews(); setAddOpen(false) }} />
         </Sheet>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Reviews</CardTitle>
+            <Star className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">All reviews</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.total}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">All reviews</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            <Check className="h-4 w-4 text-green-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Approved</CardTitle>
+            <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-            <p className="text-xs text-muted-foreground">Published reviews</p>
+            <div className="text-lg sm:text-2xl font-bold text-green-600">{stats.approved}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Published reviews</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Eye className="h-4 w-4 text-yellow-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Pending</CardTitle>
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">Awaiting approval</p>
+            <div className="text-lg sm:text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-            <Star className="h-4 w-4 text-yellow-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Average Rating</CardTitle>
+            <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRating}</div>
-            <p className="text-xs text-muted-foreground">Overall rating</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.averageRating}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Overall rating</p>
           </CardContent>
         </Card>
       </div>
@@ -307,12 +324,12 @@ export default function ReviewsManagement() {
       {/* Reviews Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Product Reviews</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">Product Reviews</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Manage and moderate customer product reviews
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin" />

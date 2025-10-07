@@ -36,6 +36,7 @@ export const columns: ColumnDef<Category>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "name",
@@ -50,6 +51,11 @@ export const columns: ColumnDef<Category>[] = [
         </Button>
       );
     },
+    cell: ({ row }) => {
+      const name = row.getValue("name") as string;
+      return <div className="min-w-[100px] sm:min-w-[150px] text-xs sm:text-sm font-medium">{name}</div>;
+    },
+    enableHiding: false,
   },
   {
     accessorKey: "description",
@@ -57,11 +63,13 @@ export const columns: ColumnDef<Category>[] = [
     cell: ({ row }) => {
       const description = row.getValue("description") as string;
       return (
-        <div className="max-w-xs truncate" title={description}>
+        <div className="max-w-[150px] sm:max-w-xs truncate text-xs sm:text-sm" title={description}>
           {description}
         </div>
       );
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "created_at",
@@ -78,23 +86,26 @@ export const columns: ColumnDef<Category>[] = [
     },
     cell: ({ row }) => {
       const date = row.getValue("created_at") as string;
-      if (!date) return <div>-</div>;
+      if (!date) return <div className="text-xs sm:text-sm">-</div>;
       
       const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) return <div>-</div>;
+      if (isNaN(parsedDate.getTime())) return <div className="text-xs sm:text-sm">-</div>;
       
-      return <div>{parsedDate.toLocaleDateString()}</div>;
+      return <div className="text-xs sm:text-sm whitespace-nowrap">{parsedDate.toLocaleDateString()}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const category = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

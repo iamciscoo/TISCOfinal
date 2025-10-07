@@ -2,7 +2,6 @@
 
 import {
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -236,22 +235,22 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
     }
   };
   return (
-    <SheetContent className="overflow-y-auto">
+    <SheetContent className="overflow-y-auto w-full sm:max-w-xl" aria-describedby={undefined}>
       <SheetHeader>
-        <SheetTitle className="mb-4">Add Order</SheetTitle>
-        <SheetDescription asChild>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <SheetTitle className="text-lg sm:text-xl mb-3 sm:mb-4">Add Order</SheetTitle>
+      </SheetHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4">
               {/* Customer Type Selection */}
               <FormField
                 control={form.control}
                 name="customer_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Type</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Customer Type</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 sm:h-10">
                           <SelectValue placeholder="Select customer type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -260,7 +259,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Choose if this is a registered or guest customer.
                     </FormDescription>
                     <FormMessage />
@@ -275,10 +274,10 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                   name="user_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Select Customer</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Select Customer</FormLabel>
                       <FormControl>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11 sm:h-10">
                             <SelectValue placeholder="Select a customer" />
                           </SelectTrigger>
                           <SelectContent>
@@ -295,7 +294,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-xs sm:text-sm">
                         Select the registered customer for this order.
                       </FormDescription>
                       <FormMessage />
@@ -312,11 +311,11 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                     name="guest_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Customer Name *</FormLabel>
+                        <FormLabel className="text-sm sm:text-base">Customer Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter customer name" {...field} />
+                          <Input placeholder="Enter customer name" className="h-11 sm:h-10" {...field} />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-xs sm:text-sm">
                           Full name of the guest customer.
                         </FormDescription>
                         <FormMessage />
@@ -328,11 +327,11 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                     name="guest_phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number *</FormLabel>
+                        <FormLabel className="text-sm sm:text-base">Phone Number *</FormLabel>
                         <FormControl>
-                          <Input placeholder="+255..." {...field} />
+                          <Input placeholder="+255..." className="h-11 sm:h-10" {...field} />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-xs sm:text-sm">
                           Contact phone number (required for guest orders).
                         </FormDescription>
                         <FormMessage />
@@ -344,11 +343,11 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                     name="guest_email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email (Optional)</FormLabel>
+                        <FormLabel className="text-sm sm:text-base">Email (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="email@example.com" {...field} />
+                          <Input type="email" placeholder="email@example.com" className="h-11 sm:h-10" {...field} />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-xs sm:text-sm">
                           Email address for order notifications.
                         </FormDescription>
                         <FormMessage />
@@ -359,27 +358,27 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
               )}
 
               {/* Order Items Section */}
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Order Items</h3>
-                  <Button type="button" size="sm" onClick={addOrderItem} variant="outline">
+              <div className="space-y-3 sm:space-y-4 border-t pt-3 sm:pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <h3 className="text-sm sm:text-base font-semibold">Order Items</h3>
+                  <Button type="button" size="sm" onClick={addOrderItem} variant="outline" className="w-full sm:w-auto h-10 min-h-[44px] sm:min-h-0">
                     <Plus className="h-4 w-4 mr-1" />
                     Add Product
                   </Button>
                 </div>
                 
                 {orderItems.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No products added yet. Click "Add Product" to start.</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">No products added yet. Click "Add Product" to start.</p>
                 )}
 
                 {orderItems.map((item, index) => (
-                  <div key={index} className="flex gap-2 items-start border p-3 rounded-md bg-muted/50">
+                  <div key={index} className="flex gap-2 items-start border p-2 sm:p-3 rounded-md bg-muted/50">
                     <div className="flex-1 space-y-2">
                       <Select
                         value={item.product_id}
                         onValueChange={(value) => updateOrderItem(index, "product_id", value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 sm:h-10 text-xs sm:text-sm">
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
@@ -399,13 +398,14 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                             placeholder="Qty"
                             value={item.quantity}
                             onChange={(e) => updateOrderItem(index, "quantity", parseInt(e.target.value) || 1)}
+                            className="h-11 sm:h-10 text-xs sm:text-sm"
                           />
                         </div>
                         <div className="flex-1">
                           <Input
                             value={`TZS ${(item.price * item.quantity).toLocaleString()}`}
                             readOnly
-                            className="bg-muted"
+                            className="bg-muted h-11 sm:h-10 text-xs sm:text-sm"
                           />
                         </div>
                       </div>
@@ -415,6 +415,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                       size="icon"
                       variant="destructive"
                       onClick={() => removeOrderItem(index)}
+                      className="h-10 w-10 sm:h-8 sm:w-8 flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -422,9 +423,9 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 ))}
 
                 {orderItems.length > 0 && (
-                  <div className="flex justify-between items-center font-semibold text-lg border-t pt-2">
+                  <div className="flex justify-between items-center font-semibold text-base sm:text-lg border-t pt-2 sm:pt-3">
                     <span>Total Amount:</span>
-                    <span>TZS {totalAmount.toLocaleString()}</span>
+                    <span className="text-primary">TZS {totalAmount.toLocaleString()}</span>
                   </div>
                 )}
               </div>
@@ -435,10 +436,10 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 name="payment_method"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment Method</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Payment Method</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 sm:h-10">
                           <SelectValue placeholder="Select payment method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -447,7 +448,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Select the payment method for this order.
                     </FormDescription>
                     <FormMessage />
@@ -459,10 +460,10 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 name="payment_status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment Status</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Payment Status</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 sm:h-10">
                           <SelectValue placeholder="Select payment status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -473,7 +474,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Select the payment status.
                     </FormDescription>
                     <FormMessage />
@@ -485,10 +486,10 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Order Status</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Order Status</FormLabel>
                     <FormControl>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 sm:h-10">
                           <SelectValue placeholder="Select order status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -501,7 +502,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Select the order status.
                     </FormDescription>
                     <FormMessage />
@@ -513,11 +514,11 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 name="shipping_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shipping Address</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Shipping Address</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="min-h-[80px] text-sm" />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Enter the shipping address for this order.
                     </FormDescription>
                     <FormMessage />
@@ -529,24 +530,22 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="min-h-[80px] text-sm" />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Add any additional notes for this order.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Create Order"}
-              </Button>
-            </form>
-          </Form>
-        </SheetDescription>
-      </SheetHeader>
+          <Button type="submit" disabled={loading} className="w-full h-11 sm:h-10 min-h-[44px] sm:min-h-0">
+            {loading ? "Creating..." : "Create Order"}
+          </Button>
+        </form>
+      </Form>
     </SheetContent>
   );
 };

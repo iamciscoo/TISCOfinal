@@ -20,8 +20,8 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
   const [processingStatus, setProcessingStatus] = useState<'processing' | 'success' | 'error' | 'idle'>('idle')
   const [processingError, setProcessingError] = useState<string>('')
   const [today] = useState(() => new Date().toISOString().split('T')[0])
-  const [selectedService, setSelectedService] = useState<string | undefined>(defaultServiceId)
-  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined)
+  const [selectedService, setSelectedService] = useState<string>(defaultServiceId || '')
+  const [selectedTime, setSelectedTime] = useState<string>('')
   const [resetKey, setResetKey] = useState<number>(0)
 
   // Submit the start time of the chosen range to keep DB type compatibility (TIME)
@@ -71,7 +71,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
     if (defaultServiceId && list.some(s => s.id === defaultServiceId)) {
       setSelectedService(defaultServiceId)
     } else {
-      setSelectedService(undefined)
+      setSelectedService('')
     }
   }, [defaultServiceId, servicesProp, services])
 
@@ -94,6 +94,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
       const payload = Object.fromEntries(formData.entries()) as Record<string, string>
       const res = await fetch('/api/service-bookings', {
         method: 'POST',
+        credentials: 'include',
         body: JSON.stringify({
           service_id: selectedService,
           description: payload.description,
@@ -132,8 +133,8 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
       console.log('Resetting form after success')
       formRef.current?.reset()
       // Force complete reset by changing key and clearing states
-      setSelectedService(undefined)
-      setSelectedTime(undefined)
+      setSelectedService('')
+      setSelectedTime('')
       setResetKey(prev => prev + 1)
     }
     setProcessingStatus('idle')
@@ -151,7 +152,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-2">
               <Label htmlFor="service_id" className="text-sm font-medium">Service *</Label>
-              <Select key={`service-${resetKey}`} value={selectedService || undefined} onValueChange={setSelectedService}>
+              <Select key={`service-${resetKey}`} value={selectedService} onValueChange={setSelectedService}>
                 <SelectTrigger id="service_id" aria-required="true" className="w-full touch-manipulation">
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
@@ -187,7 +188,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
             <div className="space-y-2">
               <Label htmlFor="preferred_time" className="text-sm font-medium">Preferred Time Range *</Label>
-              <Select key={`time-${resetKey}`} value={selectedTime || undefined} onValueChange={setSelectedTime}>
+              <Select key={`time-${resetKey}`} value={selectedTime} onValueChange={setSelectedTime}>
                 <SelectTrigger id="preferred_time" aria-required="true" className="w-full touch-manipulation">
                   <SelectValue placeholder="Select time range" />
                 </SelectTrigger>

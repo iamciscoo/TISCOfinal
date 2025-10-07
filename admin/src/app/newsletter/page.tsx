@@ -63,25 +63,34 @@ export default function NewsletterPage() {
     {
       accessorKey: 'email',
       header: 'Email',
+      cell: ({ row }) => (
+        <div className="min-w-[150px] sm:min-w-[200px] text-xs sm:text-sm truncate">{row.original.email}</div>
+      ),
+      enableHiding: false,
     },
     {
       accessorKey: 'source',
       header: 'Source',
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.source || '-'}</span>,
+      cell: ({ row }) => <span className="text-xs sm:text-sm text-muted-foreground">{row.original.source || '-'}</span>,
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       id: 'status',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.is_subscribed === false ? "destructive" : "default"}>
+        <Badge variant={row.original.is_subscribed === false ? "destructive" : "default"} className="text-xs whitespace-nowrap">
           {row.original.is_subscribed === false ? "Unsubscribed" : "Subscribed"}
         </Badge>
       ),
+      enableHiding: false,
     },
     {
       accessorKey: 'created_at',
       header: 'Created',
-      cell: ({ row }) => <span className="text-sm">{new Date(row.original.created_at).toLocaleString()}</span>,
+      cell: ({ row }) => <span className="text-xs sm:text-sm whitespace-nowrap">{new Date(row.original.created_at).toLocaleDateString()}</span>,
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
   ]
 
@@ -93,60 +102,60 @@ export default function NewsletterPage() {
   }, [items, totalCount])
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Mail className="w-7 h-7" /> Newsletter</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2"><Mail className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" /> Newsletter</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">All subscribers</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.total}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">All subscribers</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Subscribed</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Subscribed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.subs}</div>
-            <p className="text-xs text-muted-foreground">Currently subscribed</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.subs}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Currently subscribed</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Unsubscribed</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Unsubscribed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.unsubs}</div>
-            <p className="text-xs text-muted-foreground">Opted out</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.unsubs}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Opted out</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Subscribers</CardTitle>
-          <CardDescription>View newsletter subscriptions</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Subscribers</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View newsletter subscriptions</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-4">
-            <div className="flex gap-2">
+        <CardContent className="px-2 sm:px-6">
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
-                placeholder="Search (email, source)"
+                placeholder="Search..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="w-72"
+                className="flex-1 h-10"
               />
-              <Button variant="outline" onClick={handleSearch}>Search</Button>
+              <Button variant="outline" onClick={handleSearch} className="w-full sm:w-auto h-10 min-h-[44px] sm:min-h-0">Search</Button>
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
               <select
-                className="border rounded px-2 py-2 text-sm"
+                className="border rounded px-3 py-2 text-sm h-10"
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setPage(1) }}
               >
@@ -154,10 +163,12 @@ export default function NewsletterPage() {
                 <option value="subscribed">Subscribed</option>
                 <option value="unsubscribed">Unsubscribed</option>
               </select>
-              <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
-              <div className="space-x-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+              <div className="flex items-center justify-between sm:justify-end gap-2">
+                <div className="text-xs sm:text-sm text-muted-foreground">Page {page} / {totalPages}</div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="h-10 min-h-[44px] sm:min-h-0">Prev</Button>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="h-10 min-h-[44px] sm:min-h-0">Next</Button>
+                </div>
               </div>
             </div>
           </div>

@@ -71,6 +71,7 @@ export default function BookingsPage() {
       else setRefreshing(true)
       const response = await fetch('/api/service-bookings?fresh=1', {
         cache: 'no-store',
+        credentials: 'include',
         headers: { 'x-no-cache': '1' }
       })
       if (response.ok) {

@@ -38,6 +38,7 @@ export const columns: ColumnDef<Product>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "image",
@@ -45,21 +46,27 @@ export const columns: ColumnDef<Product>[] = [
     cell: ({ row }) => {
       const product = row.original;
       return (
-        <div className="w-9 h-9 relative">
+        <div className="w-10 h-10 sm:w-9 sm:h-9 relative flex-shrink-0">
           <Image
             src={product.images[product.colors[0]]}
             alt={product.name}
             fill
-            sizes="36px"
+            sizes="40px"
             className="rounded-full object-cover"
           />
         </div>
       );
     },
+    enableHiding: false,
   },
   {
     accessorKey: "name",
     header: "Name",
+    cell: ({ row }) => {
+      const name = row.getValue("name") as string;
+      return <div className="min-w-[100px] sm:min-w-[150px] text-xs sm:text-sm font-medium">{name}</div>;
+    },
+    enableHiding: false,
   },
   {
     accessorKey: "price",
@@ -74,10 +81,22 @@ export const columns: ColumnDef<Product>[] = [
         </Button>
       );
     },
+    cell: ({ row }) => {
+      const price = row.getValue("price") as number;
+      return <div className="text-xs sm:text-sm font-medium whitespace-nowrap">{price}</div>;
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "shortDescription",
     header: "Description",
+    cell: ({ row }) => {
+      const desc = row.getValue("shortDescription") as string;
+      return <div className="text-xs text-muted-foreground max-w-[200px] truncate">{desc}</div>;
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "category",
@@ -86,23 +105,25 @@ export const columns: ColumnDef<Product>[] = [
       const product = row.original;
       // Handle both old and new category structure
       const categories = product.categories || [];
-      if (categories.length === 0) return "General";
+      if (categories.length === 0) return <span className="text-xs sm:text-sm">General</span>;
       
       // Display first category name, with count if multiple
       const firstCategory = categories[0]?.category?.name || categories[0]?.name;
       const additionalCount = categories.length - 1;
       
       return (
-        <div className="flex items-center gap-1">
-          <span>{firstCategory}</span>
+        <div className="flex items-center gap-1 text-xs sm:text-sm">
+          <span className="truncate max-w-[100px]">{firstCategory}</span>
           {additionalCount > 0 && (
-            <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+            <span className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full">
               +{additionalCount}
             </span>
           )}
         </div>
       );
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "stock_quantity",
@@ -112,25 +133,28 @@ export const columns: ColumnDef<Product>[] = [
       const stock = product.stock_quantity || 0;
       return (
         <span className={cn(
-          "px-2 py-1 rounded-full text-xs font-medium",
-          stock < 10 ? "bg-red-100 text-red-800" : 
-          stock < 50 ? "bg-yellow-100 text-yellow-800" : 
-          "bg-green-100 text-green-800"
+          "px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap",
+          stock < 10 ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" : 
+          stock < 50 ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" : 
+          "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
         )}>
           {stock}
         </span>
       );
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const product = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

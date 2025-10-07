@@ -20,12 +20,12 @@ export function PageLayout<TData, TValue>({
   deleteApiBase,
 }: PageLayoutProps<TData, TValue>) {
   return (
-    <div className="p-4 sm:p-6">
-      <div className="mb-6 sm:mb-8 px-4 py-3 bg-secondary rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-lg sm:text-xl font-semibold">{title}</h1>
+    <div className="p-3 sm:p-4 lg:p-6">
+      <div className="mb-4 sm:mb-6 lg:mb-8 px-3 py-2 sm:px-4 sm:py-3 bg-secondary rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+        <h1 className="text-base sm:text-lg lg:text-xl font-semibold">{title}</h1>
         {addEntityButton}
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
         <DataTable 
           columns={columns} 
           data={data} 

@@ -118,18 +118,21 @@ export default function MessagesPage() {
       accessorFn: (row) => row.name || '',
       header: 'Sender',
       cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.name}</p>
-          <p className="text-sm text-gray-600">{row.original.email}</p>
+        <div className="min-w-[120px]">
+          <p className="font-medium text-xs sm:text-sm truncate">{row.original.name}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 truncate hidden sm:block">{row.original.email}</p>
         </div>
-      )
+      ),
+      enableHiding: false,
     },
     {
       accessorKey: 'subject',
       header: 'Subject',
       cell: ({ row }) => (
-        <div className="max-w-sm truncate">{row.original.subject}</div>
-      )
+        <div className="max-w-[150px] sm:max-w-sm truncate text-xs sm:text-sm">{row.original.subject}</div>
+      ),
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: 'status',
@@ -137,23 +140,27 @@ export default function MessagesPage() {
       cell: ({ row }) => {
         const s = row.original.status
         const variant = s === 'new' ? 'secondary' : s === 'read' ? 'outline' : s === 'responded' ? 'default' : 'secondary'
-        return <Badge variant={variant as any}>{s[0].toUpperCase() + s.slice(1)}</Badge>
-      }
+        return <Badge variant={variant as any} className="text-xs whitespace-nowrap">{s[0].toUpperCase() + s.slice(1)}</Badge>
+      },
+      enableHiding: false,
     },
     {
       accessorKey: 'created_at',
       header: 'Date',
       cell: ({ row }) => (
-        <span className="text-sm">{new Date(row.original.created_at).toLocaleString()}</span>
-      )
+        <span className="text-xs sm:text-sm whitespace-nowrap">{new Date(row.original.created_at).toLocaleDateString()}</span>
+      ),
+      enableHiding: true,
+      meta: { hideOnMobile: true },
     },
     {
       id: 'actions',
       header: 'Actions',
+      enableHiding: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => openDetails(row.original)}>
-            <Eye className="w-4 h-4 mr-1" /> View
+          <Button variant="outline" size="sm" onClick={() => openDetails(row.original)} className="h-9 sm:h-8 min-h-[44px] sm:min-h-0">
+            <Eye className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">View</span>
           </Button>
         </div>
       )
@@ -161,47 +168,47 @@ export default function MessagesPage() {
   ]
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Mail className="w-7 h-7" /> Messages</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2"><Mail className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" /> Messages</h1>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">All messages</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.total}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">All messages</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">New</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">New</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.newCnt}</div>
-            <p className="text-xs text-muted-foreground">Just arrived</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.newCnt}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Just arrived</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Responded</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Responded</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.respondedCnt}</div>
-            <p className="text-xs text-muted-foreground">Replied</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.respondedCnt}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Replied</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Closed</CardTitle>
+          <CardHeader className="pb-2 sm:pb-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Closed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.closedCnt}</div>
-            <p className="text-xs text-muted-foreground">Resolved</p>
+            <div className="text-lg sm:text-2xl font-bold">{stats.closedCnt}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Resolved</p>
           </CardContent>
         </Card>
       </div>
@@ -209,23 +216,23 @@ export default function MessagesPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact Messages</CardTitle>
-          <CardDescription>View and respond to customer inquiries</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Contact Messages</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View and respond to customer inquiries</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-4">
-            <div className="flex gap-2">
+        <CardContent className="px-2 sm:px-6">
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
-                placeholder="Search (name, email, subject, message)"
+                placeholder="Search..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="w-72"
+                className="flex-1 h-10"
               />
-              <Button variant="outline" onClick={handleSearch}>Search</Button>
+              <Button variant="outline" onClick={handleSearch} className="w-full sm:w-auto h-10 min-h-[44px] sm:min-h-0">Search</Button>
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
               <select
-                className="border rounded px-2 py-2 text-sm"
+                className="border rounded px-3 py-2 text-sm h-10"
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setPage(1) }}
               >
@@ -235,10 +242,12 @@ export default function MessagesPage() {
                 <option value="responded">Responded</option>
                 <option value="closed">Closed</option>
               </select>
-              <div className="text-sm text-muted-foreground">Page {page} / {totalPages}</div>
-              <div className="space-x-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+              <div className="flex items-center justify-between sm:justify-end gap-2">
+                <div className="text-xs sm:text-sm text-muted-foreground">Page {page} / {totalPages}</div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="h-10 min-h-[44px] sm:min-h-0">Prev</Button>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="h-10 min-h-[44px] sm:min-h-0">Next</Button>
+                </div>
               </div>
             </div>
           </div>
@@ -260,12 +269,12 @@ export default function MessagesPage() {
       {/* Details / Respond Sheet */}
       <Sheet open={open} onOpenChange={setOpen}>
         {selected && (
-          <SheetContent side="right" className="sm:max-w-lg">
+          <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto" aria-describedby={undefined}>
             <SheetHeader>
-              <SheetTitle>Message from {selected.name}</SheetTitle>
+              <SheetTitle className="text-base sm:text-lg">Message from {selected.name}</SheetTitle>
             </SheetHeader>
 
-            <div className="space-y-4 px-4">
+            <div className="space-y-4 px-4 mt-4">
               <div>
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-medium">{selected.email}</p>

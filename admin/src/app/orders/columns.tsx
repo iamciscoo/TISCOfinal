@@ -41,6 +41,7 @@ export const columns: ColumnDef<Order>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "id",
@@ -57,8 +58,9 @@ export const columns: ColumnDef<Order>[] = [
     },
     cell: ({ row }) => {
       const id = row.getValue("id") as string;
-      return <div className="font-mono text-sm">{id}</div>;
+      return <div className="font-mono text-xs sm:text-sm">{id.slice(0, 8)}...</div>;
     },
+    enableHiding: false,
   },
   {
     accessorKey: "customerName",
@@ -67,12 +69,13 @@ export const columns: ColumnDef<Order>[] = [
       const name = row.getValue("customerName") as string;
       const email = row.original.customerEmail;
       return (
-        <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500">{email}</div>
+        <div className="min-w-[120px]">
+          <div className="font-medium text-xs sm:text-sm">{name}</div>
+          <div className="text-xs text-gray-500 hidden sm:block">{email}</div>
         </div>
       );
     },
+    enableHiding: false,
   },
   {
     accessorKey: "total",
@@ -90,16 +93,20 @@ export const columns: ColumnDef<Order>[] = [
     cell: ({ row }) => {
       const total = parseFloat(row.getValue("total"));
       const formatted = `TZS ${Number(total || 0).toLocaleString()}`;
-      return <div className="font-medium">{formatted}</div>;
+      return <div className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatted}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "items",
     header: "Items",
     cell: ({ row }) => {
       const items = row.getValue("items") as number;
-      return <div className="text-center">{items}</div>;
+      return <div className="text-center text-xs sm:text-sm">{items}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "status",
@@ -116,11 +123,12 @@ export const columns: ColumnDef<Order>[] = [
       };
       
       return (
-        <Badge variant={variants[status] || "secondary"}>
+        <Badge variant={variants[status] || "secondary"} className="text-xs whitespace-nowrap">
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </Badge>
       );
     },
+    enableHiding: false,
   },
   {
     accessorKey: "paymentStatus",
@@ -135,11 +143,13 @@ export const columns: ColumnDef<Order>[] = [
       };
       
       return (
-        <Badge variant={variants[status] || "secondary"}>
+        <Badge variant={variants[status] || "secondary"} className="text-xs whitespace-nowrap">
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </Badge>
       );
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "createdAt",
@@ -156,18 +166,21 @@ export const columns: ColumnDef<Order>[] = [
     },
     cell: ({ row }) => {
       const date = row.getValue("createdAt") as string;
-      return <div>{formatToEAT(date, { dateStyle: 'short', timeStyle: 'short' })}</div>;
+      return <div className="text-xs sm:text-sm whitespace-nowrap">{formatToEAT(date, { dateStyle: 'short', timeStyle: 'short' })}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const order = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

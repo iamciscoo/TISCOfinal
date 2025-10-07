@@ -37,6 +37,7 @@ export const columns: ColumnDef<User>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "avatar",
@@ -44,21 +45,27 @@ export const columns: ColumnDef<User>[] = [
     cell: ({ row }) => {
       const user = row.original;
       return (
-        <div className="w-9 h-9 relative">
+        <div className="w-10 h-10 sm:w-9 sm:h-9 relative flex-shrink-0">
           <Image
             src={user.avatar}
             alt={user.fullName}
             fill
-            sizes="36px"
+            sizes="40px"
             className="rounded-full object-cover"
           />
         </div>
       );
     },
+    enableHiding: false,
   },
   {
     accessorKey: "fullName",
     header: "User",
+    cell: ({ row }) => {
+      const name = row.getValue("fullName") as string;
+      return <div className="min-w-[120px] text-xs sm:text-sm font-medium">{name}</div>;
+    },
+    enableHiding: false,
   },
   {
     accessorKey: "email",
@@ -73,16 +80,23 @@ export const columns: ColumnDef<User>[] = [
         </Button>
       );
     },
+    cell: ({ row }) => {
+      const email = row.getValue("email") as string;
+      return <div className="text-xs sm:text-sm truncate max-w-[150px] sm:max-w-[200px]">{email}</div>;
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const user = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { SearchSelect } from "@/components/SearchSelect";
 import {
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -94,12 +93,12 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
     `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email;
 
   return (
-    <SheetContent>
+    <SheetContent aria-describedby={undefined}>
       <SheetHeader>
         <SheetTitle className="mb-4">Add Review</SheetTitle>
-        <SheetDescription asChild>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      </SheetHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
               <FormField
                 control={form.control}
                 name="product_id"
@@ -195,13 +194,11 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
                 )}
               />
 
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Create Review"}
-              </Button>
-            </form>
-          </Form>
-        </SheetDescription>
-      </SheetHeader>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Create Review"}
+          </Button>
+        </form>
+      </Form>
     </SheetContent>
   );
 };

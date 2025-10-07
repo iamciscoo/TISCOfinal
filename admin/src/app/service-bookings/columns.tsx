@@ -57,30 +57,36 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
         checked={row.getIsSelected()}
       />
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "serviceTitle",
     header: "Service",
     cell: ({ row }) => {
       const v = row.getValue<string>("serviceTitle");
-      return <span className="font-medium max-w-[200px] truncate block">{v || "Unknown"}</span>;
+      return <span className="font-medium max-w-[120px] sm:max-w-[200px] truncate block text-xs sm:text-sm">{v || "Unknown"}</span>;
     },
+    enableHiding: false,
   },
   {
     accessorKey: "customerName",
     header: "Customer",
     cell: ({ row }) => {
       const name = row.getValue<string>("customerName");
-      return <span className="max-w-[150px] truncate block">{name}</span>;
+      return <span className="max-w-[150px] truncate block text-xs sm:text-sm">{name}</span>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "customerEmail",
     header: "Email",
     cell: ({ row }) => {
       const email = row.getValue<string>("customerEmail");
-      return <span className="max-w-[180px] truncate block text-sm">{email}</span>;
+      return <span className="max-w-[180px] truncate block text-xs sm:text-sm">{email}</span>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "status",
@@ -98,8 +104,9 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
           ? "destructive"
           : "secondary";
       const label = s?.replace(/_/g, " ") || "unknown";
-      return <Badge variant={variant as any}>{label}</Badge>;
+      return <Badge variant={variant as any} className="text-xs whitespace-nowrap">{label}</Badge>;
     },
+    enableHiding: false,
   },
   {
     accessorKey: "scheduledDate",
@@ -107,13 +114,16 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     cell: ({ row }) => {
       const iso = row.getValue<string | undefined>("scheduledDate");
       const formatted = iso ? formatToEAT(iso, { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
-      return <div>{formatted}</div>;
+      return <div className="text-xs sm:text-sm whitespace-nowrap">{formatted}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     accessorKey: "total",
     header: "Total",
-    cell: ({ row }) => formatTZS(Number(row.getValue("total"))),
+    cell: ({ row }) => <div className="text-xs sm:text-sm font-medium whitespace-nowrap">{formatTZS(Number(row.getValue("total")))}</div>,
+    enableHiding: false,
   },
   {
     accessorKey: "createdAt",
@@ -121,11 +131,14 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
     cell: ({ row }) => {
       const iso = row.getValue<string>("createdAt");
       const formatted = formatToEAT(iso, { dateStyle: 'short', timeStyle: 'short' });
-      return <div>{formatted}</div>;
+      return <div className="text-xs sm:text-sm whitespace-nowrap">{formatted}</div>;
     },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
       const booking = row.original;
       const updateStatus = async (status: ServiceBookingRow["status"]) => {
@@ -205,7 +218,7 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
         <Sheet>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>

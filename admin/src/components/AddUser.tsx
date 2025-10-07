@@ -2,7 +2,6 @@
 
 import {
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -65,12 +64,12 @@ const AddUser = () => {
     }
   };
   return (
-    <SheetContent>
+    <SheetContent aria-describedby={undefined}>
       <SheetHeader>
         <SheetTitle className="mb-4">Add User</SheetTitle>
-        <SheetDescription asChild>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      </SheetHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-4">
               <FormField
                 control={form.control}
                 name="full_name"
@@ -151,13 +150,11 @@ const AddUser = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Add User"}
-              </Button>
-            </form>
-          </Form>
-        </SheetDescription>
-      </SheetHeader>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Add User"}
+          </Button>
+        </form>
+      </Form>
     </SheetContent>
   );
 };
