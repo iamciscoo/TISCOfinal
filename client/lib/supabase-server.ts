@@ -24,6 +24,12 @@ export const createClient = async () => {
         get(name: string) {
           try {
             const cookie = cookieStore.get(name)
+            
+            // DEBUG: Log cookie access
+            if (name.includes('auth')) {
+              console.log('🍪 [cookie.get]', name, '→', cookie?.value ? 'Present' : 'Missing')
+            }
+            
             if (!cookie?.value) return undefined
             
             // Validate Supabase auth cookies to prevent UTF-8 errors
@@ -89,25 +95,50 @@ export const getUser = async (retries = 2): Promise<User | null> => {
     try {
       const supabase = await createClient()
       
+      // DEBUG: Log cookie access attempts
+      console.log('🔍 [getUser] Attempting to get session...')
+      
       // First try to get session, then user
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      console.log('🔍 [getUser] Session result:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id || 'none',
+        error: sessionError?.message || 'none'
+      })
       
       if (session?.user) {
+        console.log('✅ [getUser] User found via session:', session.user.email)
         return session.user
       }
       
       // Fallback to getUser()
+      console.log('🔍 [getUser] No session, trying getUser()...')
       const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log('🔍 [getUser] getUser() result:', {
+        hasUser: !!user,
+        userId: user?.id || 'none',
+        email: user?.email || 'none',
+        error: error?.message || 'none'
+      })
       
       if (error) {
         // If it's a retryable error and we have attempts left
         if (attempt < retries && (error.message?.includes('fetch failed') || error.message?.includes('timeout'))) {
-          console.warn(`Auth error in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
+          console.warn(`⚠️ Auth error in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
           continue
         }
-        console.error('Auth error in getUser:', error)
+        console.error('❌ Auth error in getUser:', error)
         return null
+      }
+      
+      if (user) {
+        console.log('✅ [getUser] User found via getUser():', user.email)
+      } else {
+        console.log('⚠️ [getUser] No user found')
       }
       
       return user
@@ -119,14 +150,15 @@ export const getUser = async (retries = 2): Promise<User | null> => {
         error.message?.includes('ECONNRESET') ||
         error.message?.includes('ENOTFOUND')
       ))) {
-        console.warn(`Exception in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
+        console.warn(`⚠️ Exception in getUser (attempt ${attempt + 1}/${retries + 1}):`, (error as Error).message)
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
         continue
       }
-      console.error('Exception in getUser:', error)
+      console.error('❌ Exception in getUser:', error)
       return null
     }
   }
+  console.log('❌ [getUser] All retry attempts exhausted')
   return null
 }
 

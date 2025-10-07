@@ -1,15 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from './database-types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Singleton client to prevent multiple instances with proper typing
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null
+// Create browser client that uses cookies for session storage (SSR-compatible)
+// This allows the server to read the session cookies via createServerClient
+let supabaseInstance: ReturnType<typeof createBrowserClient<Database>> | null = null
 
 export const supabase = (() => {
   if (!supabaseInstance) {
-    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    // Use createBrowserClient from @supabase/ssr instead of createClient
+    // This automatically configures cookie-based storage for SSR compatibility
+    supabaseInstance = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
   }
   return supabaseInstance
 })()

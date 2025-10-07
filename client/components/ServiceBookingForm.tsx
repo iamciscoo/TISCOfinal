@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ type Service = { id: string; title: string }
 
 export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }: { defaultServiceId?: string; services?: Service[] }) => {
   const { toast } = useToast()
+  const { user, loading: authLoading } = useAuth()
   const formRef = useRef<HTMLFormElement>(null)
   const [services, setServices] = useState<Service[]>(servicesProp ?? [])
   const [servicesLoading, setServicesLoading] = useState(false)
@@ -77,6 +79,18 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
   async function onSubmit(formData: FormData) {
     try {
+      // Check if user is signed in
+      if (!user) {
+        toast({ 
+          title: 'Sign in required', 
+          description: 'Please sign in to book a service. Redirecting...', 
+          variant: 'destructive' 
+        })
+        // Redirect to sign in page
+        window.location.href = '/auth/sign-in?redirectTo=' + encodeURIComponent(window.location.pathname)
+        return
+      }
+      
       // Basic client-side validation for select-based fields
       if (!selectedService) {
         toast({ title: 'Missing service', description: 'Please select a service.', variant: 'destructive' })
@@ -108,7 +122,15 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
-        throw new Error(j?.error || 'Failed to create booking')
+        
+        // Handle specific error codes
+        if (res.status === 401) {
+          throw new Error('Authentication required. Please sign in and try again.')
+        }
+        
+        // Show detailed error message if available
+        const errorMsg = j?.message || j?.error || `Failed to create booking (${res.status})`
+        throw new Error(errorMsg)
       }
       
       // Success state
@@ -212,7 +234,18 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
             <Textarea id="description" name="description" placeholder="Briefly describe the issue or request...  (Swahili, English or French feel free)" required className="min-h-[100px] sm:min-h-[120px] touch-manipulation" />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full md:w-auto bg-gray-900 hover:bg-gray-800 touch-manipulation py-2.5 sm:py-2">{loading ? 'Submitting…' : 'Submit Service Request'}</Button>
+          <Button 
+            type="submit" 
+            disabled={loading || authLoading || !user} 
+            className="w-full md:w-auto bg-gray-900 hover:bg-gray-800 touch-manipulation py-2.5 sm:py-2"
+          >
+            {authLoading ? 'Checking authentication...' : loading ? 'Submitting…' : !user ? 'Sign in to book' : 'Submit Service Request'}
+          </Button>
+          {!user && !authLoading && (
+            <p className="text-sm text-orange-600 mt-2">
+              Please <a href="/auth/sign-in" className="underline font-medium">sign in</a> to book a service
+            </p>
+          )}
         </form>
       </CardContent>
       

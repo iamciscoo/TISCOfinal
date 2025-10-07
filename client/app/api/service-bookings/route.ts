@@ -71,9 +71,24 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('=== POST /api/service-bookings START ===')
+    console.log('Request headers:', {
+      'content-type': req.headers.get('content-type'),
+      'cookie': req.headers.get('cookie') ? 'Present' : 'Missing',
+      'authorization': req.headers.get('authorization') ? 'Present' : 'Missing'
+    })
+    
+    console.log('Getting user...')
     const user = await getUser()
+    console.log('User result:', user ? `User ID: ${user.id}, Email: ${user.email}` : 'No user found')
+    
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.log('No user found, returning 401')
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'You must be signed in to book a service. Please sign in and try again.',
+        code: 'AUTH_REQUIRED'
+      }, { status: 401 })
     }
 
     let body: Record<string, unknown> = {}
@@ -96,11 +111,15 @@ export async function POST(req: NextRequest) {
       || user.user_metadata?.name 
       || 'Customer'
 
+    console.log('Validating booking data...')
     if (!service_id) {
       return NextResponse.json({ error: 'service_id is required' }, { status: 400 })
     }
     if (!description || !preferred_date || !preferred_time || !contact_email || !customer_name) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ 
+        error: 'Missing required fields',
+        details: { description: !!description, preferred_date: !!preferred_date, preferred_time: !!preferred_time, contact_email: !!contact_email, customer_name: !!customer_name }
+      }, { status: 400 })
     }
 
     // Verify service exists
@@ -115,6 +134,7 @@ export async function POST(req: NextRequest) {
 
     const contact_phone = String(body.contact_phone || '').trim()
 
+    console.log('Creating service booking in database...')
     const { data, error } = await supabase
       .from('service_bookings')
       .insert({
@@ -133,8 +153,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) {
+      console.error('Database error creating booking:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+    
+    console.log('Service booking created successfully:', data?.id)
 
     // Get service details for notification
     const { data: serviceData } = await supabase
