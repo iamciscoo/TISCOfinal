@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   Home,
   User2,
@@ -72,32 +72,43 @@ const AppSidebar = () => {
   const router = useRouter()
   const { state, setOpenMobile, isMobile, open } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const [isMobileView, setIsMobileView] = useState(false)
   
-  // On mobile, always show text when sidebar is open. Force text display for mobile devices
-  const shouldShowText = (typeof window !== 'undefined' && window.innerWidth < 768) ? true : !isCollapsed
+  // Memoize expensive check - only re-compute when state changes
+  const shouldShowText = useMemo(() => isMobileView ? true : !isCollapsed, [isMobileView, isCollapsed])
 
-  // Auto-collapse sidebar on mobile when navigation occurs
+  // Initialize and track mobile view state
   useEffect(() => {
+    // Initial check
+    const checkMobile = () => window.innerWidth < 768
+    setIsMobileView(checkMobile())
+
+    // Debounced resize handler for performance
+    let resizeTimer: NodeJS.Timeout
     const handleResize = () => {
-      if (window.innerWidth < 768) { // Mobile breakpoint
-        setOpenMobile(false)
-      }
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        const isMobile = checkMobile()
+        setIsMobileView(isMobile)
+        if (isMobile) {
+          setOpenMobile(false)
+        }
+      }, 150) // Debounce for 150ms
     }
 
-    // Close sidebar on mobile when clicking navigation links
-    const handleNavigation = () => {
-      if (window.innerWidth < 768) {
-        setOpenMobile(false)
-      }
-    }
-
-    // Listen for navigation events
     window.addEventListener('resize', handleResize)
-    
     return () => {
+      clearTimeout(resizeTimer)
       window.removeEventListener('resize', handleResize)
     }
   }, [setOpenMobile])
+
+  // Memoized mobile close handler
+  const handleMobileNavigation = useCallback(() => {
+    if (isMobileView) {
+      setOpenMobile(false)
+    }
+  }, [isMobileView, setOpenMobile])
 
   const handleLogout = async () => {
     try {
@@ -127,7 +138,7 @@ const AppSidebar = () => {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
-                    <Link href={item.url} onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                    <Link href={item.url} onClick={handleMobileNavigation}>
                       <item.icon />
                       {shouldShowText && <span>{item.title}</span>}
                     </Link>
@@ -143,7 +154,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Products">
-                  <Link href="/products" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/products" onClick={handleMobileNavigation}>
                     <Shirt />
                     {shouldShowText && <span>All Products</span>}
                   </Link>
@@ -151,7 +162,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Categories">
-                  <Link href="/categories" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/categories" onClick={handleMobileNavigation}>
                     <FolderOpen />
                     {shouldShowText && <span>All Categories</span>}
                   </Link>
@@ -159,7 +170,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Add Product">
-                  <Link href="/products/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/products/new" onClick={handleMobileNavigation}>
                     <Plus />
                     {shouldShowText && <span>Add Product</span>}
                   </Link>
@@ -185,7 +196,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Customers">
-                  <Link href="/users" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/users" onClick={handleMobileNavigation}>
                     <User />
                     {shouldShowText && <span>All Customers</span>}
                   </Link>
@@ -211,7 +222,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Orders">
-                  <Link href="/orders" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/orders" onClick={handleMobileNavigation}>
                     <Package />
                     {shouldShowText && <span>All Orders</span>}
                   </Link>
@@ -219,7 +230,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Payments">
-                  <Link href="/payments" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/payments" onClick={handleMobileNavigation}>
                     <CreditCard />
                     {shouldShowText && <span>All Payments</span>}
                   </Link>
@@ -245,7 +256,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="All Services">
-                  <Link href="/services" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/services" onClick={handleMobileNavigation}>
                     <Wrench />
                     {shouldShowText && <span>All Services</span>}
                   </Link>
@@ -253,7 +264,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Service Bookings">
-                  <Link href="/service-bookings" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/service-bookings" onClick={handleMobileNavigation}>
                     <CalendarCheck />
                     {shouldShowText && <span>Service Bookings</span>}
                   </Link>
@@ -261,7 +272,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Add Service">
-                  <Link href="/services/new" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/services/new" onClick={handleMobileNavigation}>
                     <Plus />
                     {shouldShowText && <span>Add Service</span>}
                   </Link>
@@ -276,7 +287,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Reviews">
-                  <Link href="/reviews" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/reviews" onClick={handleMobileNavigation}>
                     <Star />
                     {shouldShowText && <span>Reviews</span>}
                   </Link>
@@ -284,7 +295,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Newsletter">
-                  <Link href="/newsletter" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/newsletter" onClick={handleMobileNavigation}>
                     <Mail />
                     {shouldShowText && <span>Newsletter</span>}
                   </Link>
@@ -292,7 +303,7 @@ const AppSidebar = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Messages">
-                  <Link href="/messages" onClick={() => window.innerWidth < 768 && setOpenMobile(false)}>
+                  <Link href="/messages" onClick={handleMobileNavigation}>
                     <Mail />
                     {shouldShowText && <span>Messages</span>}
                   </Link>

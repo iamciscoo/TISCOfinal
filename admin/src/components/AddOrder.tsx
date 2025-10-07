@@ -32,6 +32,10 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X } from "lucide-react";
 
+interface AddOrderProps {
+  onOpenChange?: (open: boolean) => void;
+}
+
 const formSchema = z.object({
   customer_type: z.enum(["registered", "guest"]),
   user_id: z.string().optional(),
@@ -55,18 +59,22 @@ const formSchema = z.object({
     return !!data.guest_name && !!data.guest_phone;
   }
 }, {
-  message: "Customer information is required",
   path: ["user_id"],
 });
 
-const AddOrder = () => {
-  type UserItem = { id: string; email: string; first_name?: string | null; last_name?: string | null };
-  type Product = { id: string; name: string; price: number; stock_quantity: number };
-  
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
+  const { toast } = useToast();
+  const [users, setUsers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const { toast} = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Track sheet open state
+  useEffect(() => {
+    setIsOpen(true);
+    onOpenChange?.(true);
+    return () => onOpenChange?.(false);
+  }, [onOpenChange]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,7 +97,10 @@ const AddOrder = () => {
   const orderItems = form.watch("order_items");
   const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  // Only fetch data when sheet is opened - performance optimization
   useEffect(() => {
+    if (!isOpen) return;
+    
     const fetchData = async () => {
       try {
         const [usersRes, productsRes] = await Promise.all([
@@ -117,7 +128,7 @@ const AddOrder = () => {
       }
     };
     fetchData();
-  }, [toast]);
+  }, [isOpen, toast]);
   
   const addOrderItem = () => {
     const currentItems = form.getValues("order_items");

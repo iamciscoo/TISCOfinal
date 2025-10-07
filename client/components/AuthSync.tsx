@@ -30,7 +30,6 @@ export default function AuthSync() {
         // 1) Ensure profile exists/updated in local DB
         // Add retry logic for auth state synchronization
         const retries = 3
-        let lastError: Error | null = null
         
         for (let i = 0; i < retries; i++) {
           try {
@@ -68,17 +67,11 @@ export default function AuthSync() {
             }
             
             break // Exit retry loop after final attempt
-          } catch (err) {
+          } catch {
             // Network error or timeout - fail silently
             // Don't retry network errors as they're unlikely to resolve quickly
             return
           }
-        }
-        
-        // Fail silently - auth sync is not critical since user is already authenticated
-        if (lastError) {
-          // Don't throw or log - user experience is not affected
-          return
         }
       } catch {
         // Suppress errors - auth sync failure doesn't affect user experience
@@ -105,7 +98,7 @@ export default function AuthSync() {
     }
 
     run()
-  }, [isLoaded, isSignedIn, hasHydrated, ownerId, setOwnerId, user, session?.access_token])
+  }, [isLoaded, isSignedIn, hasHydrated, ownerId, setOwnerId, user, session])
 
   // Reset one-time guard on sign-out so next login merges again
   useEffect(() => {
