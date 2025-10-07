@@ -28,7 +28,7 @@ export const MobileSearchBar = () => {
   }, [searchQuery, handleSearch])
 
   return (
-    <div className="md:hidden px-4 pt-2 pb-0 bg-white">
+    <div className="md:hidden px-4 pt-2 pb-1 bg-white">
       <div className="relative">
         <Input
           type="search"

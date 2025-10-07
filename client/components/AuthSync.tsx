@@ -15,7 +15,14 @@ export default function AuthSync() {
   const hasSyncedRef = useRef(false)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !hasHydrated || hasSyncedRef.current) return
+    // More strict checks to prevent calls when user is not truly authenticated
+    if (!isLoaded || !isSignedIn || !user || !session || !hasHydrated || hasSyncedRef.current) return
+    
+    // Additional check: ensure we have a valid session with access token
+    if (!session.access_token || session.expires_at && session.expires_at < Date.now() / 1000) {
+      return
+    }
+    
     hasSyncedRef.current = true
 
     const run = async () => {
@@ -27,16 +34,26 @@ export default function AuthSync() {
         
         for (let i = 0; i < retries; i++) {
           try {
+            // Double-check session is still valid before making the call
+            if (!session?.access_token) {
+              return
+            }
+            
             const response = await fetch('/api/auth/sync', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'sync_profile' })
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({ action: 'sync_profile' }),
+              // Suppress console errors for failed requests
+              signal: AbortSignal.timeout(10000) // 10s timeout
             })
             
-            if (response.status === 401 && i < retries - 1) {
-              // Auth state not yet synchronized, wait and retry silently
-              await new Promise(resolve => setTimeout(resolve, (i + 1) * 1000))
-              continue
+            if (response.status === 401) {
+              // Auth not ready - this is expected, fail silently
+              // Don't retry for 401 as it means auth is not available
+              return
             }
             
             if (response.ok) {
@@ -44,18 +61,17 @@ export default function AuthSync() {
               break
             }
             
-            // If we've exhausted retries, fail silently
-            // User is already authenticated client-side, server sync is nice-to-have
-            if (i === retries - 1) {
-              lastError = new Error('Auth sync skipped - user authenticated client-side')
-            }
-            
-            break // Exit retry loop
-          } catch (err) {
-            lastError = err as Error
+            // For other errors, retry with backoff
             if (i < retries - 1) {
               await new Promise(resolve => setTimeout(resolve, (i + 1) * 1000))
+              continue
             }
+            
+            break // Exit retry loop after final attempt
+          } catch (err) {
+            // Network error or timeout - fail silently
+            // Don't retry network errors as they're unlikely to resolve quickly
+            return
           }
         }
         
