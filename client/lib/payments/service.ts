@@ -115,34 +115,57 @@ export async function createPaymentSession(params: {
 }): Promise<{ session: PaymentSession; is_duplicate: boolean }> {
   const transaction_reference = generateTransactionReference()
   
-  // Smart duplicate check: Only block ACTIVELY PROCESSING payments
-  // Allow retries after failed/timed-out sessions (key fix for retry logic)
-  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
-  const { data: activeSession } = await supabase
+  // Smart duplicate check with automatic timeout handling
+  // Only block ACTIVELY PROCESSING payments within reasonable time window
+  const { data: recentSessions } = await supabase
     .from('payment_sessions')
     .select('*')
     .eq('user_id', params.user_id)
     .eq('amount', params.amount)
     .eq('provider', params.provider)
     .eq('phone_number', params.phone_number)
-    .eq('status', 'processing') // KEY: Only block if actively processing, not pending/failed
-    .gte('created_at', twoMinutesAgo) // Reduced to 2 minutes
+    .eq('status', 'processing')
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(5)
 
-  if (activeSession) {
-    console.log(`⚠️ Active payment in progress, preventing duplicate: ${activeSession.id}`)
-    await logPaymentEvent('duplicate_prevented', {
-      session_id: activeSession.id,
-      transaction_reference: activeSession.transaction_reference,
-      user_id: params.user_id,
-      details: { reason: 'Active processing session found', created_at: activeSession.created_at }
-    })
-    
-    return {
-      session: activeSession as PaymentSession,
-      is_duplicate: true
+  if (recentSessions && recentSessions.length > 0) {
+    for (const session of recentSessions) {
+      const sessionAge = Date.now() - new Date(session.created_at).getTime()
+      const twoMinutesMs = 2 * 60 * 1000
+      
+      if (sessionAge < twoMinutesMs) {
+        // Session is fresh and actively processing - block duplicate
+        console.log(`⚠️ Active payment in progress (${Math.round(sessionAge/1000)}s old), preventing duplicate: ${session.id}`)
+        await logPaymentEvent('duplicate_prevented', {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          user_id: params.user_id,
+          details: { reason: 'Active processing session found', age_seconds: Math.round(sessionAge/1000) }
+        })
+        
+        return {
+          session: session as PaymentSession,
+          is_duplicate: true
+        }
+      } else {
+        // Session is stale (timeout) - mark as failed and allow retry
+        console.log(`⏳ Found stale processing session (${Math.round(sessionAge/1000)}s old), marking as failed: ${session.id}`)
+        await supabase
+          .from('payment_sessions')
+          .update({
+            status: 'failed',
+            failure_reason: 'Payment timeout - exceeded 2 minute window',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session.id)
+        
+        await logPaymentEvent('session_expired', {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          user_id: params.user_id,
+          details: { reason: 'Automatic timeout after 2 minutes', age_seconds: Math.round(sessionAge/1000) }
+        })
+      }
     }
   }
   

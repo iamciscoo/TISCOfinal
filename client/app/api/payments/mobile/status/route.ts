@@ -56,50 +56,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Find the associated order
+    // Find the associated order (always try to find it, not just when completed)
     let order_id: string | null = null
     let order_status: string | null = null
     
-    if (session.status === 'completed') {
-      // First, check if session has linked order_id (new flow)
-      if ((session as any).order_id) {
-        console.log(`📦 Session has linked order_id: ${(session as any).order_id}`)
-        
-        const { data: linkedOrder } = await supabase
-          .from('orders')
-          .select('id, status, payment_status')
-          .eq('id', (session as any).order_id)
-          .single()
-        
-        if (linkedOrder) {
-          order_id = linkedOrder.id
-          order_status = linkedOrder.status
-        }
-      }
+    // First, check if session has linked order_id (new flow)
+    if ((session as any).order_id) {
+      console.log(`📦 Session has linked order_id: ${(session as any).order_id}`)
       
-      // Fallback: search by matching criteria (legacy flow)
-      if (!order_id) {
-        console.log(`🔍 Searching for order by matching criteria...`)
-        const fiveMinutesAfterSession = new Date(
-          new Date(session.created_at).getTime() + 5 * 60 * 1000
-        ).toISOString()
-        
-        const { data: order } = await supabase
-          .from('orders')
-          .select('id, status, payment_status')
-          .eq('user_id', userProfile.id)
-          .eq('total_amount', session.amount)
-          .eq('payment_status', 'paid')
-          .gte('created_at', session.created_at)
-          .lte('created_at', fiveMinutesAfterSession)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+      const { data: linkedOrder } = await supabase
+        .from('orders')
+        .select('id, status, payment_status')
+        .eq('id', (session as any).order_id)
+        .single()
+      
+      if (linkedOrder) {
+        order_id = linkedOrder.id
+        order_status = linkedOrder.status
+      }
+    }
+    
+    // Fallback: search by matching criteria for completed payments (legacy flow)
+    if (!order_id && session.status === 'completed') {
+      console.log(`🔍 Searching for order by matching criteria...`)
+      const fiveMinutesAfterSession = new Date(
+        new Date(session.created_at).getTime() + 5 * 60 * 1000
+      ).toISOString()
+      
+      const { data: order } = await supabase
+        .from('orders')
+        .select('id, status, payment_status')
+        .eq('user_id', userProfile.id)
+        .eq('total_amount', session.amount)
+        .eq('payment_status', 'paid')
+        .gte('created_at', session.created_at)
+        .lte('created_at', fiveMinutesAfterSession)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-        if (order) {
-          order_id = order.id
-          order_status = order.status
-        }
+      if (order) {
+        order_id = order.id
+        order_status = order.status
       }
     }
 
