@@ -61,12 +61,15 @@ export async function POST(req: NextRequest) {
     let order_status: string | null = null
     
     // First, check if session has linked order_id (new flow)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((session as any).order_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.log(`📦 Session has linked order_id: ${(session as any).order_id}`)
       
       const { data: linkedOrder } = await supabase
         .from('orders')
         .select('id, status, payment_status')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .eq('id', (session as any).order_id)
         .single()
       

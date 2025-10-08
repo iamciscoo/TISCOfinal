@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(3)
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let order: any = null
     let isReusedOrder = false
     
@@ -276,6 +277,7 @@ export async function POST(req: NextRequest) {
         userMessage = 'Invalid phone number format. Please use Tanzania mobile numbers (07XX XXX XXX).'
         isRetryable = false
       } else if (paymentError instanceof ZenoPayError) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorDetails = (paymentError as any).details || {}
         resultCode = errorDetails.result_code
         isRetryable = errorDetails.retryable !== false // Default to retryable unless explicitly false

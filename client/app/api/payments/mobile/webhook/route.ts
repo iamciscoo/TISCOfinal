@@ -186,15 +186,59 @@ export async function POST(req: NextRequest) {
       const { notifyAdminOrderCreated, notifyOrderCreated } = await import('@/lib/notifications/service')
       
       const orderData = session.order_data
-      const customerEmail = orderData.email || 'customer@example.com'
-      const customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
       
-      // Get order items for notifications
+      // Get Supabase client
       const { createClient } = await import('@supabase/supabase-js')
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE!
       )
+      
+      // CRITICAL: Get email from registered user account, not checkout form
+      // This ensures notification goes to the actual account email
+      let customerEmail = orderData.email || 'customer@example.com'
+      let customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
+      
+      if (session.user_id) {
+        console.log(`🔍 [${webhookId}] Fetching registered user email for user_id: ${session.user_id}`)
+        
+        // First, try auth.users (Supabase Auth)
+        const { data: authUser } = await supabase.auth.admin.getUserById(session.user_id)
+        
+        if (authUser?.user?.email) {
+          customerEmail = authUser.user.email
+          console.log(`✅ [${webhookId}] Using auth email: ${customerEmail}`)
+        } else {
+          // Fallback: Try users table (public schema)
+          const { data: userData } = await supabase
+            .from('users')
+            .select('email, first_name, last_name')
+            .eq('auth_user_id', session.user_id)
+            .single()
+          
+          if (userData?.email) {
+            customerEmail = userData.email
+            customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || customerName
+            console.log(`✅ [${webhookId}] Using users table email: ${customerEmail}`)
+          } else {
+            console.warn(`⚠️ [${webhookId}] No registered email found, using checkout email: ${customerEmail}`)
+          }
+        }
+      } else {
+        console.log(`ℹ️ [${webhookId}] Guest checkout - using provided email: ${customerEmail}`)
+      }
+      
+      // Define type for order items with products
+      // Note: Supabase returns nested relations as arrays even for single items
+      type OrderItemWithProduct = {
+        product_id: string
+        quantity: number
+        price: string | number
+        products: {
+          id: string
+          name: string
+        }[] | null
+      }
       
       const { data: orderItems } = await supabase
         .from('order_items')
@@ -215,8 +259,8 @@ export async function POST(req: NextRequest) {
       
       // Send customer notification
       if (orderItems && orderItems.length > 0) {
-        const items = orderItems.map((item: any) => ({
-          name: item.products?.name || 'Product',
+        const items = (orderItems as OrderItemWithProduct[]).map((item) => ({
+          name: item.products?.[0]?.name || 'Product',
           quantity: item.quantity,
           price: item.price.toString()
         }))
@@ -237,9 +281,9 @@ export async function POST(req: NextRequest) {
       }
       
       // Send admin notification
-      const itemsWithProductIds = (orderItems || []).map((item: any) => ({
-        product_id: item.product_id || (item.products?.id),
-        name: item.products?.name || 'Product',
+      const itemsWithProductIds = ((orderItems || []) as OrderItemWithProduct[]).map((item) => ({
+        product_id: item.product_id || (item.products?.[0]?.id),
+        name: item.products?.[0]?.name || 'Product',
         quantity: item.quantity,
         price: item.price.toString()
       }))

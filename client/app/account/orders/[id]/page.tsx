@@ -180,7 +180,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-6 sm:pb-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 mb-6 sm:mb-8">
           <Link href="/account/orders" className="hover:text-blue-600 flex items-center gap-1">

@@ -58,13 +58,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
     video.loop = loop
     video.playsInline = true
 
-    const shouldLoad = !lazy || inView
-    if (!shouldLoad) {
-      // Pause when out of view
-      try { video.pause() } catch {}
-      return
-    }
-
+    // Always play immediately when video is loaded (no waiting for in-view)
     if (autoPlay) {
       const playPromise = video.play()
       if (playPromise !== undefined) {
@@ -73,9 +67,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         })
       }
     }
+
+    // Pause only when completely out of view (performance optimization)
+    if (!inView && lazy) {
+      try { video.pause() } catch {}
+    } else if (inView && autoPlay) {
+      // Resume playing when back in view
+      try { video.play() } catch {}
+    }
   }, [inView, lazy, muted, loop, autoPlay])
 
-  const shouldLoad = !lazy || inView
+  // Always load video immediately (no lazy loading delay)
+  const shouldLoad = true
 
   return (
     <div ref={wrapperRef} className={`relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl ${className}`}>
@@ -85,11 +88,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         muted={muted}
         loop={loop}
         playsInline
-        autoPlay={autoPlay && shouldLoad}
-        preload={shouldLoad ? preload : 'none'}
+        autoPlay={autoPlay}
+        preload={preload}
         poster={poster}
       >
-        {shouldLoad ? <source src={src} type="video/mp4" /> : null}
+        <source src={src} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
       

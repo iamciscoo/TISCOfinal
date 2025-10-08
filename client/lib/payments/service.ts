@@ -420,7 +420,9 @@ export async function createOrderFromSession(
     return sum + (Number(item.price) * Number(item.quantity))
   }, 0)
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let order: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sessionWithOrderId = session as any
 
   // Check if session already has linked order (new flow with retry)
