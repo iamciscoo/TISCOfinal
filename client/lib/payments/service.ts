@@ -248,9 +248,72 @@ export async function initiateZenoPayment(params: {
     const resp = response as {
       status?: string
       message?: string
+      code?: string | number
+      result_code?: string | number
       data?: { order_id?: string; transaction_id?: string }
       order_id?: string
       transaction_id?: string
+    }
+
+    // Check ZenoPay result codes
+    const resultCode = String(resp?.code || resp?.result_code || '000')
+    const retryableResultCodes = ['001', '002', '003', '004', '005', '999']
+    
+    console.log(`📊 ZenoPay result code: ${resultCode}`)
+    
+    // Handle non-success result codes
+    if (resultCode !== '000') {
+      const resultCodeMessages: Record<string, string> = {
+        '001': 'Invalid API key - please contact support',
+        '002': 'Missing required parameters - please retry',
+        '003': 'Invalid phone number format - please check your phone number',
+        '004': 'Insufficient funds - please top up your mobile money account',
+        '005': 'Payment canceled - you can retry the payment',
+        '999': 'Gateway error - please try again'
+      }
+      
+      const errorMessage = resultCodeMessages[resultCode] || resp?.message || 'Payment failed'
+      const isRetryable = retryableResultCodes.includes(resultCode)
+      
+      console.log(`❌ ZenoPay error - Code: ${resultCode}, Retryable: ${isRetryable}`)
+      
+      if (isRetryable) {
+        // Mark as failed but allow retry
+        await updateSessionStatus(session.id, 'failed', undefined, errorMessage)
+        
+        await logPaymentEvent('payment_failed_retryable', {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          user_id: session.user_id,
+          error: errorMessage,
+          details: { result_code: resultCode, retryable: true }
+        })
+        
+        throw new ZenoPayError(errorMessage, true, {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          result_code: resultCode,
+          retryable: true
+        })
+      } else {
+        // Non-retryable error
+        await updateSessionStatus(session.id, 'failed', undefined, errorMessage)
+        
+        await logPaymentEvent('payment_failed', {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          user_id: session.user_id,
+          error: errorMessage,
+          details: { result_code: resultCode, retryable: false }
+        })
+        
+        throw new ZenoPayError(errorMessage, false, {
+          session_id: session.id,
+          transaction_reference: session.transaction_reference,
+          result_code: resultCode,
+          retryable: false
+        })
+      }
     }
 
     const gateway_transaction_id = 
@@ -270,7 +333,8 @@ export async function initiateZenoPayment(params: {
         gateway_transaction_id,
         phone: normalizedPhone,
         channel,
-        response: resp
+        response: resp,
+        result_code: resultCode
       }
     })
 

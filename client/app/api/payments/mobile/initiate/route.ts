@@ -225,16 +225,27 @@ export async function POST(req: NextRequest) {
     } catch (paymentError) {
       console.error('Payment initiation failed:', paymentError)
 
-      // Provide user-friendly error messages
+      // Provide user-friendly error messages with retry information
       let userMessage = 'Payment initiation failed. Please try again.'
+      let isRetryable = true
+      let resultCode = null
       
       if (paymentError instanceof ValidationError) {
         userMessage = 'Invalid phone number format. Please use Tanzania mobile numbers (07XX XXX XXX).'
+        isRetryable = false
       } else if (paymentError instanceof ZenoPayError) {
+        const errorDetails = (paymentError as any).details || {}
+        resultCode = errorDetails.result_code
+        isRetryable = errorDetails.retryable !== false // Default to retryable unless explicitly false
+        
+        // Use the enhanced error message from ZenoPay handling
+        userMessage = paymentError.message || userMessage
+        
         if ((paymentError.message || '').includes('timeout')) {
           userMessage = 'Payment gateway timeout. Please try again.'
         } else if ((paymentError.message || '').includes('API key') || (paymentError.message || '').includes('403')) {
           userMessage = 'Payment service temporarily unavailable. Please contact support.'
+          isRetryable = false
         }
       }
 
@@ -242,10 +253,11 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           error: userMessage,
-          technical_error: (paymentError as Error).message,
-          transaction_reference: session.transaction_reference,
-          session_id: session.id,
-          retryable: paymentError instanceof ZenoPayError && paymentError.retryable
+          retryable: isRetryable,
+          result_code: resultCode,
+          transaction_reference: session?.transaction_reference,
+          order_id: order?.id,
+          session_id: session?.id
         },
         { status: 500 }
       )

@@ -150,24 +150,24 @@ export interface CreateOrderItemInput {
 // ============================================================================
 // Logging Types
 // ============================================================================
-
 export type PaymentLogEvent = 
   | 'payment_initiated'
   | 'payment_processing'
   | 'payment_completed'
   | 'payment_failed'
-  | 'order_created'
-  | 'order_creation_failed'
+  | 'payment_failed_retryable'
   | 'webhook_received'
   | 'webhook_processed'
   | 'webhook_error'
+  | 'order_created'
+  | 'order_creation_failed'
   | 'duplicate_prevented'
+  | 'session_expired'
   | 'notification_sent'
   | 'notification_failed'
 
 export interface PaymentLogData {
   event_type: PaymentLogEvent
-  session_id?: string
   transaction_reference?: string
   order_id?: string
   error?: string

@@ -150,10 +150,10 @@ export async function POST(req: NextRequest) {
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
     // Queue notifications asynchronously (non-blocking for webhook response)
-    // Use Promise.resolve().then() for true async execution
+    // Use setImmediate for guaranteed async execution after webhook response
     console.log(`🚀 [${webhookId}] Queueing async notifications...`)
     
-    Promise.resolve().then(async () => {
+    setImmediate(async () => {
       try {
         console.log(`📧 [${webhookId}] Processing async notifications...`)
         
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
           currency: session.currency,
           payment_method: 'Mobile Money',
           payment_status: 'paid',
-          items_count,
+          items_count: orderItems?.length || 0,
           items: itemsWithProductIds
         })
         
@@ -257,8 +257,6 @@ export async function POST(req: NextRequest) {
           console.error(`❌ Failed to log notification error:`, logError)
         }
       }
-    }).catch(queueError => {
-      console.error(`❌ [${webhookId}] Failed to queue notifications:`, queueError)
     })
 
     const processingTime = Date.now() - startTime

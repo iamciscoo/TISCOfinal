@@ -574,13 +574,27 @@ export default function CheckoutPage() {
           })
           const procJson = await procRes.json()
           if (!procRes.ok) {
-            // Payment initiation failed - show error and suggest payment method change
+            // Handle ZenoPay result codes for retryable errors
+            const isRetryable = procJson?.retryable !== false
+            const resultCode = procJson?.result_code
+            const errorMessage = procJson?.error || 'Failed to initiate mobile payment.'
+            
+            console.log(`❌ Payment initiation failed - Code: ${resultCode}, Retryable: ${isRetryable}`)
+            
             toast({
               title: "Payment Initiation Failed",
-              description: procJson?.error || 'Failed to initiate mobile payment. Please try a different payment method.',
+              description: isRetryable 
+                ? `${errorMessage} Please try again.`
+                : `${errorMessage} Please contact support or try a different payment method.`,
               variant: "destructive",
             })
-            // Don't disable retry, let user try again or change payment method
+            
+            // Enable retry and timeout UI for retryable errors
+            if (isRetryable) {
+              setPaymentTimeout(true)
+              setCanRetryPayment(true)
+            }
+            
             setCurrentStep('payment')
             return
           }
@@ -847,14 +861,23 @@ export default function CheckoutPage() {
       
       const procJson = await procRes.json()
       if (!procRes.ok) {
-        // Retry payment initiation failed - show error but keep retry enabled
+        // Check if error is retryable based on ZenoPay result code
+        const isRetryable = procJson?.retryable !== false
+        const resultCode = procJson?.result_code
+        const errorMessage = procJson?.error || 'Failed to retry mobile payment.'
+        
+        console.log(`❌ Retry failed - Code: ${resultCode}, Retryable: ${isRetryable}`)
+        
         toast({
           title: "Payment Retry Failed",
-          description: procJson?.error || 'Failed to retry mobile payment. Please try again or change your payment method.',
+          description: isRetryable 
+            ? `${errorMessage} You can try again.`
+            : `${errorMessage} Please contact support if this continues.`,
           variant: "destructive",
         })
-        // Keep retry enabled and return to payment step
-        setCanRetryPayment(true)
+        
+        // Keep retry enabled only if error is retryable
+        setCanRetryPayment(isRetryable)
         setCurrentStep('payment')
         return
       }
