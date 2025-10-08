@@ -86,60 +86,100 @@ export async function POST(req: NextRequest) {
 
     const orderData = order_data as OrderData
     
-    // Create order with pending status
-    const { data: order, error: orderError } = await supabase
+    // 🔄 ORDER REUSE LOGIC: Check for existing pending order (prevents duplicates on retry)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const { data: recentOrders } = await supabase
       .from('orders')
-      .insert({
-        user_id: userProfile.id,
-        total_amount: Number(amount),
-        currency,
-        status: 'pending',
-        payment_status: 'pending',
-        payment_method: `Mobile Money (${provider})`,
-        shipping_address: orderData.shipping_address || 'N/A',
-        address_line_1: orderData.address_line_1 || '',
-        phone: orderData.contact_phone || orderData.phone || null,
-        notes: orderData.notes || '',
-        // Store customer info from order data (for registered users)
-        customer_name: orderData.first_name && orderData.last_name ? 
-          `${orderData.first_name} ${orderData.last_name}` : null,
-        customer_email: orderData.email || null,
-        customer_phone: orderData.contact_phone || orderData.phone || null,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (orderError || !order) {
-      console.error('❌ Failed to create order:', {
-        error: orderError,
-        code: orderError?.code,
-        message: orderError?.message,
-        details: orderError?.details,
-        hint: orderError?.hint,
-        orderData: {
+      .select('id, total_amount, created_at')
+      .eq('user_id', userProfile.id)
+      .eq('status', 'pending')
+      .eq('payment_status', 'pending')
+      .eq('total_amount', Number(amount))
+      .gte('created_at', fiveMinutesAgo)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    
+    let order: any = null
+    let isReusedOrder = false
+    
+    // Check if any recent order has the same items (verify it's the same cart)
+    if (recentOrders && recentOrders.length > 0) {
+      for (const recentOrder of recentOrders) {
+        const { data: existingItems } = await supabase
+          .from('order_items')
+          .select('product_id, quantity, price')
+          .eq('order_id', recentOrder.id)
+        
+        if (!existingItems || existingItems.length !== orderData.items.length) {
+          continue
+        }
+        
+        // Check if all items match
+        const itemsMatch = orderData.items.every(cartItem =>
+          existingItems.some(orderItem =>
+            orderItem.product_id === cartItem.product_id &&
+            orderItem.quantity === cartItem.quantity &&
+            Number(orderItem.price) === Number(cartItem.price)
+          )
+        )
+        
+        if (itemsMatch) {
+          console.log(`♻️ Reusing existing pending order: ${recentOrder.id}`)
+          // Fetch the full order details
+          const { data: existingOrder } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('id', recentOrder.id)
+            .single()
+          
+          if (existingOrder) {
+            order = existingOrder
+            isReusedOrder = true
+            break
+          }
+        }
+      }
+    }
+    
+    // Create new order only if no matching pending order found
+    if (!order) {
+      console.log('📦 Creating new order...')
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
           user_id: userProfile.id,
           total_amount: Number(amount),
           currency,
-          shipping_address: orderData.shipping_address,
-          address_line_1: orderData.address_line_1,
-          phone: orderData.contact_phone || orderData.phone,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: `Mobile Money (${provider})`,
+          shipping_address: orderData.shipping_address || 'N/A',
+          address_line_1: orderData.address_line_1 || '',
+          phone: orderData.contact_phone || orderData.phone || null,
+          notes: orderData.notes || '',
           customer_name: orderData.first_name && orderData.last_name ? 
             `${orderData.first_name} ${orderData.last_name}` : null,
-          customer_email: orderData.email,
-          customer_phone: orderData.contact_phone || orderData.phone
-        }
-      })
-      return NextResponse.json(
-        { error: 'Failed to create order', details: orderError?.message },
-        { status: 500 }
-      )
+          customer_email: orderData.email || null,
+          customer_phone: orderData.contact_phone || orderData.phone || null,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (orderError || !newOrder) {
+        console.error('❌ Failed to create order:', orderError)
+        return NextResponse.json(
+          { error: 'Failed to create order', details: orderError?.message },
+          { status: 500 }
+        )
+      }
+      
+      order = newOrder
+      console.log(`✅ New order created with ID: ${order.id}`)
     }
 
-    console.log(`✅ Order created with ID: ${order.id}`)
-
-    // Create order items
-    if (orderData.items && orderData.items.length > 0) {
+    // Create order items (skip if order was reused - items already exist)
+    if (!isReusedOrder && orderData.items && orderData.items.length > 0) {
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(
@@ -156,6 +196,8 @@ export async function POST(req: NextRequest) {
       } else {
         console.log(`✅ Order items created: ${orderData.items.length} items`)
       }
+    } else if (isReusedOrder) {
+      console.log(`♻️ Skipping order items creation - order reused`)
     }
 
     // Create payment session with idempotency check, linked to order

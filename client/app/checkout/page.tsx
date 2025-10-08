@@ -673,10 +673,11 @@ export default function CheckoutPage() {
     const reasonMap: Record<string, string> = {
       'failed': 'Payment failed. Please check your balance and try again.',
       'declined': 'Payment was declined by your mobile money provider.',
-      'cancelled': 'Payment was canceled. You can try again.',
-      'timeout': 'Payment timed out. Please check your phone and try again.',
+      'cancelled': 'You canceled the payment on your phone. Feel free to try again.',
+      'timeout': 'Payment request timed out. Please ensure you respond promptly on your phone.',
       'expired': 'Payment session expired. Please start a new payment.',
       'error': 'Payment error occurred. Please try a different payment method.',
+      'rejected': 'Payment was rejected. Please check your account and try again.',
       'insufficient_funds': 'Insufficient balance in your mobile money account.',
       'invalid_pin': 'Invalid PIN entered. Please try again.',
       'user_canceled': 'You canceled the payment. Feel free to try again.'
@@ -714,9 +715,12 @@ export default function CheckoutPage() {
         
         console.log(`Payment status check ${attempt + 1}: ${st}`, { message, order_id: sjson?.order_id })
 
-        // ZenoPay specific status handling
+        // ZenoPay specific status handling (enhanced with webhook statuses)
         const successSet = new Set(['success', 'settled', 'completed', 'approved', 'successful'])
-        const failureSet = new Set(['failed', 'declined', 'cancelled', 'error', 'timeout', 'expired'])
+        const failureSet = new Set([
+          'failed', 'declined', 'cancelled', 'error', 'timeout', 'expired',
+          'rejected' // Added from webhook handling
+        ])
         const processingSet = new Set(['pending', 'processing', 'initiated', 'submitted'])
 
         if (successSet.has(st)) {
