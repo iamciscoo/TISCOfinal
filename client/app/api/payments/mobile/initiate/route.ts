@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getUser } from '@/lib/supabase-server'
+import { getUser, getUserProfile } from '@/lib/supabase-server'
 import {
   createPaymentSession,
   initiateZenoPayment
@@ -18,10 +18,23 @@ export const maxDuration = 30
 export async function POST(req: NextRequest) {
   try {
     // Authenticate user
-    const user = await getUser()
-    if (!user) {
+    const authUser = await getUser()
+    if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Get user profile from our users table
+    const userProfile = await getUserProfile(authUser.id)
+    if (!userProfile) {
+      console.error('❌ User profile not found for auth user:', authUser.id)
+      return NextResponse.json({ error: 'User profile not found' }, { status: 400 })
+    }
+
+    console.log('🔐 Authenticated user:', { 
+      authId: authUser.id, 
+      profileId: userProfile.id,
+      email: authUser.email || userProfile.email
+    })
 
     // Parse request
     const body: InitiatePaymentRequest = await req.json()
@@ -77,23 +90,46 @@ export async function POST(req: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: userProfile.id,
         total_amount: Number(amount),
         currency,
         status: 'pending',
         payment_status: 'pending',
         payment_method: `Mobile Money (${provider})`,
         shipping_address: orderData.shipping_address || 'N/A',
-        address_line_1: orderData.address_line_1 || orderData.shipping_address || '',
-        phone: orderData.phone || null,
+        address_line_1: orderData.address_line_1 || '',
+        phone: orderData.contact_phone || orderData.phone || null,
         notes: orderData.notes || '',
+        // Store customer info from order data (for registered users)
+        customer_name: orderData.first_name && orderData.last_name ? 
+          `${orderData.first_name} ${orderData.last_name}` : null,
+        customer_email: orderData.email || null,
+        customer_phone: orderData.contact_phone || orderData.phone || null,
         created_at: new Date().toISOString()
       })
       .select()
       .single()
 
     if (orderError || !order) {
-      console.error('❌ Failed to create order:', orderError)
+      console.error('❌ Failed to create order:', {
+        error: orderError,
+        code: orderError?.code,
+        message: orderError?.message,
+        details: orderError?.details,
+        hint: orderError?.hint,
+        orderData: {
+          user_id: userProfile.id,
+          total_amount: Number(amount),
+          currency,
+          shipping_address: orderData.shipping_address,
+          address_line_1: orderData.address_line_1,
+          phone: orderData.contact_phone || orderData.phone,
+          customer_name: orderData.first_name && orderData.last_name ? 
+            `${orderData.first_name} ${orderData.last_name}` : null,
+          customer_email: orderData.email,
+          customer_phone: orderData.contact_phone || orderData.phone
+        }
+      })
       return NextResponse.json(
         { error: 'Failed to create order', details: orderError?.message },
         { status: 500 }
@@ -124,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     // Create payment session with idempotency check, linked to order
     const { session, is_duplicate } = await createPaymentSession({
-      user_id: user.id,
+      user_id: userProfile.id,
       amount: Number(amount),
       currency,
       provider,
@@ -149,11 +185,11 @@ export async function POST(req: NextRequest) {
 
     // Derive buyer information
     const buyerName = 
-      user.user_metadata?.full_name || 
-      user.user_metadata?.name || 
+      authUser.user_metadata?.full_name || 
+      authUser.user_metadata?.name || 
       `${order_data.first_name} ${order_data.last_name}`.trim() ||
       'Customer'
-    const buyerEmail = user.email || order_data.email || 'no-reply@tiscomarket.store'
+    const buyerEmail = authUser.email || order_data.email || 'no-reply@tiscomarket.store'
     
     // Use production URL for webhook (ensures ZenoPay can reach us)
     const webhookUrl = process.env.NODE_ENV === 'production' 

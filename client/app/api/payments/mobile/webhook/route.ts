@@ -2,10 +2,10 @@
  * TISCO Mobile Payment Webhook Handler
  * Receives payment confirmations from ZenoPay and creates orders
  */
-
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getSessionByReference,
+  getSessionByOrderId,
   isSessionProcessed,
   updateSessionStatus,
   createOrderFromSession,
@@ -15,7 +15,6 @@ import type { ZenoPayWebhookPayload } from '@/lib/payments/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // Max 60 seconds for webhook processing
-
 export async function POST(req: NextRequest) {
   const startTime = Date.now()
   const webhookId = `webhook-${startTime}-${Math.random().toString(36).slice(2, 8)}`
@@ -49,11 +48,16 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Find payment session
-    const session = await getSessionByReference(transactionRef)
+    // Find payment session - try by order_id first (new flow), then by transaction_reference (legacy)
+    let session = await getSessionByOrderId(transactionRef)
     
     if (!session) {
-      console.error(`❌ [${webhookId}] Session not found: ${transactionRef}`)
+      console.log(`🔍 [${webhookId}] Session not found by order_id, trying transaction_reference...`)
+      session = await getSessionByReference(transactionRef)
+    }
+    
+    if (!session) {
+      console.error(`❌ [${webhookId}] Session not found by either order_id or transaction_reference: ${transactionRef}`)
       return NextResponse.json(
         { error: 'Payment session not found' },
         { status: 404 }

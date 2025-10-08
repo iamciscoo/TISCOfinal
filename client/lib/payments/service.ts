@@ -411,6 +411,25 @@ export async function getSessionByReference(
 }
 
 /**
+ * Get payment session by order ID (for ZenoPay webhook)
+ */
+export async function getSessionByOrderId(
+  order_id: string
+): Promise<PaymentSession | null> {
+  const { data, error } = await supabase
+    .from('payment_sessions')
+    .select('*')
+    .eq('order_id', order_id)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  return data as PaymentSession
+}
+
+/**
  * Check if session is already processed
  */
 export async function isSessionProcessed(session_id: string): Promise<boolean> {
