@@ -690,10 +690,12 @@ export default function CheckoutPage() {
     const start = Date.now()
     const timeoutMs = 50_000 // 50 seconds for mobile money
     let attempt = 0
-    const maxAttempts = 20
+    const maxAttempts = 12 // Reduced from 20 (with longer delays)
     
     const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
-    const getDelay = (attempt: number) => Math.min(1000 + (attempt * 500), 4000) // 1s to 4s
+    // Optimized: Start at 2s, increase more aggressively, cap at 5s
+    // Attempt 0: 2s, 1: 3s, 2: 4s, 3+: 5s
+    const getDelay = (attempt: number) => Math.min(2000 + (attempt * 1000), 5000)
     
     while (Date.now() - start < timeoutMs && attempt < maxAttempts) {
       try {
@@ -750,8 +752,9 @@ export default function CheckoutPage() {
           return false // Payment failed
         }
 
-        // Still processing - show encouraging message every 5th attempt
-        if (processingSet.has(st) && attempt % 5 === 0) {
+        // Still processing - show encouraging message every 3rd attempt (reduced from 5th)
+        // With longer delays, this means roughly every 10-15 seconds
+        if (processingSet.has(st) && attempt > 0 && attempt % 3 === 0) {
           toast({ 
             title: 'Payment Processing... 📱', 
             description: message || 'Please check your phone for payment confirmation',

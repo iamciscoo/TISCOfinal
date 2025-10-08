@@ -256,10 +256,15 @@ export async function initiateZenoPayment(params: {
   const channel = mapProviderToChannel(session.provider)
   const amountInt = Math.round(Number(session.amount))
 
-  // Use real order ID if provided, otherwise fallback to transaction reference
-  const zenoOrderId = order_id || session.transaction_reference
+  // CRITICAL: Always use session.transaction_reference for ZenoPay
+  // This allows retries with the same DB order but different ZenoPay orders
+  // Each payment session gets a unique transaction_reference
+  const zenoOrderId = session.transaction_reference
 
-  console.log(`📋 ZenoPay order_id: ${zenoOrderId} (${order_id ? 'real DB order' : 'transaction reference'})`)
+  console.log(`📋 ZenoPay order_id: ${zenoOrderId} (session ref)`)
+  if (order_id) {
+    console.log(`📦 Linked to database order: ${order_id}`)
+  }
 
   try {
     const response = await client.createOrder({
@@ -267,7 +272,7 @@ export async function initiateZenoPayment(params: {
       buyer_phone: normalizedPhone,
       buyer_email,
       amount: amountInt,
-      order_id: zenoOrderId, // Use real database order ID
+      order_id: zenoOrderId, // Use unique session reference (allows retries)
       webhook_url,
       ...(channel ? { channel } : {})
     })
