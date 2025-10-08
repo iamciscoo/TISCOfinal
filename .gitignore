@@ -23,11 +23,6 @@ next-env.d.ts
 .idea/
 .cursor/
 
-# Env files (keep examples tracked)
-.env
-.env.*
-**/.env
-**/.env.*
 
 # Backup files (should not be in repo)
 *.backup

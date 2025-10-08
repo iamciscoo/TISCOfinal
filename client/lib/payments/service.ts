@@ -111,6 +111,7 @@ export async function createPaymentSession(params: {
   provider: PaymentProvider
   phone_number: string
   order_data: OrderData
+  order_id?: string
 }): Promise<{ session: PaymentSession; is_duplicate: boolean }> {
   const transaction_reference = generateTransactionReference()
   
@@ -218,13 +219,19 @@ export async function initiateZenoPayment(params: {
   buyer_name: string
   buyer_email: string
   webhook_url: string
+  order_id?: string
 }): Promise<{ gateway_transaction_id: string | null; message: string }> {
-  const { session, buyer_name, buyer_email, webhook_url } = params
+  const { session, buyer_name, buyer_email, webhook_url, order_id } = params
   
   const client = new ZenoPayClient()
   const normalizedPhone = normalizeTzPhone(session.phone_number)
   const channel = mapProviderToChannel(session.provider)
   const amountInt = Math.round(Number(session.amount))
+
+  // Use real order ID if provided, otherwise fallback to transaction reference
+  const zenoOrderId = order_id || session.transaction_reference
+
+  console.log(`📋 ZenoPay order_id: ${zenoOrderId} (${order_id ? 'real DB order' : 'transaction reference'})`)
 
   try {
     const response = await client.createOrder({
@@ -232,7 +239,7 @@ export async function initiateZenoPayment(params: {
       buyer_phone: normalizedPhone,
       buyer_email,
       amount: amountInt,
-      order_id: session.transaction_reference,
+      order_id: zenoOrderId, // Use real database order ID
       webhook_url,
       ...(channel ? { channel } : {})
     })

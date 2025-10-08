@@ -44,18 +44,19 @@ export interface OrderData {
   email: string
   first_name: string
   last_name: string
-  contact_phone: string // Formatted: +255 7XX XXX XXX
+  phone?: string // Optional phone number
+  contact_phone?: string // Legacy - formatted: +255 7XX XXX XXX
   
   // Delivery Info
-  address_line_1: string
-  city: string
-  place: string // Area/ward
-  country: string
+  address_line_1?: string
+  city?: string
+  place?: string // Area/ward
+  country?: string
   shipping_address: string // Full formatted address
   
   // Payment Info
-  payment_method: string
-  currency: string
+  payment_method?: string
+  currency?: string
   
   // Optional
   notes?: string

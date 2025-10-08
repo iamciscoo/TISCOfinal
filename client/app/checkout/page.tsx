@@ -654,6 +654,23 @@ export default function CheckoutPage() {
   }
 
   // Enhanced payment status polling with exponential backoff and better error handling
+  // Helper function to get user-friendly payment failure reasons
+  const getPaymentFailureReason = (status: string): string => {
+    const reasonMap: Record<string, string> = {
+      'failed': 'Payment failed. Please check your balance and try again.',
+      'declined': 'Payment was declined by your mobile money provider.',
+      'cancelled': 'Payment was canceled. You can try again.',
+      'timeout': 'Payment timed out. Please check your phone and try again.',
+      'expired': 'Payment session expired. Please start a new payment.',
+      'error': 'Payment error occurred. Please try a different payment method.',
+      'insufficient_funds': 'Insufficient balance in your mobile money account.',
+      'invalid_pin': 'Invalid PIN entered. Please try again.',
+      'user_canceled': 'You canceled the payment. Feel free to try again.'
+    }
+    
+    return reasonMap[status] || 'Payment failed. Please try again or use a different payment method.'
+  }
+
   const pollPaymentStatus = async (reference: string): Promise<boolean> => {
     const start = Date.now()
     const timeoutMs = 50_000 // 50 seconds for mobile money
@@ -679,24 +696,54 @@ export default function CheckoutPage() {
         
         const sjson = await sres.json()
         const st = String(sjson?.status || '').toLowerCase()
+        const message = sjson?.message || ''
         
-        console.log(`Payment status check ${attempt + 1}: ${st}`)
+        console.log(`Payment status check ${attempt + 1}: ${st}`, { message, order_id: sjson?.order_id })
 
+        // ZenoPay specific status handling
         const successSet = new Set(['success', 'settled', 'completed', 'approved', 'successful'])
-        const failureSet = new Set(['failed', 'declined', 'cancelled', 'error', 'timeout'])
+        const failureSet = new Set(['failed', 'declined', 'cancelled', 'error', 'timeout', 'expired'])
+        const processingSet = new Set(['pending', 'processing', 'initiated', 'submitted'])
 
         if (successSet.has(st)) {
-          console.log('Payment confirmed as successful')
+          console.log('✅ Payment confirmed as successful')
+          toast({ 
+            title: 'Payment Confirmed! 🎉', 
+            description: sjson?.order_id ? 
+              `Order ${sjson.order_id.slice(0, 8)}... created successfully` :
+              'Payment completed and order is being processed',
+          })
           return true // Payment successful
         }
+        
         if (failureSet.has(st)) {
-          const reason = sjson?.failure_reason || 'Payment was declined or failed'
+          const reason = sjson?.failure_reason || message || getPaymentFailureReason(st)
+          console.log('❌ Payment failed:', { status: st, reason })
           toast({ 
-            title: 'Payment Failed', 
-            description: reason, 
+            title: 'Payment Failed ❌', 
+            description: reason,
             variant: 'destructive' 
           })
           return false // Payment failed
+        }
+
+        // Still processing - show encouraging message every 5th attempt
+        if (processingSet.has(st) && attempt % 5 === 0) {
+          toast({ 
+            title: 'Payment Processing... 📱', 
+            description: message || 'Please check your phone for payment confirmation',
+            variant: 'default'
+          })
+        }
+
+        // Show status update for any unhandled status
+        if (!successSet.has(st) && !failureSet.has(st) && !processingSet.has(st)) {
+          console.log('⚠️ Unknown payment status:', st)
+          toast({ 
+            title: 'Payment Status Update', 
+            description: message || `Status: ${st}. Please wait for confirmation.`,
+            variant: 'default'
+          })
         }
         // Continue polling for PENDING/PROCESSING status
       } catch (error) {

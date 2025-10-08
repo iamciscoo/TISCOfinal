@@ -43,7 +43,7 @@ const publicRoutes = [
   '/api/deals',
   '/api/contact-messages',
   '/api/newsletter',
-  '/api/payments/webhooks',
+  '/api/payments/mobile/webhook',
   '/api/notifications/email', // Manual email sending - public
   '/api/admin',
   '/api/auth', // Auth endpoints should be accessible
@@ -152,7 +152,7 @@ export async function middleware(request: NextRequest) {
 
   // Allow webhooks and specific auth endpoints to pass through without middleware auth check
   // But NOT /api/auth/sync which requires authentication
-  if (pathname.startsWith('/api/payments/webhooks') || 
+  if (pathname.startsWith('/api/payments/mobile/webhook') || 
       pathname.startsWith('/api/webhooks') ||
       (pathname.startsWith('/api/auth/') && pathname !== '/api/auth/sync')) {
     return response
@@ -184,9 +184,6 @@ export async function middleware(request: NextRequest) {
         const protectedApiRoutes = [
           '/api/orders',
           '/api/payments/mobile',
-          '/api/payments/initiate',
-          '/api/payments/process',
-          '/api/payments/status',
           '/api/service-bookings',
           '/api/auth/profile',
           '/api/auth/sync',

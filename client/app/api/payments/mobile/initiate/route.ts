@@ -62,14 +62,75 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create payment session with idempotency check
+    // First create order in database to get real order ID
+    console.log('📦 Creating order in database first...')
+    
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE!
+    )
+
+    const orderData = order_data as OrderData
+    
+    // Create order with pending status
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        total_amount: Number(amount),
+        currency,
+        status: 'pending',
+        payment_status: 'pending',
+        payment_method: `Mobile Money (${provider})`,
+        shipping_address: orderData.shipping_address || 'N/A',
+        address_line_1: orderData.address_line_1 || orderData.shipping_address || '',
+        phone: orderData.phone || null,
+        notes: orderData.notes || '',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (orderError || !order) {
+      console.error('❌ Failed to create order:', orderError)
+      return NextResponse.json(
+        { error: 'Failed to create order', details: orderError?.message },
+        { status: 500 }
+      )
+    }
+
+    console.log(`✅ Order created with ID: ${order.id}`)
+
+    // Create order items
+    if (orderData.items && orderData.items.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(
+          orderData.items.map(item => ({
+            order_id: order.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        )
+
+      if (itemsError) {
+        console.error('⚠️ Failed to create order items:', itemsError)
+      } else {
+        console.log(`✅ Order items created: ${orderData.items.length} items`)
+      }
+    }
+
+    // Create payment session with idempotency check, linked to order
     const { session, is_duplicate } = await createPaymentSession({
       user_id: user.id,
       amount: Number(amount),
       currency,
       provider,
       phone_number,
-      order_data: order_data as OrderData
+      order_data: orderData,
+      order_id: order.id // Link to real order
     })
 
     // If duplicate, return existing session
@@ -81,6 +142,7 @@ export async function POST(req: NextRequest) {
         status: session.status,
         message: 'Payment session already exists',
         session_id: session.id,
+        order_id: order.id,
         is_duplicate: true
       })
     }
@@ -93,26 +155,31 @@ export async function POST(req: NextRequest) {
       'Customer'
     const buyerEmail = user.email || order_data.email || 'no-reply@tiscomarket.store'
     
-    // Use request origin for webhook URL (ensures correct environment routing)
-    const webhookUrl = `${req.nextUrl.origin}/api/payments/mobile/webhook`
+    // Use production URL for webhook (ensures ZenoPay can reach us)
+    const webhookUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://tiscomarket.store/api/payments/mobile/webhook'
+      : `${req.nextUrl.origin}/api/payments/mobile/webhook`
 
-    console.log(`🚀 Initiating payment for session: ${session.id}`)
+    console.log(`🚀 Initiating payment for order: ${order.id}`)
     console.log(`📞 Webhook URL: ${webhookUrl}`)
 
-    // Initiate payment with ZenoPay
+    // Initiate payment with ZenoPay using REAL ORDER ID
     try {
       const result = await initiateZenoPayment({
         session,
+        order_id: order.id, // Use real database order ID
         buyer_name: buyerName,
         buyer_email: buyerEmail,
         webhook_url: webhookUrl
       })
 
-      console.log(`✅ Payment initiated: ${session.transaction_reference}`)
+      console.log(`✅ Payment initiated for order: ${order.id}`)
+      console.log(`📋 Transaction reference: ${session.transaction_reference}`)
 
       return NextResponse.json({
         success: true,
         transaction_reference: session.transaction_reference,
+        order_id: order.id,
         status: 'processing',
         message: result.message,
         session_id: session.id,

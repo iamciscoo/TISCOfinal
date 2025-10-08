@@ -140,12 +140,13 @@ export async function POST(req: NextRequest) {
     // Mark session as completed
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
-    // Send notifications synchronously but with timeout protection
-    // CRITICAL: In Vercel serverless functions, we must await async operations
-    // setImmediate doesn't work reliably - the function returns before it executes
-    const notificationPromise = (async () => {
+    // Queue notifications asynchronously (non-blocking for webhook response)
+    // Use Promise.resolve().then() for true async execution
+    console.log(`🚀 [${webhookId}] Queueing async notifications...`)
+    
+    Promise.resolve().then(async () => {
       try {
-        console.log(`📧 [${webhookId}] Sending notifications...`)
+        console.log(`📧 [${webhookId}] Processing async notifications...`)
         
         const { notifyAdminOrderCreated, notifyOrderCreated } = await import('@/lib/notifications/service')
         
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
         const customerEmail = orderData.email || 'customer@example.com'
         const customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
         
-        // Get order items for customer notification
+        // Get order items for notifications
         const { createClient } = await import('@supabase/supabase-js')
         const supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -173,19 +174,12 @@ export async function POST(req: NextRequest) {
           `)
           .eq('order_id', order_id)
         
-        console.log(`🔍 [${webhookId}] Order items query result:`, {
-          items_count: orderItems?.length || 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          items: orderItems?.map((item: any) => ({
-            product_id: item.product_id,
-            products_id: item.products?.id,
-            name: item.products?.name
-          }))
+        console.log(`🔍 [${webhookId}] Order items for notifications:`, {
+          items_count: orderItems?.length || 0
         })
         
         // Send customer notification
         if (orderItems && orderItems.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const items = orderItems.map((item: any) => ({
             name: item.products?.name || 'Product',
             quantity: item.quantity,
@@ -204,11 +198,10 @@ export async function POST(req: NextRequest) {
             shipping_address: orderData.shipping_address || 'N/A'
           })
           
-          console.log(`✅ [${webhookId}] Customer notification sent to ${customerEmail}`)
+          console.log(`✅ [${webhookId}] Customer notification sent (async)`)
         }
         
-        // Send admin notification with items for product-specific filtering
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // Send admin notification
         const itemsWithProductIds = (orderItems || []).map((item: any) => ({
           product_id: item.product_id || (item.products?.id),
           name: item.products?.name || 'Product',
@@ -225,10 +218,10 @@ export async function POST(req: NextRequest) {
           payment_method: 'Mobile Money',
           payment_status: 'paid',
           items_count,
-          items: itemsWithProductIds // CRITICAL: Pass items with product_id for filtering
+          items: itemsWithProductIds
         })
         
-        console.log(`✅ [${webhookId}] Admin notifications sent`)
+        console.log(`✅ [${webhookId}] Admin notification sent (async)`)
         
         await logPaymentEvent('notification_sent', {
           session_id: session.id,
@@ -241,30 +234,23 @@ export async function POST(req: NextRequest) {
         })
         
       } catch (notifError) {
-        console.error(`⚠️ [${webhookId}] Notification failed (non-blocking):`, notifError)
-        console.error(`⚠️ [${webhookId}] Notification error stack:`, (notifError as Error).stack)
+        console.error(`❌ [${webhookId}] Async notification failed:`, notifError)
         
-        await logPaymentEvent('notification_failed', {
-          session_id: session.id,
-          order_id,
-          user_id: session.user_id,
-          error: (notifError as Error).message
-        })
+        // Log failure but don't affect order creation
+        try {
+          await logPaymentEvent('notification_failed', {
+            session_id: session.id,
+            order_id,
+            user_id: session.user_id,
+            error: (notifError as Error).message
+          })
+        } catch (logError) {
+          console.error(`❌ Failed to log notification error:`, logError)
+        }
       }
-    })()
-    
-    // Wait for notifications with timeout (don't block indefinitely)
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Notification timeout after 25 seconds')), 25000)
-    )
-    
-    try {
-      await Promise.race([notificationPromise, timeoutPromise])
-      console.log(`📧 [${webhookId}] Notifications completed successfully`)
-    } catch (timeoutError) {
-      console.warn(`⚠️ [${webhookId}] Notification timeout (non-critical):`, (timeoutError as Error).message)
-      // Continue - order is created, notifications will retry via database
-    }
+    }).catch(queueError => {
+      console.error(`❌ [${webhookId}] Failed to queue notifications:`, queueError)
+    })
 
     const processingTime = Date.now() - startTime
     console.log(`🎉 [${webhookId}] SUCCESS in ${processingTime}ms`)
