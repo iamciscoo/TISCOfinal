@@ -19,6 +19,8 @@ const publicRoutes = [
   '/auth',
   '/cart', // Cart should be accessible without auth
   '/search', // Search should be accessible
+  '/checkout', // Let AuthGuard handle UI - don't redirect
+  '/account', // Let AuthGuard handle UI - don't redirect
   '/terms',
   '/privacy',
   '/cookies',
@@ -176,18 +178,34 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!user) {
-      // Redirect to sign in for protected pages
-      if (!pathname.startsWith('/api/')) {
-        const redirectUrl = new URL('/auth/sign-in', request.url)
-        redirectUrl.searchParams.set('redirectTo', pathname)
-        return NextResponse.redirect(redirectUrl)
+      // For API routes, return 401 (they need auth)
+      if (pathname.startsWith('/api/')) {
+        // Check if it's a protected API route
+        const protectedApiRoutes = [
+          '/api/orders',
+          '/api/payments/mobile',
+          '/api/payments/initiate',
+          '/api/payments/process',
+          '/api/payments/status',
+          '/api/service-bookings',
+          '/api/auth/profile',
+          '/api/auth/sync',
+          '/api/auth/addresses',
+          '/api/notifications/admin-order',
+          '/api/notifications/welcome'
+        ]
+        
+        const isProtectedApi = protectedApiRoutes.some(route => pathname.startsWith(route))
+        if (isProtectedApi) {
+          return NextResponse.json(
+            { error: 'Authentication required' },
+            { status: 401 }
+          )
+        }
       }
       
-      // Return 401 for protected API routes
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      // For protected pages, let them load (AuthGuard will handle UI)
+      // No redirect - let the page load and AuthGuard will show modal
     }
   } catch (error) {
     console.error('Auth error in middleware:', error)
@@ -224,30 +242,28 @@ export async function middleware(request: NextRequest) {
         })
       })
       
-      if (!pathname.startsWith('/api/')) {
-        const redirectUrl = new URL('/auth/sign-in', request.url)
-        redirectUrl.searchParams.set('redirectTo', pathname)
-        redirectUrl.searchParams.set('error', 'session_expired')
-        return NextResponse.redirect(redirectUrl, { headers: clearResponse.headers })
+      // For API routes, return 401 with cleared cookies
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Authentication session expired' },
+          { status: 401, headers: clearResponse.headers }
+        )
       }
       
-      return NextResponse.json(
-        { error: 'Authentication session expired' },
-        { status: 401, headers: clearResponse.headers }
-      )
+      // For pages, let them load (AuthGuard will handle UI) but clear cookies
+      return NextResponse.next({ headers: clearResponse.headers })
     }
     
     // For other auth errors, treat as unauthenticated
-    if (!pathname.startsWith('/api/')) {
-      const redirectUrl = new URL('/auth/sign-in', request.url)
-      redirectUrl.searchParams.set('redirectTo', pathname)
-      return NextResponse.redirect(redirectUrl)
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Authentication error' },
+        { status: 401 }
+      )
     }
     
-    return NextResponse.json(
-      { error: 'Authentication error' },
-      { status: 401 }
-    )
+    // For pages, let them load (AuthGuard will handle UI)
+    // No redirect needed
   }
 
   return response
