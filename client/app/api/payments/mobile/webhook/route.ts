@@ -44,7 +44,36 @@ export async function POST(req: NextRequest) {
     const isPaymentSuccessful = successStatuses.includes(payment_status?.toUpperCase())
     
     if (!isPaymentSuccessful) {
-      console.log(`⏳ [${webhookId}] Payment not successful: ${payment_status}`)
+      console.log(`❌ [${webhookId}] Payment not successful: ${payment_status}`)
+      
+      // Handle failed payments - find session and update status
+      const failedStatuses = ['FAILED', 'DECLINED', 'CANCELLED', 'EXPIRED', 'TIMEOUT', 'REJECTED']
+      const isPaymentFailed = failedStatuses.includes(payment_status?.toUpperCase())
+      
+      if (isPaymentFailed) {
+        // Find payment session to update failure status
+        let session = await getSessionByOrderId(transactionRef)
+        if (!session) {
+          session = await getSessionByReference(transactionRef)
+        }
+        
+        if (session) {
+          console.log(`🔄 [${webhookId}] Updating session status to failed`)
+          await updateSessionStatus(session.id, 'failed', undefined, `Payment ${payment_status}`)
+          
+          await logPaymentEvent('payment_failed', {
+            session_id: session.id,
+            transaction_reference: session.transaction_reference,
+            order_id: transactionRef,
+            user_id: session.user_id,
+            error: `ZenoPay webhook: ${payment_status}`,
+            details: { webhook_status: payment_status }
+          })
+          
+          console.log(`✅ [${webhookId}] Failed payment processed`)
+        }
+      }
+      
       return NextResponse.json({
         success: true,
         message: `Payment status: ${payment_status}`
@@ -202,7 +231,7 @@ export async function POST(req: NextRequest) {
             total_amount: session.amount.toString(),
             currency: session.currency,
             items,
-            order_date: new Date().toISOString(),
+            order_date: new Date().toLocaleDateString(), // ✅ Fixed: Use same format as pay at office
             payment_method: `Mobile Money (${session.provider})`,
             shipping_address: orderData.shipping_address || 'N/A'
           })
