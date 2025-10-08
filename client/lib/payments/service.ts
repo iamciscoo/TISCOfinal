@@ -115,34 +115,38 @@ export async function createPaymentSession(params: {
 }): Promise<{ session: PaymentSession; is_duplicate: boolean }> {
   const transaction_reference = generateTransactionReference()
   
-  // Check for recent duplicate (within 5 minutes)
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-  const { data: recentSession } = await supabase
+  // Smart duplicate check: Only block ACTIVELY PROCESSING payments
+  // Allow retries after failed/timed-out sessions (key fix for retry logic)
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+  const { data: activeSession } = await supabase
     .from('payment_sessions')
     .select('*')
     .eq('user_id', params.user_id)
     .eq('amount', params.amount)
     .eq('provider', params.provider)
     .eq('phone_number', params.phone_number)
-    .in('status', ['pending', 'processing'])
-    .gte('created_at', fiveMinutesAgo)
+    .eq('status', 'processing') // KEY: Only block if actively processing, not pending/failed
+    .gte('created_at', twoMinutesAgo) // Reduced to 2 minutes
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  if (recentSession) {
+  if (activeSession) {
+    console.log(`⚠️ Active payment in progress, preventing duplicate: ${activeSession.id}`)
     await logPaymentEvent('duplicate_prevented', {
-      session_id: recentSession.id,
-      transaction_reference: recentSession.transaction_reference,
+      session_id: activeSession.id,
+      transaction_reference: activeSession.transaction_reference,
       user_id: params.user_id,
-      details: { reason: 'Recent identical session found' }
+      details: { reason: 'Active processing session found', created_at: activeSession.created_at }
     })
     
     return {
-      session: recentSession as PaymentSession,
+      session: activeSession as PaymentSession,
       is_duplicate: true
     }
   }
+  
+  console.log('✅ No active session found, creating new payment session')
 
   // Create new session
   const { data: session, error } = await supabase
