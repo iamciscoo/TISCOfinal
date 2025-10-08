@@ -116,7 +116,7 @@ export async function createPaymentSession(params: {
   const transaction_reference = generateTransactionReference()
   
   // Smart duplicate check with automatic timeout handling
-  // Only block ACTIVELY PROCESSING payments within reasonable time window
+  // Match frontend timeout (50s) + small buffer (10s) = 60s active window
   const { data: recentSessions } = await supabase
     .from('payment_sessions')
     .select('*')
@@ -131,9 +131,9 @@ export async function createPaymentSession(params: {
   if (recentSessions && recentSessions.length > 0) {
     for (const session of recentSessions) {
       const sessionAge = Date.now() - new Date(session.created_at).getTime()
-      const twoMinutesMs = 2 * 60 * 1000
+      const activeWindowMs = 60 * 1000 // 60 seconds (frontend timeout 50s + 10s buffer)
       
-      if (sessionAge < twoMinutesMs) {
+      if (sessionAge < activeWindowMs) {
         // Session is fresh and actively processing - block duplicate
         console.log(`⚠️ Active payment in progress (${Math.round(sessionAge/1000)}s old), preventing duplicate: ${session.id}`)
         await logPaymentEvent('duplicate_prevented', {
@@ -154,7 +154,7 @@ export async function createPaymentSession(params: {
           .from('payment_sessions')
           .update({
             status: 'failed',
-            failure_reason: 'Payment timeout - exceeded 2 minute window',
+            failure_reason: 'Payment timeout - exceeded 60 second window',
             updated_at: new Date().toISOString()
           })
           .eq('id', session.id)
@@ -163,7 +163,7 @@ export async function createPaymentSession(params: {
           session_id: session.id,
           transaction_reference: session.transaction_reference,
           user_id: params.user_id,
-          details: { reason: 'Automatic timeout after 2 minutes', age_seconds: Math.round(sessionAge/1000) }
+          details: { reason: 'Automatic timeout after 60 seconds', age_seconds: Math.round(sessionAge/1000) }
         })
       }
     }
