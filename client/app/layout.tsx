@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import AuthSync from '@/components/AuthSync'
 import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
+import { GlobalAuthModalManager } from '@/components/auth/GlobalAuthModalManager'
 import { OrganizationSchema, WebsiteSchema, SiteNavigationSchema, LocalBusinessSchema } from '@/components/StructuredData'
 import { Geist, Geist_Mono } from 'next/font/google'
 import "./globals.css";
@@ -350,6 +351,7 @@ export default async function RootLayout({
             <CartRealtime />
             {children}
             <WhatsAppFloat />
+            <GlobalAuthModalManager />
           </CurrencyProvider>
           <Toaster />
         </AuthProvider>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getUser } from '@/lib/supabase-server'
+import { logger } from '@/lib/logger'
 // Dynamic import of notification service to avoid build issues
 
 const supabase = createClient(
@@ -24,13 +25,12 @@ const supabase = createClient(
 )
 
 export async function GET(request: NextRequest) {
-  console.log('=== GET /api/service-bookings START ===')
+  logger.apiRequest('GET', '/api/service-bookings')
   try {
-    console.log('Getting user...')
     const user = await getUser()
-    console.log('User result:', user ? `User ID: ${user.id}` : 'No user found')
+    logger.authEvent('User authentication check', { userId: user?.id || 'none', authenticated: !!user })
     if (!user?.id) {
-      console.log('No user, returning 401')
+      logger.warn('Service bookings fetch unauthorized - no user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     searchParams.get('fresh')
 
-    console.log('Fetching service bookings for user:', user.id)
+    logger.dbQuery('SELECT', 'service_bookings', { userId: user.id })
     const { data, error } = await supabase
       .from('service_bookings')
       .select(`
@@ -55,35 +55,34 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    console.log('Service bookings query result:', { data: data?.length || 0, error: error?.message })
+    logger.debug('Service bookings query result', { count: data?.length || 0, hasError: !!error })
     if (error) {
-      console.error('Service bookings fetch error:', error)
+      logger.error('Service bookings fetch failed', error, { userId: user.id })
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log('Returning service bookings:', data?.length || 0)
+    logger.info('Returning service bookings', { userId: user.id, count: data?.length || 0 })
     return NextResponse.json({ bookings: data || [] }, { status: 200 })
   } catch (error: unknown) {
-    console.error('=== GET /api/service-bookings ERROR ===', error)
+    logger.error('Service bookings fetch failed', error)
     return NextResponse.json({ error: (error as Error).message || 'Failed to fetch bookings' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('=== POST /api/service-bookings START ===')
-    console.log('Request headers:', {
+    logger.apiRequest('POST', '/api/service-bookings')
+    logger.debug('Request headers', {
       'content-type': req.headers.get('content-type'),
-      'cookie': req.headers.get('cookie') ? 'Present' : 'Missing',
-      'authorization': req.headers.get('authorization') ? 'Present' : 'Missing'
+      'has-cookie': !!req.headers.get('cookie'),
+      'has-authorization': !!req.headers.get('authorization')
     })
     
-    console.log('Getting user...')
     const user = await getUser()
-    console.log('User result:', user ? `User ID: ${user.id}, Email: ${user.email}` : 'No user found')
+    logger.authEvent('User authentication check', { userId: user?.id || 'none', authenticated: !!user })
     
     if (!user) {
-      console.log('No user found, returning 401')
+      logger.warn('Service booking creation unauthorized - no user')
       return NextResponse.json({ 
         error: 'Unauthorized', 
         message: 'You must be signed in to book a service. Please sign in and try again.',
@@ -111,7 +110,7 @@ export async function POST(req: NextRequest) {
       || user.user_metadata?.name 
       || 'Customer'
 
-    console.log('Validating booking data...')
+    logger.debug('Validating booking data', { service_id, has_description: !!description })
     if (!service_id) {
       return NextResponse.json({ error: 'service_id is required' }, { status: 400 })
     }
@@ -134,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     const contact_phone = String(body.contact_phone || '').trim()
 
-    console.log('Creating service booking in database...')
+    logger.dbQuery('INSERT', 'service_bookings', { userId: user.id, serviceId: service_id })
     const { data, error } = await supabase
       .from('service_bookings')
       .insert({
@@ -153,11 +152,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Database error creating booking:', error)
+      logger.error('Service booking creation failed', error, { userId: user.id, serviceId: service_id })
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
-    console.log('Service booking created successfully:', data?.id)
+    logger.info('Service booking created successfully', { bookingId: data?.id, userId: user.id })
 
     // Get service details for notification
     const { data: serviceData } = await supabase
@@ -181,9 +180,9 @@ export async function POST(req: NextRequest) {
         description,
         service_type
       })
-      console.log('Booking confirmation email sent successfully')
+      logger.notificationEvent('Booking confirmation email sent successfully', { bookingId: data.id })
     } catch (emailError) {
-      console.error('Failed to send booking confirmation email:', emailError)
+      logger.error('Failed to send booking confirmation email', emailError, { bookingId: data.id })
       // Don't fail the booking creation if email fails
     }
 

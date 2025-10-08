@@ -1,3 +1,12 @@
+/**
+ * Auth Debugger Component - Development Only
+ * 
+ * This component is completely excluded from production builds.
+ * Shows authentication state for debugging purposes.
+ * 
+ * NOTE: This file should be dynamically imported only in development
+ */
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -23,7 +32,6 @@ export function AuthDebugger() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        
         // Get session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
@@ -61,8 +69,6 @@ export function AuthDebugger() {
     
     checkAuth()
   }, [])
-
-  if (process.env.NODE_ENV === 'production') return null
 
   return (
     <div className="fixed bottom-4 left-4 z-[9999] bg-black/90 text-white p-4 rounded-lg text-xs max-w-md max-h-96 overflow-auto">

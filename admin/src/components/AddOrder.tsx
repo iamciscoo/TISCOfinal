@@ -235,12 +235,12 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
     }
   };
   return (
-    <SheetContent className="overflow-y-auto w-full sm:max-w-xl" aria-describedby={undefined}>
+    <SheetContent className="overflow-y-auto w-full sm:max-w-xl px-4 sm:px-6" aria-describedby={undefined}>
       <SheetHeader>
         <SheetTitle className="text-lg sm:text-xl mb-3 sm:mb-4">Add Order</SheetTitle>
       </SheetHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4 pb-6">
               {/* Customer Type Selection */}
               <FormField
                 control={form.control}

@@ -1,4 +1,5 @@
 import type { RequestInit } from 'next/dist/server/web/spec-extension/request'
+import { logger } from '../logger'
 
 export type SendPulseConfig = {
   clientId: string
@@ -65,13 +66,13 @@ async function fetchWithRetry(
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      console.log(`SendPulse: Attempt ${attempt + 1}/${retries + 1} for ${url}`)
+      logger.debug('SendPulse fetch attempt', { attempt: attempt + 1, totalAttempts: retries + 1, url })
       const response = await fetch(url, options)
-      console.log(`SendPulse: Request successful on attempt ${attempt + 1}`)
+      logger.debug('SendPulse request successful', { attempt: attempt + 1 })
       return response
     } catch (error) {
       lastError = error
-      console.error(`SendPulse: Attempt ${attempt + 1} failed:`, error)
+      logger.warn('SendPulse fetch attempt failed', { attempt: attempt + 1, error })
       
       // Don't retry if it's not a retryable error or we're on the last attempt
       if (!isRetryableError(error) || attempt === retries) {
@@ -83,7 +84,7 @@ async function fetchWithRetry(
       const jitter = Math.random() * 0.1 * baseDelay // Add up to 10% jitter
       const delay = baseDelay + jitter
       
-      console.log(`SendPulse: Waiting ${Math.round(delay)}ms before retry...`)
+      logger.debug('SendPulse retry delay', { delayMs: Math.round(delay) })
       await sleep(delay)
     }
   }
@@ -94,13 +95,13 @@ async function fetchWithRetry(
 async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
   // Check cache first
   if (tokenCache && tokenCache.expiresAt > Date.now()) {
-    console.log('SendPulse: Using cached token')
+    logger.debug('SendPulse using cached token')
     return tokenCache.token
   }
 
   // If there's already a token request in progress, wait for it
   if (tokenPromise) {
-    console.log('SendPulse: Waiting for existing token request')
+    logger.debug('SendPulse waiting for existing token request')
     return tokenPromise
   }
 
@@ -116,7 +117,7 @@ async function getAccessToken(cfg: SendPulseConfig): Promise<string> {
 }
 
 async function requestNewToken(cfg: SendPulseConfig): Promise<string> {
-  console.log('SendPulse: Requesting new access token')
+  logger.debug('SendPulse requesting new access token')
   const url = 'https://api.sendpulse.com/oauth/access_token'
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
@@ -134,18 +135,18 @@ async function requestNewToken(cfg: SendPulseConfig): Promise<string> {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '')
-    console.error('SendPulse token request failed:', { status: res.status, statusText: res.statusText, response: txt })
+    logger.error('SendPulse token request failed', null, { status: res.status, statusText: res.statusText, response: txt })
     throw new Error(`SendPulse token error: ${res.status} ${res.statusText} ${txt}`)
   }
 
   const json = await res.json().catch(() => ({} as Record<string, unknown>))
-  console.log('SendPulse token response keys:', Object.keys(json))
+  logger.debug('SendPulse token response received', { keys: Object.keys(json) })
   
   const token = (json as Record<string, unknown>)?.access_token as string | undefined
   const expiresIn = Number((json as Record<string, unknown>)?.expires_in) || 3600
   
   if (!token) {
-    console.error('SendPulse token response:', json)
+    logger.error('SendPulse token missing in response', null, { json })
     throw new Error('SendPulse token missing in response')
   }
 
@@ -153,16 +154,16 @@ async function requestNewToken(cfg: SendPulseConfig): Promise<string> {
   const expiresAt = Date.now() + (expiresIn * 900) // 90% of expires_in in ms
   tokenCache = { token, expiresAt }
   
-  console.log('SendPulse: Token cached, expires in:', expiresIn, 'seconds')
+  logger.debug('SendPulse token cached', { expiresInSeconds: expiresIn })
   return token
 }
 
 export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPulseEmail): Promise<void> {
-  console.log('SendPulse: Starting email send process')
+  logger.debug('SendPulse starting email send process')
   
   try {
     const token = await getAccessToken(cfg)
-    console.log('SendPulse: Access token obtained successfully')
+    logger.debug('SendPulse access token obtained successfully')
     
     const url = 'https://api.sendpulse.com/smtp/emails'
 
@@ -170,7 +171,7 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
     const recipients = Array.isArray(email.to) ? email.to : [email.to]
     const toArray = recipients.map(recipient => ({ email: recipient }))
     
-    console.log('SendPulse: Sending to recipients:', recipients.length)
+    logger.debug('SendPulse sending to recipients', { count: recipients.length })
 
     // Validate email content
     if (!email.html || email.html.trim().length === 0) {
@@ -209,14 +210,14 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
       },
     }
 
-    console.log('SendPulse payload validation:', {
+    logger.debug('SendPulse payload validation', {
       subject: payload.email.subject,
       recipientCount: validRecipients.length,
       htmlLength: cleanHtml.length,
       textLength: textContent.length
     })
 
-    console.log('SendPulse: Sending request to API')
+    logger.debug('SendPulse sending request to API')
     const res = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
@@ -230,13 +231,13 @@ export async function sendEmailViaSendPulse(cfg: SendPulseConfig, email: SendPul
 
     if (!res.ok) {
       const txt = await res.text().catch(() => '')
-      console.error('SendPulse API error:', { status: res.status, statusText: res.statusText, response: txt })
+      logger.error('SendPulse API error', null, { status: res.status, statusText: res.statusText, response: txt })
       throw new Error(`SendPulse send error: ${res.status} ${res.statusText} ${txt}`)
     }
 
-    console.log('SendPulse: Email sent successfully')
+    logger.info('SendPulse email sent successfully', { recipients: recipients.length })
   } catch (error: unknown) {
-    console.error('SendPulse: Error sending email:', error)
+    logger.error('SendPulse error sending email', error)
     throw error
   }
 }

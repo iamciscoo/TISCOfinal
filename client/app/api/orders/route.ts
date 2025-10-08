@@ -21,6 +21,7 @@ import { getUser, getUserProfile } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import type { Address } from '@/lib/types'
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { logger } from '@/lib/logger'
 
 // Use Node.js runtime for access to secure environment variables and notification services
 export const runtime = 'nodejs'
@@ -116,13 +117,13 @@ type OrderItemInput = {
  * - 500: Server error during order creation
  */
 export async function POST(req: Request) {
-  console.log('=== ORDER CREATION START ===')
+  logger.apiRequest('POST', '/api/orders')
   try {
     // Authenticate user - all order operations require authentication
     const user = await getUser()
-    console.log('User authentication result:', user ? `User ID: ${user.id}` : 'No user found')
+    logger.authEvent('User authentication check', { userId: user?.id || 'none', authenticated: !!user })
     if (!user) {
-      console.log('Order creation failed: Unauthorized')
+      logger.warn('Order creation unauthorized - no user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -152,17 +153,17 @@ export async function POST(req: Request) {
     // Use address_line_1 or fall back to place field for address composition
     const address_line_1_value = address_line_1_input || place_input
 
-    console.log('Order request body:', { 
-      items: items?.length, 
+    logger.debug('Order request body', { 
+      itemCount: items?.length, 
       payment_method, 
       currency, 
-      shipping_address,
+      hasShippingAddress: !!shipping_address,
       user_id: user.id 
     })
     
     // Validate that order contains at least one item
     if (!items || !Array.isArray(items) || items.length === 0) {
-      console.log('Order creation failed: No items provided')
+      logger.warn('Order creation failed: No items provided', { userId: user.id })
       return NextResponse.json({ error: 'Items are required' }, { status: 400 })
     }
 
@@ -195,7 +196,7 @@ export async function POST(req: Request) {
         ].filter(Boolean)
         shippingAddressStr = parts.join(', ')
       } else if (addrErr) {
-        console.error('Fetch default address error:', errInfo(addrErr))
+        logger.error('Fetch default address failed', addrErr, { userId: user.id })
       }
     }
 
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
     const userProfile = await getUserProfile(user.id)
     const emailValue = userProfile?.email || user.email || email_input
     
-    console.log('DEBUG - User sync data:', {
+    logger.debug('User sync data', {
       user_id: user.id,
       email: emailValue,
       first_name: userProfile?.first_name ?? first_name_input ?? null,
@@ -286,12 +287,12 @@ export async function POST(req: Request) {
         }, { onConflict: 'id' })
       
       if (userUpsertError) {
-        console.error('User upsert error:', errInfo(userUpsertError))
+        logger.error('User upsert failed', userUpsertError, { userId: user.id })
       } else {
-        console.log('User upserted successfully')
+        logger.debug('User upserted successfully', { userId: user.id })
       }
     } else {
-      console.warn('Skipping users upsert: missing email from user and request body')
+      logger.warn('Skipping users upsert: missing email', { userId: user.id })
     }
 
     // Sync user's default shipping address for admin visibility
@@ -306,7 +307,7 @@ export async function POST(req: Request) {
         .limit(1)
 
       if (findErr) {
-        console.error('Find default address error:', errInfo(findErr))
+        logger.error('Find default address failed', findErr, { userId: user.id })
       }
 
       const existing = Array.isArray(found) && found.length ? found[0] : null
@@ -322,12 +323,12 @@ export async function POST(req: Request) {
           .from('addresses')
           .update(addrUpdates)
           .eq('id', existing.id)
-        if (updErr) console.error('Update default address error:', errInfo(updErr))
+        if (updErr) logger.error('Update default address failed', updErr, { userId: user.id, addressId: existing.id })
       } else {
         // Only insert a new default address if both address_line_1 and city are provided
         const canInsertDefaultAddress = Boolean(address_line_1_value && city_input)
         if (!canInsertDefaultAddress) {
-          console.warn('Skipping insert of default shipping address: missing address_line_1 or city')
+          logger.warn('Skipping insert of default shipping address: missing required fields', { userId: user.id })
         } else {
           const insertPayload: Partial<Address> & { user_id: string; type: 'shipping' | 'billing'; is_default: boolean } = {
             user_id: user.id,
@@ -343,18 +344,17 @@ export async function POST(req: Request) {
           const { error: insErr } = await supabase
             .from('addresses')
             .insert(insertPayload)
-          if (insErr) console.error('Insert default address error:', errInfo(insErr))
+          if (insErr) logger.error('Insert default address failed', insErr, { userId: user.id })
         }
       }
     }
 
     // Create order
-    console.log('Creating order with data:', {
+    logger.dbQuery('INSERT', 'orders', {
       user_id: user.id,
       total_amount,
       currency,
       payment_method,
-      shipping_address: shippingAddressStr,
       items_count: validatedItems.length
     })
     
@@ -374,11 +374,11 @@ export async function POST(req: Request) {
       .single()
 
     if (orderError) {
-      console.error('Order creation failed:', errInfo(orderError))
+      logger.error('Order creation failed', orderError, { userId: user.id })
       return NextResponse.json({ error: orderError.message }, { status: 500 })
     }
     
-    console.log('Order created successfully:', order.id)
+    logger.info('Order created successfully', { orderId: order.id, userId: user.id })
 
     // Create order items with server-verified prices
     const orderItems = validatedItems.map((item) => ({
@@ -388,19 +388,19 @@ export async function POST(req: Request) {
       price: item.price,
     }))
 
-    console.log('Creating order items:', orderItems.length)
+    logger.dbQuery('INSERT', 'order_items', { orderId: order.id, count: orderItems.length })
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems)
 
     if (itemsError) {
-      console.error('Order items creation failed:', errInfo(itemsError))
+      logger.error('Order items creation failed - rolling back order', itemsError, { orderId: order.id })
       // Rollback order if order items creation fails
       await supabase.from('orders').delete().eq('id', order.id)
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
     
-    console.log('Order items created successfully')
+    logger.info('Order items created successfully', { orderId: order.id, count: orderItems.length })
 
     // Clear user's cart in the database to keep client and server in sync
     try {
@@ -409,7 +409,7 @@ export async function POST(req: Request) {
         .delete()
         .eq('user_id', user.id)
     } catch (e) {
-      console.warn('Non-fatal: failed to clear user cart after order creation', errInfo(e))
+      logger.warn('Non-fatal: failed to clear user cart after order creation', { userId: user.id, error: errInfo(e) })
     }
 
     // Inventory policy: do not decrement stock at order creation.
@@ -421,7 +421,7 @@ export async function POST(req: Request) {
       revalidateTag(`user-orders:${user.id}`)
       revalidateTag(`order:${order.id}`)
     } catch (e) {
-      console.warn('Revalidation error (non-fatal):', e)
+      logger.warn('Cache revalidation error (non-fatal)', { orderId: order.id, error: String(e) })
     }
 
     // Return the created order with items
@@ -437,10 +437,11 @@ export async function POST(req: Request) {
     try {
       const customerName = userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : first_name_input && last_name_input ? `${first_name_input} ${last_name_input}` : 'Customer'
 
-      console.log('=== SENDING ORDER CONFIRMATION EMAIL ===')
-      console.log('Customer email:', emailValue)
-      console.log('Customer name:', customerName)
-      console.log('Order ID:', order.id)
+      logger.notificationEvent('Sending order confirmation email', {
+        orderId: order.id,
+        customerEmail: emailValue,
+        customerName
+      })
 
       // Import notification service directly to avoid external HTTP dependency
       const { notifyOrderCreated } = await import('@/lib/notifications/service')
@@ -462,11 +463,11 @@ export async function POST(req: Request) {
         payment_method,
         shipping_address: shippingAddressStr
       })
-      console.log('✅ Order confirmation email sent successfully')
+      logger.notificationEvent('Order confirmation email sent successfully', { orderId: order.id })
 
       // Send admin notification for all orders (including "Pay at Office")
       // This ensures office payments get admin notifications just like mobile payments do via webhooks
-      console.log('=== SENDING ADMIN ORDER NOTIFICATION ===')
+      logger.notificationEvent('Sending admin order notification', { orderId: order.id })
       try {
         const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
         await notifyAdminOrderCreated({
@@ -488,19 +489,19 @@ export async function POST(req: Request) {
             }
           })
         })
-        console.log('✅ Admin order notification sent successfully')
+        logger.notificationEvent('Admin order notification sent successfully', { orderId: order.id })
       } catch (adminEmailError) {
-        console.error('❌ Failed to send admin order notification:', adminEmailError)
+        logger.error('Failed to send admin order notification', adminEmailError, { orderId: order.id })
         // Continue without failing the order creation
       }
     } catch (emailError) {
-      console.error('❌ Failed to send order confirmation email:', emailError)
+      logger.error('Failed to send order confirmation email', emailError, { orderId: order.id })
       // Don't fail the order creation if email fails
     }
-    console.log('=== ORDER CREATION SUCCESS ===', order.id)
+    logger.info('Order creation completed successfully', { orderId: order.id, userId: user.id })
     return NextResponse.json({ order: orderWithItems }, { status: 201 })
   } catch (error: unknown) {
-    console.error('=== ORDER CREATION ERROR ===', error)
+    logger.error('Order creation failed', error)
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to create order' },
       { status: 500 }
@@ -509,13 +510,12 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  console.log('=== GET /api/orders START ===')
+  logger.apiRequest('GET', '/api/orders')
   try {
-    console.log('Getting user...')
     const user = await getUser()
-    console.log('User result:', user ? `User ID: ${user.id}` : 'No user found')
+    logger.authEvent('User authentication check', { userId: user?.id || 'none', authenticated: !!user })
     if (!user) {
-      console.log('No user, returning 401')
+      logger.warn('Orders fetch unauthorized - no user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -526,7 +526,7 @@ export async function GET(req: Request) {
       || req.headers.get('x-no-cache') === '1'
 
     if (fresh) {
-      console.log('Fresh mode - fetching orders directly from DB for user:', user.id)
+      logger.debug('Fresh mode - fetching orders directly from DB', { userId: user.id })
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -539,12 +539,12 @@ export async function GET(req: Request) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Orders query result:', { data: data?.length || 0, error: error?.message })
+      logger.debug('Orders query result', { count: data?.length || 0, hasError: !!error })
       if (error) {
-        console.error('Orders fetch error:', error)
+        logger.error('Orders fetch failed', error, { userId: user.id })
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
-      console.log('Returning fresh orders:', data?.length || 0)
+      logger.info('Returning fresh orders', { userId: user.id, count: data?.length || 0 })
       return NextResponse.json({ orders: data || [] }, { status: 200 })
     }
 
@@ -574,7 +574,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ orders: data }, { status: 200 })
 
   } catch (error: unknown) {
-    console.error('=== GET /api/orders ERROR ===', error)
+    logger.error('Orders fetch failed', error)
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to fetch orders' },
       { status: 500 }

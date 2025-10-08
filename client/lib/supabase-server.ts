@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { type User } from '@supabase/supabase-js'
 import { validateEnvironment } from './env-check'
+import { logger } from './logger'
 
 export const createClient = async () => {
   const cookieStore = await cookies()
@@ -27,7 +28,7 @@ export const createClient = async () => {
             
             // DEBUG: Log cookie access
             if (name.includes('auth')) {
-              console.log('🍪 [cookie.get]', name, '→', cookie?.value ? 'Present' : 'Missing')
+              logger.debug('Cookie access', { name, present: !!cookie?.value })
             }
             
             if (!cookie?.value) return undefined
@@ -38,7 +39,7 @@ export const createClient = async () => {
                 // Test if the cookie value is valid UTF-8 by encoding/decoding
                 const testString = decodeURIComponent(encodeURIComponent(cookie.value))
                 if (testString !== cookie.value) {
-                  console.warn(`Invalid UTF-8 in cookie ${name}, ignoring`)
+                  logger.warn('Invalid UTF-8 in cookie, ignoring', { cookieName: name })
                   return undefined
                 }
                 
@@ -49,20 +50,20 @@ export const createClient = async () => {
                     try {
                       atob(parts[1])
                     } catch {
-                      console.warn(`Invalid JWT structure in cookie ${name}, ignoring`)
+                      logger.warn('Invalid JWT structure in cookie, ignoring', { cookieName: name })
                       return undefined
                     }
                   }
                 }
               } catch (error) {
-                console.warn(`Cookie validation failed for ${name}:`, error)
+                logger.warn('Cookie validation failed', { cookieName: name, error })
                 return undefined
               }
             }
             
             return cookie.value
           } catch (error) {
-            console.warn(`Error reading cookie ${name}:`, error)
+            logger.warn('Error reading cookie', { cookieName: name, error })
             return undefined
           }
         },
@@ -96,49 +97,49 @@ export const getUser = async (retries = 2): Promise<User | null> => {
       const supabase = await createClient()
       
       // DEBUG: Log cookie access attempts
-      console.log('🔍 [getUser] Attempting to get session...')
+      logger.debug('Attempting to get session')
       
       // First try to get session, then user
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      console.log('🔍 [getUser] Session result:', {
+      logger.debug('Session result', {
         hasSession: !!session,
         hasUser: !!session?.user,
         userId: session?.user?.id || 'none',
-        error: sessionError?.message || 'none'
+        hasError: !!sessionError
       })
       
       if (session?.user) {
-        console.log('✅ [getUser] User found via session:', session.user.email)
+        logger.debug('User found via session', { email: session.user.email })
         return session.user
       }
       
       // Fallback to getUser()
-      console.log('🔍 [getUser] No session, trying getUser()...')
+      logger.debug('No session, trying getUser()')
       const { data: { user }, error } = await supabase.auth.getUser()
       
-      console.log('🔍 [getUser] getUser() result:', {
+      logger.debug('getUser() result', {
         hasUser: !!user,
         userId: user?.id || 'none',
         email: user?.email || 'none',
-        error: error?.message || 'none'
+        hasError: !!error
       })
       
       if (error) {
         // If it's a retryable error and we have attempts left
         if (attempt < retries && (error.message?.includes('fetch failed') || error.message?.includes('timeout'))) {
-          console.warn(`⚠️ Auth error in getUser (attempt ${attempt + 1}/${retries + 1}):`, error.message)
+          logger.warn('Auth error in getUser, retrying', { attempt: attempt + 1, totalAttempts: retries + 1, error: error.message })
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
           continue
         }
-        console.error('❌ Auth error in getUser:', error)
+        logger.error('Auth error in getUser', error)
         return null
       }
       
       if (user) {
-        console.log('✅ [getUser] User found via getUser():', user.email)
+        logger.debug('User found via getUser()', { email: user.email })
       } else {
-        console.log('⚠️ [getUser] No user found')
+        logger.debug('No user found')
       }
       
       return user
@@ -150,15 +151,15 @@ export const getUser = async (retries = 2): Promise<User | null> => {
         error.message?.includes('ECONNRESET') ||
         error.message?.includes('ENOTFOUND')
       ))) {
-        console.warn(`⚠️ Exception in getUser (attempt ${attempt + 1}/${retries + 1}):`, (error as Error).message)
+        logger.warn('Exception in getUser, retrying', { attempt: attempt + 1, totalAttempts: retries + 1, error: (error as Error).message })
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
         continue
       }
-      console.error('❌ Exception in getUser:', error)
+      logger.error('Exception in getUser', error)
       return null
     }
   }
-  console.log('❌ [getUser] All retry attempts exhausted')
+  logger.warn('All retry attempts exhausted in getUser', { totalAttempts: retries + 1 })
   return null
 }
 
@@ -178,7 +179,7 @@ export const getUserProfile = async (authUserId: string) => {
     .single()
 
   if (error) {
-    console.error('Error fetching user profile:', error)
+    logger.error('Error fetching user profile', error, { authUserId })
     return null
   }
 
@@ -220,7 +221,7 @@ export const upsertUserProfile = async (user: User) => {
     .single()
 
   if (error) {
-    console.error('Error upserting user profile:', error)
+    logger.error('Error upserting user profile', error, { userId: user.id })
     return null
   }
 

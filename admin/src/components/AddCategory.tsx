@@ -51,12 +51,12 @@ const AddCategory = () => {
     }
   };
   return (
-    <SheetContent aria-describedby={undefined}>
+    <SheetContent aria-describedby={undefined} className="px-4 sm:px-6">
       <SheetHeader>
         <SheetTitle className="mb-4">Add Category</SheetTitle>
       </SheetHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8 mt-4">
               <FormField
                 control={form.control}
                 name="name"

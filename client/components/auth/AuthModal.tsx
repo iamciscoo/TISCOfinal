@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ToastAction } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Eye, EyeOff, Check, X } from 'lucide-react'
@@ -125,12 +126,36 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           console.error('❌❌❌ SIGN-IN ERROR DETECTED:', error)
           setLoading(false) // Stop loading immediately
           
-          // Show user-friendly toast notification for the error
+          // Show user-friendly toast notification with helpful action for new users
           toast({
             title: "Oops! Check your credentials",
-            description: "The email or password you entered is incorrect. Please double-check and try again.",
+            description: "The email or password you entered is incorrect. New user? Register by signing up instead.",
             variant: "default", // Use white background instead of red
-            duration: 6000, // Show longer for mobile users
+            duration: 8000, // Show longer for mobile users to read and act
+            action: (
+              <ToastAction 
+                altText="Create account for new users"
+                onClick={() => {
+                  console.log('🔄 Sign Up action clicked - closing current modal and opening signup')
+                  // Clear error state and close current modal
+                  setError('')
+                  setLoading(false)
+                  onClose()
+                  
+                  // Small delay to ensure modal closes, then reopen in signup mode
+                  setTimeout(() => {
+                    console.log('🔄 Reopening modal in signup mode')
+                    // Create a new AuthModal instance by triggering a click on a hidden signup button
+                    const signupEvent = new CustomEvent('openSignupModal', { 
+                      detail: { email: email } // Pass email to prefill
+                    })
+                    window.dispatchEvent(signupEvent)
+                  }, 100)
+                }}
+              >
+                Sign Up
+              </ToastAction>
+            ),
           })
           
           // Also set inline error for modal display

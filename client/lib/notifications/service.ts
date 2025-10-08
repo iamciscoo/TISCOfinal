@@ -2,6 +2,7 @@ import { sendEmailViaSendPulse, getSendPulseConfig, type SendPulseEmail } from '
 import { renderEmailTemplate, getDefaultSubject, type TemplateType } from '../email-templates'
 import { createClient } from '@supabase/supabase-js'
 import { notificationAudit } from './audit'
+import { logger } from '../logger'
 
 // Supabase client for notifications
 const getSupabaseClient = () => {
@@ -9,7 +10,7 @@ const getSupabaseClient = () => {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!url || !serviceKey) {
-    console.error('Missing Supabase configuration for notifications:', {
+    logger.error('Missing Supabase configuration for notifications', null, {
       hasUrl: !!url,
       hasServiceKey: !!serviceKey
     })
@@ -99,7 +100,7 @@ class NotificationService {
       
       return notificationRecord.id
     } catch (error) {
-      console.error('Notification send error:', error)
+      logger.error('Notification send error', error)
       throw error
     }
   }
@@ -114,7 +115,7 @@ class NotificationService {
       try {
         content = await renderEmailTemplate(template, data.data || {})
       } catch (error) {
-        console.error('Template render error:', error)
+        logger.error('Template render error', error, { event: data.event })
         content = `Notification for event: ${data.event}`
       }
     }
@@ -153,13 +154,13 @@ class NotificationService {
           updated_at: inserted.updated_at || new Date().toISOString(),
           metadata: data.data,
         }
-        console.log('Created notification DB record:', record.id)
+        logger.debug('Created notification DB record', { recordId: record.id })
         return record
       }
       if (error) throw error
     } catch (e) {
       // Try legacy notifications table before falling back to temp
-      console.warn('Email notifications table not available, trying legacy notifications:', (e as Error)?.message)
+      logger.warn('Email notifications table not available, trying legacy notifications', { error: (e as Error)?.message })
       try {
         const legacyInsert = {
           event: data.event,
@@ -195,12 +196,12 @@ class NotificationService {
             updated_at: insertedLegacy.updated_at,
             metadata: insertedLegacy.metadata || undefined,
           }
-          console.log('Created legacy notification DB record:', record.id)
+          logger.debug('Created legacy notification DB record', { recordId: record.id })
           return record
         }
         if (legacyError) throw legacyError
       } catch (e2) {
-        console.warn('Legacy notifications table unavailable, using temp record:', (e2 as Error)?.message)
+        logger.warn('Legacy notifications table unavailable, using temp record', { error: (e2 as Error)?.message })
       }
     }
 
@@ -220,7 +221,7 @@ class NotificationService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
-    console.log('Created notification temp record:', tempRecord.id)
+    logger.debug('Created notification temp record', { recordId: tempRecord.id })
     return tempRecord
   }
 
@@ -235,7 +236,7 @@ class NotificationService {
 
       // Validate HTML content contains proper structure
       if (!record.content.includes('<!DOCTYPE html') || !record.content.includes('</html>')) {
-        console.warn('Email content may not be properly formatted HTML, attempting to send anyway')
+        logger.warn('Email content may not be properly formatted HTML, attempting to send anyway', { recordId: record.id })
       }
 
       const email: SendPulseEmail = {
@@ -245,15 +246,15 @@ class NotificationService {
         replyTo: 'info@tiscomarket.store',
       }
 
-      console.log(`Sending HTML email to ${record.recipient_email} with subject: ${record.subject}`)
+      logger.notificationEvent('Sending HTML email', { email: record.recipient_email, subject: record.subject })
       
       // Try to send email with better error handling
       try {
         await sendEmailViaSendPulse(this.config, email)
-        console.log(`Successfully sent email notification ${record.id}`)
+        logger.notificationEvent('Email notification sent successfully', { recordId: record.id })
         await this.updateNotificationStatus(record.id, 'sent')
       } catch (emailError) {
-        console.error(`Failed to send email notification ${record.id}:`, emailError)
+        logger.error('Failed to send email notification', emailError, { recordId: record.id })
         
         // Determine if this is a temporary or permanent failure
         const isTemporary = this.isTemporaryError(emailError)
@@ -262,11 +263,11 @@ class NotificationService {
         if (isTemporary) {
           // For temporary errors, mark as failed but don't throw
           await this.updateNotificationStatus(record.id, 'failed', `Temporary error: ${errorMessage}`)
-          console.warn(`Email notification ${record.id} failed with temporary error, will retry later`)
+          logger.warn('Email notification failed with temporary error, will retry later', { recordId: record.id, errorMessage })
         } else {
           // For permanent errors, mark as failed and log
           await this.updateNotificationStatus(record.id, 'failed', `Permanent error: ${errorMessage}`)
-          console.error(`Email notification ${record.id} failed with permanent error:`, emailError)
+          logger.error('Email notification failed with permanent error', emailError, { recordId: record.id })
         }
         
         // Don't throw the error to prevent payment flow interruption
@@ -277,11 +278,11 @@ class NotificationService {
       try {
         await this.notifyAdminsOfNewNotification(record)
       } catch (adminNotifyError) {
-        console.warn('Failed to notify admins of new notification:', adminNotifyError)
+        logger.warn('Failed to notify admins of new notification', { error: adminNotifyError, recordId: record.id })
         // Don't fail the main notification if admin notification fails
       }
     } catch (error) {
-      console.error(`Failed to process email notification ${record.id}:`, error)
+      logger.error('Failed to process email notification', error, { recordId: record.id })
       await this.updateNotificationStatus(record.id, 'failed', (error as Error).message)
       // Don't throw the error to prevent payment flow interruption
     }
@@ -326,18 +327,18 @@ class NotificationService {
       // Skip admin notifications for admin_order_created events to prevent duplicates
       // These events ARE the admin notifications, so they shouldn't trigger additional admin emails
       if (record.event === 'admin_order_created') {
-        console.log('Skipping admin notification for admin_order_created event to prevent duplicates')
+        logger.debug('Skipping admin notification for admin_order_created event to prevent duplicates')
         return
       }
       
       // Skip admin notifications for order_created events since we use notifyAdminOrderCreated directly
       // This prevents duplicate admin emails - we want only the beautiful "New Order Created" emails
       if (record.event === 'order_created') {
-        console.log('Skipping admin notification for order_created event - using direct notifyAdminOrderCreated instead')
+        logger.debug('Skipping admin notification for order_created event - using direct notifyAdminOrderCreated instead')
         return
       }
       
-      console.log(`Processing admin notification for event: ${record.event}`)
+      logger.debug('Processing admin notification for event', { event: record.event })
 
       // Get admin recipients from database with category filtering
       const { data: recipients, error } = await supabase
@@ -346,7 +347,7 @@ class NotificationService {
         .eq('is_active', true)
       
       if (error || !recipients || recipients.length === 0) {
-        console.warn('No admin recipients found, using fallback emails for event:', record.event)
+        logger.warn('No admin recipients found, using fallback emails', { event: record.event })
         // Use fallback admin emails only for critical events (excluding admin_order_created to prevent duplicates)
         const criticalEvents: NotificationEvent[] = ['payment_failed', 'order_created', 'user_registered']
         if (criticalEvents.includes(record.event)) {
@@ -390,11 +391,11 @@ class NotificationService {
       })
 
       if (filteredRecipients.length === 0) {
-        console.log(`No recipients subscribed to event '${record.event}' categories`)
+        logger.debug('No recipients subscribed to event categories', { event: record.event })
         return
       }
 
-      console.log(`Sending admin notifications to ${filteredRecipients.length} recipients for event: ${record.event}`)
+      logger.info('Sending admin notifications', { recipientCount: filteredRecipients.length, event: record.event })
 
       // Send to filtered recipients with delay between sends
       for (let i = 0; i < filteredRecipients.length; i++) {
@@ -407,7 +408,7 @@ class NotificationService {
         }
       }
     } catch (error) {
-      console.warn('Admin notification error:', error)
+      logger.warn('Admin notification error', { error })
     }
   }
 
@@ -521,21 +522,21 @@ class NotificationService {
       }
 
       await sendEmailViaSendPulse(this.config, adminEmail)
-      console.log(`Admin notification sent to ${email} for event: ${record.event}`)
+      logger.notificationEvent('Admin notification sent', { email, event: record.event })
       return // Success, exit retry loop
         
       } catch (error) {
         attempt++
-        console.error(`Failed to send admin notification to ${email} (attempt ${attempt}/${maxRetries}):`, error)
+        logger.error('Failed to send admin notification', error, { email, attempt, maxRetries })
         
         if (attempt >= maxRetries) {
-          console.error(`Final failure sending admin notification to ${email} after ${maxRetries} attempts`)
+          logger.error('Final failure sending admin notification', null, { email, maxRetries })
           return
         }
         
         // Wait before retry: exponential backoff with some randomization
         const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 1000, 10000)
-        console.log(`Retrying admin notification to ${email} in ${Math.round(delay)}ms`)
+        logger.debug('Retrying admin notification', { email, delayMs: Math.round(delay) })
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
@@ -672,8 +673,8 @@ class NotificationService {
         await supabase.from('notifications').update(updatesLegacy).eq('id', id)
       } catch {
         // Final fallback: just log
-        console.log(`Notification ${id} status updated to: ${status}`)
-        if (errorMessage) console.log(`Error message: ${errorMessage}`)
+        logger.debug('Notification status updated', { id, status })
+        if (errorMessage) logger.debug('Notification error message', { id, errorMessage })
       }
     }
   }
@@ -784,7 +785,7 @@ export async function notifyAdminOrderCreated(orderData: {
 }) {
   // CRITICAL: Wrap entire function in try-catch to prevent blocking
   try {
-    console.log('🔄 Starting notifyAdminOrderCreated with timeout protection...')
+    logger.info('Starting notifyAdminOrderCreated with timeout protection', { orderId: orderData.order_id })
     
     // Add timeout protection to prevent infinite hanging
     const timeoutPromise = new Promise((_, reject) => {
@@ -799,7 +800,7 @@ export async function notifyAdminOrderCreated(orderData: {
         .eq('is_active', true)
     
       if (error) {
-        console.warn('Failed to fetch admin recipients, using fallback:', error)
+        logger.warn('Failed to fetch admin recipients, using fallback', { error })
         // Use hardcoded admin emails as fallback
         const adminEmails = [
           'francisjacob08@gmail.com',  // Primary admin
@@ -807,7 +808,7 @@ export async function notifyAdminOrderCreated(orderData: {
           ...(process.env.ADMIN_EMAIL?.split(',') || [])
         ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim()) // Remove duplicates and empty
         
-        console.log('Sending admin order notifications to fallback emails:', adminEmails)
+        logger.info('Sending admin order notifications to fallback emails', { emails: adminEmails })
         const notifications = adminEmails.map(email => 
           Promise.resolve(notificationService.sendNotification({
             event: 'admin_order_created',
@@ -821,7 +822,7 @@ export async function notifyAdminOrderCreated(orderData: {
             },
             priority: 'high'
           }).catch(err => {
-            console.error(`Failed to send notification to ${email}:`, err)
+            logger.error('Failed to send notification', err, { email })
             return `failed-${email}`
           }))
         )
@@ -829,7 +830,7 @@ export async function notifyAdminOrderCreated(orderData: {
       }
     
     if (!recipients || recipients.length === 0) {
-      console.warn('No admin recipients found in database, using fallback')
+      logger.warn('No admin recipients found in database, using fallback')
       const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
       const notifications = adminEmails.filter(email => email.trim()).map(email => 
         notificationService.sendNotification({
@@ -865,21 +866,21 @@ export async function notifyAdminOrderCreated(orderData: {
       }).filter(Boolean) || [])
     ].filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
     
-    console.log('🔍 DEBUG: Order Product ID Extraction:', {
-      orderData_items: orderData.items,
-      extracted_product_ids: orderProductIds,
-      items_count: orderData.items?.length || 0
+    logger.debug('Order Product ID Extraction', {
+      orderDataItems: orderData.items,
+      extractedProductIds: orderProductIds,
+      itemsCount: orderData.items?.length || 0
     })
     
     // Step 1: Find all recipients with product assignments that match this order
     const productSpecificRecipients = recipients.filter(recipient => {
       if (!recipient.assigned_product_ids || recipient.assigned_product_ids.length === 0) {
-        console.log(`⚪ No product assignment for ${recipient.email}`)
+        logger.debug('No product assignment for recipient', { email: recipient.email })
         return false // This recipient has no product assignments
       }
       
       if (orderProductIds.length === 0) {
-        console.log('⚠️  No product IDs found in order - product filtering will be skipped')
+        logger.warn('No product IDs found in order - product filtering will be skipped')
         return false // No order items to match against
       }
       
@@ -887,27 +888,28 @@ export async function notifyAdminOrderCreated(orderData: {
         recipient.assigned_product_ids?.includes(productId)
       )
       
-      console.log(`🔍 Product matching for ${recipient.email}:`, {
-        recipient_products: recipient.assigned_product_ids,
-        order_products: orderProductIds,
-        has_match: hasMatchingProduct
+      logger.debug('Product matching for recipient', {
+        email: recipient.email,
+        recipientProducts: recipient.assigned_product_ids,
+        orderProducts: orderProductIds,
+        hasMatch: hasMatchingProduct
       })
       
       if (hasMatchingProduct) {
-        console.log(`✅ Product-specific match: ${recipient.email} assigned to products [${recipient.assigned_product_ids.join(', ')}]`)
+        logger.debug('Product-specific match found', { email: recipient.email, products: recipient.assigned_product_ids })
       }
       
       return hasMatchingProduct
     })
     
     // Step 2: ADDITIVE filtering strategy - combine product-specific AND general recipients
-    console.log('🔄 Using ADDITIVE filtering strategy: product-specific + general recipients')
+    logger.debug('Using ADDITIVE filtering strategy: product-specific + general recipients')
     
     // Find recipients who should get notifications based on categories (including "all")
     const categoryBasedRecipients = recipients.filter(recipient => {
       // Skip recipients with product assignments - they're handled separately
       if (recipient.assigned_product_ids && recipient.assigned_product_ids.length > 0) {
-        console.log(`⏭️  Skipping ${recipient.email} for category filtering - has product assignments`)
+        logger.debug('Skipping recipient for category filtering - has product assignments', { email: recipient.email })
         return false
       }
       
@@ -916,14 +918,14 @@ export async function notifyAdminOrderCreated(orderData: {
       
       // If recipient has 'all' category, they get all notifications
       if (categories.includes('all')) {
-        console.log(`✅ Including ${recipient.email} - has 'all' category`)
+        logger.debug('Including recipient - has all category', { email: recipient.email })
         return true
       }
       
       // Check if they're subscribed to order-related categories
       const orderCategories = ['order_created', 'orders', 'admin_order_created']
       const hasOrderCategory = categories.some((category: string) => orderCategories.includes(category))
-      console.log(`${hasOrderCategory ? '✅' : '❌'} ${recipient.email} - order categories match: ${hasOrderCategory}`)
+      logger.debug('Order categories match check', { email: recipient.email, hasMatch: hasOrderCategory })
       return hasOrderCategory
     })
     
@@ -938,24 +940,24 @@ export async function notifyAdminOrderCreated(orderData: {
       array.findIndex(r => r.email.toLowerCase() === recipient.email.toLowerCase()) === index
     )
     
-    console.log(`📊 ADDITIVE FILTERING RESULTS:`)
-    console.log(`   🎯 Product-specific recipients: ${productSpecificRecipients.length}`)
-    console.log(`   📂 Category-based recipients: ${categoryBasedRecipients.length}`) 
-    console.log(`   📧 Total unique recipients: ${filteredRecipients.length}`)
-    console.log(`   📋 Final recipient list: ${filteredRecipients.map(r => r.email).join(', ')}`)
+    logger.info('ADDITIVE FILTERING RESULTS', {
+      productSpecificCount: productSpecificRecipients.length,
+      categoryBasedCount: categoryBasedRecipients.length,
+      totalUniqueCount: filteredRecipients.length,
+      finalRecipients: filteredRecipients.map(r => r.email)
+    })
 
     // Enhanced fallback with detailed logging and validation
     if (filteredRecipients.length === 0) {
-      console.warn('⚠️  CRITICAL: No recipients found for order notifications!')
-      console.warn('🔍 DEBUG INFO:', {
-        total_recipients: recipients.length,
-        recipients_with_products: recipients.filter(r => r.assigned_product_ids && r.assigned_product_ids.length > 0).length,
-        recipients_with_categories: recipients.filter(r => !r.assigned_product_ids || r.assigned_product_ids.length === 0).length,
-        order_product_ids: orderProductIds,
-        all_recipient_emails: recipients.map(r => r.email)
+      logger.warn('CRITICAL: No recipients found for order notifications', {
+        totalRecipients: recipients.length,
+        recipientsWithProducts: recipients.filter(r => r.assigned_product_ids && r.assigned_product_ids.length > 0).length,
+        recipientsWithCategories: recipients.filter(r => !r.assigned_product_ids || r.assigned_product_ids.length === 0).length,
+        orderProductIds,
+        allRecipientEmails: recipients.map(r => r.email)
       })
       
-      console.warn('🚨 Using emergency fallback admin emails')
+      logger.warn('Using emergency fallback admin emails')
       const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
       const notifications = adminEmails.map(email => 
         notificationService.sendNotification({
@@ -979,14 +981,14 @@ export async function notifyAdminOrderCreated(orderData: {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(recipient.email)) {
-        console.warn(`❌ Invalid email format: ${recipient.email}`)
+        logger.warn('Invalid email format', { email: recipient.email })
         return false
       }
       
       // Validate recipient is active (handle case where is_active might not exist)
       const isActive = (recipient as Record<string, unknown>).is_active !== false // Default to true if undefined
       if (!isActive) {
-        console.log(`⏭️  Skipping inactive recipient: ${recipient.email}`)
+        logger.debug('Skipping inactive recipient', { email: recipient.email })
         return false
       }
       
@@ -1000,13 +1002,13 @@ export async function notifyAdminOrderCreated(orderData: {
         unique.push(recipient)
       } else {
         // Keep the most recent entry (assuming they're sorted by created_at desc)
-        console.log(`🔄 Deduplicating ${recipient.email} - keeping most recent entry`)
+        logger.debug('Deduplicating recipient - keeping most recent entry', { email: recipient.email })
       }
       return unique
     }, [] as typeof validatedRecipients)
 
-    console.log(`📧 Sending order notifications to ${uniqueRecipients.length} validated unique recipients`)
-    console.log('📋 Final recipient list:', uniqueRecipients.map(r => `${r.email} (${r.assigned_product_ids?.length || 0} products, categories: [${r.notification_categories?.join(', ') || 'all'}])`))
+    logger.info('Sending order notifications to validated unique recipients', { count: uniqueRecipients.length })
+    logger.debug('Final recipient list', { recipients: uniqueRecipients.map(r => ({ email: r.email, productCount: r.assigned_product_ids?.length || 0, categories: r.notification_categories || ['all'] })) })
 
     // Send to filtered recipients from database with audit logging and idempotency
     const notifications = []
@@ -1034,7 +1036,7 @@ export async function notifyAdminOrderCreated(orderData: {
 
       // Skip if duplicate detected
       if (!auditLogId) {
-        console.log(`Skipping duplicate notification for ${recipient.email}`)
+        logger.debug('Skipping duplicate notification', { email: recipient.email })
         continue
       }
 
@@ -1060,7 +1062,7 @@ export async function notifyAdminOrderCreated(orderData: {
         notifications.push(notificationPromise)
       } catch (error) {
         await notificationAudit.updateAuditStatus(notificationKey, 'failed', (error as Error).message)
-        console.error(`Failed to send notification to ${recipient.email}:`, error)
+        logger.error('Failed to send notification to recipient', error, { email: recipient.email })
       }
     }
     
@@ -1071,10 +1073,10 @@ export async function notifyAdminOrderCreated(orderData: {
     return await Promise.race([notificationPromise(), timeoutPromise])
     
   } catch (error) {
-    console.error('Error in notifyAdminOrderCreated (with timeout protection):', error)
+    logger.error('Error in notifyAdminOrderCreated (with timeout protection)', error)
     
     // GUARANTEED SIMPLE FALLBACK - No complex logic, just send basic emails
-    console.log('🚨 Using GUARANTEED simple fallback for admin notifications')
+    logger.warn('Using GUARANTEED simple fallback for admin notifications')
     try {
       const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
       const simpleNotifications = adminEmails.map(async email => {
@@ -1092,14 +1094,14 @@ export async function notifyAdminOrderCreated(orderData: {
             priority: 'high'
           })
         } catch (err) {
-          console.error(`Simple fallback failed for ${email}:`, err)
+          logger.error('Simple fallback failed', err, { email })
           return `failed-${email}`
         }
       })
       
       return await Promise.allSettled(simpleNotifications)
     } catch (finalError) {
-      console.error('🚨 CRITICAL: All notification methods failed:', finalError)
+      logger.error('CRITICAL: All notification methods failed', finalError)
       return []
     }
   }
@@ -1229,7 +1231,7 @@ export async function notifyAdminBookingCreated(bookingData: {
       .eq('is_active', true)
     
     if (error || !recipients || recipients.length === 0) {
-      console.warn('No admin recipients found, using fallback emails')
+      logger.warn('No admin recipients found, using fallback emails')
       // Use fallback admin emails
       const adminEmails = [
         'francisjacob08@gmail.com',
@@ -1293,7 +1295,7 @@ export async function notifyAdminBookingCreated(bookingData: {
       }
     }
   } catch (error) {
-    console.error('Error in notifyAdminBookingCreated:', error)
+    logger.error('Error in notifyAdminBookingCreated', error)
     // Final fallback
     const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
     for (const email of adminEmails) {

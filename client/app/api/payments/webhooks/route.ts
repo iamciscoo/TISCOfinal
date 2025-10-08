@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -13,14 +14,16 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now()
   const debugId = `webhook-${startTime}`
   
-  console.log(`🚨 [${debugId}] ZENOPAY WEBHOOK RECEIVED - PROCESSING IMMEDIATELY`)
-  console.log(`📍 [${debugId}] Timestamp: ${new Date().toISOString()}`)
-  console.log(`📍 [${debugId}] Headers:`, Object.fromEntries(req.headers.entries()))
+  logger.paymentEvent('ZENOPAY WEBHOOK RECEIVED', {
+    debugId,
+    timestamp: new Date().toISOString(),
+    headers: Object.fromEntries(req.headers.entries())
+  })
   
   try {
     // Parse webhook body
     const body = await req.json()
-    console.log(`📦 [${debugId}] Webhook payload:`, body)
+    logger.debug('Webhook payload received', { debugId, body })
     
     // Extract payment data
     const {
@@ -32,11 +35,12 @@ export async function POST(req: NextRequest) {
     } = body
     
     if (!transactionRef || !payment_status) {
-      console.error(`❌ [${debugId}] Missing required fields:`, { transactionRef, payment_status })
+      logger.error('Missing required webhook fields', null, { debugId, transactionRef, payment_status })
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
     
-    console.log(`🔍 [${debugId}] Processing payment:`, {
+    logger.paymentEvent('Processing payment', {
+      debugId,
       transactionRef,
       payment_status,
       reference,
@@ -51,43 +55,43 @@ export async function POST(req: NextRequest) {
       .single()
     
     if (sessionError || !session) {
-      console.error(`❌ [${debugId}] Payment session not found:`, sessionError)
+      logger.error('Payment session not found', sessionError, { debugId })
       return NextResponse.json({ error: 'Payment session not found' }, { status: 404 })
     }
     
-    console.log(`✅ [${debugId}] Found payment session:`, session.id)
+    logger.info('Found payment session', { debugId, sessionId: session.id })
     
     // Skip if already processed
     if (session.status === 'completed') {
-      console.log(`⚠️ [${debugId}] Payment already processed`)
+      logger.warn('Payment already processed', { debugId, sessionId: session.id })
       return NextResponse.json({ message: 'Already processed' })
     }
     
     // Process only COMPLETED payments
     if (payment_status !== 'COMPLETED') {
-      console.log(`⏳ [${debugId}] Payment not completed yet: ${payment_status}`)
+      logger.info('Payment not completed yet', { debugId, payment_status })
       return NextResponse.json({ message: 'Payment not completed yet' })
     }
     
-    console.log(`🚀 [${debugId}] Creating order for completed payment...`)
+    logger.info('Creating order for completed payment', { debugId })
     
     // Parse order data with comprehensive validation
-    console.log(`📊 [${debugId}] Session order_data:`, JSON.stringify(session.order_data, null, 2))
+    logger.debug('Session order_data', { debugId, order_data: session.order_data })
     
     const orderData = session.order_data as Record<string, unknown>
     if (!orderData) {
-      console.error(`❌ [${debugId}] No order_data found in session`)
+      logger.error('No order_data found in session', null, { debugId })
       return NextResponse.json({ error: 'No order data found' }, { status: 400 })
     }
     
     const items = (orderData.items as Array<Record<string, unknown>>) || []
     
     if (!items.length) {
-      console.error(`❌ [${debugId}] No items in order data. Full orderData:`, orderData)
+      logger.error('No items in order data', null, { debugId, orderData })
       return NextResponse.json({ error: 'No items in order data' }, { status: 400 })
     }
     
-    console.log(`📮 [${debugId}] Found ${items.length} items:`, items)
+    logger.info('Found order items', { debugId, itemCount: items.length, items })
     
     // Calculate total
     let totalAmount = 0
@@ -97,19 +101,19 @@ export async function POST(req: NextRequest) {
       totalAmount += price * quantity
     }
     
-    console.log(`💰 [${debugId}] Order total: ${totalAmount} ${session.currency}`)
+    logger.info('Order total calculated', { debugId, totalAmount, currency: session.currency })
     
     // Create order with enhanced data mapping
     const shippingAddress = String(orderData.shipping_address || orderData.address_line_1 || '')
     const customerNotes = String(orderData.notes || '')
     const paymentMethod = `Mobile Money (${session.provider}) - ${String(session.phone_number).replace(/^\+?255/, '***')}`
     
-    console.log(`📝 [${debugId}] Creating order with:`, {
+    logger.dbQuery('INSERT', 'orders', {
+      debugId,
       user_id: session.user_id,
       total_amount: totalAmount,
       currency: session.currency,
       payment_method: paymentMethod,
-      shipping_address: shippingAddress,
       items_count: items.length
     })
     
@@ -130,11 +134,11 @@ export async function POST(req: NextRequest) {
       .single()
     
     if (orderError || !order) {
-      console.error(`❌ [${debugId}] Order creation failed:`, orderError)
+      logger.error('Order creation failed', orderError, { debugId })
       return NextResponse.json({ error: 'Order creation failed' }, { status: 500 })
     }
     
-    console.log(`✅ [${debugId}] Order created:`, order.id)
+    logger.info('Order created successfully', { debugId, orderId: order.id })
     
     // Create order items with validation
     const orderItems = items.map((item: Record<string, unknown>) => {
@@ -143,7 +147,7 @@ export async function POST(req: NextRequest) {
       const price = Number(item.price) || 0
       
       if (!product_id) {
-        console.warn(`⚠️ [${debugId}] Item missing product_id:`, item)
+        logger.warn('Item missing product_id', { debugId, item })
       }
       
       return {
@@ -155,18 +159,17 @@ export async function POST(req: NextRequest) {
       }
     })
     
-    console.log(`📦 [${debugId}] Creating ${orderItems.length} order items...`)
+    logger.dbQuery('INSERT', 'order_items', { debugId, count: orderItems.length })
     
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems)
     
     if (itemsError) {
-      console.error(`❌ [${debugId}] Order items creation failed:`, itemsError)
-      console.error(`❌ [${debugId}] Failed items data:`, orderItems)
+      logger.error('Order items creation failed', itemsError, { debugId, orderItems })
       // Don't fail the whole process for this - order is more important
     } else {
-      console.log(`✅ [${debugId}] Successfully created ${orderItems.length} order items`)
+      logger.info('Order items created successfully', { debugId, count: orderItems.length })
     }
     
     // Update payment session to completed
@@ -180,19 +183,20 @@ export async function POST(req: NextRequest) {
       .eq('id', session.id)
     
     if (updateError) {
-      console.error(`❌ [${debugId}] Session update failed:`, updateError)
+      logger.error('Session update failed', updateError, { debugId })
     } else {
-      console.log(`✅ [${debugId}] Payment session updated to completed`)
+      logger.info('Payment session updated to completed', { debugId, sessionId: session.id })
     }
     
     // Send admin notification IMMEDIATELY (synchronous for instant emails)
-    console.log(`📧 [${debugId}] Sending admin notification IMMEDIATELY...`)
+    logger.notificationEvent('Sending admin notification', { debugId })
     
     // Extract customer information with fallbacks
     const customerEmail = String(orderData.email || 'customer@example.com')
     const customerName = `${String(orderData.first_name || '')} ${String(orderData.last_name || '')}`.trim() || 'Customer'
     
-    console.log(`📧 [${debugId}] Email details:`, {
+    logger.debug('Email details', {
+      debugId,
       customer_email: customerEmail,
       customer_name: customerName,
       order_id: order.id,
@@ -213,14 +217,13 @@ export async function POST(req: NextRequest) {
         items_count: orderItems.length
       })
       
-      console.log(`✅ [${debugId}] Admin notification sent IMMEDIATELY to: ${customerEmail}`)
+      logger.notificationEvent('Admin notification sent', { debugId, recipient: customerEmail })
     } catch (emailError) {
-      console.error(`❌ [${debugId}] Admin notification failed for ${customerEmail}:`, emailError)
-      console.error(`❌ [${debugId}] Email error stack:`, (emailError as Error).stack)
+      logger.error('Admin notification failed', emailError, { debugId, recipient: customerEmail })
       
       // Try fallback notification
       try {
-        console.log(`🔄 [${debugId}] Attempting fallback notification...`)
+        logger.info('Attempting fallback notification', { debugId })
         const fallbackResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://tiscomarket.store'}/api/notifications/admin-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -237,12 +240,13 @@ export async function POST(req: NextRequest) {
         })
         
         if (fallbackResponse.ok) {
-          console.log(`✅ [${debugId}] Fallback notification sent successfully`)
+          logger.info('Fallback notification sent successfully', { debugId })
         } else {
-          console.error(`❌ [${debugId}] Fallback notification also failed:`, await fallbackResponse.text())
+          const errorText = await fallbackResponse.text()
+          logger.error('Fallback notification also failed', null, { debugId, error: errorText })
         }
       } catch (fallbackError) {
-        console.error(`❌ [${debugId}] Fallback notification error:`, fallbackError)
+        logger.error('Fallback notification error', fallbackError, { debugId })
       }
     }
     
@@ -263,13 +267,13 @@ export async function POST(req: NextRequest) {
       })
     
     if (successLogError) {
-      console.error(`❌ [${debugId}] Logging failed:`, successLogError)
+      logger.error('Payment log insertion failed', successLogError, { debugId })
     } else {
-      console.log(`✅ [${debugId}] Success logged`)
+      logger.debug('Payment success logged', { debugId })
     }
     
     const processingTime = Date.now() - startTime
-    console.log(`🎉 [${debugId}] WEBHOOK PROCESSED SUCCESSFULLY in ${processingTime}ms`)
+    logger.paymentEvent('WEBHOOK PROCESSED SUCCESSFULLY', { debugId, processingTime })
     
     return NextResponse.json({
       success: true,
@@ -281,7 +285,7 @@ export async function POST(req: NextRequest) {
     
   } catch (error) {
     const processingTime = Date.now() - startTime
-    console.error(`💥 [${debugId}] WEBHOOK ERROR after ${processingTime}ms:`, error)
+    logger.error('WEBHOOK ERROR', error, { debugId, processingTime })
     
     return NextResponse.json({
       error: 'Webhook processing failed',
