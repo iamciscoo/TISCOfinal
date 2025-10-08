@@ -468,7 +468,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   type="button"
                   variant="link"
                   onClick={() => setMode('reset')}
-                  className="text-sm"
+                  className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Forgot your password?
                 </Button>
@@ -480,7 +480,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                     type="button"
                     variant="link"
                     onClick={() => setMode('signup')}
-                    className="text-sm p-0"
+                    className="text-sm p-0 text-blue-600 hover:text-blue-700"
                   >
                     Sign up
                   </Button>
@@ -497,7 +497,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   type="button"
                   variant="link"
                   onClick={() => setMode('signin')}
-                  className="text-sm p-0"
+                  className="text-sm p-0 text-blue-600 hover:text-blue-700"
                 >
                   Sign in
                 </Button>
@@ -509,7 +509,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                 type="button"
                 variant="link"
                 onClick={() => setMode('signin')}
-                className="text-sm"
+                className="text-sm text-blue-600 hover:text-blue-700"
               >
                 Back to sign in
               </Button>

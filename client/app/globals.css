@@ -236,6 +236,29 @@
   overscroll-behavior: contain;
 }
 
+/* Fixed navbar padding compensation */
+.page-with-navbar {
+  padding-top: 4rem; /* 64px - matches navbar height */
+}
+
+/* Ensure main content doesn't overlap with fixed navbar */
+body:has(nav[class*="fixed"]) main,
+body:has(nav[class*="fixed"]) .main-content {
+  padding-top: 4rem;
+}
+
+/* Mobile navbar compensation */
+@media (max-width: 768px) {
+  .page-with-navbar {
+    padding-top: 4rem; /* Same height on mobile */
+  }
+  
+  body:has(nav[class*="fixed"]) main,
+  body:has(nav[class*="fixed"]) .main-content {
+    padding-top: 4rem;
+  }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   html {

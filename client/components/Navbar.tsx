@@ -234,7 +234,7 @@ export const Navbar = () => {
   }, [isMenuOpen, closeMenu])
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
+    <nav className="bg-white/95 backdrop-blur-md border-b border-gray-200 fixed top-0 z-[60] w-full shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 w-full relative">
           {/* Logo */}
