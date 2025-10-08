@@ -155,6 +155,7 @@ export async function createPaymentSession(params: {
       phone_number: params.phone_number,
       transaction_reference,
       order_data: params.order_data,
+      order_id: params.order_id || null, // Link to order if provided
       status: 'pending',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

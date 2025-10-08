@@ -719,9 +719,14 @@ export default function CheckoutPage() {
         if (failureSet.has(st)) {
           const reason = sjson?.failure_reason || message || getPaymentFailureReason(st)
           console.log('❌ Payment failed:', { status: st, reason })
+          
+          // Enable retry for failed payments
+          setPaymentTimeout(true)
+          setCanRetryPayment(true)
+          
           toast({ 
             title: 'Payment Failed ❌', 
-            description: reason,
+            description: reason + ' You can retry the payment.',
             variant: 'destructive' 
           })
           return false // Payment failed
@@ -762,6 +767,17 @@ export default function CheckoutPage() {
     }
     
     console.log('Payment status polling timed out')
+    
+    // Enable retry for timeouts
+    setPaymentTimeout(true)
+    setCanRetryPayment(true)
+    
+    toast({ 
+      title: 'Payment Timeout ⏰', 
+      description: 'The payment confirmation timed out. This could happen if you responded too late or entered an incorrect PIN.',
+      variant: 'destructive' 
+    })
+    
     return false // Timeout reached
   }
 

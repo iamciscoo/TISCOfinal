@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getUser } from '@/lib/supabase-server'
-import { getSessionByReference } from '@/lib/payments/service'
+import { getUser, getUserProfile } from '@/lib/supabase-server'
+import { getSessionByReference, getSessionByOrderId } from '@/lib/payments/service'
 import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
@@ -17,9 +17,14 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getUser()
-    if (!user) {
+    const authUser = await getUser()
+    if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userProfile = await getUserProfile(authUser.id)
+    if (!userProfile) {
+      return NextResponse.json({ error: 'User profile not found' }, { status: 400 })
     }
 
     const { reference } = await req.json()
@@ -31,8 +36,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get payment session
-    const session = await getSessionByReference(reference)
+    // Get payment session - try by transaction_reference first (standard), then by order_id (for webhook flow)
+    let session = await getSessionByReference(reference)
+    
+    if (!session) {
+      console.log(`🔍 Trying to find session by order_id: ${reference}`)
+      session = await getSessionByOrderId(reference)
+    }
 
     if (!session) {
       return NextResponse.json(
@@ -42,32 +52,54 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify ownership
-    if (session.user_id !== user.id) {
+    if (session.user_id !== userProfile.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // If completed, try to find the order
+    // Find the associated order
     let order_id: string | null = null
+    let order_status: string | null = null
     
     if (session.status === 'completed') {
-      const fiveMinutesAfterSession = new Date(
-        new Date(session.created_at).getTime() + 5 * 60 * 1000
-      ).toISOString()
+      // First, check if session has linked order_id (new flow)
+      if ((session as any).order_id) {
+        console.log(`📦 Session has linked order_id: ${(session as any).order_id}`)
+        
+        const { data: linkedOrder } = await supabase
+          .from('orders')
+          .select('id, status, payment_status')
+          .eq('id', (session as any).order_id)
+          .single()
+        
+        if (linkedOrder) {
+          order_id = linkedOrder.id
+          order_status = linkedOrder.status
+        }
+      }
       
-      const { data: order } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('user_id', session.user_id)
-        .eq('total_amount', session.amount)
-        .eq('payment_status', 'paid')
-        .gte('created_at', session.created_at)
-        .lte('created_at', fiveMinutesAfterSession)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // Fallback: search by matching criteria (legacy flow)
+      if (!order_id) {
+        console.log(`🔍 Searching for order by matching criteria...`)
+        const fiveMinutesAfterSession = new Date(
+          new Date(session.created_at).getTime() + 5 * 60 * 1000
+        ).toISOString()
+        
+        const { data: order } = await supabase
+          .from('orders')
+          .select('id, status, payment_status')
+          .eq('user_id', userProfile.id)
+          .eq('total_amount', session.amount)
+          .eq('payment_status', 'paid')
+          .gte('created_at', session.created_at)
+          .lte('created_at', fiveMinutesAfterSession)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
-      if (order) {
-        order_id = order.id
+        if (order) {
+          order_id = order.id
+          order_status = order.status
+        }
       }
     }
 
@@ -75,6 +107,7 @@ export async function POST(req: NextRequest) {
       success: true,
       status: session.status,
       order_id,
+      order_status,
       transaction_reference: reference,
       amount: session.amount,
       currency: session.currency,

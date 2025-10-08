@@ -39,14 +39,19 @@ export async function POST(req: NextRequest) {
 
     const { order_id: transactionRef, payment_status, reference, transid } = payload
 
-    // Only process completed payments
-    if (payment_status !== 'COMPLETED') {
-      console.log(`⏳ [${webhookId}] Payment not completed: ${payment_status}`)
+    // Process all success statuses from ZenoPay
+    const successStatuses = ['COMPLETED', 'SUCCESSFUL', 'SUCCESS', 'SETTLED', 'APPROVED']
+    const isPaymentSuccessful = successStatuses.includes(payment_status?.toUpperCase())
+    
+    if (!isPaymentSuccessful) {
+      console.log(`⏳ [${webhookId}] Payment not successful: ${payment_status}`)
       return NextResponse.json({
         success: true,
         message: `Payment status: ${payment_status}`
       })
     }
+    
+    console.log(`🎉 [${webhookId}] Payment successful with status: ${payment_status}`)
 
     // Find payment session - try by order_id first (new flow), then by transaction_reference (legacy)
     let session = await getSessionByOrderId(transactionRef)
