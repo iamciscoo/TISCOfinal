@@ -202,12 +202,54 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
+    // Delete related records first due to foreign key constraints
+    // 1. Delete order_items
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", id);
+    
+    if (itemsError) {
+      console.error('Failed to delete order_items:', itemsError);
+      return NextResponse.json({ 
+        error: `Failed to delete order items: ${itemsError.message}` 
+      }, { status: 500 });
+    }
+
+    // 2. Delete payment_sessions (if any)
+    const { error: sessionsError } = await supabase
+      .from("payment_sessions")
+      .delete()
+      .eq("order_id", id);
+    
+    if (sessionsError) {
+      console.error('Failed to delete payment_sessions:', sessionsError);
+      // Continue even if this fails - might not exist
+    }
+
+    // 3. Delete payment_transactions (if any)
+    const { error: transactionsError } = await supabase
+      .from("payment_transactions")
+      .delete()
+      .eq("order_id", id);
+    
+    if (transactionsError) {
+      console.error('Failed to delete payment_transactions:', transactionsError);
+      // Continue even if this fails - might not exist
+    }
+
+    // 4. Finally delete the order itself
     const { error } = await supabase
       .from("orders")
       .delete()
       .eq("id", id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error('Failed to delete order:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    console.log(`✅ Successfully deleted order ${id} and all related records`);
 
     // Revalidate broad tags after deletion (order-specific and list caches)
     try {
@@ -220,6 +262,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return new Response(null, { status: 204 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
+    console.error('Delete order error:', e);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

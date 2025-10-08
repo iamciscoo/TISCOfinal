@@ -178,115 +178,111 @@ export async function POST(req: NextRequest) {
     // Mark session as completed
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
-    // Queue notifications asynchronously (non-blocking for webhook response)
-    // Use setImmediate for guaranteed async execution after webhook response
-    console.log(`🚀 [${webhookId}] Queueing async notifications...`)
+    // Send notifications SYNCHRONOUSLY (like pay at office) to ensure they execute
+    // Serverless functions may kill async tasks after response is sent
+    console.log(`📧 [${webhookId}] Sending notifications synchronously...`)
     
-    setImmediate(async () => {
-      try {
-        console.log(`📧 [${webhookId}] Processing async notifications...`)
-        
-        const { notifyAdminOrderCreated, notifyOrderCreated } = await import('@/lib/notifications/service')
-        
-        const orderData = session.order_data
-        const customerEmail = orderData.email || 'customer@example.com'
-        const customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
-        
-        // Get order items for notifications
-        const { createClient } = await import('@supabase/supabase-js')
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE!
-        )
-        
-        const { data: orderItems } = await supabase
-          .from('order_items')
-          .select(`
-            product_id,
-            quantity,
-            price,
-            products (
-              id,
-              name
-            )
-          `)
-          .eq('order_id', order_id)
-        
-        console.log(`🔍 [${webhookId}] Order items for notifications:`, {
-          items_count: orderItems?.length || 0
-        })
-        
-        // Send customer notification
-        if (orderItems && orderItems.length > 0) {
-          const items = orderItems.map((item: any) => ({
-            name: item.products?.name || 'Product',
-            quantity: item.quantity,
-            price: item.price.toString()
-          }))
-          
-          await notifyOrderCreated({
-            order_id,
-            customer_email: customerEmail,
-            customer_name: customerName,
-            total_amount: session.amount.toString(),
-            currency: session.currency,
-            items,
-            order_date: new Date().toLocaleDateString(), // ✅ Fixed: Use same format as pay at office
-            payment_method: `Mobile Money (${session.provider})`,
-            shipping_address: orderData.shipping_address || 'N/A'
-          })
-          
-          console.log(`✅ [${webhookId}] Customer notification sent (async)`)
-        }
-        
-        // Send admin notification
-        const itemsWithProductIds = (orderItems || []).map((item: any) => ({
-          product_id: item.product_id || (item.products?.id),
+    try {
+      const { notifyAdminOrderCreated, notifyOrderCreated } = await import('@/lib/notifications/service')
+      
+      const orderData = session.order_data
+      const customerEmail = orderData.email || 'customer@example.com'
+      const customerName = `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim() || 'Customer'
+      
+      // Get order items for notifications
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE!
+      )
+      
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select(`
+          product_id,
+          quantity,
+          price,
+          products (
+            id,
+            name
+          )
+        `)
+        .eq('order_id', order_id)
+      
+      console.log(`🔍 [${webhookId}] Order items for notifications:`, {
+        items_count: orderItems?.length || 0
+      })
+      
+      // Send customer notification
+      if (orderItems && orderItems.length > 0) {
+        const items = orderItems.map((item: any) => ({
           name: item.products?.name || 'Product',
           quantity: item.quantity,
           price: item.price.toString()
         }))
         
-        await notifyAdminOrderCreated({
+        await notifyOrderCreated({
           order_id,
           customer_email: customerEmail,
           customer_name: customerName,
           total_amount: session.amount.toString(),
           currency: session.currency,
-          payment_method: 'Mobile Money',
-          payment_status: 'paid',
-          items_count: orderItems?.length || 0,
-          items: itemsWithProductIds
+          items,
+          order_date: new Date().toLocaleDateString(),
+          payment_method: `Mobile Money (${session.provider})`,
+          shipping_address: orderData.shipping_address || 'N/A'
         })
         
-        console.log(`✅ [${webhookId}] Admin notification sent (async)`)
-        
-        await logPaymentEvent('notification_sent', {
+        console.log(`✅ [${webhookId}] Customer notification sent`)
+      }
+      
+      // Send admin notification
+      const itemsWithProductIds = (orderItems || []).map((item: any) => ({
+        product_id: item.product_id || (item.products?.id),
+        name: item.products?.name || 'Product',
+        quantity: item.quantity,
+        price: item.price.toString()
+      }))
+      
+      await notifyAdminOrderCreated({
+        order_id,
+        customer_email: customerEmail,
+        customer_name: customerName,
+        total_amount: session.amount.toString(),
+        currency: session.currency,
+        payment_method: 'Mobile Money',
+        payment_status: 'paid',
+        items_count: orderItems?.length || 0,
+        items: itemsWithProductIds
+      })
+      
+      console.log(`✅ [${webhookId}] Admin notification sent`)
+      
+      await logPaymentEvent('notification_sent', {
+        session_id: session.id,
+        order_id,
+        user_id: session.user_id,
+        details: { 
+          customer_email: customerEmail,
+          notifications: ['customer', 'admin']
+        }
+      })
+      
+    } catch (notifError) {
+      console.error(`❌ [${webhookId}] Notification failed:`, notifError)
+      
+      // Log failure but don't affect order creation
+      try {
+        await logPaymentEvent('notification_failed', {
           session_id: session.id,
           order_id,
           user_id: session.user_id,
-          details: { 
-            customer_email: customerEmail,
-            notifications: ['customer', 'admin']
-          }
+          error: (notifError as Error).message
         })
-        
-      } catch (notifError) {
-        console.error(`❌ [${webhookId}] Async notification failed:`, notifError)
-        
-        // Log failure but don't affect order creation
-        try {
-          await logPaymentEvent('notification_failed', {
-            session_id: session.id,
-            order_id,
-            user_id: session.user_id,
-            error: (notifError as Error).message
-          })
-        } catch (logError) {
-          console.error(`❌ Failed to log notification error:`, logError)
-        }
+      } catch (logError) {
+        console.error(`❌ Failed to log notification error:`, logError)
       }
-    })
+    }
 
     const processingTime = Date.now() - startTime
     console.log(`🎉 [${webhookId}] SUCCESS in ${processingTime}ms`)
