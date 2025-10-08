@@ -399,7 +399,7 @@ export async function initiateZenoPayment(params: {
 // ============================================================================
 
 /**
- * Create order from payment session
+ * Create order from payment session OR update existing linked order
  * This is called by webhook when payment is confirmed
  */
 export async function createOrderFromSession(
@@ -420,34 +420,72 @@ export async function createOrderFromSession(
     return sum + (Number(item.price) * Number(item.quantity))
   }, 0)
 
-  // Create order
-  const orderInput: CreateOrderInput = {
-    user_id: session.user_id,
-    total_amount: totalAmount,
-    currency: session.currency,
-    status: 'processing',
-    payment_status: 'paid',
-    payment_method: `Mobile Money (${session.provider})`,
-    shipping_address: orderData.shipping_address,
-    notes: orderData.notes || '',
-    paid_at: new Date().toISOString()
+  let order: any
+  const sessionWithOrderId = session as any
+
+  // Check if session already has linked order (new flow with retry)
+  if (sessionWithOrderId.order_id) {
+    console.log(`♻️ Session has linked order, updating existing order: ${sessionWithOrderId.order_id}`)
+    
+    // Update existing order to paid status
+    const { data: existingOrder, error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'processing',
+        payment_status: 'paid',
+        payment_method: `Mobile Money (${session.provider})`,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sessionWithOrderId.order_id)
+      .select()
+      .single()
+
+    if (updateError || !existingOrder) {
+      throw new OrderCreationError('Failed to update linked order', {
+        session_id: session.id,
+        order_id: sessionWithOrderId.order_id,
+        error: updateError?.message
+      })
+    }
+
+    order = existingOrder
+    console.log(`✅ Updated existing order ${order.id} to paid status`)
+    
+  } else {
+    // Legacy flow: Create new order
+    console.log('📦 Creating new order (legacy flow - no linked order_id)')
+    
+    const orderInput: CreateOrderInput = {
+      user_id: session.user_id,
+      total_amount: totalAmount,
+      currency: session.currency,
+      status: 'processing',
+      payment_status: 'paid',
+      payment_method: `Mobile Money (${session.provider})`,
+      shipping_address: orderData.shipping_address,
+      notes: orderData.notes || '',
+      paid_at: new Date().toISOString()
+    }
+
+    const { data: newOrder, error: orderError } = await supabase
+      .from('orders')
+      .insert(orderInput)
+      .select()
+      .single()
+
+    if (orderError || !newOrder) {
+      throw new OrderCreationError('Failed to create order', {
+        session_id: session.id,
+        error: orderError?.message,
+        order_input: orderInput
+      })
+    }
+
+    order = newOrder
   }
 
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert(orderInput)
-    .select()
-    .single()
-
-  if (orderError || !order) {
-    throw new OrderCreationError('Failed to create order', {
-      session_id: session.id,
-      error: orderError?.message,
-      order_input: orderInput
-    })
-  }
-
-  // Create order items
+  // Create order items (only if order was newly created, not updated)
   const orderItems: CreateOrderItemInput[] = orderData.items.map(item => ({
     order_id: order.id,
     product_id: item.product_id,
@@ -455,20 +493,34 @@ export async function createOrderFromSession(
     price: item.price
   }))
 
-  const { error: itemsError } = await supabase
+  // Check if items already exist (for reused orders)
+  const { data: existingItems } = await supabase
     .from('order_items')
-    .insert(orderItems)
+    .select('id')
+    .eq('order_id', order.id)
+    .limit(1)
 
-  if (itemsError) {
-    console.error('Order items creation failed:', itemsError)
-    // Log but don't fail - order is more important
-    await logPaymentEvent('order_creation_failed', {
-      session_id: session.id,
-      order_id: order.id,
-      user_id: session.user_id,
-      error: `Items insertion failed: ${itemsError.message}`,
-      details: { items: orderItems }
-    })
+  if (!existingItems || existingItems.length === 0) {
+    // Items don't exist, create them
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems)
+
+    if (itemsError) {
+      console.error('Order items creation failed:', itemsError)
+      // Log but don't fail - order is more important
+      await logPaymentEvent('order_creation_failed', {
+        session_id: session.id,
+        order_id: order.id,
+        user_id: session.user_id,
+        error: `Items insertion failed: ${itemsError.message}`,
+        details: { items: orderItems }
+      })
+    } else {
+      console.log(`✅ Created ${orderItems.length} order items`)
+    }
+  } else {
+    console.log(`♻️ Order items already exist, skipping creation`)
   }
 
   await logPaymentEvent('order_created', {
