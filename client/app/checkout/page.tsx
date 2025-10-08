@@ -26,6 +26,7 @@ import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
 import { useAuth } from '@/hooks/use-auth'
 import { OrderProcessingLoader } from '@/components/OrderProcessingLoader'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 
 type CheckoutStep = 'shipping' | 'payment' | 'review'
 
@@ -870,8 +871,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
       
       
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -1466,5 +1468,6 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   )
 }

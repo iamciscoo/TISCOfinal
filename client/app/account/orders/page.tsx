@@ -1,11 +1,11 @@
 'use client'
-
 import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { 
@@ -165,8 +165,9 @@ function OrdersContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
       
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Breadcrumb */}
@@ -355,6 +356,7 @@ function OrdersContent() {
       <Footer />
       <CartSidebar />
     </div>
+    </AuthGuard>
   )
 }
 

@@ -19,8 +19,6 @@ const publicRoutes = [
   '/auth',
   '/cart', // Cart should be accessible without auth
   '/search', // Search should be accessible
-  '/checkout', // Let page handle auth UI
-  '/account', // Let page handle auth UI
   '/terms',
   '/privacy',
   '/cookies',
@@ -44,10 +42,8 @@ const publicRoutes = [
   '/api/contact-messages',
   '/api/newsletter',
   '/api/payments/webhooks',
-  '/api/payments',
-  '/api/notifications',
+  '/api/notifications/email', // Manual email sending - public
   '/api/admin',
-  '/api/orders', // Let API handle auth check
   '/api/auth', // Auth endpoints should be accessible
 ]
 

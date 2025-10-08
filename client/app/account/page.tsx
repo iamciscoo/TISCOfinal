@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ProfileDialog } from '@/components/auth/ProfileDialog'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 
 import Image from 'next/image'
 import { 
@@ -167,8 +168,9 @@ export default function AccountDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
@@ -423,5 +425,6 @@ export default function AccountDashboard() {
       <CartSidebar />
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
+    </AuthGuard>
   )
 }
