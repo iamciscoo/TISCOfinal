@@ -34,7 +34,7 @@ export const CurrencyToggle = () => {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-80 p-4">
+      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-80 p-4 z-[70]">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
