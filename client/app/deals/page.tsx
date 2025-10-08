@@ -233,7 +233,7 @@ export default function DealsPage() {
       <Navbar />
 
       {/* Hero Section (match Shop page styling) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
         <ShopHero imageSrc="/deals-hero.png" title="Deals" ctaHref="/products" ctaLabel="Continue Shopping" />
       </div>
 
