@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { ServiceProcessingOverlay } from '@/components/ServiceProcessingOverlay'
+import { AuthModal } from '@/components/auth/AuthModal'
 
 type Service = { id: string; title: string }
 
@@ -25,6 +26,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
   const [selectedService, setSelectedService] = useState<string>(defaultServiceId || '')
   const [selectedTime, setSelectedTime] = useState<string>('')
   const [resetKey, setResetKey] = useState<number>(0)
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   // Submit the start time of the chosen range to keep DB type compatibility (TIME)
   const TIME_RANGES = [
@@ -83,11 +85,11 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
       if (!user) {
         toast({ 
           title: 'Sign in required', 
-          description: 'Please sign in to book a service. Redirecting...', 
-          variant: 'destructive' 
+          description: 'Please sign in to continue booking your service.', 
+          variant: 'default' 
         })
-        // Redirect to sign in page
-        window.location.href = '/auth/sign-in?redirectTo=' + encodeURIComponent(window.location.pathname)
+        // Open auth modal instead of redirecting
+        setShowAuthModal(true)
         return
       }
       
@@ -236,14 +238,32 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
 
           <Button 
             type="submit" 
-            disabled={loading || authLoading || !user} 
+            disabled={loading || authLoading} 
             className="w-full md:w-auto bg-gray-900 hover:bg-gray-800 touch-manipulation py-2.5 sm:py-2"
+            onClick={(e) => {
+              // If user is not signed in, open modal instead of submitting
+              if (!user && !authLoading) {
+                e.preventDefault()
+                setShowAuthModal(true)
+                toast({ 
+                  title: 'Sign in required', 
+                  description: 'Please sign in to continue booking your service.', 
+                  variant: 'default' 
+                })
+              }
+            }}
           >
             {authLoading ? 'Checking authentication...' : loading ? 'Submitting…' : !user ? 'Sign in to book' : 'Submit Service Request'}
           </Button>
           {!user && !authLoading && (
             <p className="text-sm text-orange-600 mt-2">
-              Please <a href="/auth/sign-in" className="underline font-medium">sign in</a> to book a service
+              Please <button 
+                type="button"
+                onClick={() => setShowAuthModal(true)} 
+                className="underline font-medium hover:text-orange-700"
+              >
+                sign in
+              </button> to book a service
             </p>
           )}
         </form>
@@ -255,6 +275,13 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
         status={processingStatus}
         onClose={handleOverlayClose}
         errorMessage={processingError}
+      />
+      
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultMode="signin"
       />
     </Card>
   )
