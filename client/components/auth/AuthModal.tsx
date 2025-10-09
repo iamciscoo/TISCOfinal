@@ -256,11 +256,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           handleModalClose()
         }
       }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md shadow-2xl border-gray-200">
         <DialogHeader>
-          <DialogTitle>{getTitle()}</DialogTitle>
-          <DialogDescription>
-            {mode === 'signin' && 'Sign in to your account to access your orders and profile'}
+          <DialogTitle className="text-xl">{getTitle()}</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            {mode === 'signin' && 'Enter your email and password to access your account'}
             {mode === 'signup' && 'Create a new account to start shopping with us'}
             {mode === 'reset' && 'Enter your email to receive password reset instructions'}
           </DialogDescription>

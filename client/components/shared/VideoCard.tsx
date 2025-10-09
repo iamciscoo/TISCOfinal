@@ -77,9 +77,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({
     }
   }, [inView, lazy, muted, loop, autoPlay])
 
-  // Always load video immediately (no lazy loading delay)
-  const shouldLoad = true
-
   return (
     <div ref={wrapperRef} className={`relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl ${className}`}>
       <video
