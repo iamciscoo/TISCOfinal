@@ -87,16 +87,23 @@ class NotificationService {
       
       // Process each channel
       const channels = notificationData.channels || ['email']
+      let emailSentSuccessfully = false
       
       for (const channel of channels) {
         if (channel === 'email') {
-          await this.sendEmailNotification(notificationRecord, notificationData)
+          emailSentSuccessfully = await this.sendEmailNotification(notificationRecord, notificationData)
         }
         // Add other channels (SMS, push, in-app) here in the future
       }
 
-      // Mark as sent
-      await this.updateNotificationStatus(notificationRecord.id, 'sent')
+      // CRITICAL FIX: Only mark as sent if email actually succeeded
+      if (emailSentSuccessfully) {
+        await this.updateNotificationStatus(notificationRecord.id, 'sent')
+        logger.info('Notification marked as sent', { recordId: notificationRecord.id })
+      } else {
+        logger.error('Notification failed - not marking as sent', null, { recordId: notificationRecord.id })
+        // Don't throw error to prevent blocking order creation, but don't mark as sent either
+      }
       
       return notificationRecord.id
     } catch (error) {
@@ -226,8 +233,9 @@ class NotificationService {
   }
 
   // Send email notification with enhanced HTML rendering
+  // Returns true if email was sent successfully, false otherwise
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async sendEmailNotification(record: NotificationRecord, _: NotificationData): Promise<void> {
+  private async sendEmailNotification(record: NotificationRecord, _: NotificationData): Promise<boolean> {
     try {
       // Ensure we have properly rendered HTML content
       if (!record.content || record.content.trim() === '') {
@@ -253,6 +261,16 @@ class NotificationService {
         await sendEmailViaSendPulse(this.config, email)
         logger.notificationEvent('Email notification sent successfully', { recordId: record.id })
         await this.updateNotificationStatus(record.id, 'sent')
+        
+        // Notify admin recipients about this notification
+        try {
+          await this.notifyAdminsOfNewNotification(record)
+        } catch (adminNotifyError) {
+          logger.warn('Failed to notify admins of new notification', { error: adminNotifyError, recordId: record.id })
+          // Don't fail the main notification if admin notification fails
+        }
+        
+        return true // Email sent successfully
       } catch (emailError) {
         logger.error('Failed to send email notification', emailError, { recordId: record.id })
         
@@ -270,21 +288,12 @@ class NotificationService {
           logger.error('Email notification failed with permanent error', emailError, { recordId: record.id })
         }
         
-        // Don't throw the error to prevent payment flow interruption
-        return
-      }
-
-      // Notify admin recipients about this notification
-      try {
-        await this.notifyAdminsOfNewNotification(record)
-      } catch (adminNotifyError) {
-        logger.warn('Failed to notify admins of new notification', { error: adminNotifyError, recordId: record.id })
-        // Don't fail the main notification if admin notification fails
+        return false // Email failed
       }
     } catch (error) {
       logger.error('Failed to process email notification', error, { recordId: record.id })
       await this.updateNotificationStatus(record.id, 'failed', (error as Error).message)
-      // Don't throw the error to prevent payment flow interruption
+      return false // Email failed
     }
   }
 
