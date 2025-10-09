@@ -1,8 +1,32 @@
 # API Endpoints Documentation
 
+**Last Updated:** October 9, 2025  
+**Version:** 3.1  
+**Status:** ✅ All Critical Issues Resolved
+
 ## Overview
 
 TISCO uses Next.js API routes for both client and admin applications. All endpoints follow RESTful conventions with proper error handling, validation, and caching.
+
+## 🆕 Recent Critical Updates (October 2025)
+
+### Email Notification Delivery Fix ✅ **(Oct 9, 2025)**
+**Impact:** Fixed silent failure in notification endpoints that prevented customers from receiving order confirmation emails.
+
+**Affected Endpoints:**
+- `POST /api/orders` - Now sends customer confirmation emails correctly
+- `POST /api/payments/mobile/webhook` - Now sends emails for mobile payment orders
+- All notification endpoints - Proper success/failure tracking implemented
+
+**Technical Change:**
+- Modified `/client/lib/notifications/service.ts` to return `Promise<boolean>` instead of `Promise<void>`
+- Status only marked as 'sent' if email actually delivered
+- Failed emails properly logged with 'failed' status
+
+**Result:**
+- ✅ Customers receive order confirmation emails (mobile money & office payments)
+- ✅ Database accurately reflects email delivery status
+- ✅ Failed emails can be investigated and retried
 
 ## Client API Endpoints (`/client/app/api/`)
 

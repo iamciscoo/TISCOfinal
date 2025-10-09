@@ -1,5 +1,9 @@
 # Environment Variables Documentation
 
+**Last Updated:** October 9, 2025  
+**Version:** 3.1  
+**Status:** ✅ All Variables Documented
+
 ## Overview
 
 TISCO requires several environment variables for proper operation. This document lists all required and optional environment variables for both client and admin applications.
@@ -36,13 +40,21 @@ WEBHOOK_SECRET=your-webhook-secret-key
 - `ZENOPAY_API_KEY`: API key for ZenoPay mobile money integration
 - `WEBHOOK_SECRET`: Secret key for verifying webhook signatures from ZenoPay
 
-#### Email Service
+#### Email Service (SendPulse) ✅ **UPDATED**
 ```bash
-SENDGRID_API_KEY=your-sendgrid-api-key
+SENDPULSE_CLIENT_ID=your-sendpulse-client-id
+SENDPULSE_CLIENT_SECRET=your-sendpulse-client-secret
+SENDPULSE_SENDER_EMAIL=info@tiscomarket.store
+SENDPULSE_SENDER_NAME="TISCO Market"
 ```
 
 **Purpose**:
-- `SENDGRID_API_KEY`: SendGrid API key for sending transactional emails
+- `SENDPULSE_CLIENT_ID`: SendPulse API client ID for OAuth authentication
+- `SENDPULSE_CLIENT_SECRET`: SendPulse API client secret (keep secret!)
+- `SENDPULSE_SENDER_EMAIL`: Verified sender email address
+- `SENDPULSE_SENDER_NAME`: Display name for outgoing emails
+
+**Note**: SendPulse replaced SendGrid (Oct 2025). Email delivery fix ensures customers receive order confirmations.
 
 ### Optional Variables
 
@@ -162,12 +174,19 @@ Check the console for any missing environment variable errors.
 2. Check that `SUPABASE_ANON_KEY` has proper permissions
 3. Ensure RLS policies are configured correctly
 
-### SendGrid Email Not Sending
+### SendPulse Email Not Sending ✅ **UPDATED**
 
 **Solution**:
-1. Verify `SENDGRID_API_KEY` is valid
-2. Check SendGrid dashboard for API key permissions
-3. Ensure sender email is verified in SendGrid
+1. Verify `SENDPULSE_CLIENT_ID` and `SENDPULSE_CLIENT_SECRET` are valid
+2. Check SendPulse dashboard for API credentials
+3. Ensure sender email is verified in SendPulse
+4. Check `email_notifications` table for failed deliveries:
+   ```sql
+   SELECT * FROM email_notifications 
+   WHERE status = 'failed' 
+   ORDER BY created_at DESC;
+   ```
+5. Review error_message column for specific failure reasons
 
 ## Production Deployment
 
@@ -185,9 +204,35 @@ Add environment variables in Netlify dashboard:
 2. Add all required variables
 3. Redeploy site after adding variables
 
+## 🆕 Recent Updates (October 2025)
+
+### Email Service Migration: SendGrid → SendPulse ✅
+**Date**: October 2025  
+**Reason**: Better deliverability and API reliability
+
+**Migration Steps**:
+1. Remove `SENDGRID_API_KEY` from environment
+2. Add SendPulse credentials (see Email Service section)
+3. Verify sender email in SendPulse dashboard
+4. Test email delivery with test order
+
+### Email Notification Fix Applied ✅
+**Date**: October 9, 2025  
+**Impact**: All email notifications now working correctly
+
+**Verification**:
+```bash
+# Check recent email deliveries
+SELECT status, COUNT(*) 
+FROM email_notifications 
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY status;
+```
+
 ## Reference
 
 For more information on specific integrations:
 - [Supabase Environment Variables](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
 - [ZenoPay API Documentation](https://zenopay.co.tz/docs)
-- [SendGrid API Keys](https://docs.sendgrid.com/ui/account-and-settings/api-keys)
+- [SendPulse API Documentation](https://sendpulse.com/integrations/api)
+- [SendPulse SMTP Settings](https://sendpulse.com/knowledge-base/email-service/smtp-integration)
