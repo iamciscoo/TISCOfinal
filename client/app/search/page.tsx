@@ -14,13 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { 
   Search, 
   Grid3X3, 
   List, 
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Filter
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
@@ -48,6 +50,7 @@ function SearchResults() {
   const [currentPage, setCurrentPage] = useState(1)
   
   const productsPerPage = 12
+  const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
 
   // Debounced URL sync for refine input
   const updateUrlDebounced = useMemo(
@@ -290,52 +293,101 @@ function SearchResults() {
           </div>
           <p className="text-gray-600">
             {query 
-              ? `Found ${filteredProducts.length} ${filteredProducts.length === 1 ? 'result' : 'results'} for &quot;${query}&quot;`
+              ? `Found ${filteredProducts.length} ${filteredProducts.length === 1 ? 'result' : 'results'} for "${query}"`
               : `Showing ${filteredProducts.length} products`
             }
           </p>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            {/* Refined Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Refine your search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const next = (searchTerm || '').trim()
-                    if (next) {
-                      router.push(`/search?q=${encodeURIComponent(next)}`)
-                    } else {
-                      router.push('/search')
-                    }
-                  }
-                }}
-                className="pl-10"
-              />
-            </div>
+        {/* Mobile Filters + View Toggle */}
+        <div className="flex items-center justify-between mb-8 lg:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Open filters"
+                title="Open filters"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters{activeFiltersCount > 0 ? (
+                  <span className="ml-1 rounded-full bg-blue-600 text-white text-[10px] px-1.5 py-0.5">
+                    {activeFiltersCount}
+                  </span>
+                ) : null}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <SheetHeader className="px-4">
+                <SheetTitle>Filters</SheetTitle>
+              </SheetHeader>
+              <div className="px-4 pb-4 overflow-y-auto">
+                {/* Search */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
 
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance">Most Relevant</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                {/* Category Filter */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
+                {/* Sort By */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Sort By</label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="relevance">Relevance</SelectItem>
+                      <SelectItem value="name">Name A-Z</SelectItem>
+                      <SelectItem value="price-low">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Clear Filters */}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSearchTerm(query)
+                    setSelectedCategory('all')
+                    setSortBy('relevance')
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          
           {/* View Toggle */}
           <div className="flex items-center gap-2">
             <Button
@@ -356,11 +408,14 @@ function SearchResults() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Filters Sidebar (hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-1">
             <Card className="sticky top-24">
               <CardContent className="p-6">
-                <h3 className="font-semibold text-lg mb-6">Filters</h3>
+                <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filters
+                </h3>
 
                 {/* Search */}
                 <div className="mb-6">
@@ -437,7 +492,7 @@ function SearchResults() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
                   <p className="text-gray-600 text-center mb-6">
                     {query 
-                      ? `No products found for &quot;${query}&quot;. Try different keywords or check your spelling.`
+                      ? `No products found for "${query}". Try different keywords or check your spelling.`
                       : 'No products match your current filters.'
                     }
                   </p>
