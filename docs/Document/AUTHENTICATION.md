@@ -1,8 +1,66 @@
 # Authentication & Authorization Architecture
 
+**Last Updated:** October 9, 2025  
+**Version:** 3.1  
+**Status:** ✅ All Critical Issues Resolved
+
 ## Overview
 
 TISCO uses Supabase Auth as the primary authentication system with Google OAuth support, password-based authentication, and comprehensive password reset functionality. The system implements Row Level Security (RLS) for data access control.
+
+## 🆕 Recent Critical Fixes (October 2025)
+
+### **1. Password Reset Flow Fix** ✅
+**Problem**: Users clicking password reset links were redirected to homepage without the reset dialog appearing.
+
+**Solution**:
+- Enhanced `PasswordResetRedirectHandler` with PKCE format support (`token_hash`)
+- Added legacy token format support (`access_token` + `refresh_token`)
+- Fixed OAuth vs password reset detection logic
+- Added comprehensive error handling for expired/invalid/used tokens
+
+**Files Modified**:
+- `/client/components/PasswordResetRedirectHandler.tsx`
+- `/client/app/auth/reset-callback/page.tsx`
+
+### **2. OAuth Flow Fix** ✅
+**Problem**: Google OAuth users were incorrectly prompted to set passwords during sign-up.
+
+**Solution**:
+- Fixed `PasswordResetRedirectHandler` to properly distinguish OAuth from password reset
+- OAuth flows now correctly route to `/auth/callback` instead of `/auth/reset-callback`
+- New OAuth users get `ProfileDialog` with `isPasswordReset={false}` (no password required)
+- Existing OAuth users redirect directly to homepage
+
+**Files Modified**:
+- `/client/components/PasswordResetRedirectHandler.tsx`
+- `/client/app/auth/callback/page.tsx`
+- `/client/components/auth/ProfileDialog.tsx`
+
+### **3. Mobile UX Improvements** ✅
+**Problem**: Auth errors showed as toast popups instead of inline errors, and toast close buttons were hidden on mobile.
+
+**Solution**:
+- Auth failures now display inline red alert box within `AuthModal`
+- Error automatically clears when user types
+- Toast close button changed from `opacity-0` to `opacity-70` on mobile
+- Touch-friendly interaction patterns
+
+**Files Modified**:
+- `/client/components/auth/AuthModal.tsx`
+- `/client/components/ui/toast.tsx`
+
+### **4. Password Validation Enhancement** ✅
+**Features Added**:
+- Password visibility toggles (eye icons)
+- Real-time validation with visual indicators (✓/✗)
+- Dynamic validation for: 8+ characters, lowercase, uppercase, numbers
+- Password matching indicator
+- Color-coded feedback (green=valid, red=invalid)
+- Gradient background for password reset sections
+
+**Files Modified**:
+- `/client/components/auth/ProfileDialog.tsx`
 
 ## Authentication Methods
 
@@ -400,9 +458,11 @@ switch (error.code) {
 
 ### User Feedback
 - **Loading States**: Skeleton components during auth checks
-- **Error Messages**: Specific, actionable error descriptions
-- **Success Feedback**: Clear confirmation of successful actions
+- **Error Messages**: Inline errors within auth modal (not toast popups) ✅
+- **Success Feedback**: Toast notifications for positive actions
+- **Mobile-Friendly**: Toast close buttons visible on mobile (70% opacity) ✅
 - **Progressive Enhancement**: Works without JavaScript for core flows
+- **Real-time Validation**: Instant feedback during password creation ✅
 
 ## Admin Authentication
 
