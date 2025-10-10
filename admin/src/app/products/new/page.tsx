@@ -197,7 +197,12 @@ const AddProductPage = () => {
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Textarea {...field} />
+                  <Textarea 
+                    {...field} 
+                    rows={8}
+                    className="min-h-[200px] resize-y"
+                    placeholder="Enter detailed product description..."
+                  />
                 </FormControl>
                 <FormDescription>Enter the description of the product.</FormDescription>
                 <FormMessage />
