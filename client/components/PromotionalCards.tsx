@@ -84,6 +84,7 @@ export const PromotionalCards = () => {
                       sizes="(max-width: 768px) 120px, 160px"
                       className="object-cover"
                       priority={index === 0}
+                      loading={index === 0 ? 'eager' : 'lazy'}
                     />
                   </div>
                 </div>
@@ -120,6 +121,7 @@ export const PromotionalCards = () => {
                         sizes="120px"
                         className="object-cover"
                         priority={index === 0}
+                        loading={index === 0 ? 'eager' : 'lazy'}
                       />
                     </div>
                   </div>

@@ -283,12 +283,6 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
         <span>/</span>
         <Link href="/products" className="hover:text-blue-600">Products</Link>
         <span>/</span>
-        <Link href={`/categories/${product.category_id}`} className="hover:text-blue-600">
-          {Array.isArray(product.categories) && product.categories.length > 0 
-            ? product.categories[0]?.category?.name || 'Category' 
-            : (product.categories && 'name' in product.categories ? product.categories.name : 'Category')}
-        </Link>
-        <span>/</span>
         <span className="text-gray-900">{product.name}</span>
       </nav>
 

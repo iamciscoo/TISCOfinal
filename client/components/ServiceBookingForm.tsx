@@ -192,7 +192,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
                   ))}
                 </SelectContent>
               </Select>
-              <input type="hidden" name="service_id" value={selectedService ?? ''} required />
+              <input type="hidden" id="service_id" name="service_id" value={selectedService ?? ''} required aria-label="Service ID" />
             </div>
 
             <div className="space-y-2">
@@ -222,7 +222,7 @@ export const ServiceBookingForm = ({ defaultServiceId, services: servicesProp }:
                   ))}
                 </SelectContent>
               </Select>
-              <input type="hidden" name="preferred_time" value={selectedTime ?? ''} required />
+              <input type="hidden" id="preferred_time_value" name="preferred_time" value={selectedTime ?? ''} required aria-label="Preferred Time" />
             </div>
 
             <div className="space-y-2">

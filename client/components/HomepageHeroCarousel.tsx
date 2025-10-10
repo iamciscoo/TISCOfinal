@@ -194,6 +194,7 @@ export const HomepageHeroCarousel = () => {
               willChange: 'transform',
             }}
             priority={index === 0}
+            loading={index === 0 ? 'eager' : 'lazy'}
           />
           {/* Dark overlay for better text readability */}
           <div className="absolute inset-0 bg-black/50" />
