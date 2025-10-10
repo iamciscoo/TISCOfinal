@@ -78,7 +78,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, is_new, image_url, is_deal, original_price, deal_price } = body ?? {};
+    const { name, description, price, category_ids, category_id, stock_quantity, is_featured, is_new, image_url, is_deal, original_price, deal_price, featured_order } = body ?? {};
 
     if (!name || !description || typeof price !== "number") {
       return NextResponse.json({ error: "Missing required fields: name, description, price" }, { status: 400 });
@@ -95,6 +95,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "A product cannot have more than 5 categories" }, { status: 400 });
     }
 
+    // **HANDLE FEATURED ORDER DUPLICATES**
+    // If featured_order is provided, clear any existing product with the same order
+    if (featured_order && typeof featured_order === 'number') {
+      await supabase
+        .from('products')
+        .update({ featured_order: null })
+        .eq('featured_order', featured_order);
+      // Note: Error is ignored - if no product has this order, that's fine
+    }
+
     const payload = {
       name,
       description,
@@ -104,6 +114,7 @@ export async function POST(req: Request) {
       is_featured: !!is_featured,
       is_new: !!is_new,
       image_url: typeof image_url === "string" && image_url.length ? image_url : null,
+      featured_order: typeof featured_order === 'number' ? featured_order : null,
       // deal/sale fields
       is_deal: !!is_deal,
       original_price: typeof original_price === 'number' ? original_price : null,

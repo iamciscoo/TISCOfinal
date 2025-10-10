@@ -99,23 +99,37 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
     let q = supabase
       .from('products')                                                     // Target products table
       .select(select)                                                       // Apply comprehensive field selection
+      .eq('is_active', true)                                               // **OPTIMIZATION: Only show active products (uses idx_products_active_stock_created)**
       .limit(params.limit)                                                  // Limit results per page
       .range(params.offset, params.offset + params.limit - 1)              // Apply pagination range
 
     // Apply category filter if specified
     if (params.category) {
-      q = q.eq('category_id', params.category)                             // Filter by category UUID
+      q = q.eq('category_id', params.category)                             // Filter by category UUID (uses idx_products_category_id)
     }
 
     // Apply featured products filter if specified
     if (params.featured) {
-      q = q.eq('is_featured', true)                                        // Show only featured products
+      q = q.eq('is_featured', true)                                        // Show only featured products (uses idx_products_featured_order_nulls_created)
     }
 
-    // Apply optimized ordering for consistent results and better cache utilization
+    // **OPTIMIZATION: Apply ordering strategy based on filters to use appropriate indexes**
+    if (params.featured) {
+      // For featured products, use manual order first (idx_products_featured_order_nulls_created)
+      q = q
+        .order('featured_order', { ascending: true, nullsFirst: false })   // Manual order (1, 2, 3...), NULLs last
+        .order('created_at', { ascending: false })                         // Newest for products without manual order
+    } else {
+      // For general products, prioritize in-stock items (idx_products_active_stock_created)
+      q = q
+        .order('is_featured', { ascending: false })                        // Featured first
+        .order('created_at', { ascending: false })                         // Then newest
+    }
+
+    // **OPTIMIZATION: Order product images to show main image first (idx_product_images_product_main_fast)**
     q = q
-      .order('is_featured', { ascending: false })                          // Featured products first
-      .order('created_at', { ascending: false })                           // Newest products second
+      .order('is_main', { foreignTable: 'product_images', ascending: false })
+      .order('sort_order', { foreignTable: 'product_images', ascending: true })
 
     return q // Return configured query builder
   }

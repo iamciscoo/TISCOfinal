@@ -30,6 +30,7 @@ const formSchema = z.object({
   is_featured: z.boolean().optional(),
   is_new: z.boolean().optional(),
   is_deal: z.boolean().optional(),
+  featured_order: z.number().int().min(1).optional(),
   original_price: z.number().optional(),
   deal_price: z.number().optional(),
 }).refine((data) => {
@@ -210,14 +211,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         form.reset({
           name: json.data.name || "",
           description: json.data.description || "",
-          price: json.data.price || 0,
+          price: json.data.price || undefined,
           category_ids: categoryIds,
-          stock_quantity: json.data.stock_quantity || 0,
+          stock_quantity: json.data.stock_quantity ?? undefined,
           is_featured: Boolean(json.data.is_featured),
           is_new: Boolean(json.data.is_new),
           is_deal: Boolean(json.data.is_deal),
-          original_price: json.data.original_price || 0,
-          deal_price: json.data.deal_price || 0,
+          featured_order: json.data.featured_order ?? undefined,
+          original_price: json.data.original_price || undefined,
+          deal_price: json.data.deal_price || undefined,
         });
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -229,8 +231,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       }
     };
 
-    fetchCategories();
-    if (id) fetchProduct();
+    if (id) {
+      fetchCategories();
+      fetchProduct();
+    }
   }, [id, toast]);
 
   const onSubmit = async (values: FormData) => {
@@ -400,9 +404,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormControl>
                   <Input 
                     type="number" 
-                    step="0.01" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    step="0.01"
+                    placeholder="0.00"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                   />
                 </FormControl>
                 <FormDescription>Enter the price of the product.</FormDescription>
@@ -418,9 +423,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormLabel>Stock Quantity</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    type="number"
+                    placeholder="0"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
                   />
                 </FormControl>
                 <FormDescription>Enter the available stock quantity.</FormDescription>
@@ -520,6 +526,32 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </FormItem>
             )}
           />
+          {form.watch('is_featured') && (
+            <FormField
+              control={form.control}
+              name="featured_order"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Featured Display Order</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="1"
+                      placeholder="1"
+                      value={field.value ?? ''}
+                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Set display order on homepage (1=first, 2=second, etc). Leave empty to order by creation date.
+                    <br />
+                    <span className="text-amber-600 font-medium">Note: If another product has this number, it will be cleared automatically.</span>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
             control={form.control}
             name="is_new"
@@ -567,9 +599,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        step="0.01"
+                        placeholder="0.00"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>Enter the original price before discount.</FormDescription>
@@ -586,9 +619,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        step="0.01"
+                        placeholder="0.00"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>Enter the discounted deal price.</FormDescription>

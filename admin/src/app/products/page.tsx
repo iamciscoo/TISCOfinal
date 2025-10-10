@@ -1,58 +1,73 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Product, columns } from "./columns";
 import { PageLayout } from "@/components/shared/PageLayout";
-import { getProducts } from "@/lib/database";
+import { ProductQuickSearch } from "@/components/ProductQuickSearch";
 
-// **PERFORMANCE FIX: Disable caching for real-time admin updates**
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+const ProductsPage = () => {
+  const [data, setData] = useState<Product[]>([]);
 
-const getData = async (): Promise<Product[]> => {
-  try {
-    const products = await getProducts();
-    
-    // Transform database products to match the admin UI format
-    return products.map(product => {
-      const description = product.description || "";
-      const imgs = (product as any).product_images as any[] | undefined;
-      const mainFromList = imgs?.find((img) => img.is_main)?.url || imgs?.[0]?.url;
-      const mainImage = mainFromList || (product as any).image_url || "/circular.svg";
-      return ({
-        id: product.id,
-        name: product.name,
-        shortDescription: description.substring(0, 60) + (description.length > 60 ? "..." : ""),
-        description,
-        price: Number((product as any).price ?? 0),
-        sizes: ["Standard"], // Default sizes - can be enhanced later
-        colors: ["Default"], // Default colors - can be enhanced later
-        images: {
-          "Default": mainImage
-        },
-        // Additional database fields
-        stock_quantity: (product as any).stock_quantity,
-        is_featured: !!product.is_featured,
-        is_active: !!product.is_active,
-        rating: (product as any).rating,
-        reviews_count: (product as any).reviews_count,
-        category: (product as any).categories?.[0]?.category || product.category,
-        categories: (product as any).categories || []
-      })
-    });
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    return [];
-  }
-};
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/products?limit=50");
+        const result = await response.json();
+        
+        // Transform API products to match the UI format
+        const products = (result.data || []).map((product: any) => {
+          const description = product.description || "";
+          const imgs = product.product_images as any[] | undefined;
+          const mainFromList = imgs?.find((img: any) => img.is_main)?.url || imgs?.[0]?.url;
+          const mainImage = mainFromList || product.image_url || "/circular.svg";
+          
+          return {
+            id: product.id,
+            name: product.name,
+            shortDescription: description.substring(0, 60) + (description.length > 60 ? "..." : ""),
+            description,
+            price: Number(product.price ?? 0),
+            sizes: ["Standard"],
+            colors: ["Default"],
+            images: {
+              "Default": mainImage
+            },
+            stock_quantity: product.stock_quantity,
+            is_featured: !!product.is_featured,
+            is_active: !!product.is_active,
+            rating: product.rating,
+            reviews_count: product.reviews_count,
+            category: product.product_categories?.[0]?.categories || product.category,
+            categories: product.product_categories || []
+          };
+        });
+        
+        setData(products);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
 
-const ProductsPage = async () => {
-  const data = await getData();
+    fetchData();
+  }, []);
+
   return (
-    <PageLayout
-      title="All Products"
-      columns={columns}
-      data={data}
-      entityName="Product"
-      deleteApiBase="/api/products"
-    />
+    <div className="space-y-6 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
+        <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
+        <div className="w-full sm:w-auto">
+          <ProductQuickSearch />
+        </div>
+      </div>
+      
+      <PageLayout
+        title=""
+        columns={columns}
+        data={data}
+        entityName="Product"
+        deleteApiBase="/api/products"
+      />
+    </div>
   );
 };
 

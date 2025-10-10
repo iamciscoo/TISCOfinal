@@ -18,81 +18,62 @@ export async function GET(request: NextRequest) {
       let q = supabase
         .from('products')
         .select(`
-          *,
+          id,
+          name,
+          description,
+          price,
+          image_url,
+          stock_quantity,
+          is_featured,
+          is_active,
+          created_at,
           categories:product_categories (
             category:categories (
               id,
               name${withSlug ? ', slug' : ''}${withDescription ? ', description' : ''}
             )
           ),
-          product_images (
+          product_images!inner (
             id,
             url,
             is_main,
             sort_order
           )
         `)
+        .eq('is_active', true) // **OPTIMIZATION: Only search active products**
 
-      // Smart search filtering: check against real database categories
-      if (query && query.length > 2) {
+      // **OPTIMIZATION: Use trigram similarity search (idx_products_name_trgm, idx_products_description_trgm)**
+      if (query && query.trim().length > 0) {
         const safe = query.replace(/[(),%]/g, ' ').trim()
-        const tokens = safe.split(/\s+/).filter(Boolean).slice(0, 5)
         
-        // Fetch categories to check if this is a category-based search
-        let isLikelyCategorySearch = false
-        try {
-          const { data: categories } = await supabase
-            .from('categories')
-            .select('name, description')
-            .limit(50) // Get reasonable number of categories for comparison
-          
-          if (categories && categories.length > 0) {
-            // Check if search terms match any category names or descriptions
-            isLikelyCategorySearch = categories.some(category => {
-              const categoryName = (category.name || '').toLowerCase()
-              const categoryDesc = (category.description || '').toLowerCase()
-              
-              return tokens.some(token => 
-                categoryName.includes(token.toLowerCase()) ||
-                token.toLowerCase().includes(categoryName) ||
-                categoryDesc.includes(token.toLowerCase()) ||
-                token.toLowerCase().includes(categoryDesc.substring(0, 20)) // Match first part of description
-              )
-            })
-            
-            // Log category detection for monitoring
-            if (isLikelyCategorySearch) {
-              console.log(`🏷️ Detected category search: "${query}"`)
-            }
-          }
-        } catch (categoryError) {
-          console.warn('Could not fetch categories for search optimization:', categoryError)
-          // Fallback to fetching more products if category check fails
-          isLikelyCategorySearch = true
-        }
+        // **Use ILIKE for fast pattern matching with GIN indexes**
+        // The trigram indexes make ILIKE extremely fast
+        q = q.or(`name.ilike.%${safe}%,description.ilike.%${safe}%`)
         
-        if (!isLikelyCategorySearch && tokens.length > 0) {
-          // This looks like a product-specific search - filter on server
-          const orClauses = (tokens.length > 0 ? tokens : [safe])
-            .map((t) => `name.ilike.%${t}%,description.ilike.%${t}%`)
-            .join(',')
-          q = q.or(orClauses)
-        }
-        else if (isLikelyCategorySearch) {
-          // Category-based search - fetch more products for client-side filtering
-          q = q.limit(150) // Increased limit for better category coverage
-        }
+        // **Order by relevance: exact matches first, then partial matches**
+        // This uses the trigram similarity for ranking
+        q = q.order('name', { ascending: true }) // Alphabetical for consistency
+      } else {
+        // No query - show recent products
+        q = q.order('created_at', { ascending: false })
       }
 
-      // Category filter removed - let frontend handle it to support multi-category products
-      // This matches the shop page behavior which does client-side filtering
+      // **OPTIMIZATION: Order images by is_main first (idx_product_images_product_main_fast)**
+      q = q
+        .order('is_main', { foreignTable: 'product_images', ascending: false })
+        .order('sort_order', { foreignTable: 'product_images', ascending: true })
 
-      // Apply limit only if provided
+      // Apply limit (default 20 for search suggestions)
+      const defaultLimit = query ? 20 : 10
       if (limitParam) {
         const parsed = parseInt(limitParam)
         if (!Number.isNaN(parsed) && parsed > 0) {
-          q = q.limit(parsed)
+          q = q.limit(Math.min(parsed, 50)) // Max 50 for performance
+        } else {
+          q = q.limit(defaultLimit)
         }
+      } else {
+        q = q.limit(defaultLimit)
       }
 
       return q
@@ -128,17 +109,9 @@ export async function GET(request: NextRequest) {
       console.log(`🔍 Search: "${query}" → ${products?.length || 0} products`)
     }
 
-    // Sort product_images by sort_order and is_main
-    const productsWithSortedImages = products?.map(product => ({
-      ...product,
-      product_images: product.product_images?.sort((a: { is_main: boolean; sort_order: number | null }, b: { is_main: boolean; sort_order: number | null }) => {
-        if (a.is_main && !b.is_main) return -1
-        if (!a.is_main && b.is_main) return 1
-        return (a.sort_order || 0) - (b.sort_order || 0)
-      })
-    }))
-
-    const result = productsWithSortedImages || []
+    // **OPTIMIZATION REMOVED: Images are now sorted in database query (idx_product_images_product_main_fast)**
+    // No need for client-side sorting - database handles it via ORDER BY
+    const result = products || []
     
     // Log empty results for monitoring
     if (query && result.length === 0) {

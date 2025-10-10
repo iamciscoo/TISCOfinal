@@ -9,7 +9,7 @@ import { debounce } from '@/lib/shared-utils'
 /**
  * Maximum number of search suggestions to display
  */
-const MAX_SUGGESTIONS = 5
+const MAX_SUGGESTIONS = 8
 
 /**
  * Mobile-only search bar component with autocomplete
@@ -26,15 +26,17 @@ export const MobileSearchBar = () => {
   // Debounced search suggestion handler backed by API
   const updateSuggestions = useMemo(
     () => debounce(async (query: string) => {
-      const q = query.trim()
-      if (q.length === 0) {
+      // Normalize query: trim and remove extra spaces
+      const normalizedQuery = query.trim().replace(/\s+/g, ' ')
+      
+      if (normalizedQuery.length === 0) {
         setShowSuggestions(false)
         setSearchSuggestions([])
         return
       }
 
       try {
-        const params = new URLSearchParams({ q, limit: String(MAX_SUGGESTIONS) })
+        const params = new URLSearchParams({ q: normalizedQuery, limit: String(MAX_SUGGESTIONS) })
         const resp = await fetch(`/api/products/search?${params.toString()}`)
         if (!resp.ok) {
           setShowSuggestions(false)
@@ -50,7 +52,7 @@ export const MobileSearchBar = () => {
         setShowSuggestions(false)
         setSearchSuggestions([])
       }
-    }, 200),
+    }, 250),
     []
   )
 
@@ -106,22 +108,22 @@ export const MobileSearchBar = () => {
         
         {/* Search Suggestions Dropdown */}
         {showSuggestions && searchSuggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-[9999] animate-in fade-in-0 zoom-in-95">
+          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mt-2 z-[9999] animate-in fade-in-0 zoom-in-95 max-h-[400px] overflow-y-auto">
             {searchSuggestions.map((suggestion, index) => (
               <button
                 key={`mobile-suggestion-${index}`}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 flex items-center gap-3 text-base transition-colors focus:bg-gray-50 focus:outline-none touch-manipulation"
+                className="w-full px-4 py-3.5 text-left hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 text-base transition-all duration-150 focus:bg-blue-50 focus:outline-none touch-manipulation border-b border-gray-100 last:border-b-0 group"
                 onClick={() => handleSearch(suggestion)}
                 type="button"
               >
-                <Search className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                <span className="truncate">{suggestion}</span>
+                <Search className="h-5 w-5 text-gray-400 group-hover:text-blue-600 flex-shrink-0 transition-colors" />
+                <span className="truncate text-gray-900 group-hover:text-blue-700 font-medium">{suggestion}</span>
               </button>
             ))}
             {searchQuery && (
-              <div className="px-4 py-3 border-t border-gray-100">
+              <div className="px-4 py-3.5 bg-gray-50 border-t border-gray-200">
                 <button
-                  className="text-blue-600 text-base hover:underline transition-colors focus:outline-none touch-manipulation"
+                  className="text-blue-600 text-base font-medium hover:text-blue-700 hover:underline transition-colors focus:outline-none touch-manipulation"
                   onClick={() => handleSearch(searchQuery)}
                   type="button"
                 >
@@ -129,6 +131,14 @@ export const MobileSearchBar = () => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+        {/* No Results Message */}
+        {showSuggestions && searchQuery.trim().length > 0 && searchSuggestions.length === 0 && (
+          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mt-2 z-[9999] p-6 text-center animate-in fade-in-0 zoom-in-95">
+            <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-base text-gray-600 font-medium">No products found</p>
+            <p className="text-sm text-gray-400 mt-1">Try a different search term</p>
           </div>
         )}
       </div>

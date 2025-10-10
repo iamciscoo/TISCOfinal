@@ -25,6 +25,7 @@ const formSchema = z.object({
   is_featured: z.boolean(),
   is_new: z.boolean(),
   is_deal: z.boolean(),
+  featured_order: z.number().int().min(1).optional(),
   original_price: z.number().min(0.01).optional(),
   deal_price: z.number().min(0.01).optional(),
   images: z.any().optional(),
@@ -52,14 +53,15 @@ const AddProductPage = () => {
     defaultValues: {
       name: "",
       description: "",
-      price: 0,
+      price: undefined as any,
       category_ids: [],
-      stock_quantity: 0,
+      stock_quantity: undefined as any,
       is_featured: false,
       is_new: false,
       is_deal: false,
-      original_price: 0,
-      deal_price: 0,
+      featured_order: undefined,
+      original_price: undefined,
+      deal_price: undefined,
     },
   });
 
@@ -211,9 +213,10 @@ const AddProductPage = () => {
                 <FormControl>
                   <Input 
                     type="number" 
-                    step="0.01" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    step="0.01"
+                    placeholder="0.00"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                   />
                 </FormControl>
                 <FormDescription>Enter the price of the product.</FormDescription>
@@ -229,9 +232,10 @@ const AddProductPage = () => {
                 <FormLabel>Stock Quantity</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    type="number"
+                    placeholder="0"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
                   />
                 </FormControl>
                 <FormDescription>Enter the available stock quantity.</FormDescription>
@@ -375,6 +379,32 @@ const AddProductPage = () => {
               </FormItem>
             )}
           />
+          {form.watch('is_featured') && (
+            <FormField
+              control={form.control}
+              name="featured_order"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Featured Display Order</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="1"
+                      placeholder="1"
+                      value={field.value ?? ''}
+                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Set display order on homepage (1=first, 2=second, etc). Leave empty to order by creation date.
+                    <br />
+                    <span className="text-amber-600 font-medium">Note: If another product has this number, it will be cleared automatically.</span>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
             control={form.control}
             name="is_new"
@@ -422,9 +452,10 @@ const AddProductPage = () => {
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        step="0.01"
+                        placeholder="0.00"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>Enter the original price before discount.</FormDescription>
@@ -441,9 +472,10 @@ const AddProductPage = () => {
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        step="0.01"
+                        placeholder="0.00"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>Enter the discounted deal price.</FormDescription>

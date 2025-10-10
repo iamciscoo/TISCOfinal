@@ -136,17 +136,110 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    // Delete user from database
+    // **STEP 1: Fetch user data before deletion**
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('id, avatar_url, auth_user_id, first_name, last_name, email, phone')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // **STEP 2: Delete avatar from storage if it exists**
+    if (user?.avatar_url) {
+      const avatarPath = extractAvatarPath(user.avatar_url);
+      if (avatarPath) {
+        const { error: storageError } = await supabase.storage
+          .from('avatars')
+          .remove([avatarPath]);
+
+        if (storageError) {
+          console.error('Error deleting avatar from storage:', storageError.message);
+          // Continue with user deletion even if storage cleanup fails
+        } else {
+          console.log(`✅ Deleted avatar from storage for user ${id}`);
+        }
+      }
+    }
+
+    // **STEP 3: Preserve orders - copy user info to customer fields, then nullify user_id**
+    // This satisfies the chk_orders_has_customer constraint which requires either user_id OR (customer_name AND customer_phone)
+    const customerName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || 'Deleted User';
+    const customerEmail = user.email || null;
+    // Phone is required by constraint, use placeholder if user has no phone (minimum 8 chars for safety)
+    const customerPhone = user.phone || 'Not Available';
+
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ 
+        user_id: null,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone
+      })
+      .eq('user_id', id);
+
+    if (orderError) {
+      console.error('Error updating orders:', orderError.message);
+      return NextResponse.json({ 
+        error: `Failed to preserve orders: ${orderError.message}` 
+      }, { status: 500 });
+    } else {
+      console.log(`✅ Preserved orders for deleted user ${id} with customer info`);
+    }
+
+    // **STEP 4: Delete from Supabase Auth (if auth_user_id exists)**
+    if (user.auth_user_id) {
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        user.auth_user_id
+      );
+
+      if (authError) {
+        console.error('Error deleting user from Supabase Auth:', authError.message);
+        // Continue with database deletion even if auth deletion fails
+        // User may have already been deleted from auth manually
+      } else {
+        console.log(`✅ Deleted user from Supabase Auth: ${user.auth_user_id}`);
+      }
+    } else {
+      console.warn(`⚠️ No auth_user_id found for user ${id}, skipping auth deletion`);
+    }
+
+    // **STEP 5: Delete user from database (cascades to addresses, reviews, etc. via FK)**
+    // Orders are preserved with nullified user_id
     const { error } = await supabase
       .from("users")
       .delete()
       .eq("id", id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    // Return a standard JSON response to avoid 204-with-body issues
-    return NextResponse.json({ success: true }, { status: 200 });
+    
+    console.log('✅ User deleted successfully from database and auth with preserved orders:', id);
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'User deleted successfully from database and authentication system',
+      preserved_orders: true 
+    }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// Helper function to extract storage path from avatar URL
+function extractAvatarPath(url: string): string | null {
+  try {
+    // Format: https://{project}.supabase.co/storage/v1/object/public/avatars/{user_id}/{filename}
+    const match = url.match(/\/avatars\/(.+)$/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
   }
 }

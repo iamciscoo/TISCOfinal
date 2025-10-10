@@ -39,6 +39,7 @@ export const GET = withMiddleware(
           reviews_count,
           slug,
           created_at,
+          featured_order,
           product_images (
             url,
             is_main,
@@ -51,11 +52,14 @@ export const GET = withMiddleware(
             )
           )
         `)
-        .eq('is_featured', true)
+        .eq('is_featured', true)                                          // **Uses idx_products_featured_order_nulls_created**
+        .eq('is_active', true)                                            // **OPTIMIZATION: Only show active products**
+        .gte('stock_quantity', 0)                                         // **OPTIMIZATION: Only show products with stock info**
         .limit(validatedData.limit)
-        .order('created_at', { ascending: false })
-        .order('is_main', { foreignTable: 'product_images', ascending: false })
-        .order('sort_order', { foreignTable: 'product_images', ascending: true })
+        .order('featured_order', { ascending: true, nullsFirst: false })  // **Manual order first (1, 2, 3...), NULLs last**
+        .order('created_at', { ascending: false })                        // **Then by newest for products without manual order**
+        .order('is_main', { foreignTable: 'product_images', ascending: false })  // **Main images first**
+        .order('sort_order', { foreignTable: 'product_images', ascending: true }) // **Then by sort order**
 
     let { data, error } = await buildQuery(true)
     if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {

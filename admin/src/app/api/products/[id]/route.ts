@@ -75,11 +75,24 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       "original_price",
       "deal_price",
       "image_url",
+      "featured_order",
     ] as const;
 
     const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
       if (key in body) updates[key] = (body as Record<string, unknown>)[key];
+    }
+
+    // **HANDLE FEATURED ORDER DUPLICATES**
+    // If featured_order is being updated, clear any existing product with the same order (except this one)
+    const featured_order = (body as any).featured_order;
+    if (featured_order && typeof featured_order === 'number') {
+      await supabase
+        .from('products')
+        .update({ featured_order: null })
+        .eq('featured_order', featured_order)
+        .neq('id', id); // Don't clear this product itself
+      // Note: Error is ignored - if no other product has this order, that's fine
     }
 
     // Handle category updates (both single and multiple)
@@ -156,6 +169,51 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
+    // **STEP 1: Fetch product images before deletion**
+    const { data: images, error: fetchError } = await supabase
+      .from('product_images')
+      .select('id, url, path')
+      .eq('product_id', id);
+
+    if (fetchError) {
+      console.error('Error fetching product images:', fetchError.message);
+    }
+
+    // **STEP 2: Delete images from storage (if any exist)**
+    if (images && images.length > 0) {
+      const imagePaths = images
+        .map(img => {
+          // Try path field first, then extract from URL
+          if (img.path) return img.path;
+          if (img.url) return extractPathFromUrl(img.url);
+          return null;
+        })
+        .filter((path): path is string => Boolean(path));
+
+      if (imagePaths.length > 0) {
+        try {
+          const { error: storageError } = await supabase.storage
+            .from('product-images')
+            .remove(imagePaths);
+
+          if (storageError) {
+            console.error('Error deleting product images from storage:', storageError.message);
+            // Continue with product deletion even if storage cleanup fails
+          } else {
+            console.log(`✅ Deleted ${imagePaths.length} images from storage for product ${id}`);
+          }
+        } catch (storageException) {
+          console.error('Exception during storage deletion:', storageException);
+          // Continue with product deletion
+        }
+      } else {
+        console.warn(`⚠️ No valid image paths extracted for product ${id}`);
+      }
+    } else {
+      console.log(`ℹ️ No images to delete for product ${id}`);
+    }
+
+    // **STEP 3: Delete product (cascades to product_images and product_categories via FK)**
     const { error } = await supabase
       .from("products")
       .delete()
@@ -163,14 +221,23 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     
-    // **CACHING DISABLED - No cache invalidation needed**
-    // Products now always fetch fresh data for instant updates
-    console.log('✅ Product deleted successfully - no cache invalidation needed (caching disabled):', id)
+    console.log('✅ Product deleted successfully with all associated data:', id)
     
     return new Response(null, { status: 204 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// Helper function to extract storage path from Supabase URL
+function extractPathFromUrl(url: string): string | null {
+  try {
+    // Format: https://{project}.supabase.co/storage/v1/object/public/product-images/{path}
+    const match = url.match(/\/product-images\/(.+)$/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
   }
 }
 

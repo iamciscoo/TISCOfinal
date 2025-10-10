@@ -57,6 +57,7 @@ export default function ViewProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalImageSize, setTotalImageSize] = useState<number | null>(null);
 
   const productId = params?.id as string;
 
@@ -80,6 +81,45 @@ export default function ViewProductPage() {
 
     fetchProduct();
   }, [productId]);
+
+  // Calculate total image size
+  useEffect(() => {
+    if (!product?.product_images || product.product_images.length === 0) {
+      setTotalImageSize(null);
+      return;
+    }
+
+    const calculateTotalSize = async () => {
+      try {
+        const sizePromises = product.product_images!.map(async (image) => {
+          try {
+            const response = await fetch(image.url, { method: 'HEAD' });
+            const contentLength = response.headers.get('content-length');
+            return contentLength ? parseInt(contentLength, 10) : 0;
+          } catch {
+            return 0; // If fetch fails, return 0
+          }
+        });
+
+        const sizes = await Promise.all(sizePromises);
+        const total = sizes.reduce((sum, size) => sum + size, 0);
+        setTotalImageSize(total);
+      } catch (error) {
+        console.error('Error calculating image sizes:', error);
+        setTotalImageSize(null);
+      }
+    };
+
+    calculateTotalSize();
+  }, [product?.product_images]);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
 
   const handleCopyId = async () => {
     if (product?.id) {
@@ -271,6 +311,10 @@ export default function ViewProductPage() {
           <Card>
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
+              <CardDescription>
+                {product.product_images?.length || 0} {product.product_images?.length === 1 ? 'image' : 'images'} uploaded
+                {totalImageSize !== null && totalImageSize > 0 && ` • Total size: ${formatBytes(totalImageSize)}`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {product.product_images && product.product_images.length > 0 ? (
