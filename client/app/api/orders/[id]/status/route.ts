@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUser } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
-import { notifyOrderStatusChanged } from '@/lib/notifications/service'
+// TODO: Implement notifyOrderStatusChanged in notifications service
+// import { notifyOrderStatusChanged } from '@/lib/notifications/service'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -106,7 +107,9 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    // Send notification email about status change
+    // TODO: Send notification email about status change
+    // This feature is pending implementation of notifyOrderStatusChanged in notifications service
+    /*
     try {
       // Get user details for notification
       const { data: userData } = await supabase
@@ -133,6 +136,7 @@ export async function PATCH(
       console.error('Failed to send order status notification:', emailError)
       // Don't fail the status update if email fails
     }
+    */
 
     // Invalidate caches across client and admin
     try {

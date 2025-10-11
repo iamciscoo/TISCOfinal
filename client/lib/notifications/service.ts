@@ -1374,25 +1374,3 @@ export async function notifyAdminBookingCreated(bookingData: {
     }
   }
 }
-
-export async function notifyOrderStatusChanged(orderData: {
-  order_id: string
-  customer_email: string
-  customer_name: string
-  old_status: string
-  new_status: string
-  total_amount?: string
-  currency?: string
-}): Promise<string> {
-  // Use order_created event for status updates since order_status_changed was removed
-  return notificationService.sendNotification({
-    event: 'order_created',
-    recipient_email: orderData.customer_email,
-    recipient_name: orderData.customer_name,
-    data: {
-      ...orderData,
-      order_status_update: true, // Flag to indicate this is a status update
-    },
-    priority: 'medium',
-  })
-}

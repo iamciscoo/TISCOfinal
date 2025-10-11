@@ -1,23 +1,90 @@
+/**
+ * ============================================================================
+ * GLOBAL STYLES - The Foundation of All Visual Design
+ * ============================================================================
+ * 
+ * WHAT IS THIS FILE?
+ * This is the "master stylesheet" that controls how EVERYTHING looks across
+ * the entire website. Think of it like the "settings" file for design.
+ * 
+ * WHAT'S INCLUDED?
+ * 1. TailwindCSS - Utility CSS framework (like pre-made LEGO blocks)
+ * 2. Color themes - Light mode and dark mode colors
+ * 3. Fonts - Typography settings (Geist Sans, Geist Mono, Chango)
+ * 4. Animations - Scrolling, sliding, fading effects
+ * 5. Performance optimizations - Make scrolling smooth
+ * 6. Accessibility - Support for reduced motion preferences
+ * 
+ * WHEN IS THIS LOADED?
+ * - Immediately when any page loads
+ * - Applied to ALL pages automatically
+ * - Loaded once and cached by browser
+ * 
+ * CONNECTED FILES:
+ * - layout.tsx (imports this file)
+ * - All page components (inherit these styles)
+ * - tailwind.config.ts (configuration for TailwindCSS)
+ * 
+ * HOW IT WORKS:
+ * CSS variables (like --background) are defined here, then TailwindCSS
+ * classes (like bg-background) use those variables. This means we can
+ * change the entire site's color scheme by just updating these values!
+ * ============================================================================
+ */
+
+/* ========== FRAMEWORK IMPORTS ========== */
+
+/* Import TailwindCSS - The utility-first CSS framework we use */
+/* This gives us classes like "flex", "text-center", "bg-blue-500" */
 @import "tailwindcss";
+
+/* Import animation library - Provides pre-built animations */
+/* Gives us animations like fade, slide, bounce */
 @import "tw-animate-css";
 
 /* Google Fonts are now loaded via Next.js font optimization in layout.tsx */
+/* This is more efficient than loading them here with @import */
 
+/* ========== DARK MODE CONFIGURATION ========== */
+
+/* Tell TailwindCSS how to detect dark mode */
+/* This creates a custom selector for dark mode styling */
 @custom-variant dark (&:is(.dark *));
 
-/* Font definitions with Google Fonts as primary, system fonts as fallbacks */
+/* ========== FONT FAMILY DEFINITIONS ========== */
+
+/* Define font families as CSS variables (like storing values in variables) */
+/* These are used throughout the site for consistent typography */
 :root {
+  /* Geist Sans - Our main font for body text and UI */
+  /* Falls back to system fonts if Geist fails to load */
   --font-geist-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Geist Mono - Our font for code and technical content */
+  /* Monospace means all characters have equal width (like a typewriter) */
   --font-geist-mono: 'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+  
+  /* Chango - Our bold, fun font for headlines and brand elements */
+  /* Falls back to Impact if Chango doesn't load */
   --font-chango: 'Chango', Impact, 'Arial Black', sans-serif;
 }
 
+/* ========== TAILWIND THEME MAPPING ========== */
+
+/* @theme tells TailwindCSS to map our custom variables to Tailwind's color system */
+/* This connects our variables to Tailwind classes like "bg-background" or "text-foreground" */
+/* NOTE: CSS linter shows warning for @theme but it's valid TailwindCSS syntax */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-chango: var(--font-chango);
+  /* Map colors to TailwindCSS color utilities */
+  --color-background: var(--background);      /* Page background color */
+  --color-foreground: var(--foreground);      /* Main text color */
+  
+  /* Map fonts to TailwindCSS font utilities */
+  --font-sans: var(--font-geist-sans);        /* Default body font */
+  --font-mono: var(--font-geist-mono);        /* Code/monospace font */
+  --font-chango: var(--font-chango);          /* Brand/headline font */
+  
+  /* Sidebar colors (for admin dashboard and navigation) */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -26,257 +93,402 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  
+  /* Chart colors (for analytics and graphs in admin) */
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
+  
+  /* UI element colors */
+  --color-ring: var(--ring);                  /* Focus ring around inputs */
+  --color-input: var(--input);                /* Input field borders */
+  --color-border: var(--border);              /* General borders */
+  --color-destructive: var(--destructive);    /* Danger/delete buttons (red) */
+  
+  /* Accent colors (for highlights and hover states) */
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
+  
+  /* Muted colors (for less important text and backgrounds) */
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  
+  /* Secondary colors (alternative buttons and elements) */
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  
+  /* Primary brand colors (main buttons and key UI elements) */
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  
+  /* Popover/dropdown colors */
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
+  
+  /* Card colors (for content containers) */
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Border radius values (controls how rounded corners are) */
+  --radius-sm: calc(var(--radius) - 4px);     /* Small radius (like chips) */
+  --radius-md: calc(var(--radius) - 2px);     /* Medium radius (default) */
+  --radius-lg: var(--radius);                 /* Large radius (cards) */
+  --radius-xl: calc(var(--radius) + 4px);     /* Extra large radius (modals) */
 }
 
+/* ========== LIGHT MODE COLOR SCHEME ========== */
+
+/* :root applies to ALL pages by default (this is the light/default theme) */
+/* We use OKLCH color format - a modern color space that's more perceptually uniform */
+/* OKLCH format: oklch(lightness chroma hue) where lightness is 0-1 */
 :root {
+  /* Global border radius - how rounded our corners are (0.625rem = 10px) */
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Page backgrounds and text colors */
+  --background: oklch(1 0 0);                    /* Pure white background */
+  --foreground: oklch(0.145 0 0);                /* Almost black text */
+  
+  /* Card component colors (product cards, info boxes, etc.) */
+  --card: oklch(1 0 0);                          /* White cards */
+  --card-foreground: oklch(0.145 0 0);           /* Dark text on cards */
+  
+  /* Popover/dropdown colors (menus, tooltips) */
+  --popover: oklch(1 0 0);                       /* White popover background */
+  --popover-foreground: oklch(0.145 0 0);        /* Dark text in popovers */
+  
+  /* Primary brand colors (main buttons, links, key actions) */
+  --primary: oklch(0.205 0 0);                   /* Dark gray primary */
+  --primary-foreground: oklch(0.985 0 0);        /* White text on primary */
+  
+  /* Secondary colors (alternative buttons, less important actions) */
+  --secondary: oklch(0.97 0 0);                  /* Very light gray */
+  --secondary-foreground: oklch(0.205 0 0);      /* Dark text on secondary */
+  
+  /* Muted colors (disabled states, placeholders, less important text) */
+  --muted: oklch(0.97 0 0);                      /* Light gray background */
+  --muted-foreground: oklch(0.556 0 0);          /* Medium gray text */
+  
+  /* Accent colors (highlights, hover states, special elements) */
+  --accent: oklch(0.97 0 0);                     /* Light gray accent bg */
+  --accent-foreground: oklch(0.205 0 0);         /* Dark text on accent */
+  
+  /* Destructive/danger colors (delete buttons, error states, warnings) */
+  --destructive: oklch(0.577 0.245 27.325);      /* Red for danger actions */
+  
+  /* UI element borders and inputs */
+  --border: oklch(0.922 0 0);                    /* Light gray borders */
+  --input: oklch(0.922 0 0);                     /* Light gray input borders */
+  --ring: oklch(0.708 0 0);                      /* Gray focus rings */
+  
+  /* Chart colors for analytics (5 distinct colors for graphs) */
+  --chart-1: oklch(0.646 0.222 41.116);          /* Orange */
+  --chart-2: oklch(0.6 0.118 184.704);           /* Teal */
+  --chart-3: oklch(0.398 0.07 227.392);          /* Blue */
+  --chart-4: oklch(0.828 0.189 84.429);          /* Yellow-green */
+  --chart-5: oklch(0.769 0.188 70.08);           /* Orange-yellow */
+  
+  /* Sidebar colors (admin dashboard navigation) */
+  --sidebar: oklch(0.985 0 0);                   /* Light sidebar background */
+  --sidebar-foreground: oklch(0.145 0 0);        /* Dark sidebar text */
+  --sidebar-primary: oklch(0.205 0 0);           /* Dark primary items */
+  --sidebar-primary-foreground: oklch(0.985 0 0); /* White text on primary */
+  --sidebar-accent: oklch(0.97 0 0);             /* Light accent in sidebar */
+  --sidebar-accent-foreground: oklch(0.205 0 0); /* Dark text on accent */
+  --sidebar-border: oklch(0.922 0 0);            /* Light sidebar borders */
+  --sidebar-ring: oklch(0.708 0 0);              /* Focus ring in sidebar */
 }
 
+/* ========== DARK MODE COLOR SCHEME ========== */
+
+/* .dark class overrides the light mode colors when dark mode is active */
+/* These colors are inverted from light mode for better night-time viewing */
+/* Activated by user preference or system setting (prefers-color-scheme: dark) */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Page backgrounds and text colors - INVERTED from light mode */
+  --background: oklch(0.145 0 0);                    /* Almost black background */
+  --foreground: oklch(0.985 0 0);                    /* Almost white text */
+  
+  /* Card component colors - darker than background for depth */
+  --card: oklch(0.205 0 0);                          /* Dark gray cards */
+  --card-foreground: oklch(0.985 0 0);               /* White text on cards */
+  
+  /* Popover/dropdown colors */
+  --popover: oklch(0.205 0 0);                       /* Dark gray popover */
+  --popover-foreground: oklch(0.985 0 0);            /* White text in popover */
+  
+  /* Primary brand colors - lighter in dark mode for contrast */
+  --primary: oklch(0.922 0 0);                       /* Light gray primary */
+  --primary-foreground: oklch(0.205 0 0);            /* Dark text on primary */
+  
+  /* Secondary colors */
+  --secondary: oklch(0.269 0 0);                     /* Medium dark gray */
+  --secondary-foreground: oklch(0.985 0 0);          /* White text on secondary */
+  
+  /* Muted colors - still subtle but visible in dark mode */
+  --muted: oklch(0.269 0 0);                         /* Medium dark gray */
+  --muted-foreground: oklch(0.708 0 0);              /* Light gray text */
+  
+  /* Accent colors */
+  --accent: oklch(0.269 0 0);                        /* Medium dark gray */
+  --accent-foreground: oklch(0.985 0 0);             /* White text on accent */
+  
+  /* Destructive/danger - brighter red for visibility on dark background */
+  --destructive: oklch(0.704 0.191 22.216);          /* Bright red for warnings */
+  
+  /* UI element borders and inputs - semi-transparent for subtle effect */
+  --border: oklch(1 0 0 / 10%);                      /* 10% white borders */
+  --input: oklch(1 0 0 / 15%);                       /* 15% white input borders */
+  --ring: oklch(0.556 0 0);                          /* Medium gray focus ring */
+  
+  /* Chart colors - adjusted for dark backgrounds */
+  --chart-1: oklch(0.488 0.243 264.376);             /* Purple-blue */
+  --chart-2: oklch(0.696 0.17 162.48);               /* Green */
+  --chart-3: oklch(0.769 0.188 70.08);               /* Orange-yellow */
+  --chart-4: oklch(0.627 0.265 303.9);               /* Magenta */
+  --chart-5: oklch(0.645 0.246 16.439);              /* Orange-red */
+  
+  /* Sidebar colors - darker than main content */
+  --sidebar: oklch(0.205 0 0);                       /* Dark sidebar */
+  --sidebar-foreground: oklch(0.985 0 0);            /* White sidebar text */
+  --sidebar-primary: oklch(0.488 0.243 264.376);     /* Purple-blue primary */
+  --sidebar-primary-foreground: oklch(0.985 0 0);    /* White on primary */
+  --sidebar-accent: oklch(0.269 0 0);                /* Medium dark accent */
+  --sidebar-accent-foreground: oklch(0.985 0 0);     /* White on accent */
+  --sidebar-border: oklch(1 0 0 / 10%);              /* 10% white borders */
+  --sidebar-ring: oklch(0.556 0 0);                  /* Focus ring */
 }
 
+/* ========== BASE STYLES - Foundation for ALL Elements ========== */
+
+/* @layer base applies styles to base HTML elements (like resetting default styles) */
+/* NOTE: CSS linter shows warning for @layer and @apply but they're valid TailwindCSS syntax */
 @layer base {
+  /* Apply to EVERY element (*) on the page */
   * {
+    /* @apply lets us use Tailwind classes inside CSS */
+    /* border-border = use our theme border color */
+    /* outline-ring/50 = 50% opacity ring color for focus outlines */
     @apply border-border outline-ring/50;
   }
   
+  /* HTML root element - controls overall page behavior */
   html {
+    /* Smooth scrolling when clicking anchor links (like jumping to sections) */
     scroll-behavior: smooth;
+    
+    /* Add padding at top when scrolling to anchors (accounts for fixed navbar) */
+    /* 4rem = 64px (height of our navigation bar) */
     scroll-padding-top: 4rem;
-    /* Enhanced scroll performance */
+    
+    /* Enhanced scroll performance on iOS (momentum scrolling) */
+    /* Makes scrolling feel "fluid" and natural on touch devices */
     -webkit-overflow-scrolling: touch;
+    
+    /* Reserve space for scrollbar to prevent layout shifts */
+    /* Prevents content from jumping when scrollbar appears/disappears */
     scrollbar-gutter: stable;
-    /* Force full width */
+    
+    /* Force full width to prevent horizontal scrolling issues */
     width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
+    max-width: 100vw;  /* vw = viewport width (screen width) */
+    overflow-x: hidden; /* Hide any content that overflows horizontally */
   }
   
+  /* Body element - the main container for all visible content */
   body {
+    /* @apply our theme colors: bg-background = background color, text-foreground = text color */
     @apply bg-background text-foreground;
-    /* Prevent overscroll bounce on mobile */
+    
+    /* Prevent "bounce" effect when scrolling past top/bottom on mobile */
+    /* Improves UX by making the page feel more "app-like" */
     overscroll-behavior: contain;
-    /* Optimize scroll performance */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* Force full width */
+    
+    /* Optimize font rendering for better readability */
+    /* antialiased = smoother font edges */
+    -webkit-font-smoothing: antialiased;   /* For Chrome/Safari */
+    -moz-osx-font-smoothing: grayscale;    /* For Firefox on macOS */
+    
+    /* Force full width (prevents weird spacing issues on some browsers) */
     width: 100%;
     max-width: 100vw;
     min-width: 100%;
   }
   
-  /* Enhanced scrollbar styling */
+  /* ========== CUSTOM SCROLLBAR STYLING ========== */
+  
+  /* Style the scrollbar for Chrome, Safari, Edge (WebKit browsers) */
+  /* Makes scrollbars thinner and matches our design system */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 8px;   /* Vertical scrollbar width */
+    height: 8px;  /* Horizontal scrollbar height */
   }
   
+  /* Scrollbar track (the background behind the thumb) */
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: transparent;  /* Invisible track for clean look */
   }
   
+  /* Scrollbar thumb (the draggable part you actually grab) */
   ::-webkit-scrollbar-thumb {
+    /* 30% opacity muted color - subtle but visible */
     background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 4px;
+    border-radius: 4px;  /* Rounded corners */
+    /* Smooth color transition on hover */
     transition: background-color 0.2s ease;
   }
   
+  /* Scrollbar thumb when you hover over it - becomes more visible */
   ::-webkit-scrollbar-thumb:hover {
+    /* 50% opacity on hover - more prominent */
     background: hsl(var(--muted-foreground) / 0.5);
   }
   
-  /* Firefox scrollbar */
+  /* Firefox scrollbar styling (different syntax than WebKit) */
   * {
-    scrollbar-width: thin;
+    scrollbar-width: thin;  /* Thin scrollbar for Firefox */
+    /* Firefox scrollbar colors: thumb color, then track color */
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
   }
 }
 
-/* Brand slider marquee animation */
+/* ========== BRAND SLIDER ANIMATION ========== */
+
+/* Animation for our brand logo carousel (infinite horizontal scroll) */
+/* Used in BrandSlider component on homepage */
 .brand-slider .track {
-  width: max-content;
+  width: max-content;  /* Let content determine width (all logos in one row) */
+  /* Animate with brand-marquee animation, 15 seconds, linear speed, infinite loop */
   animation: brand-marquee 15s linear infinite;
 }
 
+/* Define the marquee animation (sliding logos from right to left) */
 @keyframes brand-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from { transform: translateX(0); }        /* Start at original position */
+  to { transform: translateX(-50%); }       /* Move left by 50% (then loop) */
 }
 
-/* Scroll performance optimizations */
+/* ========== PERFORMANCE OPTIMIZATIONS ========== */
+
+/* Optimize elements that scroll (improves smoothness on all devices) */
 .scroll-container {
+  /* Tell browser this will change (so it can optimize rendering) */
   will-change: scroll-position;
+  
+  /* Force GPU acceleration with 3D transform */
+  /* translateZ(0) creates a new layer, making scrolling smoother */
   transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  -webkit-transform: translateZ(0);  /* For Safari/Chrome */
+  
+  /* Hide back of element (performance optimization) */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
+/* Class for smooth scrolling behavior */
 .scroll-smooth {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;  /* Smooth animated scrolling */
+  -webkit-overflow-scrolling: touch;  /* iOS momentum scrolling */
 }
 
+/* Class to disable smooth scrolling (instant jumps) */
 .scroll-auto {
-  scroll-behavior: auto;
+  scroll-behavior: auto;  /* Instant scrolling without animation */
 }
 
-/* Enhanced parallax performance */
+/* Optimize parallax scrolling effects (images/backgrounds that move slower) */
 .parallax-element {
+  /* Tell browser transform will change (optimizes rendering) */
   will-change: transform;
+  
+  /* Force GPU acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  
+  /* Hide back side (prevents flickering) */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-/* Optimized horizontal scroll containers */
+/* Optimize horizontal scrolling containers (like product carousels) */
 .horizontal-scroll {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;  /* Smooth horizontal scrolling */
+  -webkit-overflow-scrolling: touch;  /* iOS momentum */
+  scrollbar-width: none;  /* Hide scrollbar in Firefox */
+  -ms-overflow-style: none;  /* Hide scrollbar in IE/Edge */
+  overscroll-behavior-x: contain;  /* Prevent horizontal over-scroll bounce */
 }
 
+/* Hide scrollbar in Chrome/Safari for horizontal scroll */
 .horizontal-scroll::-webkit-scrollbar {
-  display: none;
+  display: none;  /* Completely hidden for clean look */
 }
 
-/* Momentum scrolling for iOS */
+/* iOS momentum scrolling optimization (makes scrolling feel natural) */
 .momentum-scroll {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;  /* Enable momentum scrolling */
+  overscroll-behavior: contain;  /* Prevent bounce effect */
 }
 
-/* Fixed navbar padding compensation */
+/* ========== FIXED NAVBAR COMPENSATION ========== */
+
+/* Add padding to pages with fixed navbar (prevents content hiding under navbar) */
+/* Our navbar is "fixed" at top, so content needs to start below it */
 .page-with-navbar {
   padding-top: 4rem; /* 64px - matches navbar height */
 }
 
-/* Ensure main content doesn't overlap with fixed navbar */
+/* Automatically add padding when body has a fixed navbar */
+/* :has() selector checks if body contains a fixed navbar */
 body:has(nav[class*="fixed"]) main,
 body:has(nav[class*="fixed"]) .main-content {
-  padding-top: 4rem;
+  padding-top: 4rem;  /* Push content down by navbar height */
 }
 
-/* Mobile navbar compensation */
+/* Mobile navbar compensation (tablets and phones) */
+/* @media (max-width: 768px) targets screens narrower than 768px */
 @media (max-width: 768px) {
   .page-with-navbar {
-    padding-top: 4rem; /* Same height on mobile */
+    padding-top: 4rem; /* Same height on mobile (navbar doesn't shrink) */
   }
   
+  /* Apply to main content on mobile too */
   body:has(nav[class*="fixed"]) main,
   body:has(nav[class*="fixed"]) .main-content {
     padding-top: 4rem;
   }
 }
 
-/* Reduced motion support */
+/* ========== ACCESSIBILITY - REDUCED MOTION SUPPORT ========== */
+
+/* Respect user's motion preference (accessibility setting) */
+/* Some users get motion sickness from animations - this disables them */
+/* Activated when user enables "Reduce Motion" in system settings */
 @media (prefers-reduced-motion: reduce) {
+  /* Disable smooth scrolling (makes it instant) */
   html {
-    scroll-behavior: auto;
+    scroll-behavior: auto;  /* Instant jumps instead of smooth scrolling */
   }
   
+  /* Override smooth scroll class */
   .scroll-smooth {
     scroll-behavior: auto;
   }
   
+  /* Disable parallax effects (can cause motion sickness) */
   .parallax-element {
-    will-change: auto;
-    transform: none !important;
+    will-change: auto;  /* Stop optimizing for transforms */
+    transform: none !important;  /* Remove all transforms */
   }
   
+  /* Dramatically reduce ALL animations and transitions */
+  /* Makes them nearly instant (0.01ms) instead of removing entirely */
+  /* This prevents layout issues while still respecting user preference */
   * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;  /* Nearly instant animations */
+    animation-iteration-count: 1 !important;  /* Play only once */
+    transition-duration: 0.01ms !important;  /* Nearly instant transitions */
   }
 }

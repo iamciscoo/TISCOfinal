@@ -4,16 +4,10 @@
 
 export type TemplateType = 
   | 'order_confirmation'
-  | 'order_status_update'
   | 'payment_success'
   | 'payment_failed'
   | 'welcome_email'
-  | 'password_reset'
-  | 'delivery_confirmation'
-  | 'review_request'
-  | 'contact_reply'
   | 'booking_confirmation'
-  | 'booking_status_update'
   | 'admin_notification'
   | 'manual_notification'
 
@@ -49,12 +43,6 @@ interface PaymentEmailData extends BaseEmailData {
   transaction_id?: string
   failure_reason?: string
   payment_date?: string
-}
-
-interface ContactReplyData extends BaseEmailData {
-  original_message?: string
-  admin_response: string
-  message_id: string
 }
 
 interface BookingEmailData extends BaseEmailData {
@@ -450,133 +438,6 @@ export const emailTemplates = {
     return baseTemplate(content, data, previewText, 'order_confirmation')
   },
 
-  order_status_update: (data: OrderEmailData & { status: string, reason?: string }) => {
-    const statusConfig = {
-      processing: { 
-        color: '#f59e0b', 
-        bgColor: '#fef3c7', 
-        borderColor: '#fcd34d',
-        icon: '⏳',
-        title: 'Order Processing',
-        message: 'We\'re preparing your order and it will be dispatched soon.'
-      },
-      shipped: { 
-        color: '#2563eb', 
-        bgColor: '#dbeafe', 
-        borderColor: '#93c5fd',
-        icon: '🚚',
-        title: 'Order Shipped',
-        message: `Great news! Your order is on its way${data.tracking_number ? `. Track with: ${data.tracking_number}` : '.'}`
-      },
-      delivered: { 
-        color: '#059669', 
-        bgColor: '#d1fae5', 
-        borderColor: '#a7f3d0',
-        icon: '📦',
-        title: 'Order Delivered',
-        message: 'Your order has been successfully delivered. Enjoy your new tech!'
-      },
-      cancelled: { 
-        color: '#dc2626', 
-        bgColor: '#fee2e2', 
-        borderColor: '#fca5a5',
-        icon: '❌',
-        title: 'Order Cancelled',
-        message: `Your order has been cancelled${data.reason ? `. Reason: ${data.reason}` : '.'}`
-      }
-    }
-    
-    const config = statusConfig[data.status as keyof typeof statusConfig] || {
-      color: '#6b7280',
-      bgColor: '#f3f4f6',
-      borderColor: '#d1d5db',
-      icon: 'ℹ️',
-      title: 'Status Update',
-      message: 'Your order status has been updated.'
-    }
-    
-    const previewText = `${config.title} - Order ${data.order_id}`
-    const content = `
-      <!-- Status Icon -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
-        <tr>
-          <td align="center">
-            <div style="width: 72px; height: 72px; background: ${config.color}; border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-              <span style="color: #ffffff; font-size: 36px; line-height: 1;">${config.icon}</span>
-            </div>
-            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">${config.title}</h1>
-            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
-            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">${config.message}</p>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Status Details Card -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 12px; margin: 32px 0;">
-        <tr>
-          <td style="padding: 28px;">
-            <h2 class="heading-3" style="margin: 0 0 20px 0; color: ${config.color};">Order Details</h2>
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
-                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 600; text-align: right;">#${data.order_id}</td>
-              </tr>
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Status</td>
-                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 700; text-align: right; text-transform: capitalize;">${data.status.replace('_', ' ')}</td>
-              </tr>
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
-                <td class="text-small" style="padding: 8px 0; color: ${config.color}; font-weight: 600; text-align: right;">${data.order_date}</td>
-              </tr>
-              ${data.tracking_number && data.status === 'shipped' ? `
-              <tr>
-                <td class="text-small" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid ${config.borderColor};">Tracking Number</td>
-                <td class="text-small" style="padding: 12px 0 8px 0; color: ${config.color}; font-weight: 600; text-align: right; border-top: 1px solid ${config.borderColor};"><code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${data.tracking_number}</code></td>
-              </tr>` : ''}
-              ${data.estimated_delivery && (data.status === 'shipped' || data.status === 'processing') ? `
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Estimated Delivery</td>
-                <td class="text-small" style="padding: 8px 0; color: #059669; font-weight: 600; text-align: right;">${data.estimated_delivery}</td>
-              </tr>` : ''}
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Action Buttons -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
-        <tr>
-          <td align="center">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-              <tr>
-                <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
-                </td>
-                ${data.status === 'delivered' ? `
-                <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/account/orders/${data.order_id}/review" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Leave Review</a>
-                </td>` : ''}
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Additional Info for specific statuses -->
-      ${data.status === 'cancelled' ? `
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
-        <tr>
-          <td style="padding: 20px;">
-            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Need Help?</p>
-            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">If you have questions about this cancellation or need assistance, our support team is ready to help.</p>
-          </td>
-        </tr>
-      </table>` : ''}
-    `
-    return baseTemplate(content, data, previewText, 'order_status_update')
-  },
-
   payment_success: (data: PaymentEmailData) => {
     const previewText = `Payment confirmed! Your transaction was successful`
     const content = `
@@ -855,170 +716,6 @@ export const emailTemplates = {
     return baseTemplate(content, data, previewText, 'welcome_email')
   },
 
-
-  delivery_confirmation: (data: OrderEmailData) => {
-    const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">Order Delivered!</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Dear ${data.customer_name || 'Customer'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">Your order ${data.order_id} has been successfully delivered.</p>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">We hope you're happy with your purchase! If you have any issues or questions, please contact us.</p>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">Would you like to share your experience? Your feedback helps us improve.</p>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:15px 0;">
-        <tr>
-          <td style="background-color:#1a1a1a;border-radius:4px;">
-            <a href="${appBaseUrl}/account/orders/${data.order_id}/review" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:13px;">Leave a Review</a>
-          </td>
-        </tr>
-      </table>
-    `
-    return baseTemplate(content, data)
-  },
-
-  review_request: (data: OrderEmailData) => {
-    const previewText = `Review follow-up needed for order ${data.order_id}`
-    const content = `
-      <!-- Admin Notification Icon -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
-        <tr>
-          <td align="center">
-            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
-              <span style="color: #ffffff; font-size: 36px; line-height: 1;">⭐</span>
-            </div>
-            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Review Follow-up Required</h1>
-            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Admin Action Needed</p>
-            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">A customer's order has been delivered and may be ready for review follow-up.</p>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Customer Order Details -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border: 1px solid #d1d5db; border-radius: 12px; margin: 32px 0;">
-        <tr>
-          <td style="padding: 28px;">
-            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #374151;">Order Information</h2>
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Customer</td>
-                <td class="text-small" style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${data.customer_name || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
-                <td class="text-small" style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">#${data.order_id}</td>
-              </tr>
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
-                <td class="text-small" style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">${data.order_date || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td class="text-small" style="padding: 8px 0; color: #374151; font-weight: 500;">Total Amount</td>
-                <td class="text-small" style="padding: 8px 0; color: #111827; font-weight: 700; text-align: right; font-size: 16px;">${data.currency || 'TSh'} ${data.total_amount || 'N/A'}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Action Items -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
-        <tr>
-          <td style="padding: 24px;">
-            <h4 class="heading-3" style="margin: 0 0 12px 0; color: #92400e;">Recommended Actions</h4>
-            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">Consider reaching out to the customer via WhatsApp for review feedback</li>
-              <li class="text-small" style="margin-bottom: 8px; line-height: 1.5;">Check if customer has already left a review on the platform</li>
-              <li class="text-small" style="margin-bottom: 0; line-height: 1.5;">Follow up if this is a high-value or repeat customer</li>
-            </ul>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Action Buttons -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
-        <tr>
-          <td align="center">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-              <tr>
-                <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/admin/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order in Admin</a>
-                </td>
-                <td style="padding: 0 8px;">
-                  <a href="https://wa.me/255748624684" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Contact Customer</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Note -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280; margin: 32px 0;">
-        <tr>
-          <td style="padding: 20px;">
-            <p class="text-small" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Customer Reviews Strategy</p>
-            <p class="text-small" style="margin: 0; color: #6b7280; line-height: 1.5;">Encouraging customer reviews helps build trust and provides valuable feedback. Consider personalizing your approach based on the customer's order history and experience.</p>
-          </td>
-        </tr>
-      </table>
-    `
-    return baseTemplate(content, data, previewText, 'review_request')
-  },
-
-  contact_reply: (data: ContactReplyData) => {
-    const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">Response to Your Inquiry</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Dear ${data.customer_name || 'Customer'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">Thank you for contacting TISCOマーケット. We've responded to your inquiry.</p>
-      
-      ${data.original_message ? `
-        <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p><strong>Your Message:</strong></p>
-          <p style="font-style: italic;">"${data.original_message}"</p>
-        </div>
-      ` : ''}
-      
-      <div style="background-color: #e6f7ff; padding: 20px; margin: 20px 0; border-radius: 4px; border: 1px solid #91d5ff;">
-        <p><strong>Our Response:</strong></p>
-        <p>${data.admin_response}</p>
-      </div>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">If you need further assistance, please don't hesitate to contact us again.</p>
-      
-      <p>WhatsApp: <strong>+255748624684</strong></p>
-    `
-    return baseTemplate(content, data)
-  },
-
-  password_reset: (data: BaseEmailData & { reset_link: string, expires_at?: string }) => {
-    const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">Password Reset Request</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Dear ${data.customer_name || 'Customer'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">We received a request to reset the password for your TISCOマーケット account.</p>
-      
-      <div style="background-color: #fff3cd; padding: 20px; margin: 20px 0; border-radius: 4px; border: 1px solid #ffeaa7;">
-        <p><strong>⚠️ Security Notice:</strong></p>
-        <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
-      </div>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">To reset your password, click the button below:</p>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:15px 0;">
-        <tr>
-          <td style="background-color:#1a1a1a;border-radius:4px;">
-            <a href="${data.reset_link}" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:13px;">Reset Password</a>
-          </td>
-        </tr>
-      </table>
-      
-      ${data.expires_at ? `<p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">This link expires at: ${data.expires_at}</p>` : ''}
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">For security reasons, this link will expire in 24 hours.</p>
-    `
-    return baseTemplate(content, data)
-  },
-
   booking_confirmation: (data: BookingEmailData) => {
     const previewText = `Service booking ${data.booking_id} confirmed - We'll be in touch soon!`
     const content = `
@@ -1108,41 +805,6 @@ export const emailTemplates = {
       </table>
     `
     return baseTemplate(content, data, previewText, 'order_confirmation')
-  },
-
-  booking_status_update: (data: BookingEmailData & { status: string, admin_notes?: string }) => {
-    const statusMessages = {
-      confirmed: 'Your service booking has been confirmed! We look forward to serving you.',
-      in_progress: 'Our team is currently working on your service request.',
-      completed: 'Your service has been completed. Thank you for choosing TISCOマーケット!',
-      cancelled: 'Your service booking has been cancelled.',
-      rescheduled: 'Your service booking has been rescheduled.'
-    }
-    
-    const content = `
-      <h2 style="margin:0 0 15px 0;color:#1a1a1a;font-size:20px;font-weight:bold;">Booking Status Update</h2>
-      <p style="margin:0 0 10px 0;color:#333333;">Dear ${data.customer_name || 'Customer'},</p>
-      <p style="margin:0 0 15px 0;color:#333333;">Your service booking ${data.booking_id} status has been updated to: <strong>${data.status}</strong></p>
-      <p style="margin:0 0 15px 0;color:#333333;">${statusMessages[data.status as keyof typeof statusMessages] || 'Your booking status has been updated.'}</p>
-      
-      <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 4px;">
-        <p><strong>Service:</strong> ${data.service_name}</p>
-        <p><strong>Date:</strong> ${data.preferred_date}</p>
-        <p><strong>Time:</strong> ${data.preferred_time}</p>
-        ${data.admin_notes ? `<p><strong>Notes:</strong> ${data.admin_notes}</p>` : ''}
-      </div>
-      
-      <p style="margin:15px 0 10px 0;color:#333333;font-size:13px;">If you have any questions, please don't hesitate to contact us.</p>
-      
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:15px 0;">
-        <tr>
-          <td style="background-color:#1a1a1a;border-radius:4px;">
-            <a href="${appBaseUrl}/account/bookings/${data.booking_id}" style="display:inline-block;padding:10px 20px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:13px;">View Booking</a>
-          </td>
-        </tr>
-      </table>
-    `
-    return baseTemplate(content, data)
   },
 
   admin_notification: (data: AdminNotificationData) => {
@@ -1407,27 +1069,14 @@ export async function renderEmailTemplate(
   switch (templateType) {
     case 'order_confirmation':
       return emailTemplates.order_confirmation(defaultData as OrderEmailData)
-    case 'order_status_update':
-      return emailTemplates.order_status_update(defaultData as OrderEmailData & { status: string, reason?: string })
     case 'payment_success':
       return emailTemplates.payment_success(defaultData as PaymentEmailData)
     case 'payment_failed':
       return emailTemplates.payment_failed(defaultData as PaymentEmailData)
     case 'welcome_email':
       return emailTemplates.welcome_email(defaultData as BaseEmailData)
-    case 'password_reset':
-      return emailTemplates.password_reset(defaultData as BaseEmailData & { reset_link: string, expires_at?: string })
-    
-    case 'delivery_confirmation':
-      return emailTemplates.delivery_confirmation(defaultData as OrderEmailData)
-    case 'review_request':
-      return emailTemplates.review_request(defaultData as OrderEmailData)
-    case 'contact_reply':
-      return emailTemplates.contact_reply(defaultData as ContactReplyData)
     case 'booking_confirmation':
       return emailTemplates.booking_confirmation(defaultData as BookingEmailData)
-    case 'booking_status_update':
-      return emailTemplates.booking_status_update(defaultData as BookingEmailData & { status: string, admin_notes?: string })
     case 'admin_notification':
       return emailTemplates.admin_notification(defaultData as AdminNotificationData)
     case 'manual_notification':
@@ -1441,16 +1090,10 @@ export async function renderEmailTemplate(
 export function getDefaultSubject(templateType: TemplateType): string {
   const subjects: Record<TemplateType, string> = {
     order_confirmation: 'Order Confirmed ✓ Your package is on the way',
-    order_status_update: 'Order Update → Status Changed',
     payment_success: 'Payment Successful ✓ Transaction Complete',
     payment_failed: 'Payment Issue ⚠️ Let\'s resolve this quickly',
     welcome_email: 'Welcome to TISCO! 🚀 Let\'s get started',
-    password_reset: 'Reset Your Password 🔒 Secure link inside',
-    delivery_confirmation: 'Delivered! 📦 Your order has arrived',
-    review_request: 'Review Follow-up Required ⭐ Admin action needed',
-    contact_reply: 'We\'ve responded 💬 Your inquiry answered',
     booking_confirmation: 'Service Booked 📅 We\'ll be in touch soon',
-    booking_status_update: 'Booking Update 🔄 Status changed',
     admin_notification: 'Admin Alert 🔔 Action may be required',
     manual_notification: 'Important Message 📢 From TISCOマーケット'
   }

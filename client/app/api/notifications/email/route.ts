@@ -31,16 +31,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Validate email template exists
-    const allowedTemplates = [
+    // Validate email template exists (only active templates)
+    const allowedTemplates: string[] = [
       'order_confirmation',
-      'order_status_update',
       'payment_success',
       'payment_failed',
       'welcome_email',
-      'password_reset',
-      'delivery_confirmation',
-      'review_request'
+      'booking_confirmation',
+      'admin_notification',
+      'manual_notification'
     ]
 
     if (!allowedTemplates.includes(template_type)) {

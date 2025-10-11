@@ -1,7 +1,22 @@
-'use client'
+/**
+ * TISCO Notifications Management Page
+ * 
+ * This page lets admins:
+ * 1. View all system notifications (emails sent to customers)
+ * 2. Send custom notifications to specific users
+ * 3. Manage admin recipients (who gets notification alerts)
+ * 
+ * Think of it like a control panel for seeing what emails the system sent,
+ * and who on your team should be notified when certain events happen.
+ */
 
+'use client' // This tells Next.js to run this code in the browser, not on the server
+
+// React hooks - think of these as tools that let components remember things and respond to changes
 import * as React from 'react'
 import { useState, useEffect } from 'react'
+
+// Pre-built UI components - these are like Lego blocks we use to build the page
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,49 +25,70 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, Check, ExternalLink, X, Package } from 'lucide-react'
+
+// Icons - little pictures we show in the UI
+import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, ExternalLink, X, Package } from 'lucide-react'
+
+// Toast - popup messages that appear briefly to tell users something happened
 import { toast } from 'sonner'
+
+// More UI components
 import { Checkbox } from '@/components/ui/checkbox'
 import { ProductMultiSelect } from '@/components/ui/product-multi-select'
+
+// Utility function to format dates in East African Time (Tanzania timezone)
 import { formatToEAT } from '@/lib/utils'
 
-// Component to display assigned products for a recipient
-function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
-  const [products, setProducts] = React.useState<Array<{ id: string; name: string }>>([])
-  const [loading, setLoading] = React.useState(true)
+// =============================================================================
+// HELPER COMPONENTS - Small pieces that are used in the main page
+// =============================================================================
 
+/**
+ * ProductAssignmentDisplay Component
+ * 
+ * Shows which products an admin is assigned to receive notifications for.
+ * For example, if an admin only wants notifications about "iPhone" and "MacBook",
+ * this component fetches those product names and displays them.
+ * 
+ * @param productIds - Array of product IDs like ["123", "456"]
+ */
+function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
+  // State variables - these hold data that changes over time
+  const [products, setProducts] = React.useState<Array<{ id: string; name: string }>>([]) // List of products to display
+  const [loading, setLoading] = React.useState(true) // Are we still fetching data?
+
+  // useEffect runs code when the component loads or when productIds changes
   React.useEffect(() => {
+    // Async function to fetch product data from the server
     const fetchProducts = async () => {
+      // If there are no product IDs, don't bother fetching anything
       if (!productIds || productIds.length === 0) {
         setLoading(false)
         return
       }
 
       try {
-        // Fetch ALL products first, then filter on client side
-        // This ensures we get the exact products that match the IDs
+        // Step 1: Fetch all products from the database (up to 1000)
+        // We get all products, then filter on our end to find the ones we need
         const response = await fetch('/api/admin/products?limit=1000', { cache: 'no-store' })
+        
         if (response.ok) {
           const data = await response.json()
           const allProducts = Array.isArray(data.products) ? data.products : []
           
-          // Filter to only include products with matching IDs
+          // Step 2: Filter to only show products that match our productIds
+          // Example: If productIds is ["123", "456"], only keep products with those IDs
           const matchedProducts = allProducts.filter((p: { id: string }) => 
             productIds.includes(p.id)
           )
           
-          console.log('Product filtering:', {
-            requestedIds: productIds,
-            totalProducts: allProducts.length,
-            matchedProducts: matchedProducts.length,
-            matched: matchedProducts.map((p: { id: string; name: string }) => p.name)
-          })
-          
+          // Save the matched products so we can display them
           setProducts(matchedProducts)
         }
       } catch (error) {
         console.error('Failed to fetch product details:', error)
       } finally {
+        // Whether it worked or failed, we're done loading
         setLoading(false)
       }
     }
@@ -79,91 +115,183 @@ function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
   )
 }
 
+// =============================================================================
+// TYPE DEFINITIONS - These describe what shape our data has
+// =============================================================================
+
+/**
+ * NotificationRecord
+ * 
+ * Describes a single notification (email) that was sent by the system.
+ * Think of it like a receipt for an email that was sent.
+ */
 interface NotificationRecord {
-  id: string
-  event: string
-  recipient_email: string
-  recipient_name?: string
-  subject: string
-  content: string
-  channels: string[]
-  status: 'pending' | 'sent' | 'failed' | 'scheduled'
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  error_message?: string
-  sent_at?: string
-  scheduled_at?: string
-  created_at: string
-  updated_at: string
-  metadata?: Record<string, any>
-  category?: string
-  platform_module?: string
-  action_url?: string
+  id: string                    // Unique identifier for this notification
+  event: string                 // What triggered it? (e.g., "order_created", "payment_failed")
+  recipient_email: string       // Who did we send it to?
+  recipient_name?: string       // Their name (if we know it)
+  subject: string               // Email subject line
+  content: string               // The actual email message
+  channels: string[]            // How we sent it (usually just ["email"])
+  status: 'pending' | 'sent' | 'failed' | 'scheduled'  // Did it send successfully?
+  priority: 'low' | 'medium' | 'high' | 'urgent'       // How important is it?
+  error_message?: string        // If it failed, why?
+  sent_at?: string             // When was it sent?
+  scheduled_at?: string        // When was it scheduled to send?
+  created_at: string           // When was this notification created?
+  updated_at: string           // Last time it was updated
+  category?: string            // Optional category tag (legacy field)
+  platform_module?: string     // Which part of the platform triggered this (legacy field)
+  action_url?: string          // Optional link the recipient can click
+  metadata?: Record<string, any>  // Extra data attached to the notification
 }
 
+/**
+ * NotificationStats
+ * 
+ * Summary numbers shown at the top of the page.
+ * Like a dashboard showing "37 total, 35 sent, 2 failed, 0 pending"
+ */
 interface NotificationStats {
-  total: number
-  sent: number
-  failed: number
-  pending: number
-  by_event: Record<string, number>
+  total: number                 // Total number of notifications
+  sent: number                  // How many were sent successfully
+  failed: number                // How many failed to send
+  pending: number               // How many are waiting to be sent
+  by_event: Record<string, number>  // Count per event type (not currently displayed)
 }
 
+// =============================================================================
+// CONSTANTS - Values that never change
+// =============================================================================
+
+/**
+ * Status Icons
+ * 
+ * Maps each notification status to a colored icon.
+ * Example: "sent" shows a green checkmark ✅
+ */
 const statusIcons = {
-  pending: <Clock className="w-4 h-4 text-yellow-500" />,
-  sent: <CheckCircle className="w-4 h-4 text-green-500" />,
-  failed: <AlertCircle className="w-4 h-4 text-red-500" />,
-  scheduled: <Bell className="w-4 h-4 text-blue-500" />
+  pending: <Clock className="w-4 h-4 text-yellow-500" />,      // Yellow clock ⏰
+  sent: <CheckCircle className="w-4 h-4 text-green-500" />,    // Green checkmark ✅
+  failed: <AlertCircle className="w-4 h-4 text-red-500" />,    // Red alert ❌
+  scheduled: <Bell className="w-4 h-4 text-blue-500" />        // Blue bell 🔔
 }
 
+/**
+ * Priority Colors
+ * 
+ * CSS classes for different priority levels.
+ * These make the priority badges different colors.
+ */
 const priorityColors = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-blue-100 text-blue-800',
-  high: 'bg-orange-100 text-orange-800',
-  urgent: 'bg-red-100 text-red-800'
+  low: 'bg-gray-100 text-gray-800',       // Gray badge
+  medium: 'bg-blue-100 text-blue-800',    // Blue badge
+  high: 'bg-orange-100 text-orange-800',  // Orange badge
+  urgent: 'bg-red-100 text-red-800'       // Red badge
 }
 
-// Only include categories that are actually implemented and make logical sense
-const CATEGORIES = [
-  'order_created',    // ✅ Used in checkout/order creation (customer notifications)
-  'orders',           // Simplified category for all order events
-  'payment_success',  // ✅ Used for successful payments (customer notifications)
-  'payment_failed',   // ✅ Used for failed payments (customer notifications)
-  'payments',         // Simplified category for all payment events
-  'booking_created',  // ✅ Used for service bookings (customer notifications)
-  'bookings',         // Simplified category for booking events  
-  'contact_message_received', // ✅ Used for contact forms (customer notifications)
-  'contact',          // Simplified category for contact events
-  'user_registered',  // ✅ Used for welcome emails to new users (customer notifications)
-  'users',            // Simplified category for user events
-  'admin_order_created' // ✅ Used for admin order notifications (admin notifications)
-]
-const MODULES = ['orders', 'products', 'users', 'payments', 'inventory', 'analytics', 'system']
+/**
+ * Notification Event Types
+ * 
+ * These are all the different types of emails the system can send.
+ * Each one is triggered by a specific action in the app.
+ * 
+ * Example: When a customer places an order, we send them an "order_created" email
+ */
+const NOTIFICATION_EVENTS = [
+  'order_created',              // Customer placed an order
+  'payment_success',            // Payment went through successfully
+  'payment_failed',             // Payment was declined
+  'booking_created',            // Customer booked a service
+  'contact_message_received',   // Someone filled out the contact form
+  'user_registered',            // New user signed up
+  'admin_order_created'         // Notify admin about new orders
+] as const
+
+/**
+ * Priority Levels
+ * 
+ * Used to filter notifications by how important they are.
+ * "all" means show everything, the others filter to that specific level.
+ */
 const PRIORITY_OPTIONS = ['all', 'low', 'medium', 'high', 'urgent'] as const
-const DEPARTMENTS = ['technical', 'support', 'sales', 'management']
+
+/**
+ * Department Options
+ * 
+ * When adding admin recipients, you can assign them to a department.
+ * This helps organize who gets what notifications.
+ */
+const DEPARTMENTS = ['technical', 'support', 'sales', 'management'] as const
+
+/**
+ * Pagination Setting
+ * 
+ * How many notifications to show per page.
+ * If there are 47 notifications total, we show 10 per page across 5 pages.
+ */
+const ITEMS_PER_PAGE = 10
+
+// =============================================================================
+// MAIN PAGE COMPONENT
+// =============================================================================
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationRecord[]>([])
-  const [stats, setStats] = useState<NotificationStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<string>('all')
-  const [eventFilter, setEventFilter] = useState<string>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [moduleFilter, setModuleFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // ---------------------------------------------------------------------------
+  // STATE VARIABLES - These hold all the data that changes on this page
+  // ---------------------------------------------------------------------------
   
-  // Bulk actions state
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [isDeleting, setIsDeleting] = useState(false)
+  // Notifications data
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([])  // List of all notifications
+  const [stats, setStats] = useState<NotificationStats | null>(null)            // Summary stats (total, sent, failed, etc.)
+  const [loading, setLoading] = useState(true)                                  // Are we loading data from server?
+  
+  // Filter states - these control what notifications we show
+  const [filter, setFilter] = useState<string>('all')              // Filter by status (all/sent/failed/pending)
+  const [eventFilter, setEventFilter] = useState<string>('all')    // Filter by event type (order_created, etc.)
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')  // Filter by priority (low/medium/high)
+  
+  // Loading states - track if we're doing something async
+  const [isRefreshing, setIsRefreshing] = useState(false)      // Are we refreshing the data?
+  const [isClearingAll, setIsClearingAll] = useState(false)    // Are we deleting all notifications?
+  
+  // Pagination states - control which page we're on
+  const [currentPage, setCurrentPage] = useState(1)    // Which page are we showing? (1, 2, 3, etc.)
+  const [totalPages, setTotalPages] = useState(1)      // How many pages total?
+  
+  // Bulk selection states - for selecting and deleting multiple items
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())  // Which notification IDs are checked?
+  const [isDeleting, setIsDeleting] = useState(false)                      // Are we deleting selected items?
 
-  // Recipients state
-  type Recipient = { id: string; email: string; name?: string; is_active: boolean; department?: string | null; notification_categories?: string[] | null; assigned_product_ids?: string[] | null; created_at: string }
-  const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [newRecipient, setNewRecipient] = useState<{ email: string; name: string; department: string; notification_categories: string[]; assigned_product_ids: string[] }>({ email: '', name: '', department: '', notification_categories: ['all'], assigned_product_ids: [] })
-  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(['all']))
-  const [isEditing, setIsEditing] = useState(false)
+  // Admin Recipients states - for managing who gets notification alerts
+  type Recipient = { 
+    id: string
+    email: string
+    name?: string
+    is_active: boolean
+    department?: string | null
+    notification_categories?: string[] | null
+    assigned_product_ids?: string[] | null
+    created_at: string
+  }
+  const [recipients, setRecipients] = useState<Recipient[]>([])  // List of admin recipients
+  const [newRecipient, setNewRecipient] = useState<{
+    email: string
+    name: string
+    department: string
+    notification_categories: string[]
+    assigned_product_ids: string[]  // Fixed type: should be string[], not never[]
+  }>({                                             // Form data for adding/editing recipient
+    email: '',
+    name: '',
+    department: '',
+    notification_categories: ['all'],
+    assigned_product_ids: []
+  })
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(['all']))  // Which events are selected?
+  const [isEditing, setIsEditing] = useState(false)                                     // Are we editing a recipient?
 
-  // Manual notification form
+  // Manual notification form states - for sending custom emails
   const [manualNotification, setManualNotification] = useState({
     event: 'admin_notification',
     recipient_email: '',
@@ -174,48 +302,83 @@ export default function NotificationsPage() {
     action_url: ''
   })
 
+  // ---------------------------------------------------------------------------
+  // DATA FETCHING FUNCTIONS - Get data from the server
+  // ---------------------------------------------------------------------------
+  
+  /**
+   * fetchNotifications
+   * 
+   * Gets the list of notifications from the database.
+   * Applies filters if the user selected any (status, event type, priority).
+   * 
+   * Example: If user selected "failed" status, only show failed notifications.
+   */
   const fetchNotifications = async () => {
     try {
+      // Step 1: Build the URL with filter parameters
       const params = new URLSearchParams()
-      if (filter !== 'all') params.append('status', filter)
-      if (eventFilter !== 'all') params.append('event', eventFilter)
-      if (categoryFilter !== 'all') params.append('category', categoryFilter)
-      if (moduleFilter !== 'all') params.append('platform_module', moduleFilter)
-      if (priorityFilter !== 'all') params.append('priority', priorityFilter)
+      if (filter !== 'all') params.append('status', filter)              // Add status filter if not "all"
+      if (eventFilter !== 'all') params.append('event', eventFilter)     // Add event filter if not "all"
+      if (priorityFilter !== 'all') params.append('priority', priorityFilter)  // Add priority filter
       
-      // Add cache busting timestamp
+      // Add timestamp to prevent browser from using old cached data
       params.append('_t', Date.now().toString())
       
+      // Step 2: Fetch data from server
       const response = await fetch(`/api/admin/notifications?${params}`, {
-        cache: 'no-store',
+        cache: 'no-store',  // Don't cache this request
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',  // Tell browser not to cache
           'Pragma': 'no-cache'
         }
       })
+      
+      // Step 3: Process the response
       if (response.ok) {
         const data = await response.json()
-        console.log('[FETCH] Received notifications:', data.notifications.length)
-        setNotifications(data.notifications)
+        const allNotifications = data.notifications
+        setNotifications(allNotifications)  // Save notifications to state
+        
+        // Calculate how many pages we need (e.g., 47 notifications / 10 per page = 5 pages)
+        const total = Math.ceil(allNotifications.length / ITEMS_PER_PAGE)
+        setTotalPages(total)
+        
+        // If we're on page 5 but there are only 3 pages now, go back to page 1
+        if (currentPage > total && total > 0) {
+          setCurrentPage(1)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
-      toast.error('Failed to fetch notifications')
+      toast.error('Failed to fetch notifications')  // Show error popup to user
     }
   }
 
+  /**
+   * fetchStats
+   * 
+   * Gets summary statistics to show in the cards at the top of the page.
+   * Shows: Total notifications, How many sent, How many failed, How many pending
+   */
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/admin/notifications/stats', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
-        setStats(data.stats)
+        setStats(data.stats)  // Save stats to show in the UI
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     }
   }
 
+  /**
+   * fetchRecipients
+   * 
+   * Gets the list of admin recipients (people who receive notification alerts).
+   * These are the admins configured to get emails when certain events happen.
+   */
   const fetchRecipients = async () => {
     try {
       const res = await fetch('/api/admin/notifications/recipients', { cache: 'no-store' })
@@ -228,14 +391,36 @@ export default function NotificationsPage() {
     }
   }
 
+  /**
+   * refreshData
+   * 
+   * Refreshes all data on the page by fetching everything again.
+   * Called when user clicks the "Refresh" button.
+   */
   const refreshData = async () => {
-    setIsRefreshing(true)
+    setIsRefreshing(true)  // Show loading spinner
+    
+    // Fetch all three things at once (parallel, not one after another)
     await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients()])
-    setIsRefreshing(false)
+    
+    setIsRefreshing(false)  // Hide loading spinner
   }
 
+  // ---------------------------------------------------------------------------
+  // ACTION FUNCTIONS - Functions that do things when user clicks buttons
+  // ---------------------------------------------------------------------------
+
+  /**
+   * sendManualNotification
+   * 
+   * Sends a custom notification (email) to a specific person.
+   * Used in the "Send Notification" tab.
+   * 
+   * Example: Admin wants to send a special message to a customer about their order.
+   */
   const sendManualNotification = async () => {
     try {
+      // Send the notification data to the server
       const response = await fetch('/api/admin/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,7 +439,9 @@ export default function NotificationsPage() {
       })
 
       if (response.ok) {
-        toast.success('Notification sent successfully')
+        toast.success('Notification sent successfully')  // Show success popup
+        
+        // Clear the form so it's ready for the next notification
         setManualNotification({
           event: 'admin_notification',
           recipient_email: '',
@@ -264,9 +451,10 @@ export default function NotificationsPage() {
           priority: 'medium',
           action_url: ''
         })
-        refreshData()
+        
+        refreshData()  // Refresh the list to show the new notification
       } else {
-        toast.error('Failed to send notification')
+        toast.error('Failed to send notification')  // Show error popup
       }
     } catch (error) {
       console.error('Failed to send notification:', error)
@@ -274,36 +462,83 @@ export default function NotificationsPage() {
     }
   }
 
+  /**
+   * handleSelectAll
+   * 
+   * Toggles the "select all" checkbox.
+   * Only selects notifications visible on the current page (not all pages).
+   * 
+   * Example: If you're on page 2 showing 10 items, this selects those 10.
+   */
   const handleSelectAll = () => {
-    if (selectedIds.size === notifications.length) {
-      setSelectedIds(new Set())
+    // Get only the notifications visible on the current page
+    const visibleNotifications = notifications.slice(
+      (currentPage - 1) * ITEMS_PER_PAGE,  // Start index (e.g., page 2 starts at index 10)
+      currentPage * ITEMS_PER_PAGE         // End index (e.g., page 2 ends at index 20)
+    )
+    const visibleIds = visibleNotifications.map(n => n.id)
+    
+    // Check if all visible items are already selected
+    const allVisibleSelected = visibleIds.every(id => selectedIds.has(id))
+    
+    if (allVisibleSelected && visibleIds.length > 0) {
+      // If everything is selected, deselect all visible items
+      const newSelected = new Set(selectedIds)
+      visibleIds.forEach(id => newSelected.delete(id))
+      setSelectedIds(newSelected)
     } else {
-      setSelectedIds(new Set(notifications.map(n => n.id)))
+      // If not everything is selected, select all visible items
+      const newSelected = new Set(selectedIds)
+      visibleIds.forEach(id => newSelected.add(id))
+      setSelectedIds(newSelected)
     }
   }
 
+  /**
+   * handleSelectNotification
+   * 
+   * Toggles a single notification checkbox on/off.
+   * 
+   * @param id - The notification ID to toggle
+   */
   const handleSelectNotification = (id: string) => {
     const newSelected = new Set(selectedIds)
+    
+    // If already selected, remove it. Otherwise, add it.
     if (newSelected.has(id)) {
-      newSelected.delete(id)
+      newSelected.delete(id)  // Uncheck this notification
     } else {
-      newSelected.add(id)
+      newSelected.add(id)     // Check this notification
     }
+    
     setSelectedIds(newSelected)
   }
 
+  /**
+   * handleBulkDelete
+   * 
+   * Deletes all selected notifications.
+   * Shows a confirmation popup first to prevent accidents.
+   * 
+   * Example: User checked 5 notifications, clicks "Delete Selected" → This deletes those 5.
+   */
   const handleBulkDelete = async () => {
+    // Make sure at least one notification is selected
     if (selectedIds.size === 0) {
       toast.error('No notifications selected')
       return
     }
 
-    const confirmed = confirm(`Are you sure you want to delete ${selectedIds.size} notification${selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.`)
-    if (!confirmed) return
+    // Ask user to confirm before deleting
+    const confirmed = confirm(
+      `Are you sure you want to delete ${selectedIds.size} notification${selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.`
+    )
+    if (!confirmed) return  // User clicked "Cancel"
 
-    setIsDeleting(true)
+    setIsDeleting(true)  // Show loading state on delete button
+    
     try {
-      console.log('[DELETE] Deleting notifications:', Array.from(selectedIds))
+      // Send delete request to server with all selected IDs
       const response = await fetch('/api/admin/notifications?bulk=true', {
         method: 'DELETE',
         headers: { 
@@ -316,14 +551,16 @@ export default function NotificationsPage() {
 
       if (response.ok) {
         const result = await response.json()
-        console.log('[DELETE] Delete result:', result)
-        toast.success(`Successfully deleted ${result.deletedCount} notification${result.deletedCount > 1 ? 's' : ''}`)
-        setSelectedIds(new Set())
+        toast.success(
+          `Successfully deleted ${result.deletedCount} notification${result.deletedCount > 1 ? 's' : ''}`
+        )
         
-        // Force immediate UI update
+        setSelectedIds(new Set())  // Clear all checkboxes
+        
+        // Immediately remove deleted items from the UI (don't wait for server refresh)
         setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)))
         
-        // Then refresh from server
+        // Then refresh from server to make sure we're in sync
         await refreshData()
       } else {
         const error = await response.json()
@@ -333,25 +570,63 @@ export default function NotificationsPage() {
       console.error('Failed to delete notifications:', error)
       toast.error('Failed to delete notifications')
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false)  // Hide loading state
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // EFFECTS - Code that runs automatically when certain things change
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Initial Load + Reload on Filter Change
+   * 
+   * This runs when:
+   * 1. The page first loads
+   * 2. User changes any filter (status, event, priority)
+   * 
+   * It fetches all the data and displays it.
+   */
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true)
+      setLoading(true)  // Show loading spinner
+      
+      // Fetch notifications, stats, and recipients all at once
       await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients()])
-      setLoading(false)
+      
+      setLoading(false)  // Hide loading spinner
     }
     loadData()
-  }, [filter, eventFilter, categoryFilter, moduleFilter, priorityFilter])
-
-  // Auto-refresh every 30 seconds
+  }, [filter, eventFilter, priorityFilter])  // Re-run when these filters change
+  
+  /**
+   * Reset to Page 1 When Filters Change
+   * 
+   * When user changes a filter, go back to page 1.
+   * Example: If you're on page 3 and filter to "failed", start at page 1 of failed notifications.
+   */
   useEffect(() => {
-    const interval = setInterval(refreshData, 30000)
+    setCurrentPage(1)
+  }, [filter, eventFilter, priorityFilter])
+
+  /**
+   * Auto-Refresh Timer
+   * 
+   * Automatically refreshes data every 30 seconds so admins see new notifications.
+   * Like a news feed that updates itself.
+   */
+  useEffect(() => {
+    const interval = setInterval(refreshData, 30000)  // 30000 milliseconds = 30 seconds
+    
+    // Cleanup: Stop the timer when component is removed
     return () => clearInterval(interval)
   }, [])
 
+  // ---------------------------------------------------------------------------
+  // RENDER - What to show on the page
+  // ---------------------------------------------------------------------------
+
+  // If still loading data, show a spinner
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -360,6 +635,8 @@ export default function NotificationsPage() {
     )
   }
 
+  // Main page content (shown after loading is done)
+
   return (
     <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-6 max-w-full overflow-x-hidden">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -367,10 +644,50 @@ export default function NotificationsPage() {
           <h1 className="text-xl sm:text-3xl font-bold">Notifications</h1>
           <p className="text-muted-foreground text-xs sm:text-base line-clamp-2">Manage system notifications and email communications</p>
         </div>
-        <Button onClick={refreshData} disabled={isRefreshing} variant="outline" size="sm" className="w-full sm:w-auto shrink-0">
-          <RefreshCw className={`w-4 h-4 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={refreshData} disabled={isRefreshing} variant="outline" size="sm" className="shrink-0">
+            <RefreshCw className={`w-4 h-4 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+          <Button 
+            onClick={async () => {
+              const confirmed = confirm(
+                `⚠️ WARNING: This will permanently delete ALL ${notifications.length} notifications!\n\nThis action cannot be undone. Are you absolutely sure?`
+              )
+              if (!confirmed) return
+              
+              setIsClearingAll(true)
+              try {
+                const allIds = notifications.map(n => n.id)
+                const response = await fetch('/api/admin/notifications?bulk=true', {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ids: allIds })
+                })
+                
+                if (response.ok) {
+                  const result = await response.json()
+                  toast.success(`Successfully cleared ${result.deletedCount} notifications`)
+                  await refreshData()
+                } else {
+                  toast.error('Failed to clear notifications')
+                }
+              } catch (error) {
+                console.error('Failed to clear all notifications:', error)
+                toast.error('Failed to clear notifications')
+              } finally {
+                setIsClearingAll(false)
+              }
+            }}
+            disabled={isClearingAll || notifications.length === 0}
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
+          >
+            <Trash2 className={`w-4 h-4 sm:mr-2 ${isClearingAll ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Clear All</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -426,7 +743,7 @@ export default function NotificationsPage() {
           {/* Filters and Bulk Actions */}
           <div className="space-y-4">
             {/* Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by status" />
@@ -446,36 +763,10 @@ export default function NotificationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Events</SelectItem>
-                  <SelectItem value="order_created">Order Created</SelectItem>
-                  <SelectItem value="booking_created">Booking Created</SelectItem>
-                  <SelectItem value="contact_message_received">Contact Message</SelectItem>
-                  <SelectItem value="user_registered">User Registered</SelectItem>
-                  <SelectItem value="payment_success">Payment Success</SelectItem>
-                  <SelectItem value="payment_failed">Payment Failed</SelectItem>
-                  <SelectItem value="admin_order_created">Admin Order Created</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by module" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Modules</SelectItem>
-                  {MODULES.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  {NOTIFICATION_EVENTS.map((event) => (
+                    <SelectItem key={event} value={event}>
+                      {event.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -497,12 +788,19 @@ export default function NotificationsPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Checkbox
-                    checked={selectedIds.size === notifications.length && notifications.length > 0}
+                    checked={(() => {
+                      const visibleNotifications = notifications.slice(
+                        (currentPage - 1) * ITEMS_PER_PAGE,
+                        currentPage * ITEMS_PER_PAGE
+                      )
+                      const visibleIds = visibleNotifications.map(n => n.id)
+                      return visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
+                    })()}
                     onCheckedChange={handleSelectAll}
                     id="select-all"
                   />
                   <Label htmlFor="select-all" className="text-xs sm:text-sm font-semibold cursor-pointer">
-                    Select All <span className="text-muted-foreground">({notifications.length})</span>
+                    Select All on Page <span className="text-muted-foreground">({Math.min(ITEMS_PER_PAGE, notifications.length - (currentPage - 1) * ITEMS_PER_PAGE)})</span>
                   </Label>
                 </div>
                 
@@ -537,8 +835,14 @@ export default function NotificationsPage() {
             )}
           </div>
 
-          {/* Notifications List */}
+          {/* ===============================================================
+           * NOTIFICATIONS LIST - Display all the email notifications
+           * ===============================================================
+           * This section shows each notification as a card with details.
+           * Think of it like a list of receipts for emails that were sent.
+           * =============================================================== */}
           <div className="space-y-4">
+            {/* If there are NO notifications, show a message */}
             {notifications.length === 0 ? (
               <Card>
                 <CardContent className="flex items-center justify-center py-8">
@@ -546,32 +850,52 @@ export default function NotificationsPage() {
                 </CardContent>
               </Card>
             ) : (
-              notifications.map((notification) => (
+              <>
+                {/* If there ARE notifications, show them page by page */}
+                {/* Step 1: Slice the array to get only items for current page */}
+                {/* Step 2: Map through each notification and create a card */}
+                {notifications
+                  .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                  .map((notification) => (
                 <Card key={notification.id} className="overflow-hidden">
                   <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
                     <div className="space-y-2 sm:space-y-3">
+                      {/* Top row: Checkbox + Icon + Title + Delete button */}
                       <div className="flex items-start gap-2 sm:gap-3">
+                        {/* Checkbox to select this notification for bulk actions */}
+                        {/* Is this notification selected? - shrink-0 means don't make it smaller */}
                         <Checkbox
                           checked={selectedIds.has(notification.id)}
                           onCheckedChange={() => handleSelectNotification(notification.id)}
                           className="mt-1 shrink-0"
                         />
+                        
+                        {/* Status icon + Email subject */}
                         <div className="flex items-start gap-2 min-w-0 flex-1">
+                          {/* Status icon (green checkmark, red X, yellow clock, etc.) */}
                           <div className="shrink-0 mt-0.5">{statusIcons[notification.status]}</div>
+                          
+                          {/* Email subject line (what the email was about) */}
                           <CardTitle className="text-sm sm:text-lg leading-snug break-words">{notification.subject}</CardTitle>
                         </div>
+                        {/* Delete button for this single notification - Red button (dangerous action) */}
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={async () => {
+                            // Step 1: Ask user to confirm (prevent accidents)
                             if (!confirm('Delete this notification record?')) return
+                            
+                            // Step 2: Send delete request to server
                             const url = `/api/admin/notifications?id=${encodeURIComponent(notification.id)}`
                             const res = await fetch(url, { method: 'DELETE' })
+                            
+                            // Step 3: Show success or error message
                             if (res.ok) {
-                              toast.success('Notification deleted')
-                              refreshData()
+                              toast.success('Notification deleted')  // Green popup
+                              refreshData()  // Reload the list
                             } else {
-                              toast.error('Failed to delete notification')
+                              toast.error('Failed to delete notification')  // Red popup
                             }
                           }}
                           className="shrink-0 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
@@ -580,46 +904,78 @@ export default function NotificationsPage() {
                           <span className="hidden sm:inline sm:ml-1">Delete</span>
                         </Button>
                       </div>
+                      {/* Badges row: Shows priority, event type, category, module */}
                       <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        {/* Priority badge (low/medium/high/urgent) with color coding */}
                         <Badge className={`${priorityColors[notification.priority]} text-xs`}>
                           {notification.priority}
                         </Badge>
-                        <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">{notification.event}</Badge>
+                        
+                        {/* Event type badge (what triggered this email - e.g., "order_created", "payment_failed") */}
+                        <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">
+                          {notification.event}
+                        </Badge>
+                        
+                        {/* Category badge (only show if it exists - "&&" means "if this exists, then show this") */}
+                        {/* Legacy field for categorization */}
                         {notification.category && (
-                          <Badge variant="outline" className="text-xs truncate max-w-[100px] sm:max-w-none">{notification.category}</Badge>
+                          <Badge variant="outline" className="text-xs truncate max-w-[100px] sm:max-w-none">
+                            {notification.category}
+                          </Badge>
                         )}
+                        
+                        {/* Platform module badge (which part of system sent this - e.g., "orders", "payments") */}
                         {notification.platform_module && (
-                          <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">{notification.platform_module}</Badge>
+                          <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">
+                            {notification.platform_module}
+                          </Badge>
                         )}
                       </div>
                     </div>
+                    {/* Recipient information (who we sent this email to) */}
                     <CardDescription className="mt-2 text-xs sm:text-sm break-all">
                       <span className="font-medium">To:</span> {notification.recipient_name || notification.recipient_email} 
+                      {/* If we have their name, also show email in parentheses (desktop only) */}
                       {notification.recipient_name && <span className="hidden sm:inline"> ({notification.recipient_email})</span>}
                     </CardDescription>
                   </CardHeader>
+                  {/* Card body - Additional notification details */}
                   <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                     <div className="space-y-2">
+                      {/* Timestamps - When things happened */}
                       <div className="flex flex-col gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                        {/* Always show when notification was created */}
                         <span className="truncate">Created: {formatToEAT(notification.created_at)}</span>
+                        
+                        {/* Only show "Sent" time if it was actually sent */}
                         {notification.sent_at && (
                           <span className="truncate">Sent: {formatToEAT(notification.sent_at)}</span>
                         )}
+                        
+                        {/* Only show "Scheduled" time if it was scheduled */}
                         {notification.scheduled_at && (
                           <span className="truncate">Scheduled: {formatToEAT(notification.scheduled_at)}</span>
                         )}
                       </div>
+                      {/* Error message box (only shows if there was an error) */}
                       {notification.error_message && (
                         <div className="text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded break-words">
                           <span className="font-semibold">Error:</span> {notification.error_message}
                         </div>
                       )}
+                      
+                      {/* Delivery channels (how we sent it: email, SMS, etc. - Usually just "email") */}
                       <div className="flex items-center gap-2">
                         <Mail className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">Channels: {notification.channels.join(', ')}</span>
+                        <span className="text-xs sm:text-sm truncate">
+                          Channels: {notification.channels.join(', ')}
+                        </span>
                       </div>
+                      
+                      {/* Action button link (if this notification has a clickable action) */}
                       {notification.action_url && (
                         <div>
+                          {/* URL to go to when clicked - opens in new tab for security */}
                           <a
                             href={notification.action_url}
                             target="_blank"
@@ -634,7 +990,64 @@ export default function NotificationsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                  ))}
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, notifications.length)} of {notifications.length} notifications
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum: number
+                              if (totalPages <= 5) {
+                                pageNum = i + 1
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i
+                              } else {
+                                pageNum = currentPage - 2 + i
+                              }
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className="w-9 h-9 p-0"
+                                >
+                                  {pageNum}
+                                </Button>
+                              )
+                            })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </TabsContent>
@@ -846,7 +1259,7 @@ export default function NotificationsPage() {
                       >
                         All Events
                       </Button>
-                      {CATEGORIES.map((category) => (
+                      {NOTIFICATION_EVENTS.map((category) => (
                         <Button
                           key={category}
                           type="button"

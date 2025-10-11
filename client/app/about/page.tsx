@@ -1,40 +1,110 @@
+/**
+ * ============================================================================
+ * ABOUT PAGE - Company Information and Story
+ * ============================================================================
+ * 
+ * WHAT IS THIS PAGE?
+ * The "About Us" page that tells customers who we are, our mission, and why
+ * they should trust us. Think of it like the "Our Story" section in a store.
+ * 
+ * URL: https://tiscomarket.store/about
+ * 
+ * WHAT'S ON THIS PAGE?
+ * 1. Hero Section - Company name and mission statement
+ * 2. Our Story - How TISCO was founded and why
+ * 3. Development Timeline - August → November 2025 launch
+ * 4. Our Values - What drives us (speed, honesty, expertise)
+ * 5. Why Choose Us - What makes us different
+ * 6. Team Section - Meet the founders
+ * 7. CTA Section - Call-to-action to browse products
+ * 
+ * WHEN DO USERS SEE THIS?
+ * - Click "About" link in footer or navigation
+ * - Want to learn about the company before buying
+ * - Checking if we're legitimate/trustworthy
+ * 
+ * CONNECTED FILES:
+ * - /components/shared/PageLayout.tsx (page wrapper with nav/footer)
+ * - /components/ui/card.tsx (card components for content blocks)
+ * - /components/ui/button.tsx (CTA buttons)
+ * - /components/ui/mobile-slider.tsx (carousel for mobile)
+ * - Images: /about/portraitabout.jpeg, /about/aboutbottom.jpeg
+ * 
+ * HOW IT WORKS:
+ * This is a static page (no data fetching). It uses responsive design with
+ * desktop grid layouts that switch to mobile sliders on small screens.
+ * ============================================================================
+ */
+
+// Next.js Metadata type for SEO
 import { Metadata } from 'next'
+// Next.js Link component for internal navigation (faster than <a> tags)
 import Link from 'next/link'
 
+/* ========== SEO METADATA ========== */
+
+/**
+ * Page metadata for Google and social media
+ * Shows up in search results and when page is shared
+ */
 export const metadata: Metadata = {
+  // Page title in browser tab and Google search results
   title: 'About Us | TISCO Market - No BS Tech Solutions & Rare Finds',
+  
+  // Description shown in Google search results (important for clicks!)
   description: 'Learn about TISCO Market: the no-nonsense destination for rare tech products and professional services. Founded August 2025, launching November 2025. No bullshit, just what you need.',
+  
+  // Keywords help Google understand page content
   keywords: [
     'about TISCO market', 'tech marketplace', 'rare tech products', 'professional tech services',
     'no bullshit tech store', 'TISCO company info', 'tech solutions platform',
     'reliable tech marketplace', 'transparent pricing tech store'
   ],
+  
+  // OpenGraph - preview when shared on Facebook, WhatsApp, LinkedIn
   openGraph: {
     title: 'About TISCO Market - No BS Tech Solutions & Rare Finds',
     description: 'The no-nonsense destination for rare tech products and professional services. No bullshit, just what you need.',
-    url: 'https://tiscomarket.store/about',
-    images: ['/logo-email.png'],
+    url: 'https://tiscomarket.store/about',  // Canonical URL for this page
+    images: ['/logo-email.png'],  // Image shown in social media preview
   },
+  
+  // Twitter Card - preview when shared on Twitter/X
   twitter: {
     title: 'About TISCO Market - No BS Tech Solutions & Rare Finds',
     description: 'The no-nonsense destination for rare tech products and professional services. No bullshit, just what you need.',
-    images: ['/logo-email.png'],
+    images: ['/logo-email.png'],  // Image shown in Twitter preview
   },
 }
 
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { MobileSlider } from '@/components/ui/mobile-slider'
+/* ========== COMPONENT IMPORTS ========== */
+
+// UI components for layout and styling
+import { Card, CardContent } from '@/components/ui/card'       // Card containers for content blocks
+import { Button } from '@/components/ui/button'                 // Styled buttons
+import { MobileSlider } from '@/components/ui/mobile-slider'    // Carousel for mobile devices
+
+// Icons from lucide-react library (lightweight icon set)
 import { 
-  Users, 
-  Award, 
-  Shield, 
-  Heart, 
-  Clock,
-  CheckCircle
+  Users,        // People icon (for team section)
+  Award,        // Trophy icon (for achievements)
+  Shield,       // Shield icon (for trust/security)
+  Heart,        // Heart icon (for passion/care)
+  Clock,        // Clock icon (for speed/time)
+  CheckCircle   // Checkmark icon (for completed features)
 } from 'lucide-react'
+
+// Shared layout components
 import { PageLayout, Breadcrumb } from '@/components/shared'
 
+/* ========== ABOUT PAGE COMPONENT ========== */
+
+/**
+ * ABOUT PAGE COMPONENT
+ * 
+ * Main page component that renders the entire about page.
+ * Uses responsive design: grid on desktop, sliders on mobile.
+ */
 export default function AboutPage() {
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
