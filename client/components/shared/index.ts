@@ -2,7 +2,6 @@
 export { PageLayout } from './PageLayout'
 export { LoadingSpinner } from './LoadingSpinner'
 export { ProductCard } from './ProductCard'
-export { LazyImage } from './LazyImage'
 export { Breadcrumb } from './Breadcrumb'
 export type { Toast } from './Toast'
 export { ToastProvider, useToast } from './Toast'

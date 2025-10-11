@@ -480,7 +480,7 @@ class NotificationService {
             
             <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1.5rem; margin: 1.5rem 0;">
                 <h3 style="color: #92400e; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ ${eventName} Alert</h3>
-                <div style="color: #374151; white-space: pre-wrap; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6;">
+                <div style="color: #374151; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6;">
                     ${message}
                 </div>
             </div>
@@ -818,6 +818,14 @@ export async function notifyAdminOrderCreated(orderData: {
         ].filter((email, index, arr) => arr.indexOf(email) === index && email.trim()) // Remove duplicates and empty
         
         logger.info('Sending admin order notifications to fallback emails', { emails: adminEmails })
+        
+        // Format product list for fallback notification with HTML-safe formatting
+        const productsList = orderData.items && orderData.items.length > 0
+          ? orderData.items.map((item, index) => 
+              `${index + 1}. ${item.name} (Qty: ${item.quantity}) - ${orderData.currency} ${item.price}`
+            ).join('<br>')
+          : `${orderData.items_count} item(s)`
+        
         const notifications = adminEmails.map(email => 
           Promise.resolve(notificationService.sendNotification({
             event: 'admin_order_created',
@@ -826,7 +834,7 @@ export async function notifyAdminOrderCreated(orderData: {
             data: {
               ...orderData,
               title: 'New Order Created',
-              message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+              message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}.<br><br>Order ID: ${orderData.order_id}<br>Payment: ${orderData.payment_method} - ${orderData.payment_status}<br><br><strong>Products:</strong><br>${productsList}`,
               action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
             },
             priority: 'high'
@@ -841,6 +849,14 @@ export async function notifyAdminOrderCreated(orderData: {
     if (!recipients || recipients.length === 0) {
       logger.warn('No admin recipients found in database, using fallback')
       const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
+      
+      // Format product list for fallback notification with HTML-safe formatting
+      const productsList = orderData.items && orderData.items.length > 0
+        ? orderData.items.map((item, index) => 
+            `${index + 1}. ${item.name} (Qty: ${item.quantity}) - ${orderData.currency} ${item.price}`
+          ).join('<br>')
+        : `${orderData.items_count} item(s)`
+      
       const notifications = adminEmails.filter(email => email.trim()).map(email => 
         notificationService.sendNotification({
           event: 'admin_order_created',
@@ -849,7 +865,7 @@ export async function notifyAdminOrderCreated(orderData: {
           data: {
             ...orderData,
             title: 'New Order Created',
-            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}.<br><br>Order ID: ${orderData.order_id}<br>Payment: ${orderData.payment_method} - ${orderData.payment_status}<br><br><strong>Products:</strong><br>${productsList}`,
             action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
@@ -968,6 +984,14 @@ export async function notifyAdminOrderCreated(orderData: {
       
       logger.warn('Using emergency fallback admin emails')
       const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
+      
+      // Format product list for emergency fallback with HTML-safe formatting
+      const productsList = orderData.items && orderData.items.length > 0
+        ? orderData.items.map((item, index) => 
+            `${index + 1}. ${item.name} (Qty: ${item.quantity}) - ${orderData.currency} ${item.price}`
+          ).join('<br>')
+        : `${orderData.items_count} item(s)`
+      
       const notifications = adminEmails.map(email => 
         notificationService.sendNotification({
           event: 'admin_order_created',
@@ -976,7 +1000,7 @@ export async function notifyAdminOrderCreated(orderData: {
           data: {
             ...orderData,
             title: 'New Order Created (Fallback)',
-            message: `⚠️ FALLBACK NOTIFICATION: A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}. Note: Product-specific recipients may not have been notified correctly.`,
+            message: `⚠️ <strong>FALLBACK NOTIFICATION:</strong> A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}.<br><br>Order ID: ${orderData.order_id}<br>Payment: ${orderData.payment_method} - ${orderData.payment_status}<br><br><strong>Products:</strong><br>${productsList}<br><br><em>Note: Product-specific recipients may not have been notified correctly.</em>`,
             action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
@@ -1050,6 +1074,13 @@ export async function notifyAdminOrderCreated(orderData: {
       }
 
       try {
+        // Format product list for notification with HTML-safe formatting
+        const productsList = orderData.items && orderData.items.length > 0
+          ? orderData.items.map((item, index) => 
+              `${index + 1}. ${item.name} (Qty: ${item.quantity}) - ${orderData.currency} ${item.price}`
+            ).join('<br>')
+          : `${orderData.items_count} item(s)`
+
         const notificationPromise = notificationService.sendNotification({
           event: 'admin_order_created',
           recipient_email: recipient.email,
@@ -1057,7 +1088,7 @@ export async function notifyAdminOrderCreated(orderData: {
           data: {
             ...orderData,
             title: 'New Order Created',
-            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}. Order ID: ${orderData.order_id}`,
+            message: `A new order has been received from ${orderData.customer_name} (${orderData.customer_email}) for ${orderData.currency} ${orderData.total_amount}.<br><br>Order ID: ${orderData.order_id}<br>Payment: ${orderData.payment_method} - ${orderData.payment_status}<br><br><strong>Products:</strong><br>${productsList}`,
             action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
           },
           priority: 'high'
@@ -1088,6 +1119,14 @@ export async function notifyAdminOrderCreated(orderData: {
     logger.warn('Using GUARANTEED simple fallback for admin notifications')
     try {
       const adminEmails = ['francisjacob08@gmail.com', 'info@tiscomarket.store']
+      
+      // Format product list for simple fallback with HTML-safe formatting
+      const productsList = orderData.items && orderData.items.length > 0
+        ? orderData.items.map((item, index) => 
+            `${index + 1}. ${item.name} (Qty: ${item.quantity})`
+          ).join('<br>')
+        : `${orderData.items_count} item(s)`
+      
       const simpleNotifications = adminEmails.map(async email => {
         try {
           return await notificationService.sendNotification({
@@ -1097,7 +1136,7 @@ export async function notifyAdminOrderCreated(orderData: {
             data: {
               ...orderData,
               title: 'New Order Created (Simple)',
-              message: `SIMPLE FALLBACK: Order ${orderData.order_id} from ${orderData.customer_name} for ${orderData.currency} ${orderData.total_amount}`,
+              message: `<strong>SIMPLE FALLBACK:</strong> Order ${orderData.order_id} from ${orderData.customer_name} for ${orderData.currency} ${orderData.total_amount}<br><br><strong>Products:</strong><br>${productsList}`,
               action_url: `https://admin.tiscomarket.store/orders/${orderData.order_id}`
             },
             priority: 'high'

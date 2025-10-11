@@ -52,6 +52,15 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    return [
+      {
+        source: '/sign-in/:path*',
+        destination: '/auth/sign-in',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

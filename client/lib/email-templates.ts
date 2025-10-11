@@ -1440,7 +1440,7 @@ export async function renderEmailTemplate(
 // Get default subject lines for email types
 export function getDefaultSubject(templateType: TemplateType): string {
   const subjects: Record<TemplateType, string> = {
-    order_confirmation: 'Order Confirmed ✓ Your tech is on the way',
+    order_confirmation: 'Order Confirmed ✓ Your package is on the way',
     order_status_update: 'Order Update → Status Changed',
     payment_success: 'Payment Successful ✓ Transaction Complete',
     payment_failed: 'Payment Issue ⚠️ Let\'s resolve this quickly',
