@@ -80,12 +80,19 @@ export default function ContactPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Get in Touch
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We&apos;d love to hear from you. Send us a message and we&apos;ll
-            respond as soon as possible.
+          <div className="inline-block mb-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
+              Get in
+              {" "}
+              <span className="relative inline-block">
+                <span className="relative z-10">Touch</span>
+                <span className="absolute bottom-1 left-0 w-full h-4 bg-gradient-to-r from-orange-500 to-orange-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+            </h1>
+          </div>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            We&apos;d love to hear from you.
+            <span className="block mt-2 font-medium text-gray-700">Send us a message and we&apos;ll respond <span className="font-semibold text-orange-600">as soon as possible</span>.</span>
           </p>
         </div>
 

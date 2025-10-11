@@ -50,18 +50,23 @@ export const FeaturedProducts = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
-
   return (
     <section className="pt-2 pb-2 bg-white w-full overflow-hidden">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Featured Products
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            We picked them, you love them, Products you’ll regret missing out
-            on.
+          <div className="inline-block mb-6">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">
+              Featured{" "}
+              <span className="relative inline-block">
+                <span className="relative z-10">Products</span>
+                <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+            </h2>
+          </div>
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            We picked them, you love them.
+            <span className="block mt-1 text-gray-500 font-medium">Products you&apos;ll regret missing out on.</span>
           </p>
         </div>
 

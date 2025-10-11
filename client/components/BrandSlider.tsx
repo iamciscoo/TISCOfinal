@@ -17,10 +17,16 @@ export const BrandSlider = () => {
     <section className="bg-white py-[10px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
-        <div className="text-center mb-8">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-            Access Products from leading Industry Leaders.
-          </h3>
+        <div className="text-center mb-10">
+          <div className="inline-block">
+            <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Access Products from
+              <span className="relative inline-block ml-2">
+                <span className="relative z-10">Industry Leaders</span>
+                <span className="absolute bottom-1 left-0 w-full h-2.5 bg-gradient-to-r from-green-500 to-emerald-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+            </h3>
+          </div>
         </div>
         
         <div className="brand-slider relative overflow-hidden">

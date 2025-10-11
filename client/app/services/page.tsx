@@ -45,7 +45,7 @@ import {
   Award,
   Zap
 } from 'lucide-react'
-import { PageLayout, Breadcrumb } from '@/components/shared'
+import { PageLayout } from '@/components/shared'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
 import { ServicesPromoGrid } from '@/components/ServicesPromoGrid'
 
@@ -165,27 +165,26 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
   return (
     <PageLayout>
       {/* Hero Carousel */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 relative z-10">
         <ServicesHeroCarousel />
       </div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <Breadcrumb 
-          items={[
-            { label: 'Home', href: '/' },
-            { label: 'Services' }
-          ]} 
-          className="mb-8" 
-        />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
 
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Top Services
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Whether it’s one rig, home space or an entire office, we’ve got you covered.
+        <div className="text-center mb-16 relative">
+          <div className="inline-block mb-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
+              <span className="relative inline-block">
+                <span className="relative">Top</span>
+                <span className="absolute bottom-1 left-0 w-full h-4 bg-gradient-to-r from-purple-500 to-purple-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+              {" "}Services
+            </h1>
+          </div>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            Whether it&apos;s <span className="font-semibold text-gray-800">one rig</span>, a <span className="font-semibold text-gray-800">home space</span>, or an <span className="font-semibold text-gray-800">entire office</span>
+            <span className="block mt-2 text-purple-600 font-semibold">we&apos;ve got you covered.</span>
           </p>
         </div>
 
@@ -342,11 +341,18 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         <section className="mb-16" id="booking-form" data-section="booking">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Book Your Service Appointment.
-              </h2>
-              <p className="text-lg text-gray-600">
-                Ready to get started? Fill out the form below and we&apos;ll get back to you within 24 hours.
+              <div className="inline-block mb-6">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+                  <span className="relative inline-block">
+                    <span className="relative z-10">Book Your</span>
+                    <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 transform -skew-y-1 opacity-30"></span>
+                  </span>
+                  {" "}Service
+                </h2>
+              </div>
+              <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                Ready to get started?
+                <span className="block mt-2 font-medium text-gray-700">Fill out the form below and we&apos;ll get back to you within <span className="font-bold text-blue-600">24 hours</span>.</span>
               </p>
             </div>
 

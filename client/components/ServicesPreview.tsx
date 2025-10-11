@@ -90,11 +90,17 @@ export const ServicesPreview = () => {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Top Services
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We handle the builds, the installs, and the headaches.
+          <div className="inline-block mb-6">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              <span className="relative inline-block">
+                <span className="relative z-10">Top</span>
+                <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-purple-500 to-purple-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+              {" "}Services
+            </h2>
+          </div>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            We handle the <span className="font-semibold text-gray-800">builds</span>, the <span className="font-semibold text-gray-800">installs</span>, and the <span className="font-semibold text-gray-800">headaches</span>.
           </p>
         </div>
 
