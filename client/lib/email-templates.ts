@@ -152,12 +152,18 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
         /* Mobile Responsive */
         @media only screen and (max-width: 600px) {
             .mobile-center { text-align: center !important; }
-            .mobile-full { width: 100% !important; }
+            .mobile-full { width: 100% !important; display: block !important; margin: 8px 0 !important; }
             .mobile-padding { padding: 16px !important; }
             .mobile-margin { margin: 16px 0 !important; }
             .heading-1 { font-size: 24px !important; line-height: 30px !important; }
             .heading-2 { font-size: 20px !important; line-height: 26px !important; }
-            .btn-primary, .btn-secondary { width: 100% !important; display: block !important; }
+            .btn-primary, .btn-secondary { 
+                width: 100% !important; 
+                display: block !important; 
+                margin: 8px 0 !important; 
+                padding: 16px 24px !important; 
+                text-align: center !important; 
+            }
         }
         
         /* Dark Mode Support - Comprehensive Email Client Compatibility */
@@ -167,57 +173,84 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
             .email-container { background-color: #1f2937 !important; border: 1px solid #374151 !important; }
             .content-area { background-color: #1f2937 !important; }
             
-            /* Text colors - Universal dark mode text */
-            body, p, td, th, div, span, li { color: #f9fafb !important; }
+            /* Text colors - Universal dark mode text with high contrast */
+            body, p, td, th, div, span, li { color: #f3f4f6 !important; }
             .dark-text { color: #f9fafb !important; }
-            .dark-text-secondary { color: #d1d5db !important; }
-            .dark-text-muted { color: #9ca3af !important; }
+            .dark-text-secondary { color: #e5e7eb !important; }
+            .dark-text-muted { color: #d1d5db !important; }
             
-            /* Headers and titles */
-            h1, h2, h3, h4, h5, h6, .heading-1, .heading-2, .heading-3 { color: #f9fafb !important; }
+            /* Headers and titles - Ensure maximum visibility */
+            h1, h2, h3, h4, h5, h6, .heading-1, .heading-2, .heading-3 { color: #ffffff !important; }
             
-            /* Cards and sections - Universal background fixes */
+            /* Cards and sections - Darker backgrounds for better contrast */
             table[style*="background"] { background-color: #374151 !important; }
             .card-bg { background-color: #374151 !important; border-color: #4b5563 !important; }
             .card-bg-light { background-color: #2d3748 !important; border-color: #4a5568 !important; }
             
-            /* Specific background overrides for common patterns */
+            /* Specific background overrides for light color patterns */
             table[style*="#f0f9ff"], table[style*="#e0f2fe"], table[style*="#ecfdf5"], 
             table[style*="#d1fae5"], table[style*="#fef3c7"], table[style*="#f9fafb"],
-            table[style*="#ffffff"], table[style*="white"] { 
+            table[style*="#ffffff"], table[style*="white"], table[style*="#f8fafc"] { 
                 background-color: #374151 !important; 
                 border-color: #4b5563 !important; 
             }
             
-            /* Text color overrides for specific color classes */
+            /* Text in light blue/cyan boxes - make highly visible */
+            td[style*="#0c4a6e"], p[style*="#0c4a6e"], span[style*="#0c4a6e"] { 
+                color: #e0f2fe !important; 
+            }
+            
+            /* Text in yellow/warning boxes - make highly visible */
+            td[style*="#92400e"], p[style*="#92400e"], span[style*="#92400e"], li[style*="#92400e"] { 
+                color: #fef3c7 !important; 
+            }
+            
+            /* Text in gray boxes - make highly visible */
             td[style*="#374151"], td[style*="#6b7280"], td[style*="#111827"],
-            p[style*="#374151"], p[style*="#6b7280"], p[style*="#111827"] { 
-                color: #f9fafb !important; 
+            p[style*="#374151"], p[style*="#6b7280"], p[style*="#111827"],
+            span[style*="#374151"], span[style*="#6b7280"], span[style*="#111827"] { 
+                color: #f3f4f6 !important; 
             }
             
-            td[style*="#0c4a6e"], td[style*="#065f46"], td[style*="#92400e"],
-            p[style*="#0c4a6e"], p[style*="#065f46"], p[style*="#92400e"] { 
-                color: #d1d5db !important; 
+            /* Text in green boxes */
+            td[style*="#065f46"], p[style*="#065f46"], span[style*="#065f46"] { 
+                color: #d1fae5 !important; 
             }
             
-            /* Buttons - ensure they remain visible */
-            .btn-primary { 
+            /* Text in success/green highlights */
+            td[style*="#059669"], p[style*="#059669"], span[style*="#059669"] { 
+                color: #6ee7b7 !important; 
+            }
+            
+            /* Buttons - ensure maximum visibility and contrast */
+            .btn-primary, a.btn-primary { 
                 background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
                 color: #ffffff !important;
+                border: none !important;
             }
-            .btn-secondary { 
+            .btn-secondary, a.btn-secondary { 
                 background-color: #374151 !important; 
-                border-color: #4b5563 !important; 
-                color: #f9fafb !important; 
+                border: 2px solid #60a5fa !important; 
+                color: #ffffff !important; 
             }
             
-            /* Links */
+            /* Button hover states */
+            a[class*="btn"]:hover { 
+                opacity: 0.9 !important; 
+            }
+            
+            /* Links - bright and visible */
             a { color: #60a5fa !important; }
             a[style*="#2563eb"] { color: #60a5fa !important; }
-            a[style*="#059669"] { color: #34d399 !important; }
+            a[style*="#059669"] { color: #6ee7b7 !important; }
+            a[style*="color"] { color: #60a5fa !important; }
             
-            /* Footer */
-            .footer-bg { background-color: #111827 !important; border-color: #374151 !important; }
+            /* Footer - slightly darker */
+            .footer-bg { background-color: #0f172a !important; border-color: #334155 !important; }
+            
+            /* Border overrides for better separation */
+            table[style*="border"] td { border-color: #4b5563 !important; }
+            tr[style*="border-bottom"] td { border-bottom-color: #4b5563 !important; }
         }
         
         /* Force dark mode styles for email clients that don't support prefers-color-scheme */
@@ -335,29 +368,29 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; margin: 32px 0; border: 1px solid #bae6fd;">
         <tr>
           <td style="padding: 28px;">
-            <h2 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #0c4a6e;">Order Summary</h2>
+            <h2 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #0c4a6e; font-weight: 700;">Order Summary</h2>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Number</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">#${data.order_id}</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right;">#${data.order_id}</td>
               </tr>
               <tr>
                 <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Order Date</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.order_date}</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right;">${data.order_date}</td>
               </tr>
               <tr>
                 <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Total Amount</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right; font-size: 16px;">${data.currency} ${data.total_amount}</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right; font-size: 18px;">${data.currency} ${data.total_amount}</td>
               </tr>
               ${data.payment_method ? `
               <tr>
                 <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #374151; font-weight: 500;">Payment Method</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 600; text-align: right;">${data.payment_method}</td>
+                <td class="text-small dark-text" style="padding: 8px 0; color: #0c4a6e; font-weight: 700; text-align: right;">${data.payment_method}</td>
               </tr>` : ''}
               ${data.estimated_delivery ? `
               <tr>
                 <td class="text-small dark-text-secondary" style="padding: 12px 0 8px 0; color: #374151; font-weight: 500; border-top: 1px solid #bae6fd;">Estimated Delivery</td>
-                <td class="text-small dark-text" style="padding: 12px 0 8px 0; color: #059669; font-weight: 600; text-align: right; border-top: 1px solid #bae6fd;">${data.estimated_delivery}</td>
+                <td class="text-small dark-text" style="padding: 12px 0 8px 0; color: #059669; font-weight: 700; text-align: right; border-top: 1px solid #bae6fd;">${data.estimated_delivery}</td>
               </tr>` : ''}
             </table>
           </td>
@@ -396,41 +429,47 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
         <tr>
           <td style="padding: 24px;">
-            <h4 class="heading-3 dark-text" style="margin: 0 0 12px 0; color: #92400e;">What happens next?</h4>
-            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.5; color: #92400e;">We're preparing your order for dispatch</li>
-              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.5; color: #92400e;">You'll get updates via email as your order progresses</li>
-              <li class="text-small dark-text-secondary" style="margin-bottom: 0; line-height: 1.5; color: #92400e;">Our team will contact you if we need any clarification</li>
+            <h4 class="heading-3 dark-text" style="margin: 0 0 12px 0; color: #92400e; font-weight: 700;">What happens next?</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.6; color: #92400e; font-weight: 500;">We're preparing your order for dispatch</li>
+              <li class="text-small dark-text-secondary" style="margin-bottom: 8px; line-height: 1.6; color: #92400e; font-weight: 500;">You'll get updates via email as your order progresses</li>
+              <li class="text-small dark-text-secondary" style="margin-bottom: 0; line-height: 1.6; color: #92400e; font-weight: 500;">Our team will contact you if we need any clarification</li>
             </ul>
           </td>
         </tr>
       </table>
 
-      <!-- CTA Buttons -->
+      <!-- CTA Buttons - Fixed Layout to Prevent Overlay -->
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
         <tr>
           <td align="center">
+            <!--[if mso]>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0">
               <tr>
                 <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">View Order Details</a>
+            <![endif]-->
+                  <a href="${appBaseUrl}/account/orders/${data.order_id}" class="btn-primary mobile-full" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: inline-block; padding: 16px 32px; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none; margin: 0 8px 16px 8px; min-width: 200px;">View Order Details</a>
+            <!--[if mso]>
                 </td>
                 <td style="padding: 0 8px;">
-                  <a href="https://wa.me/255748624684" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Contact Support</a>
+            <![endif]-->
+                  <a href="https://wa.me/255748624684" class="btn-secondary mobile-full" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151 !important; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; margin: 0 8px 16px 8px; min-width: 200px;">Contact Support</a>
+            <!--[if mso]>
                 </td>
               </tr>
             </table>
+            <![endif]-->
           </td>
         </tr>
       </table>
 
       ${data.shipping_address ? `
       <!-- Shipping Info -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="margin: 32px 0; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="margin: 32px 0; background: #f9fafb; border-radius: 8px; border-left: 4px solid #6b7280;">
         <tr>
-          <td>
-            <p class="text-small dark-text" style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Delivery Address</p>
-            <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.5;">${data.shipping_address}</p>
+          <td style="padding: 20px;">
+            <p class="text-small dark-text" style="margin: 0 0 8px 0; color: #374151; font-weight: 700;">Delivery Address</p>
+            <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.6; font-weight: 500;">${data.shipping_address}</p>
           </td>
         </tr>
       </table>` : ''}
