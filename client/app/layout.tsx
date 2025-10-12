@@ -278,72 +278,34 @@ export default async function RootLayout({
       {/* ========== HEAD SECTION - Invisible Metadata ========== */}
       {/* Everything in <head> doesn't show on page but is crucial for SEO and functionality */}
       <head>
-        
-        {/* Structured Data Components - JSON-LD for Google Rich Results */}
-        {/* These help Google show enhanced search results (star ratings, business info, etc.) */}
-        <OrganizationSchema />     {/* Our company info for Google Knowledge Panel */}
-        <WebsiteSchema />          {/* Site info and search box in Google */}
-        <SiteNavigationSchema />   {/* Breadcrumbs in search results */}
-        <LocalBusinessSchema />    {/* Local business info for Google Maps */}
-        
-        {/* ========== FAVICONS - Browser Tab Icons ========== */}
-        {/* Multiple sizes ensure crisp icons across all devices and browsers */}
-        
-        {/* .ico file - legacy format, works everywhere */}
+        <OrganizationSchema />
+        <WebsiteSchema />
+        <SiteNavigationSchema />
+        <LocalBusinessSchema />
         <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16 32x32 48x48" />
-        
-        {/* PNG favicons - better quality, various sizes for different uses */}
-        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />    {/* Browser tab */}
-        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />    {/* Browser tab (retina) */}
-        <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />    {/* Desktop shortcuts */}
-        <link rel="icon" href="/favicon-192x192.png" type="image/png" sizes="192x192" /> {/* Android home screen */}
-        <link rel="icon" href="/favicon-512x512.png" type="image/png" sizes="512x512" /> {/* High-res displays */}
-        
-        {/* SVG favicon - vector format, scales perfectly on any screen */}
+        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
+        <link rel="icon" href="/favicon-192x192.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/favicon-512x512.png" type="image/png" sizes="512x512" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        
-        {/* Shortcut icon - legacy attribute for older browsers */}
         <link rel="shortcut icon" href="/favicon.ico" />
-        
-        {/* Images are loaded via OpenGraph metadata and favicons - no need to preload */}
-        
-        {/* ========== APPLE TOUCH ICONS - iPhone/iPad Home Screen ========== */}
-        {/* When user adds our site to iPhone home screen, these icons are used */}
-        
-        {/* Main apple icon (180x180 is standard for modern iPhones) */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-        
-        {/* Various iPad and older iPhone sizes */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="152x152" /> {/* iPad Pro */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="144x144" /> {/* iPad Retina */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="120x120" /> {/* iPhone Retina */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="114x114" /> {/* iPhone 4 */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="76x76" />   {/* iPad */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="72x72" />   {/* iPad (old) */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="60x60" />   {/* iPhone */}
-        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="57x57" />   {/* iPhone (old) */}
-        
-        {/* ========== PWA MANIFEST - Progressive Web App Settings ========== */}
-        {/* Defines how our site behaves when installed as an app */}
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="152x152" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="144x144" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="120x120" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="114x114" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="76x76" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="72x72" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="60x60" />
+        <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="57x57" />
         <link rel="manifest" href="/manifest.json" />
-        
-        {/* ========== MICROSOFT TILES - Windows Start Menu ========== */}
-        {/* When user pins our site to Windows Start menu */}
-        <meta name="msapplication-square70x70logo" content="/favicon-96x96.png" />    {/* Small tile */}
-        <meta name="msapplication-square150x150logo" content="/favicon-192x192.png" /> {/* Medium tile */}
-        <meta name="msapplication-wide310x150logo" content="/favicon-192x192.png" />   {/* Wide tile */}
-        <meta name="msapplication-square310x310logo" content="/favicon-512x512.png" /> {/* Large tile */}
-        
-        {/* ========== FONTS - External Typography ========== */}
-        {/* Chango font for bold headlines (loaded from Google Fonts) */}
-        {/* display=swap prevents invisible text while font loads */}
+        <meta name="msapplication-square70x70logo" content="/favicon-96x96.png" />
+        <meta name="msapplication-square150x150logo" content="/favicon-192x192.png" />
+        <meta name="msapplication-wide310x150logo" content="/favicon-192x192.png" />
+        <meta name="msapplication-square310x310logo" content="/favicon-512x512.png" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Chango&display=swap"
-          rel="stylesheet"
-        />
-        
-        {/* Additional SEO Meta Tags */}
+        <link href="https://fonts.googleapis.com/css2?family=Chango&display=swap" rel="stylesheet" />
         <meta name="application-name" content="TISCO Market" />
         <meta name="apple-mobile-web-app-title" content="TISCO Market" />
         <meta name="format-detection" content="telephone=no" />
@@ -356,166 +318,14 @@ export default async function RootLayout({
         <meta name="theme-color" content="#0066CC" />
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0066CC" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0066CC" />
-        
-        {/* Site is verified via DNS through domain registrar - no HTML tags needed */}
-        
-        {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
-        {/* DNS prefetch for better performance */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
-        
-        {/* Structured Data - Organization */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "TISCO Market",
-              "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
-              "url": "https://tiscomarket.store",
-              "logo": {
-                "@type": "ImageObject",
-                "url": "https://tiscomarket.store/logo-email.png",
-                "width": 1200,
-                "height": 630,
-                "caption": "TISCO Market Logo - Tanzania's Online Marketplace"
-              },
-              "image": [
-                {
-                  "@type": "ImageObject",
-                  "url": "https://tiscomarket.store/logo-email.png",
-                  "width": 1200,
-                  "height": 630
-                },
-                {
-                  "@type": "ImageObject", 
-                  "url": "https://tiscomarket.store/favicon-512x512.png",
-                  "width": 512,
-                  "height": 512
-                },
-                {
-                  "@type": "ImageObject",
-                  "url": "https://tiscomarket.store/favicon.svg",
-                  "width": 512,
-                  "height": 512
-                }
-              ],
-              "description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.",
-              "address": {
-                "@type": "PostalAddress",
-                "addressLocality": "Dar es Salaam",
-                "addressRegion": "Dar es Salaam Region",
-                "addressCountry": "TZ"
-              },
-              "contactPoint": {
-                "@type": "ContactPoint",
-                "telephone": "+255748624684",
-                "contactType": "customer service",
-                "email": "support@tiscomarket.store"
-              },
-              "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": -6.792354,
-                "longitude": 39.208328
-              },
-              "areaServed": ["Tanzania", "Kenya", "Uganda", "East Africa"],
-              "sameAs": [
-                "https://twitter.com/tiscomarket",
-                "https://facebook.com/tiscomarket",
-                "https://instagram.com/tiscomarket"
-              ]
-            })
-          }}
-        />
-        
-        {/* Structured Data - WebSite */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "TISCOマーケット - Online Shop",
-              "alternateName": "TISCO Market",
-              "url": "https://tiscomarket.store",
-              "logo": "https://tiscomarket.store/logo-email.png",
-              "image": "https://tiscomarket.store/logo-email.png",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": {
-                  "@type": "EntryPoint",
-                  "urlTemplate": "https://tiscomarket.store/products?query={search_term_string}"
-                },
-                "query-input": "required name=search_term_string"
-              }
-            })
-          }}
-        />
-        
-        {/* Structured Data - Brand */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Brand",
-              "name": "TISCO Market",
-              "alternateName": ["TISCOマーケット", "TISCO", "tiscomarket"],
-              "url": "https://tiscomarket.store",
-              "logo": {
-                "@type": "ImageObject",
-                "url": "https://tiscomarket.store/logo-email.png",
-                "width": 1200,
-                "height": 630,
-                "caption": "TISCO Market Logo - Tanzania's Premier Online Marketplace"
-              },
-              "description": "TISCO Market brand - Tanzania's leading online marketplace for electronics, rare finds, and professional tech services",
-              "slogan": "No Bullshit. No Excuses. No Fluff. Just What You Need.",
-              "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "4.8",
-                "reviewCount": "150"
-              }
-            })
-          }}
-        />
-        
-        {/* Structured Data - Store/ElectronicsStore */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "ElectronicsStore",
-              "name": "TISCO Market",
-              "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],
-              "description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.",
-              "url": "https://tiscomarket.store",
-              "telephone": "+255748624684",
-              "email": "support@tiscomarket.com",
-              "address": {
-                "@type": "PostalAddress",
-                "addressLocality": "Dar es Salaam",
-                "addressRegion": "Dar es Salaam Region",  
-                "addressCountry": "TZ"
-              },
-              "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": -6.792354,
-                "longitude": 39.208328
-              },
-              "openingHours": "Mo-Su 00:00-23:59",
-              "areaServed": ["Tanzania", "Kenya", "Uganda"],
-              "priceRange": "$$",
-              "paymentAccepted": ["Mobile Money", "Credit Card", "Bank Transfer"],
-              "currenciesAccepted": "TZS"
-            })
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "Organization","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],"url": "https://tiscomarket.store","logo": {"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630,"caption": "TISCO Market Logo - Tanzania's Online Marketplace"},"image": [{"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630},{"@type": "ImageObject","url": "https://tiscomarket.store/favicon-512x512.png","width": 512,"height": 512},{"@type": "ImageObject","url": "https://tiscomarket.store/favicon.svg","width": 512,"height": 512}],"description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.","address": {"@type": "PostalAddress","addressLocality": "Dar es Salaam","addressRegion": "Dar es Salaam Region","addressCountry": "TZ"},"contactPoint": {"@type": "ContactPoint","telephone": "+255748624684","contactType": "customer service","email": "support@tiscomarket.store"},"geo": {"@type": "GeoCoordinates","latitude": -6.792354,"longitude": 39.208328},"areaServed": ["Tanzania", "Kenya", "Uganda", "East Africa"],"sameAs": ["https://twitter.com/tiscomarket","https://facebook.com/tiscomarket","https://instagram.com/tiscomarket"]})}} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "WebSite","name": "TISCOマーケット - Online Shop","alternateName": "TISCO Market","url": "https://tiscomarket.store","logo": "https://tiscomarket.store/logo-email.png","image": "https://tiscomarket.store/logo-email.png","potentialAction": {"@type": "SearchAction","target": {"@type": "EntryPoint","urlTemplate": "https://tiscomarket.store/products?query={search_term_string}"},"query-input": "required name=search_term_string"}})}} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "Brand","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "tiscomarket"],"url": "https://tiscomarket.store","logo": {"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630,"caption": "TISCO Market Logo - Tanzania's Premier Online Marketplace"},"description": "TISCO Market brand - Tanzania's leading online marketplace for electronics, rare finds, and professional tech services","slogan": "No Bullshit. No Excuses. No Fluff. Just What You Need.","aggregateRating": {"@type": "AggregateRating","ratingValue": "4.8","reviewCount": "150"}})}} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "ElectronicsStore","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],"description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.","url": "https://tiscomarket.store","telephone": "+255748624684","email": "support@tiscomarket.com","address": {"@type": "PostalAddress","addressLocality": "Dar es Salaam","addressRegion": "Dar es Salaam Region","addressCountry": "TZ"},"geo": {"@type": "GeoCoordinates","latitude": -6.792354,"longitude": 39.208328},"openingHours": "Mo-Su 00:00-23:59","areaServed": ["Tanzania", "Kenya", "Uganda"],"priceRange": "$$","paymentAccepted": ["Mobile Money", "Credit Card", "Bank Transfer"],"currenciesAccepted": "TZS"})}} />
       </head>
       
       {/* ========== BODY SECTION - Visible Content ========== */}
