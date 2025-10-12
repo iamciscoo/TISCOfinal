@@ -1498,8 +1498,8 @@ export default function CheckoutPage() {
               <div className="mb-6">
                 <OrderProcessingLoader 
                   isVisible={isProcessing}
-                  message={paymentData.method === 'mobile' ? "Processing Payment & Order" : "Creating Your Order"}
-                  submessage="Please check your account and emails for status updates."
+                  message="Creating Your Order"
+                  submessage="Please check your account and email for status updates after order processing completion."
                 />
               </div>
             )}
