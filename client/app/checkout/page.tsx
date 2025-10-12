@@ -1307,7 +1307,7 @@ export default function CheckoutPage() {
                   {paymentData.method === 'office' && (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-700">
-                        You can pay for your product at our office. We will contact you to arrange pickup or delivery and payment.
+                        You can pay for your product at our office. We also offer bank transfer as a payment option. We will contact you to arrange pickup or delivery and payment.
                       </p>
                     </div>
                   )}
