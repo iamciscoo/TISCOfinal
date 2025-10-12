@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-auth'
 import { Loader2 } from 'lucide-react'
@@ -11,8 +11,13 @@ export default function AuthCallback() {
   const [showProfileDialog, setShowProfileDialog] = useState(false)
   const [isNewUser, setIsNewUser] = useState(false)
   const [isProcessing, setIsProcessing] = useState(true)
+  const hasExecuted = useRef(false)
 
   useEffect(() => {
+    // Prevent double execution in React StrictMode (development)
+    if (hasExecuted.current) return
+    hasExecuted.current = true
+
     const handleAuthCallback = async () => {
       const supabase = createClient()
       

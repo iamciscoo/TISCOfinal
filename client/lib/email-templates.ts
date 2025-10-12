@@ -90,8 +90,8 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
     <meta name="format-detection" content="date=no">
     <meta name="format-detection" content="address=no">
     <meta name="format-detection" content="email=no">
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
     ${previewText ? `<meta name="description" content="${previewText}">`  : ''}
     <title>TISCO Email - ${templateType?.replace('_', ' ').toUpperCase() || 'NOTIFICATION'}</title>
     <!--[if mso]>
@@ -164,113 +164,6 @@ const baseTemplate = (content: string, data: BaseEmailData, previewText?: string
                 padding: 16px 24px !important; 
                 text-align: center !important; 
             }
-        }
-        
-        /* Dark Mode Support - Comprehensive Email Client Compatibility */
-        @media (prefers-color-scheme: dark) {
-            /* Main containers */
-            .email-body { background-color: #111827 !important; }
-            .email-container { background-color: #1f2937 !important; border: 1px solid #374151 !important; }
-            .content-area { background-color: #1f2937 !important; }
-            
-            /* Text colors - Universal dark mode text with high contrast */
-            body, p, td, th, div, span, li { color: #f3f4f6 !important; }
-            .dark-text { color: #f9fafb !important; }
-            .dark-text-secondary { color: #e5e7eb !important; }
-            .dark-text-muted { color: #d1d5db !important; }
-            
-            /* Headers and titles - Ensure maximum visibility */
-            h1, h2, h3, h4, h5, h6, .heading-1, .heading-2, .heading-3 { color: #ffffff !important; }
-            
-            /* Cards and sections - Darker backgrounds for better contrast */
-            table[style*="background"] { background-color: #374151 !important; }
-            .card-bg { background-color: #374151 !important; border-color: #4b5563 !important; }
-            .card-bg-light { background-color: #2d3748 !important; border-color: #4a5568 !important; }
-            
-            /* Specific background overrides for light color patterns */
-            table[style*="#f0f9ff"], table[style*="#e0f2fe"], table[style*="#ecfdf5"], 
-            table[style*="#d1fae5"], table[style*="#fef3c7"], table[style*="#f9fafb"],
-            table[style*="#ffffff"], table[style*="white"], table[style*="#f8fafc"] { 
-                background-color: #374151 !important; 
-                border-color: #4b5563 !important; 
-            }
-            
-            /* Text in light blue/cyan boxes - make highly visible */
-            td[style*="#0c4a6e"], p[style*="#0c4a6e"], span[style*="#0c4a6e"] { 
-                color: #e0f2fe !important; 
-            }
-            
-            /* Text in yellow/warning boxes - make highly visible */
-            td[style*="#92400e"], p[style*="#92400e"], span[style*="#92400e"], li[style*="#92400e"] { 
-                color: #fef3c7 !important; 
-            }
-            
-            /* Text in gray boxes - make highly visible */
-            td[style*="#374151"], td[style*="#6b7280"], td[style*="#111827"],
-            p[style*="#374151"], p[style*="#6b7280"], p[style*="#111827"],
-            span[style*="#374151"], span[style*="#6b7280"], span[style*="#111827"] { 
-                color: #f3f4f6 !important; 
-            }
-            
-            /* Text in green boxes */
-            td[style*="#065f46"], p[style*="#065f46"], span[style*="#065f46"] { 
-                color: #d1fae5 !important; 
-            }
-            
-            /* Text in success/green highlights */
-            td[style*="#059669"], p[style*="#059669"], span[style*="#059669"] { 
-                color: #6ee7b7 !important; 
-            }
-            
-            /* Buttons - ensure maximum visibility and contrast */
-            .btn-primary, a.btn-primary { 
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-                color: #ffffff !important;
-                border: none !important;
-            }
-            .btn-secondary, a.btn-secondary { 
-                background-color: #374151 !important; 
-                border: 2px solid #60a5fa !important; 
-                color: #ffffff !important; 
-            }
-            
-            /* Button hover states */
-            a[class*="btn"]:hover { 
-                opacity: 0.9 !important; 
-            }
-            
-            /* Links - bright and visible */
-            a { color: #60a5fa !important; }
-            a[style*="#2563eb"] { color: #60a5fa !important; }
-            a[style*="#059669"] { color: #6ee7b7 !important; }
-            a[style*="color"] { color: #60a5fa !important; }
-            
-            /* Footer - slightly darker */
-            .footer-bg { background-color: #0f172a !important; border-color: #334155 !important; }
-            
-            /* Border overrides for better separation */
-            table[style*="border"] td { border-color: #4b5563 !important; }
-            tr[style*="border-bottom"] td { border-bottom-color: #4b5563 !important; }
-        }
-        
-        /* Force dark mode styles for email clients that don't support prefers-color-scheme */
-        /* Outlook.com, Gmail, Apple Mail dark mode support */
-        [data-ogsc] .email-body, [data-ogsb] .email-body { background-color: #111827 !important; }
-        [data-ogsc] .email-container, [data-ogsb] .email-container { background-color: #1f2937 !important; }
-        [data-ogsc] .content-area, [data-ogsb] .content-area { background-color: #1f2937 !important; }
-        [data-ogsc] h1, [data-ogsc] h2, [data-ogsc] h3, [data-ogsc] h4,
-        [data-ogsb] h1, [data-ogsb] h2, [data-ogsb] h3, [data-ogsb] h4 { color: #f9fafb !important; }
-        [data-ogsc] .dark-text, [data-ogsb] .dark-text { color: #f9fafb !important; }
-        [data-ogsc] .card-bg, [data-ogsb] .card-bg { background-color: #374151 !important; }
-        
-        /* Gmail specific dark mode */
-        u + .body .email-body { background-color: #111827 !important; }
-        u + .body .email-container { background-color: #1f2937 !important; }
-        
-        /* Apple Mail dark mode */
-        @media (prefers-color-scheme: dark) and (-webkit-min-device-pixel-ratio: 0) {
-            .email-body { background-color: #111827 !important; }
-            .email-container { background-color: #1f2937 !important; }
         }
     </style>
 </head>
