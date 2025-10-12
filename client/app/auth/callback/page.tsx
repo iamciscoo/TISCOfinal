@@ -28,8 +28,35 @@ export default function AuthCallback() {
         const urlParams = new URLSearchParams(window.location.search)
         const authCode = urlParams.get('code')
         
+        // Early return if no auth code and no existing session
+        // This prevents unnecessary processing and errors
+        if (!authCode) {
+          const { data } = await supabase.auth.getSession()
+          if (data.session) {
+            router.push('/')
+            return
+          }
+          router.push('/auth/sign-in')
+          return
+        }
+        
+        // Check if this code was already processed (prevent duplicate exchange)
+        const processedCodes = sessionStorage.getItem('processed_oauth_codes') || ''
+        if (processedCodes.includes(authCode)) {
+          console.log('OAuth code already processed, skipping exchange')
+          // Check for existing session and redirect
+          const { data } = await supabase.auth.getSession()
+          if (data.session) {
+            router.push('/')
+            return
+          }
+        }
+        
         if (authCode) {
           try {
+            // Mark code as being processed
+            sessionStorage.setItem('processed_oauth_codes', processedCodes + '|' + authCode)
+            
             const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
             if (data.session && !error) {
               console.log('OAuth session established successfully')
@@ -50,6 +77,8 @@ export default function AuthCallback() {
               } else {
                 // Existing OAuth user, redirect directly
                 const redirectTo = urlParams.get('redirectTo')
+                // Clean up processed codes before redirect
+                sessionStorage.removeItem('processed_oauth_codes')
                 router.push(redirectTo || '/')
               }
               
@@ -67,6 +96,7 @@ export default function AuthCallback() {
         
         if (error) {
           console.error('Auth callback error:', error)
+          sessionStorage.removeItem('processed_oauth_codes')
           router.push('/auth/sign-in?error=callback_failed')
           return
         }
@@ -74,13 +104,17 @@ export default function AuthCallback() {
         if (data.session) {
           // Successful authentication, redirect to home or intended page
           const redirectTo = urlParams.get('redirectTo')
+          // Clean up processed codes before redirect
+          sessionStorage.removeItem('processed_oauth_codes')
           router.push(redirectTo || '/')
         } else {
           // No session found, redirect to sign in
+          sessionStorage.removeItem('processed_oauth_codes')
           router.push('/auth/sign-in')
         }
       } catch (error) {
         console.error('Auth callback error:', error)
+        sessionStorage.removeItem('processed_oauth_codes')
         router.push('/auth/sign-in?error=callback_failed')
       } finally {
         setIsProcessing(false)
@@ -92,6 +126,8 @@ export default function AuthCallback() {
 
   const handleProfileDialogClose = () => {
     setShowProfileDialog(false)
+    // Clean up processed codes before redirect
+    sessionStorage.removeItem('processed_oauth_codes')
     // Redirect to home page after profile completion for new OAuth users
     const redirectTo = new URLSearchParams(window.location.search).get('redirectTo')
     router.push(redirectTo || '/')
