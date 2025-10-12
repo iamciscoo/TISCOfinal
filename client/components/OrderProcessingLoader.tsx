@@ -10,8 +10,8 @@ interface OrderProcessingLoaderProps {
 
 export const OrderProcessingLoader: React.FC<OrderProcessingLoaderProps> = ({ 
   isVisible, 
-  message = "Processing Your Order", 
-  submessage = "Please check your account and emails for status updates"
+  message = "Creating Your Order", 
+  submessage = "Check your account and emails after completion for order details"
 }) => {
   const [quantumLoaded, setQuantumLoaded] = useState(false)
 

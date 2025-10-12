@@ -345,9 +345,9 @@ export default function CheckoutPage() {
     if (currentStep === 'shipping') {
       if (!isStepValid('shipping')) {
         toast({
-          title: "Missing Information",
-          description: "Please fill in all required delivery information with valid details.",
-          variant: "destructive",
+          title: "Almost There! 📋",
+          description: "Please complete all delivery fields to continue with your order.",
+          variant: "default",
         })
         return
       }
@@ -358,25 +358,25 @@ export default function CheckoutPage() {
       if (paymentData.method === 'mobile') {
         if (!paymentData.provider) {
           toast({
-            title: "Payment Method Required",
-            description: "Please select your mobile service provider.",
-            variant: "destructive",
+            title: "Just One More Step! 📱",
+            description: "Please select your mobile service provider to continue.",
+            variant: "default",
           })
           return
         }
         if (!paymentData.mobilePhone) {
           toast({
-            title: "Phone Number Required",
-            description: "Please enter your mobile phone number.",
-            variant: "destructive",
+            title: "Phone Number Needed 📞",
+            description: "Please enter your mobile phone number to receive the payment prompt.",
+            variant: "default",
           })
           return
         }
         if (!isValidTzPhone(paymentData.mobilePhone)) {
           toast({
-            title: "Invalid Phone Number",
+            title: "Phone Number Format 📱",
             description: "Please enter a valid Tanzanian mobile number (e.g., +255 7XX XXX XXX).",
-            variant: "destructive",
+            variant: "default",
           })
           return
         }
@@ -402,9 +402,9 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "Please sign in to place your order.",
-        variant: "destructive",
+        title: "Sign In Required 🔐",
+        description: "Please sign in to complete and track your order.",
+        variant: "default",
       })
       return
     }
@@ -423,9 +423,9 @@ export default function CheckoutPage() {
       ))
     ) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required delivery information.",
-        variant: "destructive",
+        title: "Complete Your Details 📋",
+        description: "Please fill in all required delivery information to place your order.",
+        variant: "default",
       })
       return
     }
@@ -434,9 +434,9 @@ export default function CheckoutPage() {
     if (paymentData.method === 'mobile') {
       if (!paymentData.provider || !paymentData.mobilePhone) {
         toast({
-          title: "Missing Information", 
+          title: "Payment Details Needed 📱", 
           description: "Please select your mobile service and enter your phone number.",
-          variant: "destructive",
+          variant: "default",
         })
         return
       }
@@ -504,8 +504,8 @@ export default function CheckoutPage() {
         if (!orderResponse.ok) {
           // Order creation failed - show error and suggest payment method change
           toast({
-            title: "Order Creation Failed",
-            description: orderResult.error || 'Failed to create order. Please try a different payment method.',
+            title: "Oops! Something Went Wrong",
+            description: orderResult.error || 'We couldn\'t create your order. Please try a different payment method.',
             variant: "destructive",
           })
           // Don't disable retry, let user try again or change payment method
@@ -656,8 +656,8 @@ export default function CheckoutPage() {
     } catch (error: unknown) {
       console.error('Error placing order:', error)
       toast({
-        title: "Order Failed",
-        description: (error as Error).message || "There was an error placing your order. Please try again or change your payment method.",
+        title: "Order Not Completed",
+        description: (error as Error).message || "We encountered an issue placing your order. Please try again or choose a different payment method.",
         variant: "destructive",
       })
       // Return to payment step to allow method change or retry
@@ -918,8 +918,8 @@ export default function CheckoutPage() {
     } catch (error: unknown) {
       console.error('Error retrying payment:', error)
       toast({
-        title: "Payment Retry Failed",
-        description: (error as Error).message || "Failed to retry payment. Please try again or change your payment method.",
+        title: "Payment Retry Issue",
+        description: (error as Error).message || "We couldn't retry your payment. Please try again or choose another payment method.",
         variant: "destructive",
       })
       // Keep retry enabled and return to payment step
