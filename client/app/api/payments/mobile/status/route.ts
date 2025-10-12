@@ -138,7 +138,7 @@ function getStatusMessage(status: string, hasOrder: boolean): string {
         ? 'Payment completed and order created successfully'
         : 'Payment completed, order is being processed'
     case 'processing':
-      return 'Payment is being processed. Please check your phone for confirmation.'
+      return 'Please check your phone for confirmation. If done, wait a moment for order processing completion.'
     case 'pending':
       return 'Waiting for payment confirmation from mobile money provider.'
     case 'failed':
