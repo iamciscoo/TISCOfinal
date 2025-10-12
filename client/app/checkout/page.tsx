@@ -757,7 +757,7 @@ export default function CheckoutPage() {
         if (processingSet.has(st) && attempt > 0 && attempt % 3 === 0) {
           toast({ 
             title: 'Payment Processing... 📱', 
-            description: message || 'Please check your phone for payment confirmation',
+            description: message || 'Please check your phone for confirmation. If done, wait a moment for order processing completion.',
             variant: 'default'
           })
         }
