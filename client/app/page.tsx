@@ -66,6 +66,12 @@ const PromotionalCards = dynamic(() => import("@/components/PromotionalCards").t
   loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded-lg" />
 })
 
+// New Arrivals Section - Latest products with CTA
+// Shows while loading: Gray pulsing box (h-64 = height of 16rem)
+const NewArrivalsSection = dynamic(() => import("@/components/NewArrivalsSection").then(mod => ({ default: mod.NewArrivalsSection })), {
+  loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded-lg" />
+})
+
 // Featured Products - Grid of best-selling/featured items
 // Shows while loading: Gray pulsing box (h-64 = height of 16rem)
 const FeaturedProducts = dynamic(() => import("@/components/FeaturedProducts").then(mod => ({ default: mod.FeaturedProducts })), {
@@ -124,7 +130,10 @@ export default function Home() {
           
           {/* Promotional Cards - Special deals and category highlights */}
           <PromotionalCards />
-          
+
+          {/* New Arrivals - between promos and rare finds */}
+          <NewArrivalsSection />
+
           {/* Rare Finds Section - Unique/hard-to-find products */}
           <RareFinds />
           
