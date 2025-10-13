@@ -49,8 +49,8 @@ export function NewArrivalsSection() {
           })
         })
 
-        // Randomize and take up to 5
-        const picked = shuffle(newItems).slice(0, 5)
+        // Randomize and take up to 7
+        const picked = shuffle(newItems).slice(0, 7)
         if (mounted) setProducts(picked)
       } catch (e) {
         console.error("[NewArrivals] load error:", e)
@@ -65,6 +65,8 @@ export function NewArrivalsSection() {
   }, [])
 
   const hasProducts = products.length > 0
+  const showArrows = !loading && products.length > 7
+  const desktopCols = Math.min(Math.max(products.length, 1), 7)
 
   const handleScroll = (dir: "left" | "right") => {
     const el = scrollerRef.current
@@ -106,34 +108,39 @@ export function NewArrivalsSection() {
         {/* Product slider */}
         <div className="relative">
           {/* Desktop arrows */}
-          <div className="hidden md:block absolute -left-3 top-1/2 -translate-y-1/2 z-10">
-            <button
-              type="button"
-              onClick={() => handleScroll("left")}
-              className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
-              aria-label="Scroll left"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-          </div>
-          <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
-            <button
-              type="button"
-              onClick={() => handleScroll("right")}
-              className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
-              aria-label="Scroll right"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
-            </button>
-          </div>
+          {showArrows && (
+            <>
+              <div className="hidden md:block absolute -left-3 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  type="button"
+                  onClick={() => handleScroll("left")}
+                  className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
+                  aria-label="Scroll left"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+              </div>
+              <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  type="button"
+                  onClick={() => handleScroll("right")}
+                  className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
+                  aria-label="Scroll right"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                </button>
+              </div>
+            </>
+          )}
 
           <div
             ref={scrollerRef}
-            className="-mx-4 px-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:pb-0 md:overflow-x-hidden md:grid md:grid-cols-5"
+            className="-mx-4 px-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:pb-0 md:overflow-x-hidden md:grid"
+            style={{ gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))` }}
           >
             {loading && (
-              <div className="w-full col-span-5 grid grid-cols-2 md:grid-cols-5 gap-4">
-                {Array.from({ length: 5 }).map((_, i) => (
+              <div className="w-full col-span-7 grid grid-cols-2 md:grid-cols-7 gap-4">
+                {Array.from({ length: 7 }).map((_, i) => (
                   <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
                 ))}
               </div>
@@ -153,7 +160,7 @@ export function NewArrivalsSection() {
             )}
 
             {!loading && !hasProducts && (
-              <div className="w-full text-center text-gray-600 py-8 col-span-5">
+              <div className="w-full text-center text-gray-600 py-8 md:col-span-full">
                 New items will appear here soon.
               </div>
             )}
