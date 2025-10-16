@@ -39,10 +39,10 @@ export function NewArrivalsSection() {
         const data: Product[] = Array.isArray(json?.data) ? json.data : json
 
         // Filter by 'is_new' flag OR category named/slugged 'new'
-        const newItems = (data || []).filter((p: any) => {
+        const newItems = (data || []).filter((p: Product) => {
           if (p?.is_new) return true
-          const cats = p?.categories || []
-          return cats?.some((c: any) => {
+          const cats = (p as { categories?: { category?: { name?: string; slug?: string } }[] }).categories || []
+          return cats?.some((c: { category?: { name?: string; slug?: string } }) => {
             const nm = (c?.category?.name || "").toString().toLowerCase()
             const sg = (c?.category?.slug || "").toString().toLowerCase()
             return nm === "new" || sg === "new"

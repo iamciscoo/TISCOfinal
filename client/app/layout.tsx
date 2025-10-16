@@ -112,7 +112,7 @@ export const metadata: Metadata = {
   
   // Meta description - shown in Google search results under title
   // 150-160 characters optimal (this is what makes people click!)
-  description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, rare finds, and professional tech services. Custom PC building, office setup, device repair. Shop with confidence across East Africa. Fast delivery, secure payments, and authentic products guaranteed.",
+  description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, rare finds, and professional tech services. Electronics, Anime Merch, Sports, Home & Garden, Clothing, Books. Custom PC building, office setup, device repair. Shop with confidence across East Africa.",
   
   // Keywords - helps Google understand what our site is about
   // Includes: brand names, products, services, locations, long-tail keywords
@@ -179,16 +179,16 @@ export const metadata: Metadata = {
     // Images shown in social media preview cards
     images: [
       {
-        url: 'https://tiscomarket.store/logo-email.png',  // Main preview image
-        width: 1200,   // Recommended width for Facebook/LinkedIn
-        height: 630,   // Recommended height (1.91:1 ratio)
-        alt: 'TISCO Market - Tanzania Online Shopping & Rare Finds',
+        url: 'https://tiscomarket.store/favicon-512x512.png',  // Main preview image (high quality PNG)
+        width: 512,
+        height: 512,
+        alt: 'TISCO Market - Tanzania Online Shopping & Electronics',
         type: 'image/png',
       },
       {
-        url: 'https://tiscomarket.store/favicon-512x512.png',  // Fallback image
-        width: 512,
-        height: 512,
+        url: 'https://tiscomarket.store/favicon-192x192.png',  // Fallback image
+        width: 192,
+        height: 192,
         alt: 'TISCOマーケット Logo',
         type: 'image/png',
       },
@@ -201,7 +201,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',  // Large image card format (most engaging)
     title: 'TISCOマーケット - Tanzania\'s Online Marketplace',
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
-    images: ['https://tiscomarket.store/logo-email.png'],  // Twitter preview image
+    images: ['https://tiscomarket.store/favicon-512x512.png'],  // Twitter preview image (high quality PNG)
     creator: '@tiscomarket',  // Twitter handle (creator)
     site: '@tiscomarket',     // Twitter handle (site owner)
   },

@@ -80,36 +80,50 @@ export function SiteNavigationSchema() {
             "@type": "SiteNavigationElement",
             "position": 1,
             "name": "Electronics",
-            "description": "Shop laptops, phones, tablets, gaming consoles, and accessories",
+            "description": "Stay ahead of the curve with our collection of cutting-edge electronics and smart gadgets. From the latest smartphones and accessories to home tech, audio gear, and innovative devices",
             "url": "https://tiscomarket.store/products?category=electronics"
           },
           {
             "@type": "SiteNavigationElement",
             "position": 2,
-            "name": "Gaming",
-            "description": "Gaming consoles, PC gaming, accessories, and game installations",
-            "url": "https://tiscomarket.store/products?category=gaming"
-          },
-          {
-            "@type": "SiteNavigationElement",
-            "position": 3,
             "name": "Anime Merch",
-            "description": "Anime figures, manga, posters, and collectibles",
+            "description": "Explore a wide range of anime-inspired merchandise including figures, apparel, posters, and collectibles",
             "url": "https://tiscomarket.store/products?category=anime-merch"
           },
           {
             "@type": "SiteNavigationElement",
-            "position": 4,
+            "position": 3,
             "name": "Rare Finds",
-            "description": "Unique items, antiques, vintage tech, and hard-to-find products",
+            "description": "A curated collection of unique, hard-to-find pieces you won't see everywhere perfect for collectors, trendsetters, and those who want something truly special",
             "url": "https://tiscomarket.store/products?category=rare-finds"
           },
           {
             "@type": "SiteNavigationElement",
+            "position": 4,
+            "name": "Sports",
+            "description": "Gear up for performance with our wide range of sportswear, fitness gear, and athletic equipment",
+            "url": "https://tiscomarket.store/products?category=sports"
+          },
+          {
+            "@type": "SiteNavigationElement",
             "position": 5,
-            "name": "Tech Services",
-            "description": "PC building, office setup, device repair, and tech support",
-            "url": "https://tiscomarket.store/services"
+            "name": "Home & Garden",
+            "description": "Transform your living spaces with our curated selection of home décor, furniture, and garden essentials",
+            "url": "https://tiscomarket.store/products?category=home-garden"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 6,
+            "name": "Clothing",
+            "description": "Discover our curated selection of apparel designed for comfort, style, and self-expression",
+            "url": "https://tiscomarket.store/products?category=clothing"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 7,
+            "name": "Books",
+            "description": "Explore our diverse collection of books spanning every genre and interest. From timeless literary classics and bestselling novels to insightful non-fiction",
+            "url": "https://tiscomarket.store/products?category=books"
           }
         ]
       },
@@ -143,7 +157,7 @@ export function SiteNavigationSchema() {
             "position": 4,
             "name": "Track Order",
             "description": "Track your order status and delivery",
-            "url": "https://tiscomarket.store/orders"
+            "url": "https://tiscomarket.store/account/orders"
           }
         ]
       }

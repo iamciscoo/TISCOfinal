@@ -33,6 +33,7 @@
 // Import Next.js type for sitemap structure
 // This ensures our sitemap follows the correct format
 import { MetadataRoute } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
 /**
  * SITEMAP GENERATOR FUNCTION
@@ -44,7 +45,7 @@ import { MetadataRoute } from 'next'
  * - changeFrequency: How often it changes
  * - priority: How important it is (0.0 to 1.0)
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Base URL of our website
   const baseUrl = 'https://tiscomarket.store'
   
@@ -52,8 +53,59 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // .toISOString() converts date to format like "2024-12-15T10:30:00Z"
   const currentDate = new Date().toISOString()
   
-  // Return array of all pages for the sitemap
-  return [
+  // Fetch dynamic product and category data from database
+  let productUrls: MetadataRoute.Sitemap = []
+  let categoryUrls: MetadataRoute.Sitemap = []
+  
+  try {
+    // Initialize Supabase client
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE) {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE
+      )
+      
+      // Fetch all active products
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, updated_at, is_active, is_featured')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(500) // Limit to 500 most recent products
+      
+      if (products && products.length > 0) {
+        productUrls = products.map((product) => ({
+          url: `${baseUrl}/products/${product.id}`,
+          lastModified: product.updated_at || currentDate,
+          changeFrequency: 'weekly' as const,
+          priority: product.is_featured ? 0.8 : 0.7,
+        }))
+        console.log(`[SITEMAP] Added ${products.length} products`)
+      }
+      
+      // Fetch all categories
+      const { data: categories } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name', { ascending: true })
+      
+      if (categories && categories.length > 0) {
+        categoryUrls = categories.map((category) => ({
+          url: `${baseUrl}/products?category=${encodeURIComponent(category.name.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and'))}`,
+          lastModified: currentDate,
+          changeFrequency: 'daily' as const,
+          priority: 0.85,
+        }))
+        console.log(`[SITEMAP] Added ${categories.length} category pages`)
+      }
+    }
+  } catch (error) {
+    console.error('[SITEMAP] Error fetching dynamic data:', error)
+    // Continue with static pages even if dynamic fetch fails
+  }
+  
+  // Static pages array
+  const staticPages: MetadataRoute.Sitemap = [
     // Homepage - highest priority (1.0 = most important)
     // Changes daily because we update featured products often
     {
@@ -187,7 +239,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
   
-  // NOTE: Individual product pages (like /products/iphone-13) are NOT listed here
-  // They are automatically discovered by Google when it crawls /products
-  // This keeps our sitemap manageable (we have hundreds of products!)
+  // Combine static pages with dynamic product and category URLs
+  // This creates a comprehensive sitemap for Google to index
+  const allPages = [...staticPages, ...categoryUrls, ...productUrls]
+  
+  console.log(`[SITEMAP] Generated sitemap with ${allPages.length} total URLs (${staticPages.length} static, ${categoryUrls.length} categories, ${productUrls.length} products)`)
+  
+  return allPages
 }
