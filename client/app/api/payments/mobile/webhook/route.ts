@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
     // Mark session as completed
     await updateSessionStatus(session.id, 'completed', gatewayTxId)
 
-    // Send notifications SYNCHRONOUSLY (like pay at office) to ensure they execute
+    // Send notifications SYNCHRONOUSLY (like Direct Pay) to ensure they execute
     // Serverless functions may kill async tasks after response is sent
     console.log(`📧 [${webhookId}] Sending notifications synchronously...`)
     

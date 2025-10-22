@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 // Icons - little pictures we show in the UI
-import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, ExternalLink, X, Package } from 'lucide-react'
+import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, ExternalLink, X, Package, CreditCard } from 'lucide-react'
 
 // Toast - popup messages that appear briefly to tell users something happened
 import { toast } from 'sonner'
@@ -302,6 +302,33 @@ export default function NotificationsPage() {
     action_url: ''
   })
 
+  // Payment Details states - for managing payment account information
+  type PaymentDetails = {
+    id?: string
+    bank_name: string
+    account_number: string
+    account_name: string
+    mpesa_number: string
+    tigo_pesa_number: string
+    airtel_money_number: string
+    lipa_number: string
+    payment_instructions: string
+  }
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+    bank_name: '',
+    account_number: '',
+    account_name: '',
+    mpesa_number: '',
+    tigo_pesa_number: '',
+    airtel_money_number: '',
+    lipa_number: '',
+    payment_instructions: 'IMPORTANT PAYMENT INSTRUCTIONS:\n\n1. Include your ORDER NUMBER as the payment reference\n2. After payment, check your order status in "My Orders" section\n3. You will receive an email confirmation once payment is verified\n4. Payment verification typically takes 5-15 minutes\n5. Keep your payment receipt for your records\n\nFor any payment issues, contact our support team immediately.\n\nThank you for shopping with TISCO Market!'
+  })
+  const [excludedFields, setExcludedFields] = useState<Set<string>>(new Set())
+  const [isSavingPaymentDetails, setIsSavingPaymentDetails] = useState(false)
+  const [paymentDetailsLoaded, setPaymentDetailsLoaded] = useState(false)
+  const [isSendingNotification, setIsSendingNotification] = useState(false)
+
   // ---------------------------------------------------------------------------
   // DATA FETCHING FUNCTIONS - Get data from the server
   // ---------------------------------------------------------------------------
@@ -400,10 +427,131 @@ export default function NotificationsPage() {
   const refreshData = async () => {
     setIsRefreshing(true)  // Show loading spinner
     
-    // Fetch all three things at once (parallel, not one after another)
-    await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients()])
+    // Fetch all data at once (parallel, not one after another)
+    await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients(), fetchPaymentDetails()])
     
     setIsRefreshing(false)  // Hide loading spinner
+  }
+
+  /**
+   * fetchPaymentDetails
+   * 
+   * Fetches the active payment details from the database.
+   * These are the account numbers and payment instructions configured by admins.
+   */
+  const fetchPaymentDetails = async () => {
+    try {
+      const response = await fetch('/api/admin/payment-details')
+      const result = await response.json()
+      
+      if (result.paymentDetails) {
+        // Ensure all fields are strings, not null
+        const details = result.paymentDetails
+        const defaultInstructions = 'IMPORTANT PAYMENT INSTRUCTIONS:\n\n1. Include your ORDER NUMBER as the payment reference\n2. After payment, check your order status in "My Orders" section\n3. You will receive an email confirmation once payment is verified\n4. Payment verification typically takes 5-15 minutes\n5. Keep your payment receipt for your records\n\nFor any payment issues, contact our support team immediately.\n\nThank you for shopping with TISCO Market!'
+        
+        setPaymentDetails({
+          id: details.id || '',
+          bank_name: details.bank_name || '',
+          account_number: details.account_number || '',
+          account_name: details.account_name || '',
+          mpesa_number: details.mpesa_number || '',
+          tigo_pesa_number: details.tigo_pesa_number || '',
+          airtel_money_number: details.airtel_money_number || '',
+          lipa_number: details.lipa_number || '',
+          payment_instructions: details.payment_instructions || defaultInstructions
+        })
+        setPaymentDetailsLoaded(true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch payment details:', error)
+    }
+  }
+
+  /**
+   * savePaymentDetails
+   * 
+   * Saves the payment details (account numbers, mobile money numbers, etc.) to the database.
+   */
+  const savePaymentDetails = async () => {
+    setIsSavingPaymentDetails(true)
+    try {
+      const response = await fetch('/api/admin/payment-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentDetails)
+      })
+
+      if (response.ok) {
+        toast.success('Payment details saved successfully!')
+        fetchPaymentDetails() // Refresh data
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to save payment details')
+      }
+    } catch (error) {
+      console.error('Failed to save payment details:', error)
+      toast.error('Failed to save payment details')
+    } finally {
+      setIsSavingPaymentDetails(false)
+    }
+  }
+
+  /**
+   * insertPaymentDetailsIntoMessage
+   * 
+   * Helper function to insert payment details into the notification message.
+   */
+  const insertPaymentDetailsIntoMessage = () => {
+    if (!paymentDetailsLoaded) {
+      toast.error('Please save payment details first in the section above')
+      return
+    }
+
+    // Build sections only for filled fields that aren't excluded
+    const sections: string[] = []
+
+    // Bank Transfer Section
+    if (!excludedFields.has('bank') && (paymentDetails.bank_name || paymentDetails.account_number || paymentDetails.account_name)) {
+      const bankLines: string[] = ['🏦 BANK TRANSFER:']
+      if (paymentDetails.bank_name) bankLines.push(`   Bank: ${paymentDetails.bank_name}`)
+      if (paymentDetails.account_number) bankLines.push(`   Account Number: ${paymentDetails.account_number}`)
+      if (paymentDetails.account_name) bankLines.push(`   Account Name: ${paymentDetails.account_name}`)
+      sections.push(bankLines.join('\n'))
+    }
+
+    // Mobile Money Section
+    const mobileMoneyLines: string[] = []
+    if (!excludedFields.has('mpesa') && paymentDetails.mpesa_number) mobileMoneyLines.push(`   • M-Pesa: ${paymentDetails.mpesa_number}`)
+    if (!excludedFields.has('tigo_pesa') && paymentDetails.tigo_pesa_number) mobileMoneyLines.push(`   • Tigo Pesa: ${paymentDetails.tigo_pesa_number}`)
+    if (!excludedFields.has('airtel_money') && paymentDetails.airtel_money_number) mobileMoneyLines.push(`   • Airtel Money: ${paymentDetails.airtel_money_number}`)
+    
+    if (mobileMoneyLines.length > 0) {
+      sections.push('📱 MOBILE MONEY OPTIONS:\n' + mobileMoneyLines.join('\n'))
+    }
+
+    // LIPA Number
+    if (!excludedFields.has('lipa') && paymentDetails.lipa_number) {
+      sections.push(`💳 LIPA NUMBER: ${paymentDetails.lipa_number}`)
+    }
+
+    // Additional Instructions
+    if (!excludedFields.has('instructions') && paymentDetails.payment_instructions) {
+      sections.push(`📝 PAYMENT INSTRUCTIONS:\n${paymentDetails.payment_instructions}`)
+    }
+
+    if (sections.length === 0) {
+      toast.error('No payment details configured')
+      return
+    }
+
+    const detailsText = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nPAYMENT DETAILS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' + sections.join('\n\n') + '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+
+    setManualNotification(prev => ({
+      ...prev,
+      message: prev.message + detailsText
+    }))
+    
+    toast.success('Payment details inserted into message!')
   }
 
   // ---------------------------------------------------------------------------
@@ -419,6 +567,7 @@ export default function NotificationsPage() {
    * Example: Admin wants to send a special message to a customer about their order.
    */
   const sendManualNotification = async () => {
+    setIsSendingNotification(true)
     try {
       // Send the notification data to the server
       const response = await fetch('/api/admin/notifications', {
@@ -459,6 +608,8 @@ export default function NotificationsPage() {
     } catch (error) {
       console.error('Failed to send notification:', error)
       toast.error('Failed to send notification')
+    } finally {
+      setIsSendingNotification(false)
     }
   }
 
@@ -591,8 +742,8 @@ export default function NotificationsPage() {
     const loadData = async () => {
       setLoading(true)  // Show loading spinner
       
-      // Fetch notifications, stats, and recipients all at once
-      await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients()])
+      // Fetch notifications, stats, recipients, and payment details all at once
+      await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients(), fetchPaymentDetails()])
       
       setLoading(false)  // Hide loading spinner
     }
@@ -609,18 +760,7 @@ export default function NotificationsPage() {
     setCurrentPage(1)
   }, [filter, eventFilter, priorityFilter])
 
-  /**
-   * Auto-Refresh Timer
-   * 
-   * Automatically refreshes data every 30 seconds so admins see new notifications.
-   * Like a news feed that updates itself.
-   */
-  useEffect(() => {
-    const interval = setInterval(refreshData, 30000)  // 30000 milliseconds = 30 seconds
-    
-    // Cleanup: Stop the timer when component is removed
-    return () => clearInterval(interval)
-  }, [])
+  // Auto-refresh removed - admins can use the manual refresh button to update data
 
   // ---------------------------------------------------------------------------
   // RENDER - What to show on the page
@@ -1053,6 +1193,274 @@ export default function NotificationsPage() {
         </TabsContent>
 
         <TabsContent value="send" className="space-y-4">
+          {/* Payment Details Configuration Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Details Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure payment account details for Direct Pay orders. Once saved, use the "Insert Payment Details" button below to add them to notifications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Bank Transfer Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    🏦 Bank Transfer Details
+                  </h3>
+                  <Button
+                    type="button"
+                    variant={excludedFields.has('bank') ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={() => {
+                      const newExcluded = new Set(excludedFields)
+                      if (newExcluded.has('bank')) {
+                        newExcluded.delete('bank')
+                      } else {
+                        newExcluded.add('bank')
+                      }
+                      setExcludedFields(newExcluded)
+                    }}
+                    className={`h-8 px-4 rounded-full ${excludedFields.has('bank') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                  >
+                    {excludedFields.has('bank') ? '❌ Excluded' : 'Included'}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bank_name">Bank Name</Label>
+                    <Input
+                      id="bank_name"
+                      value={paymentDetails.bank_name}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, bank_name: e.target.value }))}
+                      placeholder="e.g., CRDB Bank"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="account_number">Bank Account Number</Label>
+                    <Input
+                      id="account_number"
+                      value={paymentDetails.account_number}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_number: e.target.value }))}
+                      placeholder="e.g., 0123456789"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="account_name">Account Name</Label>
+                    <Input
+                      id="account_name"
+                      value={paymentDetails.account_name}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_name: e.target.value }))}
+                      placeholder="e.g., TISCO MARKET LTD"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Money Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 border-b pb-2">
+                  📱 Mobile Money Details
+                </h3>
+                
+                {/* M-Pesa */}
+                <div className="bg-green-50 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-green-900">M-Pesa</h4>
+                    <Button
+                      type="button"
+                      variant={excludedFields.has('mpesa') ? 'outline' : 'default'}
+                      size="sm"
+                      onClick={() => {
+                        const newExcluded = new Set(excludedFields)
+                        if (newExcluded.has('mpesa')) {
+                          newExcluded.delete('mpesa')
+                        } else {
+                          newExcluded.add('mpesa')
+                        }
+                        setExcludedFields(newExcluded)
+                      }}
+                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('mpesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                    >
+                      {excludedFields.has('mpesa') ? '❌ Excluded' : 'Included'}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mpesa_number">M-Pesa Number</Label>
+                    <Input
+                      id="mpesa_number"
+                      value={paymentDetails.mpesa_number}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, mpesa_number: e.target.value }))}
+                      placeholder="e.g., +255 7XX XXX XXX or 07XX XXX XXX"
+                    />
+                  </div>
+                </div>
+
+                {/* Tigo Pesa */}
+                <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-blue-900">Tigo Pesa</h4>
+                    <Button
+                      type="button"
+                      variant={excludedFields.has('tigo_pesa') ? 'outline' : 'default'}
+                      size="sm"
+                      onClick={() => {
+                        const newExcluded = new Set(excludedFields)
+                        if (newExcluded.has('tigo_pesa')) {
+                          newExcluded.delete('tigo_pesa')
+                        } else {
+                          newExcluded.add('tigo_pesa')
+                        }
+                        setExcludedFields(newExcluded)
+                      }}
+                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('tigo_pesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                    >
+                      {excludedFields.has('tigo_pesa') ? '❌ Excluded' : 'Included'}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tigo_pesa_number">Tigo Pesa Number</Label>
+                    <Input
+                      id="tigo_pesa_number"
+                      value={paymentDetails.tigo_pesa_number}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, tigo_pesa_number: e.target.value }))}
+                      placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
+                    />
+                  </div>
+                </div>
+
+                {/* Airtel Money */}
+                <div className="bg-red-50 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-red-900">Airtel Money</h4>
+                    <Button
+                      type="button"
+                      variant={excludedFields.has('airtel_money') ? 'outline' : 'default'}
+                      size="sm"
+                      onClick={() => {
+                        const newExcluded = new Set(excludedFields)
+                        if (newExcluded.has('airtel_money')) {
+                          newExcluded.delete('airtel_money')
+                        } else {
+                          newExcluded.add('airtel_money')
+                        }
+                        setExcludedFields(newExcluded)
+                      }}
+                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('airtel_money') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                    >
+                      {excludedFields.has('airtel_money') ? '❌ Excluded' : 'Included'}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="airtel_money_number">Airtel Money Number</Label>
+                    <Input
+                      id="airtel_money_number"
+                      value={paymentDetails.airtel_money_number}
+                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, airtel_money_number: e.target.value }))}
+                      placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* LIPA Number */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    💳 LIPA Number
+                  </h3>
+                  <Button
+                    type="button"
+                    variant={excludedFields.has('lipa') ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={() => {
+                      const newExcluded = new Set(excludedFields)
+                      if (newExcluded.has('lipa')) {
+                        newExcluded.delete('lipa')
+                      } else {
+                        newExcluded.add('lipa')
+                      }
+                      setExcludedFields(newExcluded)
+                    }}
+                    className={`h-8 px-4 rounded-full ${excludedFields.has('lipa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                  >
+                    {excludedFields.has('lipa') ? '❌ Excluded' : 'Included'}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lipa_number">LIPA Number</Label>
+                  <Input
+                    id="lipa_number"
+                    value={paymentDetails.lipa_number}
+                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, lipa_number: e.target.value }))}
+                    placeholder="e.g., 888xxx"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Optional: Business short code or LIPA number for Till/Paybill payments
+                  </p>
+                </div>
+              </div>
+
+              {/* Additional Instructions */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    📝 Additional Instructions
+                  </h3>
+                  <Button
+                    type="button"
+                    variant={excludedFields.has('instructions') ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={() => {
+                      const newExcluded = new Set(excludedFields)
+                      if (newExcluded.has('instructions')) {
+                        newExcluded.delete('instructions')
+                      } else {
+                        newExcluded.add('instructions')
+                      }
+                      setExcludedFields(newExcluded)
+                    }}
+                    className={`h-8 px-4 rounded-full ${excludedFields.has('instructions') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                  >
+                    {excludedFields.has('instructions') ? '❌ Excluded' : 'Included'}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_instructions">Additional Payment Instructions</Label>
+                  <Textarea
+                    id="payment_instructions"
+                    value={paymentDetails.payment_instructions}
+                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, payment_instructions: e.target.value }))}
+                    placeholder="Professional payment instructions will guide customers on next steps..."
+                    rows={8}
+                  />
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={savePaymentDetails}
+                  disabled={isSavingPaymentDetails}
+                  size="lg"
+                >
+                  {isSavingPaymentDetails ? 'Saving...' : 'Save Payment Details'}
+                </Button>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>💡 Tip:</strong> After saving, use the "Insert Payment Details" button in the message field below to add these details to your notification.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Send Manual Notification Card */}
           <Card>
             <CardHeader>
               <CardTitle>Send Manual Notification</CardTitle>
@@ -1098,8 +1506,31 @@ export default function NotificationsPage() {
                   value={manualNotification.message}
                   onChange={(e) => setManualNotification(prev => ({ ...prev, message: e.target.value }))}
                   placeholder="Your notification message..."
-                  rows={4}
+                  rows={8}
                 />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant={paymentDetailsLoaded ? "default" : "outline"}
+                    size="sm"
+                    onClick={insertPaymentDetailsIntoMessage}
+                    disabled={!paymentDetailsLoaded}
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Insert Payment Details
+                  </Button>
+                  {!paymentDetailsLoaded && (
+                    <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+                      💡 Save payment details above first
+                    </span>
+                  )}
+                  {paymentDetailsLoaded && (
+                    <span className="text-xs text-green-600">
+                      Ready to insert
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -1135,11 +1566,20 @@ export default function NotificationsPage() {
 
               <Button 
                 onClick={sendManualNotification}
-                disabled={!manualNotification.recipient_email || !manualNotification.title || !manualNotification.message}
+                disabled={!manualNotification.recipient_email || !manualNotification.title || !manualNotification.message || isSendingNotification}
                 className="w-full"
               >
-                <Send className="w-4 h-4 mr-2" />
-                Send Notification
+                {isSendingNotification ? (
+                  <>
+                    <span className="animate-pulse">Sending</span>
+                    <span className="ml-1 animate-bounce">...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Notification
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>

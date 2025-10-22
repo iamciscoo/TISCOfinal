@@ -55,7 +55,7 @@ const faqs: FAQ[] = [
   {
     id: '6',
     question: 'What payment methods do you accept?',
-    answer: 'We accept a variety of payment methods for your convenience, including Mobile Money, major credit cards (Visa, MasterCard), and cash payments at our office. All online transactions are processed securely.',
+    answer: 'We accept a variety of payment methods for your convenience, including Mobile Money (M-Pesa, Tigo Pesa, Airtel Money), Direct Pay (bank transfer or cash payment), and major credit cards. All online transactions are processed securely.',
     category: 'Payment'
   },
   {

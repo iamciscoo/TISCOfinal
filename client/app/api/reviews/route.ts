@@ -65,27 +65,138 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
-    const { product_id, rating, title, comment } = body
+    const { product_id, rating, title, comment, reviewer_name, user_id } = body
+
+    console.log('📝 Review POST received:', { 
+      product_id, 
+      rating, 
+      user_id: user_id || 'not provided',
+      reviewer_name: reviewer_name || 'not provided',
+      hasAuthUser: !!user 
+    })
 
     // Validate required fields
     if (!product_id || !rating) {
+      console.error('❌ Missing product_id or rating')
       return NextResponse.json({ error: 'Product ID and rating are required' }, { status: 400 })
     }
 
     if (rating < 1 || rating > 5) {
+      console.error('❌ Invalid rating:', rating)
       return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 })
     }
 
-    // Use service role client to bypass RLS (Supabase is our auth source)
+    // Use service role client to bypass RLS
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE!
     )
+
+    // Normalize empty strings to null/undefined
+    const normalizedUserId = user_id && typeof user_id === 'string' && user_id.trim().length > 0 ? user_id.trim() : null
+    const normalizedReviewerName = reviewer_name && typeof reviewer_name === 'string' && reviewer_name.trim().length > 0 ? reviewer_name.trim() : null
+
+    console.log('🔍 Normalized values:', {
+      normalizedUserId,
+      normalizedReviewerName,
+      hasAuthUser: !!user
+    })
+
+    // FOR DEBUGGING: Log the exact validation check
+    const hasUserId = !!normalizedUserId
+    const hasReviewerName = !!normalizedReviewerName  
+    const hasAuthUser = !!user
+    
+    console.log('✅ Validation check:', {
+      hasUserId,
+      hasReviewerName,
+      hasAuthUser,
+      willPass: hasUserId || hasReviewerName || hasAuthUser
+    })
+
+    // Validate that either user_id or reviewer_name is provided (for admin reviews)
+    // OR user is authenticated (for customer reviews)
+    if (!normalizedUserId && !normalizedReviewerName && !user) {
+      console.error('❌ VALIDATION FAILED!')
+      console.error('Details:', {
+        user_id_value: body.user_id,
+        reviewer_name_value: body.reviewer_name,
+        user_exists: !!user
+      })
+      return NextResponse.json({ 
+        error: `Missing required fields. user_id=${body.user_id}, reviewer_name=${body.reviewer_name}, auth=${!!user}` 
+      }, { status: 400 })
+    }
+    
+    console.log('✅ Validation PASSED! Proceeding to create review...')
+
+    // Handle three scenarios:
+    // 1. Admin creating review for existing user (user_id provided)
+    // 2. Admin creating guest review (reviewer_name provided, no user_id)
+    // 3. Authenticated user creating their own review
+
+    // If user_id is provided from admin, create review for that user
+    if (normalizedUserId) {
+      const { data, error } = await service
+        .from('reviews')
+        .insert({
+          product_id,
+          user_id: normalizedUserId,
+          reviewer_name: null,
+          rating,
+          title: title || null,
+          comment: comment || null,
+          is_verified_purchase: false
+        })
+        .select(`
+          *,
+          users(first_name, last_name, avatar_url)
+        `)
+        .single()
+
+      if (error) {
+        console.error('Error creating user review:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Update product rating and review count
+      await updateProductRating(product_id, service)
+
+      return NextResponse.json(data, { status: 201 })
+    }
+
+    // If reviewer_name is provided (guest review from admin)
+    if (normalizedReviewerName) {
+      const { data, error } = await service
+        .from('reviews')
+        .insert({
+          product_id,
+          user_id: null,
+          reviewer_name: normalizedReviewerName,
+          rating,
+          title: title || null,
+          comment: comment || null,
+          is_verified_purchase: false
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating guest review:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Update product rating and review count
+      await updateProductRating(product_id, service)
+
+      return NextResponse.json(data, { status: 201 })
+    }
+
+    // Authenticated user review flow
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Ensure user exists in users table to satisfy FK constraint
     const userEmail = user.email || ''

@@ -164,14 +164,32 @@ export default function ReviewsManagement() {
     },
     {
       id: 'userEmail',
-      accessorFn: (row) => row.user?.email ?? '',
+      accessorFn: (row) => row.user?.email ?? (row as any).reviewer_name ?? 'Guest',
       header: 'Customer',
-      cell: ({ row }) => (
-        <div className="min-w-[120px]">
-          <p className="font-medium text-xs sm:text-sm">{row.original.user.first_name} {row.original.user.last_name}</p>
-          <p className="text-xs text-gray-600 hidden sm:block truncate">{row.original.user.email}</p>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const review = row.original as any;
+        const isGuestReview = !review.user && review.reviewer_name;
+        
+        if (isGuestReview) {
+          return (
+            <div className="min-w-[120px]">
+              <p className="font-medium text-xs sm:text-sm">{review.reviewer_name}</p>
+              <p className="text-xs text-gray-500 hidden sm:block">Guest Review</p>
+            </div>
+          );
+        }
+        
+        return (
+          <div className="min-w-[120px]">
+            <p className="font-medium text-xs sm:text-sm">
+              {review.user?.first_name} {review.user?.last_name}
+            </p>
+            <p className="text-xs text-gray-600 hidden sm:block truncate">
+              {review.user?.email}
+            </p>
+          </div>
+        );
+      },
       enableHiding: true,
       meta: { hideOnMobile: true },
     },

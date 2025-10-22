@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       .from("reviews")
       .select(`
         *,
+        reviewer_name,
         user:users(*),
         product:products(name, image_url, price)
       `, { count: 'exact' })
@@ -52,26 +53,47 @@ export async function GET(request: NextRequest) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { product_id, user_id, rating, comment, title } = body ?? {};
+    const { product_id, user_id, reviewer_name, rating, comment, title } = body ?? {};
 
-    if (!product_id || !user_id || !rating) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    console.log('🎯 Admin API - Review POST received:', {
+      product_id,
+      user_id: user_id || 'empty',
+      reviewer_name: reviewer_name || 'empty',
+      rating
+    });
+
+    // Validate required fields
+    if (!product_id || !rating) {
+      return NextResponse.json({ error: "Product ID and rating are required" }, { status: 400 });
     }
 
     if (rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Rating must be between 1 and 5" }, { status: 400 });
     }
 
-    // Prevent duplicate review for same product and user
-    {
+    // Normalize empty strings to null
+    const normalizedUserId = user_id && typeof user_id === 'string' && user_id.trim().length > 0 ? user_id.trim() : null;
+    const normalizedReviewerName = reviewer_name && typeof reviewer_name === 'string' && reviewer_name.trim().length > 0 ? reviewer_name.trim() : null;
+
+    // Either user_id OR reviewer_name must be provided
+    if (!normalizedUserId && !normalizedReviewerName) {
+      console.error('❌ Neither user_id nor reviewer_name provided');
+      return NextResponse.json({ 
+        error: "Either select a user or provide a reviewer name" 
+      }, { status: 400 });
+    }
+
+    console.log('✅ Normalized:', { normalizedUserId, normalizedReviewerName });
+
+    // Prevent duplicate review for same product and user (only if user_id is provided)
+    if (normalizedUserId) {
       const { data: existing, error: existingErr } = await supabase
         .from('reviews')
         .select('id')
         .eq('product_id', product_id)
-        .eq('user_id', user_id)
+        .eq('user_id', normalizedUserId)
         .maybeSingle()
       if (existingErr && existingErr.code !== 'PGRST116') {
-        // Unexpected error (ignore no rows error code)
         return NextResponse.json({ error: existingErr.message }, { status: 500 });
       }
       if (existing) {
@@ -79,7 +101,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Check if 'is_approved' column exists; include it and auto-approve only if present
+    // Check if 'is_approved' column exists
     let hasIsApproved = true
     {
       const { error: colErr } = await supabase
@@ -93,12 +115,15 @@ export async function POST(req: Request) {
 
     const insertPayload: Record<string, unknown> = {
       product_id,
-      user_id,
+      user_id: normalizedUserId,
+      reviewer_name: normalizedReviewerName,
       rating,
       comment: comment || null,
       title: title || null,
     }
     if (hasIsApproved) insertPayload.is_approved = true
+
+    console.log('📝 Inserting review:', insertPayload);
 
     const { data, error } = await supabase
       .from("reviews")
@@ -107,14 +132,18 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
+      console.error('❌ Insert error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Update product aggregates after creating (auto-approved) review
+    console.log('✅ Review created successfully!');
+
+    // Update product aggregates after creating review
     await updateProductRating(product_id)
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (e) {
+    console.error('❌ Unexpected error:', e);
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

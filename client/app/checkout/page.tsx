@@ -85,7 +85,7 @@ export default function CheckoutPage() {
   })
 
   const [paymentData, setPaymentData] = useState<PaymentData>({
-    method: 'mobile',
+    method: 'office', // Default to 'office' since mobile money is temporarily unavailable
     provider: '',
     mobilePhone: ''
   })
@@ -460,8 +460,8 @@ export default function CheckoutPage() {
         payment_method = `Mobile Money (${paymentData.provider}) - ${maskPhone(paymentData.mobilePhone)}`
         payment_summary = `Mobile Money (${paymentData.provider}) to ${paymentData.mobilePhone}`
       } else {
-        payment_method = 'Pay at Office'
-        payment_summary = 'Pay at office on pickup/delivery'
+        payment_method = 'Direct Pay'
+        payment_summary = 'Direct pay on pickup/delivery'
       }
 
       const orderData = {
@@ -490,7 +490,7 @@ export default function CheckoutPage() {
 
       // Handle different payment methods - create order only after successful payment for mobile money
       if (paymentData.method === 'office') {
-        // Non-mobile flows (card, office payment) - create order first
+        // Non-mobile flows (Direct Pay) - create order first
         const orderResponse = await fetch('/api/orders', {
           method: 'POST',
           credentials: 'include',
@@ -513,7 +513,7 @@ export default function CheckoutPage() {
           return
         }
 
-        // Office payment successful - send notifications
+        // Direct Pay successful - send notifications
         try {
           // Send notifications via API route
           const notificationResponse = await fetch('/api/notifications', {
@@ -534,7 +534,7 @@ export default function CheckoutPage() {
                   price: item.price.toString()
                 })),
                 order_date: new Date().toLocaleDateString(),
-                payment_method: 'Pay at Office',
+                payment_method: 'Direct Pay',
                 shipping_address: isPickup ? 'Pickup at Office' : `${shippingData.address}, ${shippingData.place}, ${selectedCity}`,
                 payment_status: 'pending'
               }
@@ -1220,25 +1220,25 @@ export default function CheckoutPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Method selector */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Method selector - Mobile Money temporarily disabled */}
+                  <div className="space-y-3">
+                    {/* Mobile Money - Temporarily Unavailable */}
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Notice:</strong> Mobile Money payments are temporarily unavailable due to service provider maintenance. Please use &quot;Direct Pay&quot; option.
+                      </p>
+                    </div>
+                    
+                    {/* Direct Pay - Only Available Option */}
                     <Button
                       type="button"
-                      variant={paymentData.method === 'mobile' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPaymentData(prev => ({ ...prev, method: 'mobile' }))}
-                      className="w-full"
-                    >
-                      Mobile Money
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={paymentData.method === 'office' ? 'default' : 'outline'}
-                      size="sm"
+                      variant="default"
+                      size="lg"
                       onClick={() => setPaymentData(prev => ({ ...prev, method: 'office' }))}
-                      className="w-full"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled
                     >
-                      Pay at Office
+                      Direct Pay (Auto Selected)
                     </Button>
                   </div>
 
@@ -1303,12 +1303,61 @@ export default function CheckoutPage() {
                   )}
 
 
-                  {/* Pay at Office */}
+                  {/* Direct Pay - Enhanced Information */}
                   {paymentData.method === 'office' && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-700">
-                        You can pay for your product at our office. We also offer bank transfer as a payment option. We will contact you to arrange pickup or delivery and payment.
-                      </p>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <Package className="h-5 w-5" />
+                          How &quot;Direct Pay&quot; Works
+                        </h4>
+                        <ol className="space-y-2 text-sm text-blue-800">
+                          <li className="flex gap-2">
+                            <span className="font-semibold min-w-[20px]">1.</span>
+                            <span>On the review page, complete your order by clicking &quot;Place Order&quot; below</span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="font-semibold min-w-[20px]">2.</span>
+                            <span>Our team will contact you <strong>Shortly</strong> to confirm your order</span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="font-semibold min-w-[20px]">3.</span>
+                            <span>You&apos;ll receive an email with payment options (Bank Transfer, Mobile Money details or LIPA Details)</span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="font-semibold min-w-[20px]">4.</span>
+                            <span>After payment confirmation, we&apos;ll arrange delivery or pickup</span>
+                          </li>
+                        </ol>
+                      </div>
+
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2">Payment Options Available:</h4>
+                        <ul className="space-y-1 text-sm text-gray-700">
+                          <li className="flex items-center gap-2">
+                            <svg className="h-4 w-4 text-green-600" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                              <path d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Bank Transfer (Account details will be provided via email)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <svg className="h-4 w-4 text-green-600" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                              <path d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Mobile Money (M-Pesa, Tigo Pesa, Airtel Money)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <svg className="h-4 w-4 text-green-600" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                              <path d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Cash Payment (During store pickup)
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="text-sm text-gray-600 italic">
+                        💡 <strong>Note:</strong> You won&apos;t be charged until you confirm payment details with our team.
+                      </div>
                     </div>
                   )}
 
@@ -1372,7 +1421,7 @@ export default function CheckoutPage() {
                       )}
                       {paymentData.method === 'office' && (
                         <>
-                          <p>Pay at Office</p>
+                          <p>Direct Pay</p>
                         </>
                       )}
                     </div>
@@ -1499,7 +1548,7 @@ export default function CheckoutPage() {
                 <OrderProcessingLoader 
                   isVisible={isProcessing}
                   message="Creating Your Order"
-                  submessage="Please check your account and email for status updates after order processing completion."
+                  submessage="Please check your account and email for payment details and status updates after order processing completion."
                 />
               </div>
             )}

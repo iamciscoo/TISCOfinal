@@ -29,7 +29,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Search } from "lucide-react";
 
 interface AddOrderProps {
   onOpenChange?: (open: boolean) => void;
@@ -42,7 +42,7 @@ const formSchema = z.object({
   guest_email: z.string().email().optional().or(z.literal("")),
   guest_phone: z.string().optional(),
   status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]),
-  payment_method: z.enum(["mobile_money", "pay_at_office"]),
+  payment_method: z.enum(["mobile_money", "direct_pay"]),
   payment_status: z.enum(["pending", "paid", "failed", "refunded"]),
   shipping_address: z.string().min(1, { message: "Shipping address is required!" }),
   notes: z.string().optional(),
@@ -67,6 +67,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState<string>("");
   
   // Track sheet open state
   useEffect(() => {
@@ -95,6 +96,17 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
   const customerType = form.watch("customer_type");
   const orderItems = form.watch("order_items");
   const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // Filter products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearch) return true;
+    const searchLower = productSearch.toLowerCase();
+    return (
+      product.name?.toLowerCase().includes(searchLower) ||
+      product.id?.toLowerCase().includes(searchLower) ||
+      product.price?.toString().includes(searchLower)
+    );
+  });
 
   // Only fetch data when sheet is opened - performance optimization
   useEffect(() => {
@@ -376,17 +388,44 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                     <div className="flex-1 space-y-2">
                       <Select
                         value={item.product_id}
-                        onValueChange={(value) => updateOrderItem(index, "product_id", value)}
+                        onValueChange={(value) => {
+                          updateOrderItem(index, "product_id", value);
+                          setProductSearch(""); // Clear search after selection
+                        }}
                       >
                         <SelectTrigger className="h-11 sm:h-10 text-xs sm:text-sm">
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} - TZS {product.price.toLocaleString()} (Stock: {product.stock_quantity})
-                            </SelectItem>
-                          ))}
+                        <SelectContent className="max-h-[300px]">
+                          {/* Search Input */}
+                          <div className="sticky top-0 z-10 bg-popover p-2 border-b">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Search products..."
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                className="pl-8 h-9 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Scrollable Product List */}
+                          <div className="max-h-[240px] overflow-y-auto">
+                            {filteredProducts.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                No products found
+                              </div>
+                            ) : (
+                              filteredProducts.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} - TZS {product.price.toLocaleString()} (Stock: {product.stock_quantity})
+                                </SelectItem>
+                              ))
+                            )}
+                          </div>
                         </SelectContent>
                       </Select>
                       
@@ -444,7 +483,7 @@ const AddOrder = ({ onOpenChange }: AddOrderProps = {}) => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="mobile_money">Mobile Money (M-Pesa, Tigo Pesa, Airtel Money)</SelectItem>
-                          <SelectItem value="pay_at_office">Pay at Office</SelectItem>
+                          <SelectItem value="direct_pay">Direct Pay</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>

@@ -11,6 +11,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +23,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Sheet, SheetTrigger } from "@/components/ui/sheet";
-import AddUser from "./AddUser";
 
 interface AddReviewProps {
   onCreated?: () => void;
@@ -44,10 +43,11 @@ interface AdminProductOption {
 
 const formSchema = z.object({
   product_id: z.string().min(1, { message: "Select a product" }),
-  user_id: z.string().min(1, { message: "Select a user" }),
+  user_id: z.string().optional().or(z.literal('')),
+  reviewer_name: z.string().optional().or(z.literal('')),
   rating: z.number().int().min(1).max(5),
-  title: z.string().optional(),
-  comment: z.string().optional(),
+  title: z.string().optional().or(z.literal('')),
+  comment: z.string().optional().or(z.literal('')),
 });
 
 const AddReview = ({ onCreated }: AddReviewProps) => {
@@ -59,16 +59,25 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
     defaultValues: {
       product_id: "",
       user_id: "",
+      reviewer_name: "",
       rating: 5,
       title: "",
       comment: "",
     },
   });
 
-  // Lists are fetched on demand via SearchSelect to avoid loading too many items at once.
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
+    
+    console.log('🎯 Admin Review Form - Submitting:', {
+      product_id: values.product_id,
+      user_id: values.user_id || 'EMPTY',
+      reviewer_name: values.reviewer_name || 'EMPTY',
+      rating: values.rating,
+      title: values.title || 'EMPTY',
+      comment: values.comment || 'EMPTY'
+    });
+    
     try {
       const res = await fetch("/api/reviews", {
         method: "POST",
@@ -76,10 +85,17 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
         body: JSON.stringify(values),
       });
       const json = await res.json().catch(() => ({}));
+      
+      console.log('📡 API Response:', { 
+        status: res.status, 
+        ok: res.ok, 
+        error: json?.error 
+      });
+      
       if (!res.ok) throw new Error(json?.error || "Failed to create review");
 
-      toast({ title: "Review created", description: "Review published and synced." });
-      form.reset({ product_id: "", user_id: "", rating: 5, title: "", comment: "" });
+      toast({ title: "Review created", description: "Review published successfully." });
+      form.reset({ product_id: "", user_id: "", reviewer_name: "", rating: 5, title: "", comment: "" });
       onCreated?.();
     } catch (e) {
       console.error(e);
@@ -123,30 +139,51 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
                 name="user_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <SearchSelect<AdminUserOption>
-                          value={field.value}
-                          onChange={field.onChange}
-                          fetchUrl="/api/users"
-                          placeholder="Search users..."
-                          itemToOption={(u) => ({ id: u.id, label: `${userLabel(u)} (${u.email})` })}
-                          limit={10}
-                          buttonClassName="w-full justify-between"
-                        />
-                      </div>
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button type="button" variant="outline" size="sm">New</Button>
-                        </SheetTrigger>
-                        <AddUser />
-                      </Sheet>
-                    </div>
+                    <FormLabel>User (Optional)</FormLabel>
+                    <SearchSelect<AdminUserOption>
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      fetchUrl="/api/users"
+                      placeholder="Search users..."
+                      itemToOption={(u) => ({ id: u.id, label: `${userLabel(u)} (${u.email})` })}
+                      limit={10}
+                      buttonClassName="w-full justify-between"
+                    />
+                    <FormDescription>
+                      Select a registered user or leave empty to add a guest review
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="reviewer_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reviewer Name (Optional if user selected)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter reviewer's name for guest review" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Only required if no user is selected above. Must provide either a user OR a reviewer name.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Validation hint */}
+              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                <p className="font-medium">📝 Note:</p>
+                <p className="mt-1">
+                  You must either <strong>select a user</strong> from the system OR <strong>enter a reviewer name</strong> for guest reviews.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField

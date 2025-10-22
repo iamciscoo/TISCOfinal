@@ -59,24 +59,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Validate amount matches cart total
-    const calculatedTotal = order_data.items.reduce((sum, item) => {
-      return sum + (Number(item.price) * Number(item.quantity))
-    }, 0)
-
-    if (Math.abs(calculatedTotal - Number(amount)) > 0.01) {
-      return NextResponse.json(
-        {
-          error: 'Amount mismatch',
-          calculated: calculatedTotal,
-          provided: amount
-        },
-        { status: 400 }
-      )
-    }
-
-    // First create order in database to get real order ID
-    console.log('📦 Creating order in database first...')
+    // Server-side price validation - fetch actual prices from database
+    console.log('🔍 Validating product prices from database...')
     
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
@@ -85,6 +69,93 @@ export async function POST(req: NextRequest) {
     )
 
     const orderData = order_data as OrderData
+    
+    // Fetch products to validate prices and check for deals
+    const productIds = orderData.items.map(item => item.product_id)
+    const { data: productsData, error: productsErr } = await supabase
+      .from('products')
+      .select('id, name, price, stock_quantity, is_deal, deal_price, original_price')
+      .in('id', productIds)
+
+    if (productsErr) {
+      console.error('❌ Failed to fetch products for price validation:', productsErr)
+      return NextResponse.json(
+        { error: 'Failed to validate product prices' },
+        { status: 500 }
+      )
+    }
+
+    type ProductRow = {
+      id: string
+      name: string
+      price: number
+      stock_quantity: number | null
+      is_deal?: boolean | null
+      deal_price?: number | null
+      original_price?: number | null
+    }
+
+    const productsMap = new Map<string, ProductRow>()
+    for (const p of (productsData || []) as ProductRow[]) {
+      productsMap.set(p.id, p)
+    }
+
+    // Validate all products exist and recalculate with correct prices
+    let serverCalculatedTotal = 0
+    const validatedItems = []
+
+    for (const item of orderData.items) {
+      const product = productsMap.get(item.product_id)
+      if (!product) {
+        return NextResponse.json(
+          { error: `Product not found: ${item.product_id}` },
+          { status: 404 }
+        )
+      }
+
+      // Check stock
+      if (typeof product.stock_quantity === 'number' && product.stock_quantity < item.quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock for ${product.name}` },
+          { status: 409 }
+        )
+      }
+
+      // Use deal_price if product is a deal, otherwise use regular price
+      const actualPrice = (product.is_deal && typeof product.deal_price === 'number')
+        ? product.deal_price
+        : product.price
+
+      serverCalculatedTotal += actualPrice * item.quantity
+      
+      validatedItems.push({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: actualPrice // Use server-validated price
+      })
+    }
+
+    // Validate amount matches server-calculated total
+    if (Math.abs(serverCalculatedTotal - Number(amount)) > 0.01) {
+      console.error('❌ Amount mismatch:', {
+        client_amount: amount,
+        server_calculated: serverCalculatedTotal,
+        difference: Math.abs(serverCalculatedTotal - Number(amount))
+      })
+      return NextResponse.json(
+        {
+          error: 'Price mismatch - please refresh your cart',
+          client_total: amount,
+          server_total: serverCalculatedTotal
+        },
+        { status: 400 }
+      )
+    }
+
+    console.log('✅ Price validation passed - using server-validated prices')
+
+    // First create order in database to get real order ID
+    console.log('📦 Creating order in database first...')
     
     // 🔄 ORDER REUSE LOGIC: Check for existing pending order (prevents duplicates on retry)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
@@ -149,7 +220,7 @@ export async function POST(req: NextRequest) {
         .from('orders')
         .insert({
           user_id: userProfile.id,
-          total_amount: Number(amount),
+          total_amount: serverCalculatedTotal, // Use server-validated total (includes deal prices)
           currency,
           status: 'pending',
           payment_status: 'pending',
@@ -180,15 +251,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Create order items (skip if order was reused - items already exist)
-    if (!isReusedOrder && orderData.items && orderData.items.length > 0) {
+    // Use validated items with server-verified deal prices
+    if (!isReusedOrder && validatedItems && validatedItems.length > 0) {
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(
-          orderData.items.map(item => ({
+          validatedItems.map(item => ({
             order_id: order.id,
             product_id: item.product_id,
             quantity: item.quantity,
-            price: item.price
+            price: item.price // Server-validated price (includes deal price if applicable)
           }))
         )
 
@@ -202,9 +274,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Create payment session with idempotency check, linked to order
+    // Use server-validated total amount
     const { session, is_duplicate } = await createPaymentSession({
       user_id: userProfile.id,
-      amount: Number(amount),
+      amount: serverCalculatedTotal, // Use server-validated total (includes deal prices)
       currency,
       provider,
       phone_number,

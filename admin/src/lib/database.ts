@@ -329,7 +329,10 @@ export async function getOrders(limit?: number): Promise<Order[]> {
             id,
             name,
             price,
-            image_url
+            image_url,
+            is_deal,
+            deal_price,
+            original_price
           )
         )
       `)
@@ -428,7 +431,10 @@ export async function getOrderById(id: string | number): Promise<Order | null> {
           name,
           image_url,
           price,
-          description
+          description,
+          is_deal,
+          deal_price,
+          original_price
         )
       )
     `)

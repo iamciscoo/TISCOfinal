@@ -462,7 +462,7 @@ function ProductsContent() {
           {/* Filters Sidebar (hidden on mobile) */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              <Card className="max-h-[calc(100vh-32rem)] overflow-auto">
+              <Card>
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
                     <Filter className="h-5 w-5" />

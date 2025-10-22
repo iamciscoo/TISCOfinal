@@ -127,16 +127,18 @@ export interface OrderItem {
 export interface Review {
   id: string | number
   product_id: string | number
-  user_id: string
+  user_id?: string | null
+  reviewer_name?: string | null
   rating: number
   comment?: string
+  title?: string
   is_verified: boolean
   is_approved: boolean
   created_at: string
   updated_at: string
   // Relations
   product?: Product
-  user?: User
+  user?: User | null
 }
 
 export interface Service {

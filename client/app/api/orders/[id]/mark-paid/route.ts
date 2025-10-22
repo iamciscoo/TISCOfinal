@@ -94,8 +94,8 @@ export async function POST(req: NextRequest, { params }: Params) {
         amount: orderData.total_amount,
         currency: orderData.currency || 'TZS',
         status: 'completed',
-        payment_type: 'office_payment',
-        provider: 'office',
+        payment_type: 'direct_pay',
+        provider: 'direct_pay',
         transaction_reference: `OFFICE_${id.slice(0, 8)}_${Date.now()}`,
         completed_at: new Date().toISOString()
       })
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         customer_name: customerName,
         amount: orderData.total_amount?.toString() || '0',
         currency: orderData.currency || 'TZS',
-        payment_method: 'Office Payment - Confirmed',
+        payment_method: 'Direct Pay - Confirmed',
         transaction_id: `OFFICE_${id.slice(0, 8)}_${Date.now()}`
       })
       console.log('Customer payment success notification sent')

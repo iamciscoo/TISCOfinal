@@ -217,22 +217,44 @@ export async function POST(req: Request) {
 
     const { data: productsData, error: productsErr } = await supabase
       .from('products')
-      .select('id, name, price, stock_quantity')
+      .select('id, name, price, stock_quantity, is_deal, deal_price, original_price')
       .in('id', productIds)
 
     if (productsErr) {
       return NextResponse.json({ error: productsErr.message }, { status: 500 })
     }
 
-    type ProductRow = { id: string; name: string; price: number; stock_quantity: number | null }
+    type ProductRow = { 
+      id: string; 
+      name: string; 
+      price: number; 
+      stock_quantity: number | null;
+      is_deal?: boolean | null;
+      deal_price?: number | null;
+      original_price?: number | null;
+    }
     const productsDataTyped = (productsData || []) as ProductRow[]
-    const productMap = new Map<string, { id: string; name: string; price: number; stock_quantity?: number | null }>()
+    const productMap = new Map<string, { 
+      id: string; 
+      name: string; 
+      price: number; 
+      stock_quantity?: number | null;
+      is_deal?: boolean | null;
+      deal_price?: number | null;
+    }>()
     for (const p of productsDataTyped) {
+      // Use deal_price if product is a deal, otherwise use regular price
+      const actualPrice = (p.is_deal && typeof p.deal_price === 'number') 
+        ? p.deal_price 
+        : Number(p.price) || 0
+      
       productMap.set(p.id, {
         id: p.id,
         name: p.name,
-        price: Number(p.price) || 0,
+        price: actualPrice,
         stock_quantity: p.stock_quantity ?? null,
+        is_deal: p.is_deal ?? null,
+        deal_price: p.deal_price ?? null,
       })
     }
 
@@ -465,8 +487,8 @@ export async function POST(req: Request) {
       })
       logger.notificationEvent('Order confirmation email sent successfully', { orderId: order.id })
 
-      // Send admin notification for all orders (including "Pay at Office")
-      // This ensures office payments get admin notifications just like mobile payments do via webhooks
+      // Send admin notification for all orders (including "Direct Pay")
+      // This ensures Direct Pay orders get admin notifications just like mobile payments do via webhooks
       logger.notificationEvent('Sending admin order notification', { orderId: order.id })
       try {
         const { notifyAdminOrderCreated } = await import('@/lib/notifications/service')
@@ -533,7 +555,7 @@ export async function GET(req: Request) {
           *,
           order_items(
             *,
-            products(id, name, price, image_url)
+            products(id, name, price, image_url, is_deal, deal_price, original_price)
           )
         `)
         .eq('user_id', user.id)
@@ -557,7 +579,7 @@ export async function GET(req: Request) {
             *,
             order_items(
               *,
-              products(id, name, price, image_url)
+              products(id, name, price, image_url, is_deal, deal_price, original_price)
             )
           `)
           .eq('user_id', uid)
