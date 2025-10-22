@@ -11,7 +11,8 @@ import type {
   CreateOrderInput,
   CreateOrderItemInput,
   PaymentLogEvent,
-  PaymentProvider
+  PaymentProvider,
+  ZenoPayResponse
 } from './types'
 import {
   ZenoPayError,
@@ -42,9 +43,26 @@ export function normalizeTzPhone(raw: string): string {
 }
 
 /**
- * Map provider name to ZenoPay channel
+ * Map provider name to ZenoPay channel parameter
+ * 
+ * NOTE: The 'channel' parameter is NOT documented in official ZenoPay docs.
+ * We include it based on internal testing, but it may be optional or ignored.
+ * 
+ * To disable channel parameter entirely, set ENABLE_ZENOPAY_CHANNEL=false in env
+ * 
+ * Mappings based on Tanzanian mobile networks:
+ * - M-Pesa (Vodacom) → 'vodacom'
+ * - Tigo Pesa → 'tigo'
+ * - Airtel Money → 'airtel'
+ * - Halopesa (Halotel) → 'halotel'
  */
 export function mapProviderToChannel(provider: PaymentProvider): string | undefined {
+  // Feature flag: Allow disabling channel parameter if it causes issues
+  const enableChannel = process.env.ENABLE_ZENOPAY_CHANNEL !== 'false'
+  if (!enableChannel) {
+    return undefined
+  }
+  
   const map: Record<PaymentProvider, string> = {
     'M-Pesa': 'vodacom',
     'Tigo Pesa': 'tigo',
@@ -274,21 +292,20 @@ export async function initiateZenoPayment(params: {
       amount: amountInt,
       order_id: zenoOrderId, // Use unique session reference (allows retries)
       webhook_url,
-      ...(channel ? { channel } : {})
+      ...(channel ? { channel } : {}) // Undocumented parameter, may be optional
     })
 
-    const resp = response as {
-      status?: string
-      message?: string
-      code?: string | number
-      result_code?: string | number
-      data?: { order_id?: string; transaction_id?: string }
-      order_id?: string
-      transaction_id?: string
-    }
+    // Use typed response structure based on ZenoPay documentation
+    const resp = response as ZenoPayResponse
 
     // Check ZenoPay result codes
-    const resultCode = String(resp?.code || resp?.result_code || '000')
+    // Priority order: resultcode (official docs) > result_code > code
+    const resultCode = String(
+      resp?.resultcode ||   // Official ZenoPay docs format
+      resp?.result_code ||  // Alternative underscore format
+      resp?.code ||         // Short form
+      '000'                 // Default success code
+    )
     const retryableResultCodes = ['001', '002', '003', '004', '005', '999']
     
     console.log(`📊 ZenoPay result code: ${resultCode}`)

@@ -175,6 +175,35 @@ export interface PaymentLogData {
 }
 
 // ============================================================================
+// ZenoPay API Response Types
+// ============================================================================
+
+/**
+ * ZenoPay API response structure based on official documentation
+ * @see https://zenoapi.com/docs
+ */
+export interface ZenoPayResponse {
+  // Result code fields (multiple formats for compatibility)
+  resultcode?: string | number  // Official docs format (lowercase, no underscore)
+  result_code?: string | number // Alternative format with underscore
+  code?: string | number        // Short form
+  
+  // Status and message
+  status?: string
+  result?: string
+  message?: string
+  
+  // Transaction data
+  data?: {
+    order_id?: string
+    transaction_id?: string
+  }
+  order_id?: string
+  transaction_id?: string
+  reference?: string
+}
+
+// ============================================================================
 // Error Types
 // ============================================================================
 

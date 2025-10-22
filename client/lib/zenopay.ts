@@ -3,13 +3,30 @@ type ZenoPayConfig = {
   apiKey: string
 }
 
+/**
+ * ZenoPay API Create Order Parameters
+ * Based on official ZenoPay documentation
+ * @see https://zenoapi.com/docs
+ */
 export interface CreateOrderArgs {
+  /** Customer's full name */
   buyer_name: string
+  /** Tanzanian phone number in format: 07XXXXXXXX or 06XXXXXXXX */
   buyer_phone: string
+  /** Customer's email address */
   buyer_email: string
+  /** Payment amount in TZS (Tanzanian Shillings) */
   amount: number | string
+  /** Unique order identifier (UUID recommended) */
   order_id: string
+  /** Optional webhook URL for payment status notifications */
   webhook_url?: string
+  /** 
+   * Optional channel parameter for provider routing
+   * NOTE: This parameter is NOT documented in official ZenoPay API docs.
+   * Possible values: 'vodacom', 'tigo', 'airtel', 'halotel'
+   * May be ignored by ZenoPay or used for internal routing.
+   */
   channel?: string
 }
 
@@ -25,12 +42,18 @@ export class ZenoPayClient {
     } as ZenoPayConfig
   }
 
+  /**
+   * Create a mobile money payment order
+   * @param args - Payment order parameters
+   * @returns ZenoPay API response
+   * @throws Error if request fails or times out
+   */
   async createOrder(args: CreateOrderArgs): Promise<unknown> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30000)
 
     try {
-      // New API expects JSON body and x-api-key header
+      // Build payload according to ZenoPay API specification
       const payload: Record<string, unknown> = {
         order_id: args.order_id,
         buyer_name: args.buyer_name,
@@ -38,12 +61,15 @@ export class ZenoPayClient {
         buyer_email: args.buyer_email,
         amount: args.amount,
       }
-      // Always send webhook_url if provided (including localhost for testing)
+      
+      // Optional: Include webhook URL for payment status callbacks
       if (args.webhook_url) {
         payload.webhook_url = args.webhook_url
       }
+      
+      // Optional: Include channel parameter (undocumented)
+      // This parameter is not in official docs but may help with payment routing
       if (args.channel) {
-        // Only include documented 'channel' when explicitly provided.
         payload.channel = args.channel
       }
 
@@ -80,6 +106,12 @@ export class ZenoPayClient {
     }
   }
 
+  /**
+   * Check the status of a payment order
+   * @param orderId - The unique order_id used when creating the order
+   * @returns ZenoPay API response with order status
+   * @throws Error if request fails or times out
+   */
   async getOrderStatus(orderId: string): Promise<unknown> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 20000)
