@@ -266,7 +266,29 @@ export async function POST(req: NextRequest) {
       })
 
     } catch (paymentError) {
-      console.error('Payment initiation failed:', paymentError)
+      console.error('❌ Payment initiation failed:', paymentError)
+      console.error('❌ Error details:', {
+        name: (paymentError as Error).name,
+        message: (paymentError as Error).message,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        details: (paymentError as any).details
+      })
+
+      // 🗑️ CLEANUP: Mark order as failed when ZenoPay fails
+      // This prevents orphaned "pending" orders that will never be paid
+      if (order && !isReusedOrder) {
+        console.log(`🗑️ Marking order ${order.id} as cancelled due to payment failure`)
+        await supabase
+          .from('orders')
+          .update({
+            status: 'cancelled',
+            payment_status: 'failed',
+            notes: order.notes ? 
+              `${order.notes}\n\nPayment failed: ${(paymentError as Error).message}` :
+              `Payment failed: ${(paymentError as Error).message}`
+          })
+          .eq('id', order.id)
+      }
 
       // Provide user-friendly error messages with retry information
       let userMessage = 'Payment initiation failed. Please try again.'

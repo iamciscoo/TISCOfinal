@@ -284,6 +284,17 @@ export async function initiateZenoPayment(params: {
     console.log(`📦 Linked to database order: ${order_id}`)
   }
 
+  // 🔍 DIAGNOSTIC LOGGING: Log request details
+  console.log(`🔍 ZenoPay Request Details:`, {
+    buyer_phone: normalizedPhone,
+    amount: amountInt,
+    channel: channel || 'auto',
+    order_id: zenoOrderId,
+    buyer_email,
+    buyer_name,
+    webhook_url
+  })
+
   try {
     const response = await client.createOrder({
       buyer_name,
@@ -294,6 +305,9 @@ export async function initiateZenoPayment(params: {
       webhook_url,
       ...(channel ? { channel } : {}) // Undocumented parameter, may be optional
     })
+
+    // 🔍 DIAGNOSTIC LOGGING: Log raw ZenoPay response
+    console.log(`📥 ZenoPay Raw Response:`, JSON.stringify(response, null, 2))
 
     // Use typed response structure based on ZenoPay documentation
     const resp = response as ZenoPayResponse
@@ -387,6 +401,11 @@ export async function initiateZenoPayment(params: {
       }
     })
 
+    console.log(`✅ ZenoPay call successful! USSD push should arrive shortly.`)
+    console.log(`💡 Customer phone: ${normalizedPhone}`)
+    console.log(`💡 Result code: ${resultCode}`)
+    console.log(`💡 Gateway transaction ID: ${gateway_transaction_id || 'N/A'}`)
+
     return {
       gateway_transaction_id,
       message: `Payment request sent to ${normalizedPhone}. Please approve on your phone.`
@@ -394,6 +413,13 @@ export async function initiateZenoPayment(params: {
 
   } catch (error) {
     const errorMessage = (error as Error).message
+    const errorName = (error as Error).name
+    
+    console.error(`❌ ZenoPay API Error:`, {
+      name: errorName,
+      message: errorMessage,
+      stack: (error as Error).stack?.split('\n').slice(0, 3).join('\n')
+    })
     
     await updateSessionStatus(session.id, 'failed', undefined, errorMessage)
     
@@ -401,12 +427,19 @@ export async function initiateZenoPayment(params: {
       session_id: session.id,
       transaction_reference: session.transaction_reference,
       user_id: session.user_id,
-      error: errorMessage
+      error: errorMessage,
+      details: {
+        error_name: errorName,
+        phone: session.phone_number,
+        amount: session.amount
+      }
     })
 
+    // Re-throw with enhanced context
     throw new ZenoPayError(errorMessage, true, {
       session_id: session.id,
-      transaction_reference: session.transaction_reference
+      transaction_reference: session.transaction_reference,
+      original_error: errorName
     })
   }
 }
