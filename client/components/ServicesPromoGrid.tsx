@@ -61,24 +61,30 @@ const promoCards: PromoCard[] = [
   }
 ]
 
-export function ServicesPromoGrid() {
+interface ServicesPromoGridProps {
+  showHeader?: boolean
+}
+
+export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps) {
   return (
     <section className="mb-16">
-      <div className="text-center mb-12">
-        <div className="inline-block mb-6">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
-            <span className="relative inline-block">
-              <span className="relative z-10">Power Up</span>
-              <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-orange-500 to-orange-600 transform -skew-y-1 opacity-30"></span>
-            </span>
-            {" "}Your Experience
-          </h2>
+      {showHeader && (
+        <div className="text-center mb-12">
+          <div className="inline-block mb-6">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
+              <span className="relative inline-block">
+                <span className="relative z-10">Power Up</span>
+                <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-orange-500 to-orange-600 transform -skew-y-1 opacity-30"></span>
+              </span>
+              {" "}Your Experience
+            </h2>
+          </div>
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Essential services designed to
+            <span className="block mt-1 font-semibold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">elevate your lifestyle</span>
+          </p>
         </div>
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-          Essential services designed to
-          <span className="block mt-1 font-semibold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">elevate your lifestyle</span>
-        </p>
-      </div>
+      )}
 
       {/* Desktop Grid */}
       <div className="hidden lg:grid grid-cols-4 grid-rows-2 gap-6 h-[600px]">

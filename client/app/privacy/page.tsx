@@ -220,7 +220,7 @@ export default function PrivacyPolicyPage() {
             <CardTitle>13. Contact Us</CardTitle>
           </CardHeader>
           <CardContent className="text-gray-700 space-y-2">
-            <p>Email: support@tiscomarket.com</p>
+            <p>Email: support@tiscomarket.store</p>
             <p className="text-sm text-gray-500">
               Note: This Policy provides general information and does not constitute legal advice.
             </p>

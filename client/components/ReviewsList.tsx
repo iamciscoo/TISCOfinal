@@ -35,6 +35,11 @@ export function ReviewsList({ productId, refreshTrigger }: ReviewsListProps) {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
+
   useEffect(() => {
     const fetchReviews = async () => {
       try {

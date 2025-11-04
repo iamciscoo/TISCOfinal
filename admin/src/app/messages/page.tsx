@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +9,6 @@ import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/ui/data-table'
 import { ColumnDef } from '@tanstack/react-table'
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Mail, Eye, Send } from 'lucide-react'
 
@@ -25,6 +25,7 @@ interface ContactMessage {
 }
 
 export default function MessagesPage() {
+  const router = useRouter()
   const [messages, setMessages] = useState<ContactMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -36,7 +37,6 @@ export default function MessagesPage() {
 
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<ContactMessage | null>(null)
-  const [responseText, setResponseText] = useState('')
   const [updating, setUpdating] = useState(false)
 
   const { toast } = useToast()
@@ -73,7 +73,6 @@ export default function MessagesPage() {
 
   const openDetails = (msg: ContactMessage) => {
     setSelected(msg)
-    setResponseText(msg.response || '')
     setOpen(true)
   }
 
@@ -92,7 +91,6 @@ export default function MessagesPage() {
       toast({ title: 'Success', description: 'Message updated' })
       setOpen(false)
       setSelected(null)
-      setResponseText('')
       fetchMessages()
     } catch (err) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
@@ -296,22 +294,25 @@ export default function MessagesPage() {
                   )}
                 </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Response</p>
-                <Textarea
-                  value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
-                  placeholder="Type your response here..."
-                  rows={6}
-                />
-              </div>
             </div>
 
             <SheetFooter>
               <div className="flex gap-2 w-full">
-                <Button className="flex-1" disabled={updating} onClick={() => updateMessage({ response: responseText, status: 'responded' })}>
-                  {updating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                  Send Response
+                <Button 
+                  className="flex-1" 
+                  onClick={() => {
+                    // Navigate to notifications page Send tab with pre-filled data
+                    const params = new URLSearchParams({
+                      tab: 'send',
+                      email: selected.email,
+                      name: selected.name,
+                      subject: selected.subject
+                    })
+                    router.push(`/notifications?${params.toString()}`)
+                  }}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
                 </Button>
                 <Button className="flex-1" variant="outline" disabled={updating} onClick={() => updateMessage({ status: 'closed' })}>Close</Button>
               </div>

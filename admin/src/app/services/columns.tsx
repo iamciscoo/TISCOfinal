@@ -24,7 +24,6 @@ export type Service = {
   features: string[]
   duration: string
   image: string
-  gallery: string[]
   created_at: string
   updated_at: string
 }
@@ -108,13 +107,31 @@ export const columns: ColumnDef<Service>[] = [
     header: 'Title',
     cell: ({ row }) => {
       const service = row.original
+      // Handle relative paths for images stored in client's public folder
+      const getImageUrl = (imagePath: string | null | undefined) => {
+        if (!imagePath) return null
+        // If it's a relative path (starts with /), prepend client URL
+        if (imagePath.startsWith('/')) {
+          const clientUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'
+          return `${clientUrl}${imagePath}`
+        }
+        // Otherwise it's already a full URL
+        return imagePath
+      }
+      
+      const imageUrl = getImageUrl(service.image)
+      
       return (
         <div className="flex items-center gap-2 min-w-[150px] sm:min-w-[200px]">
-          {service.image && (
+          {imageUrl && (
             <img
-              src={service.image}
+              src={imageUrl}
               alt={service.title}
               className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover flex-shrink-0"
+              onError={(e) => {
+                // Hide image on error
+                e.currentTarget.style.display = 'none'
+              }}
             />
           )}
           <div className="min-w-0">

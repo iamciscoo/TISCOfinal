@@ -202,17 +202,6 @@ const AppSidebar = () => {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <SidebarMenuButton tooltip="Add Customer">
-                      <Plus />
-                      {shouldShowText && <span>Add Customer</span>}
-                    </SidebarMenuButton>
-                  </SheetTrigger>
-                  <AddUser />
-                </Sheet>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -145,7 +145,7 @@ export default function CookiePolicyPage() {
             <CardTitle>8. Contact Us</CardTitle>
           </CardHeader>
           <CardContent className="text-gray-700 space-y-2">
-            <p>Email: support@tiscomarket.com</p>
+            <p>Email: support@tiscomarket.store</p>
             <p className="text-sm text-gray-500">This document provides general information and does not constitute legal advice.</p>
           </CardContent>
         </Card>

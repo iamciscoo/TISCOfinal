@@ -131,9 +131,9 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium text-gray-900">Address</p>
                       <p className="text-gray-600">
-                        123 xxxxx Street
+                        MC Murungu Street, Mawasiliano
                         <br />
-                        xxxxxx District
+                        Near Peace and Love School 
                         <br />
                         Dar es salaam, Tanzania
                       </p>
@@ -270,7 +270,18 @@ export default function ContactPage() {
                       disabled={isLoading}
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      {isLoading ? "Sending..." : "Send Message"}
+                      {isLoading ? (
+                        <span className="flex items-center">
+                          Sending
+                          <span className="flex ml-1">
+                            <span className="animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }}>.</span>
+                            <span className="animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }}>.</span>
+                            <span className="animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }}>.</span>
+                          </span>
+                        </span>
+                      ) : (
+                        "Send Message"
+                      )}
                     </Button>
                   </form>
                 )}

@@ -66,7 +66,7 @@ export const FeaturedProducts = () => {
           </div>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             We picked them, you love them.
-            <span className="block mt-1 text-gray-500 font-medium">Products you&apos;ll regret missing out on.</span>
+            <span className="block mt-1 text-gray-500 font-medium">Items you&apos;ll regret missing out on.</span>
           </p>
         </div>
 

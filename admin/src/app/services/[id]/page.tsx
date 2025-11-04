@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,6 @@ interface Service {
   features: string[]
   duration: string
   image: string
-  gallery: string[]
 }
 
 export default function EditServicePage() {
@@ -28,6 +27,7 @@ export default function EditServicePage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
   const [formData, setFormData] = useState<Service>({
     id: '',
     title: '',
@@ -35,10 +35,33 @@ export default function EditServicePage() {
     features: [],
     duration: '',
     image: '',
-    gallery: [],
   })
   const [newFeature, setNewFeature] = useState('')
-  const [newGalleryImage, setNewGalleryImage] = useState('')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handlePickFile = () => fileInputRef.current?.click()
+
+  const uploadImage = async (file: File) => {
+    try {
+      setIsUploading(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/uploads/service-image', {
+        method: 'POST',
+        body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || 'Failed to upload image')
+      }
+      setFormData(prev => ({ ...prev, image: data.url }))
+      toast({ title: 'Image uploaded', description: 'Main image URL set from upload' })
+    } catch (err) {
+      toast({ title: 'Upload failed', description: (err as Error).message, variant: 'destructive' })
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -59,8 +82,7 @@ export default function EditServicePage() {
         description: service?.description ?? '',
         duration: service?.duration ?? '',
         image: service?.image ?? '',
-        features: Array.isArray(service?.features) ? service.features.filter(Boolean) : [],
-        gallery: Array.isArray(service?.gallery) ? service.gallery.filter(Boolean) : []
+        features: Array.isArray(service?.features) ? service.features.filter(Boolean) : []
       }))
     } catch (error) {
       toast({
@@ -91,22 +113,6 @@ export default function EditServicePage() {
     }))
   }
 
-  const addGalleryImage = () => {
-    if (newGalleryImage.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        gallery: [...prev.gallery, newGalleryImage.trim()]
-      }))
-      setNewGalleryImage('')
-    }
-  }
-
-  const removeGalleryImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, i) => i !== index)
-    }))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -195,12 +201,28 @@ export default function EditServicePage() {
 
               <div>
                 <Label htmlFor="image">Main Image URL</Label>
-                <Input
-                  id="image"
-                  value={formData.image}
-                  onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-                  placeholder="Enter image URL"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="image"
+                    value={formData.image}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                    placeholder="Enter image URL or use Upload"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) uploadImage(f)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
+                  />
+                  <Button type="button" variant="secondary" onClick={handlePickFile} disabled={isUploading}>
+                    {isUploading ? 'Uploading…' : 'Upload'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -215,62 +237,38 @@ export default function EditServicePage() {
                   value={newFeature}
                   onChange={(e) => setNewFeature(e.target.value)}
                   placeholder="Add a feature"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
                 />
-                <Button type="button" onClick={addFeature}>
+                <Button type="button" onClick={addFeature} size="icon">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {feature}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => removeFeature(index)}
-                    />
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Gallery Images</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  value={newGalleryImage}
-                  onChange={(e) => setNewGalleryImage(e.target.value)}
-                  placeholder="Add gallery image URL"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addGalleryImage())}
-                />
-                <Button type="button" onClick={addGalleryImage}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {formData.gallery.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={image}
-                      alt={`Gallery ${index + 1}`}
-                      className="w-full h-20 object-cover rounded"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0"
-                      onClick={() => removeGalleryImage(index)}
+              {formData.features.length > 0 && (
+                <div className="flex flex-wrap gap-2 items-start">
+                  {formData.features.map((feature, index) => (
+                    <Badge
+                      key={`${feature}-${index}`}
+                      variant="secondary"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm"
                     >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                      <span className="truncate max-w-[220px]" title={feature}>
+                        {feature}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${feature}`}
+                        onClick={() => removeFeature(index)}
+                        className="ml-1 -mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-destructive/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30"
+                      >
+                        <X className="h-3.5 w-3.5 pointer-events-none text-muted-foreground" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {formData.features.length === 0 && (
+                <p className="text-sm text-muted-foreground">No features added yet. Add features to highlight what's included in this service.</p>
+              )}
             </CardContent>
           </Card>
 

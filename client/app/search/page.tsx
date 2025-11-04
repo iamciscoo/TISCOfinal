@@ -52,6 +52,11 @@ function SearchResults() {
   const productsPerPage = 12
   const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
+
   // Debounced URL sync for refine input
   const updateUrlDebounced = useMemo(
     () => debounce((next: string) => {

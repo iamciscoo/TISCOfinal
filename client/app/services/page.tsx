@@ -47,7 +47,6 @@ import {
 } from 'lucide-react'
 import { PageLayout } from '@/components/shared'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
-import { ServicesPromoGrid } from '@/components/ServicesPromoGrid'
 
 interface Service {
   id: string
@@ -307,9 +306,6 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             )
           })}
         </div>
-
-        {/* Services Promotional Grid */}
-        <ServicesPromoGrid />
 
         {/* Custom Service Promo */}
         <div className="mb-16">

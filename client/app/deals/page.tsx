@@ -66,6 +66,11 @@ export default function DealsPage() {
   
   const { addItem } = useCartStore()
   
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
+  
   // Fetch deals from API
   useEffect(() => {
     const fetchDeals = async () => {

@@ -15,6 +15,7 @@
 // React hooks - think of these as tools that let components remember things and respond to changes
 import * as React from 'react'
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 // Pre-built UI components - these are like Lego blocks we use to build the page
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 // Icons - little pictures we show in the UI
 import { Bell, Mail, AlertCircle, CheckCircle, Clock, Send, RefreshCw, Trash2, ExternalLink, X, Package, CreditCard } from 'lucide-react'
@@ -237,9 +239,15 @@ const ITEMS_PER_PAGE = 10
 // =============================================================================
 
 export default function NotificationsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
   // ---------------------------------------------------------------------------
   // STATE VARIABLES - These hold all the data that changes on this page
   // ---------------------------------------------------------------------------
+  
+  // Active tab state
+  const [activeTab, setActiveTab] = useState('notifications')
   
   // Notifications data
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])  // List of all notifications
@@ -760,6 +768,31 @@ export default function NotificationsPage() {
     setCurrentPage(1)
   }, [filter, eventFilter, priorityFilter])
 
+  /**
+   * Handle URL Parameters
+   * 
+   * Pre-fill form when coming from messages page
+   */
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    const email = searchParams.get('email')
+    const name = searchParams.get('name')
+    const subject = searchParams.get('subject')
+    
+    if (tab) {
+      setActiveTab(tab)
+    }
+    
+    if (email || name || subject) {
+      setManualNotification(prev => ({
+        ...prev,
+        recipient_email: email || prev.recipient_email,
+        recipient_name: name || prev.recipient_name,
+        title: subject ? `Re: ${subject}` : prev.title
+      }))
+    }
+  }, [searchParams])
+
   // Auto-refresh removed - admins can use the manual refresh button to update data
 
   // ---------------------------------------------------------------------------
@@ -872,7 +905,7 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      <Tabs defaultValue="notifications" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="notifications" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">All Notifications</TabsTrigger>
           <TabsTrigger value="send" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">Send Notification</TabsTrigger>
@@ -1193,18 +1226,27 @@ export default function NotificationsPage() {
         </TabsContent>
 
         <TabsContent value="send" className="space-y-4">
-          {/* Payment Details Configuration Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment Details Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure payment account details for Direct Pay orders. Once saved, use the "Insert Payment Details" button below to add them to notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          {/* Payment Details Configuration Accordion */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="payment-details" className="border rounded-lg">
+              <Card className="border-0">
+                <CardHeader className="pb-0">
+                  <AccordionTrigger className="hover:no-underline [&[data-state=open]]:pb-4">
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900">
+                        <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <CardTitle className="text-base sm:text-lg font-semibold">Payment Details Configuration</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm mt-0.5">
+                          Configure payment account details for Direct Pay orders
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                </CardHeader>
+                <AccordionContent>
+                  <CardContent className="space-y-6 pt-2">
               {/* Bank Transfer Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-2">
@@ -1451,14 +1493,17 @@ export default function NotificationsPage() {
                 </Button>
               </div>
 
-              {/* Info Box */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>💡 Tip:</strong> After saving, use the "Insert Payment Details" button in the message field below to add these details to your notification.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                    {/* Info Box */}
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-sm text-blue-900">
+                        <strong>💡 Tip:</strong> After saving, use the "Insert Payment Details" button in the message field below to add these details to your notification.
+                      </p>
+                    </div>
+                  </CardContent>
+                </AccordionContent>
+              </Card>
+            </AccordionItem>
+          </Accordion>
 
           {/* Send Manual Notification Card */}
           <Card>

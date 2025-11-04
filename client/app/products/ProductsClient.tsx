@@ -57,6 +57,11 @@ function ProductsContent() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
