@@ -6,6 +6,7 @@ import type { Product } from '@/lib/types'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
+import { extractProductId } from '@/lib/url-utils'
 
 interface ProductPageProps {
   params: Promise<{ slug: string[] }>
@@ -13,7 +14,7 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
-  const id = slug[0] // Get the first slug segment as the product ID
+  const id = extractProductId(slug) // Extract product ID (supports both old and new URL formats)
   
   // Add debug logging for production
   console.log(`[PRODUCT PAGE] Attempting to load product with ID: ${id}`)
@@ -53,7 +54,7 @@ export const runtime = 'nodejs'
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { slug } = await params
-  const id = slug[0]
+  const id = extractProductId(slug)
   
   try {
     const product = await fetchProductByIdOrSlug(id)

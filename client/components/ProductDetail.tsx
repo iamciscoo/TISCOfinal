@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Minus,
-  Plus
+  Plus,
+  Share2
 } from 'lucide-react'
 import { Product } from '@/lib/types'
 import { PriceDisplay } from '@/components/PriceDisplay'
@@ -25,6 +26,7 @@ import { ReviewForm } from '@/components/ReviewForm'
 import { ReviewsList } from '@/components/ReviewsList'
 import { LoadingSpinner } from '@/components/shared'
 import { preserveLineBreaks } from '@/lib/text-utils'
+import { ShareModal } from '@/components/ShareModal'
 
 interface ProductDetailProps {
   product: Product
@@ -50,6 +52,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
   const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   
   const { addItem, setItemQuantity, openCart } = useCartStore()
   
@@ -401,7 +404,21 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                 ? product.categories[0]?.category?.name || 'Electronics'
                 : (product.categories && 'name' in product.categories ? product.categories.name : 'Electronics')}
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+            
+            {/* Title with Share Button */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex-1">{product.name}</h1>
+              
+              {/* Share Button */}
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center transition-all hover:scale-105 hover:shadow-md group"
+                aria-label="Share product"
+                data-testid="share-button"
+              >
+                <Share2 className="h-5 w-5 text-blue-600 group-hover:text-blue-700" />
+              </button>
+            </div>
             
             {/* Rating */}
             <div className="flex items-center gap-3 md:gap-4 mb-4">
@@ -592,6 +609,14 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        productName={product.name}
+        productId={String(product.id)}
+      />
     </div>
     </>
   )
