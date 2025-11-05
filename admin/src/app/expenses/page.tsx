@@ -103,13 +103,33 @@ export default function ExpensesPage() {
   const fetchExpenses = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/expenses')
+      // Add timestamp to bust cache
+      const response = await fetch(`/api/expenses?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
+        console.log('Fetched expenses:', data.length, data)
         setExpenses(data)
+      } else {
+        console.error('Failed to fetch expenses:', response.status)
+        toast({
+          title: 'Error',
+          description: 'Failed to load expenses',
+          variant: 'destructive'
+        })
       }
     } catch (error) {
       console.error('Failed to fetch expenses:', error)
+      toast({
+        title: 'Error',
+        description: 'Network error loading expenses',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -139,8 +159,14 @@ export default function ExpensesPage() {
       })
 
       if (response.ok) {
+        const savedExpense = await response.json()
+        console.log('Expense saved:', savedExpense)
+        
         // Close dialog first
         handleCloseDialog()
+        
+        // Small delay to ensure DB write completes
+        await new Promise(resolve => setTimeout(resolve, 100))
         
         // Then fetch fresh data
         await fetchExpenses()
@@ -194,8 +220,14 @@ export default function ExpensesPage() {
       })
 
       if (response.ok) {
+        console.log('Expense deleted:', expenseToDelete.id)
+        
+        // Small delay to ensure DB write completes
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         // Fetch fresh data to ensure consistency
         await fetchExpenses()
+        
         toast({
           title: 'Expense Deleted',
           description: 'The expense has been deleted successfully.',
