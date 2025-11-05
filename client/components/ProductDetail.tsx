@@ -337,41 +337,54 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
             )}
           </div>
 
-          {/* Thumbnail Images */}
+          {/* Thumbnail Images - Horizontal Scrollable Gallery */}
           {productImages.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {productImages.slice(0, 4).map((image, index) => (
-                <div
-                  key={index}
-                  className={`relative aspect-square bg-gray-100 rounded-md cursor-pointer border-2 transition-all hover:border-blue-400 hover:shadow-md ${
-                    selectedImageIndex === index ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'
-                  }`}
-                  onClick={() => handleImageSelect(index)}
-                >
-                  <Image
-                    src={image || '/circular.svg'}
-                    alt={`${product.name} thumbnail ${index + 1}`}
-                    fill
-                    className="object-cover rounded-md"
-                    sizes="(max-width: 768px) 25vw, 12vw"
-                    quality={60}
-                  />
-                  {/* Index indicator */}
-                  <div className={`absolute top-1 right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center font-medium ${
-                    selectedImageIndex === index 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-800 text-white opacity-60'
-                  }`}>
-                    {index + 1}
+            <div className="relative">
+              {/* Scroll container - hidden scrollbar with proper padding */}
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory py-2 px-1 -mx-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <style jsx>{`
+                  div::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
+                {productImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg cursor-pointer border-2 transition-all duration-200 snap-start ${
+                      selectedImageIndex === index 
+                        ? 'border-blue-500 ring-2 ring-blue-300 shadow-lg' 
+                        : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
+                    }`}
+                    onClick={() => handleImageSelect(index)}
+                  >
+                    <Image
+                      src={image || '/circular.svg'}
+                      alt={`${product.name} thumbnail ${index + 1}`}
+                      fill
+                      className="object-cover rounded-lg"
+                      sizes="100px"
+                      quality={60}
+                    />
+                    {/* Index indicator */}
+                    <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold transition-all ${
+                      selectedImageIndex === index 
+                        ? 'bg-blue-500 text-white shadow-md' 
+                        : 'bg-gray-700 bg-opacity-70 text-white'
+                    }`}>
+                      {index + 1}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
               
-              {/* More Images Indicator */}
+              {/* Scroll hint for many images */}
               {productImages.length > 4 && (
-                <div className="col-span-4 text-center mt-2">
-                  <span className="text-sm text-gray-500">
-                    +{productImages.length - 4} more images (use navigation arrows)
+                <div className="mt-3 text-center">
+                  <span className="text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 inline-flex items-center gap-1.5">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                    </svg>
+                    Scroll to view all {productImages.length} images
                   </span>
                 </div>
               )}
