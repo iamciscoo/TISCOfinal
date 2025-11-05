@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   Mail,
   Bell,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -60,6 +61,11 @@ const items = [
     title: "Revenue",
     url: "/revenue",
     icon: DollarSign,
+  },
+  {
+    title: "Expenses",
+    url: "/expenses",
+    icon: Receipt,
   },
   {
     title: "Notifications",

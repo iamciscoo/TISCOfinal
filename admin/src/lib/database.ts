@@ -715,3 +715,902 @@ export async function getUserMonthlyOrderActivity(userId: string, months = 6): P
   return buckets.map(b => ({ month: b.label, orders: counts.get(b.key) || 0 }))
 }
 
+
+// =========================
+// Revenue Analytics Helpers
+// =========================
+
+// Types local to this module to avoid polluting global types
+type DailyPoint = { date: string; total: number; products: number; services: number; successful: number }
+type TopItem = { id: string | number; name: string; revenue: number; quantity?: number }
+type PaymentBreakdown = { method: string; amount: number }
+
+function normalizeMethod(method?: string | null) {
+  const m = String(method || '').trim().toLowerCase()
+  if (!m) return 'unknown'
+  if (m.includes('mobile')) return 'mobile money'
+  if (m.includes('zeno')) return 'mobile money'
+  if (m.includes('cash')) return 'cash'
+  if (m.includes('office')) return 'pay at office'
+  if (m.includes('card')) return 'card'
+  return m
+}
+
+// Combine orders and service bookings by day
+export async function getDailyRevenue(days = 30): Promise<DailyPoint[]> {
+  try {
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(now.getDate() - (days - 1))
+
+    // Prepare day buckets
+    const buckets = new Map<string, DailyPoint>()
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const key = d.toISOString().slice(0, 10)
+      buckets.set(key, { date: key, total: 0, products: 0, services: 0, successful: 0 })
+    }
+
+    // Orders (products)
+    const { data: orders, error: ordersErr } = await supabase
+      .from('orders')
+      .select('created_at,total_amount,payment_status')
+      .gte('created_at', start.toISOString())
+
+    if (!ordersErr) {
+      for (const row of (orders || []) as Array<{ created_at: string; total_amount: number | string; payment_status?: string }>) {
+        const key = new Date(row.created_at).toISOString().slice(0, 10)
+        if (!buckets.has(key)) continue
+        const amt = Number(row.total_amount ?? 0)
+        const b = buckets.get(key)!
+        b.total += amt
+        b.products += amt
+        if (String(row.payment_status).toLowerCase() === 'paid') b.successful += amt
+      }
+    }
+
+    // Service bookings
+    try {
+      const { data: bookings, error: svcErr } = await supabase
+        .from('service_bookings')
+        .select('created_at,total_amount,payment_status')
+        .gte('created_at', start.toISOString())
+
+      if (!svcErr) {
+        for (const row of (bookings || []) as Array<{ created_at: string; total_amount: number | string; payment_status?: string }>) {
+          const key = new Date(row.created_at).toISOString().slice(0, 10)
+          if (!buckets.has(key)) continue
+          const amt = Number(row.total_amount ?? 0)
+          const b = buckets.get(key)!
+          b.total += amt
+          b.services += amt
+          if (String(row.payment_status || '').toLowerCase() === 'paid') b.successful += amt
+        }
+      }
+    } catch (e) {
+      // Ignore missing service bookings table/columns
+    }
+
+    return Array.from(buckets.values())
+  } catch (e) {
+    console.error('getDailyRevenue error', e)
+    return []
+  }
+}
+
+// Top products by revenue (from order_items of PAID orders)
+export async function getTopProductsByRevenue(limit = 5, days = 90): Promise<TopItem[]> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    // Load paid orders in range
+    const { data: orders, error: ordersErr } = await supabase
+      .from('orders')
+      .select('id, created_at')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    if (ordersErr || !Array.isArray(orders) || orders.length === 0) return []
+
+    const orderIds = orders.map(o => (o as any).id)
+
+    // Fetch order_items with product relation; handle both relation names
+    const { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('product_id, quantity, price, products ( id, name )')
+      .in('order_id', orderIds as any)
+
+    if (itemsErr || !Array.isArray(items)) return []
+
+    const map = new Map<string | number, TopItem>()
+    for (const it of items as Array<any>) {
+      const revenue = Number(it.price ?? 0) * Number(it.quantity ?? 0)
+      const pid = it.product_id
+      const prod = it.products || it.product
+      const name = prod?.name || `Product ${pid}`
+      const cur = map.get(pid) || { id: pid, name, revenue: 0, quantity: 0 }
+      cur.revenue += revenue
+      cur.quantity = (cur.quantity || 0) + Number(it.quantity ?? 0)
+      cur.name = name
+      map.set(pid, cur)
+    }
+
+    const sorted = Array.from(map.values()).sort((a, b) => b.revenue - a.revenue)
+    return sorted.slice(0, limit)
+  } catch (e) {
+    console.error('getTopProductsByRevenue error', e)
+    return []
+  }
+}
+
+// Top services by revenue (paid bookings)
+export async function getTopServicesByRevenue(limit = 5, days = 90): Promise<TopItem[]> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    try {
+      const { data, error } = await supabase
+        .from('service_bookings')
+        .select('service_id,total_amount,payment_status,services ( id, title )')
+        .gte('created_at', start.toISOString())
+        
+      if (error) {
+        const msg = String(error.message || '').toLowerCase()
+        if (msg.includes('does not exist')) return []
+        return []
+      }
+
+      const map = new Map<string | number, TopItem>()
+      for (const row of (data || []) as Array<any>) {
+        if (String(row.payment_status || '').toLowerCase() !== 'paid') continue
+        const id = row.service_id
+        const title = row.services?.title || `Service ${id}`
+        const cur = map.get(id) || { id, name: title, revenue: 0 }
+        cur.revenue += Number(row.total_amount ?? 0)
+        cur.name = title
+        map.set(id, cur)
+      }
+
+      const sorted = Array.from(map.values()).sort((a, b) => b.revenue - a.revenue)
+      return sorted.slice(0, limit)
+    } catch {
+      return []
+    }
+  } catch (e) {
+    console.error('getTopServicesByRevenue error', e)
+    return []
+  }
+}
+
+// Payment method breakdown for PAID orders
+export async function getPaymentMethodBreakdown(days = 90): Promise<PaymentBreakdown[]> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('payment_method,total_amount,payment_status,created_at')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    if (error) return []
+
+    const totals = new Map<string, number>()
+    for (const row of (data || []) as Array<any>) {
+      const key = normalizeMethod(row.payment_method)
+      totals.set(key, (totals.get(key) || 0) + Number(row.total_amount ?? 0))
+    }
+
+    return Array.from(totals.entries()).map(([method, amount]) => ({ method, amount }))
+  } catch (e) {
+    console.error('getPaymentMethodBreakdown error', e)
+    return []
+  }
+}
+
+// KPI metrics for cards on revenue page
+export async function getRevenueKPIs() {
+  try {
+    const now = new Date()
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    // Today + month for orders
+    const [ordersToday, ordersMonth] = await Promise.all([
+      supabase.from('orders').select('total_amount,payment_status,created_at').gte('created_at', startOfDay.toISOString()),
+      supabase.from('orders').select('total_amount,payment_status,created_at').gte('created_at', startOfMonth.toISOString()),
+    ])
+
+    const sumPaid = (rows: any[] | null | undefined) =>
+      (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid').reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
+
+    const countPaid = (rows: any[] | null | undefined) =>
+      (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid').length
+
+    const todayOrdersRevenue = sumPaid(ordersToday.data as any[])
+    const monthOrdersRevenue = sumPaid(ordersMonth.data as any[])
+    const paidOrdersCount = countPaid(ordersMonth.data as any[])
+
+    // Average order value (paid orders in month)
+    const avgOrderValue = paidOrdersCount > 0 ? Math.round(monthOrdersRevenue / paidOrdersCount) : 0
+
+    // Service bookings (best-effort)
+    let todaySvcRevenue = 0
+    let monthSvcRevenue = 0
+    let paidBookingsCount = 0
+    try {
+      const [svcToday, svcMonth] = await Promise.all([
+        supabase.from('service_bookings').select('total_amount,payment_status,created_at').gte('created_at', startOfDay.toISOString()),
+        supabase.from('service_bookings').select('total_amount,payment_status,created_at').gte('created_at', startOfMonth.toISOString()),
+      ])
+      const sumPaidBookings = (rows: any[] | null | undefined) =>
+        (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid').reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
+      todaySvcRevenue = sumPaidBookings(svcToday.data as any[])
+      monthSvcRevenue = sumPaidBookings(svcMonth.data as any[])
+      paidBookingsCount = countPaid(svcMonth.data as any[])
+    } catch {}
+
+    return {
+      todayRevenue: todayOrdersRevenue + todaySvcRevenue,
+      monthRevenue: monthOrdersRevenue + monthSvcRevenue,
+      paidOrdersCount,
+      paidBookingsCount,
+      avgOrderValue,
+    }
+  } catch (e) {
+    console.error('getRevenueKPIs error', e)
+    return { todayRevenue: 0, monthRevenue: 0, paidOrdersCount: 0, paidBookingsCount: 0, avgOrderValue: 0 }
+  }
+}
+
+// Revenue by Category (using product_categories junction table)
+type CategoryRevenue = { category_id: string | null; category_name: string; revenue: number; orders_count: number }
+export async function getRevenueByCategory(days = 90): Promise<CategoryRevenue[]> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    // Get paid orders with items
+    const { data: orders, error: ordersErr } = await supabase
+      .from('orders')
+      .select('id, created_at')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    if (ordersErr || !orders?.length) return []
+
+    const orderIds = orders.map(o => o.id)
+
+    // Get order items with products
+    const { data: items, error: itemsErr } = await supabase
+      .from('order_items')
+      .select('price, quantity, product_id')
+      .in('order_id', orderIds as any)
+
+    if (itemsErr || !items?.length) return []
+
+    // Get unique product IDs
+    const productIds = [...new Set(items.map((i: any) => i.product_id))].filter(Boolean)
+
+    // Get product categories from junction table
+    const { data: productCategories, error: pcErr } = await supabase
+      .from('product_categories')
+      .select(`
+        product_id,
+        category:categories(id, name)
+      `)
+      .in('product_id', productIds as any)
+
+    if (pcErr) {
+      console.error('Error fetching product categories:', pcErr)
+      return []
+    }
+
+    // Build product to categories map
+    const productCategoryMap = new Map<string, any[]>()
+    for (const pc of (productCategories || []) as any[]) {
+      if (!productCategoryMap.has(pc.product_id)) {
+        productCategoryMap.set(pc.product_id, [])
+      }
+      if (pc.category) {
+        productCategoryMap.get(pc.product_id)!.push(pc.category)
+      }
+    }
+
+    // Aggregate by category (full revenue attributed to each category)
+    const categoryMap = new Map<string, CategoryRevenue>()
+    
+    for (const item of items as any[]) {
+      const revenue = Number(item.price ?? 0) * Number(item.quantity ?? 0)
+      const categories = productCategoryMap.get(item.product_id) || []
+      
+      if (categories.length === 0) {
+        // Uncategorized products
+        const key = 'uncategorized'
+        const current = categoryMap.get(key) || {
+          category_id: null,
+          category_name: 'Uncategorized',
+          revenue: 0,
+          orders_count: 0
+        }
+        current.revenue += revenue
+        current.orders_count += 1
+        categoryMap.set(key, current)
+      } else {
+        // Attribute full revenue to each category (products can be in multiple categories)
+        for (const category of categories) {
+          const key = category.id
+          const current = categoryMap.get(key) || {
+            category_id: category.id,
+            category_name: category.name,
+            revenue: 0,
+            orders_count: 0
+          }
+          current.revenue += revenue
+          current.orders_count += 1
+          categoryMap.set(key, current)
+        }
+      }
+    }
+
+    return Array.from(categoryMap.values()).sort((a, b) => b.revenue - a.revenue)
+  } catch (e) {
+    console.error('getRevenueByCategory error', e)
+    return []
+  }
+}
+
+// Revenue Trends (compare current period vs previous period)
+type RevenueTrends = {
+  currentPeriodRevenue: number
+  previousPeriodRevenue: number
+  growthPercentage: number
+  currentOrders: number
+  previousOrders: number
+  ordersGrowth: number
+}
+export async function getRevenueTrends(days = 30): Promise<RevenueTrends> {
+  try {
+    const now = new Date()
+    const currentStart = new Date(now)
+    currentStart.setDate(now.getDate() - days)
+    
+    const previousStart = new Date(currentStart)
+    previousStart.setDate(currentStart.getDate() - days)
+
+    // Current period - Orders (Products)
+    const { data: currentOrders } = await supabase
+      .from('orders')
+      .select('total_amount, payment_status')
+      .gte('created_at', currentStart.toISOString())
+      .lte('created_at', now.toISOString())
+
+    // Previous period - Orders (Products)
+    const { data: previousOrders } = await supabase
+      .from('orders')
+      .select('total_amount, payment_status')
+      .gte('created_at', previousStart.toISOString())
+      .lte('created_at', currentStart.toISOString())
+
+    // Current period - Service Bookings
+    const { data: currentBookings } = await supabase
+      .from('service_bookings')
+      .select('total_amount, payment_status')
+      .gte('created_at', currentStart.toISOString())
+      .lte('created_at', now.toISOString())
+
+    // Previous period - Service Bookings
+    const { data: previousBookings } = await supabase
+      .from('service_bookings')
+      .select('total_amount, payment_status')
+      .gte('created_at', previousStart.toISOString())
+      .lte('created_at', currentStart.toISOString())
+
+    const sumPaidOrders = (rows: any[] | null | undefined) =>
+      (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid')
+        .reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
+
+    const sumPaidBookings = (rows: any[] | null | undefined) =>
+      (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid')
+        .reduce((s, r) => s + Number(r.total_amount ?? 0), 0)
+
+    const countPaid = (rows: any[] | null | undefined) =>
+      (rows || []).filter(r => String(r.payment_status).toLowerCase() === 'paid').length
+
+    // Calculate total revenue including both orders and bookings
+    const currentPeriodRevenue = sumPaidOrders(currentOrders) + sumPaidBookings(currentBookings)
+    const previousPeriodRevenue = sumPaidOrders(previousOrders) + sumPaidBookings(previousBookings)
+    const currentOrdersCount = countPaid(currentOrders)
+    const previousOrdersCount = countPaid(previousOrders)
+
+    const growthPercentage = previousPeriodRevenue > 0
+      ? ((currentPeriodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100
+      : 0
+
+    const ordersGrowth = previousOrdersCount > 0
+      ? ((currentOrdersCount - previousOrdersCount) / previousOrdersCount) * 100
+      : 0
+
+    return {
+      currentPeriodRevenue,
+      previousPeriodRevenue,
+      growthPercentage: Math.round(growthPercentage * 10) / 10,
+      currentOrders: currentOrdersCount,
+      previousOrders: previousOrdersCount,
+      ordersGrowth: Math.round(ordersGrowth * 10) / 10
+    }
+  } catch (e) {
+    console.error('getRevenueTrends error', e)
+    return {
+      currentPeriodRevenue: 0,
+      previousPeriodRevenue: 0,
+      growthPercentage: 0,
+      currentOrders: 0,
+      previousOrders: 0,
+      ordersGrowth: 0
+    }
+  }
+}
+
+// Conversion Rate (paid orders vs total orders)
+type ConversionMetrics = {
+  totalOrders: number
+  paidOrders: number
+  pendingOrders: number
+  failedOrders: number
+  conversionRate: number
+  averageProcessingTime: number // hours
+}
+export async function getConversionMetrics(days = 30): Promise<ConversionMetrics> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('payment_status, created_at, paid_at')
+      .gte('created_at', start.toISOString())
+
+    if (!orders?.length) {
+      return {
+        totalOrders: 0,
+        paidOrders: 0,
+        pendingOrders: 0,
+        failedOrders: 0,
+        conversionRate: 0,
+        averageProcessingTime: 0
+      }
+    }
+
+    const totalOrders = orders.length
+    const paidOrders = orders.filter(o => String(o.payment_status).toLowerCase() === 'paid').length
+    const pendingOrders = orders.filter(o => String(o.payment_status).toLowerCase() === 'pending').length
+    const failedOrders = orders.filter(o => String(o.payment_status).toLowerCase() === 'failed').length
+    const conversionRate = (paidOrders / totalOrders) * 100
+
+    // Calculate average processing time for paid orders
+    const paidWithTimes = orders.filter(o => 
+      String(o.payment_status).toLowerCase() === 'paid' && o.paid_at
+    )
+    
+    let averageProcessingTime = 0
+    if (paidWithTimes.length > 0) {
+      const totalHours = paidWithTimes.reduce((sum, o) => {
+        const created = new Date(o.created_at).getTime()
+        const paid = new Date(o.paid_at!).getTime()
+        return sum + (paid - created) / (1000 * 60 * 60) // convert to hours
+      }, 0)
+      averageProcessingTime = totalHours / paidWithTimes.length
+    }
+
+    return {
+      totalOrders,
+      paidOrders,
+      pendingOrders,
+      failedOrders,
+      conversionRate: Math.round(conversionRate * 10) / 10,
+      averageProcessingTime: Math.round(averageProcessingTime * 10) / 10
+    }
+  } catch (e) {
+    console.error('getConversionMetrics error', e)
+    return {
+      totalOrders: 0,
+      paidOrders: 0,
+      pendingOrders: 0,
+      failedOrders: 0,
+      conversionRate: 0,
+      averageProcessingTime: 0
+    }
+  }
+}
+
+// Revenue by Payment Method with more details
+type PaymentMethodDetails = {
+  method: string
+  revenue: number
+  orderCount: number
+  averageOrderValue: number
+  percentage: number
+}
+export async function getPaymentMethodDetails(days = 90): Promise<PaymentMethodDetails[]> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('payment_method, total_amount, payment_status')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    if (error || !data?.length) return []
+
+    const methodMap = new Map<string, { revenue: number; count: number }>()
+    let totalRevenue = 0
+
+    for (const order of data as any[]) {
+      const method = normalizeMethod(order.payment_method)
+      const amount = Number(order.total_amount ?? 0)
+      totalRevenue += amount
+
+      const current = methodMap.get(method) || { revenue: 0, count: 0 }
+      current.revenue += amount
+      current.count += 1
+      methodMap.set(method, current)
+    }
+
+    const details: PaymentMethodDetails[] = []
+    for (const [method, stats] of methodMap.entries()) {
+      details.push({
+        method,
+        revenue: stats.revenue,
+        orderCount: stats.count,
+        averageOrderValue: Math.round(stats.revenue / stats.count),
+        percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0
+      })
+    }
+
+    return details.sort((a, b) => b.revenue - a.revenue)
+  } catch (e) {
+    console.error('getPaymentMethodDetails error', e)
+    return []
+  }
+}
+
+// =========================
+// Expense Tracking Functions
+// =========================
+
+export type Expense = {
+  id: string
+  amount: number
+  category: string
+  description: string
+  expense_date: string
+  frequency: 'one-time' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+  notes?: string
+  receipt_url?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export type ExpenseSummary = {
+  totalExpenses: number
+  expenseCount: number
+  byCategory: { category: string; amount: number; count: number }[]
+  byFrequency: { frequency: string; amount: number; count: number }[]
+}
+
+export type NetProfitMetrics = {
+  revenue: number
+  expenses: number
+  netProfit: number
+  profitMargin: number
+  dailyAverage: number
+  monthlyProjection: number
+}
+
+// Get all expenses with optional date range and category filter
+export async function getExpenses(params?: {
+  startDate?: string
+  endDate?: string
+  category?: string
+  frequency?: string
+  limit?: number
+}): Promise<Expense[]> {
+  try {
+    let query = supabase
+      .from('expenses')
+      .select('*')
+      .order('expense_date', { ascending: false })
+
+    if (params?.startDate) {
+      query = query.gte('expense_date', params.startDate)
+    }
+    if (params?.endDate) {
+      query = query.lte('expense_date', params.endDate)
+    }
+    if (params?.category) {
+      query = query.eq('category', params.category)
+    }
+    if (params?.frequency) {
+      query = query.eq('frequency', params.frequency)
+    }
+    if (params?.limit) {
+      query = query.limit(params.limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('getExpenses error:', error)
+      return []
+    }
+
+    return (data || []) as Expense[]
+  } catch (e) {
+    console.error('getExpenses error', e)
+    return []
+  }
+}
+
+// Get expense summary for a date range
+export async function getExpenseSummary(days = 30): Promise<ExpenseSummary> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('amount, category, frequency, expense_date')
+      .gte('expense_date', start.toISOString().split('T')[0])
+
+    if (error || !data?.length) {
+      return {
+        totalExpenses: 0,
+        expenseCount: 0,
+        byCategory: [],
+        byFrequency: []
+      }
+    }
+
+    const totalExpenses = data.reduce((sum, e) => sum + Number(e.amount ?? 0), 0)
+    const expenseCount = data.length
+
+    // Group by category
+    const categoryMap = new Map<string, { amount: number; count: number }>()
+    for (const expense of data as any[]) {
+      const cat = expense.category || 'Other'
+      const current = categoryMap.get(cat) || { amount: 0, count: 0 }
+      current.amount += Number(expense.amount ?? 0)
+      current.count += 1
+      categoryMap.set(cat, current)
+    }
+
+    const byCategory = Array.from(categoryMap.entries())
+      .map(([category, stats]) => ({ category, ...stats }))
+      .sort((a, b) => b.amount - a.amount)
+
+    // Group by frequency
+    const frequencyMap = new Map<string, { amount: number; count: number }>()
+    for (const expense of data as any[]) {
+      const freq = expense.frequency || 'one-time'
+      const current = frequencyMap.get(freq) || { amount: 0, count: 0 }
+      current.amount += Number(expense.amount ?? 0)
+      current.count += 1
+      frequencyMap.set(freq, current)
+    }
+
+    const byFrequency = Array.from(frequencyMap.entries())
+      .map(([frequency, stats]) => ({ frequency, ...stats }))
+      .sort((a, b) => b.amount - a.amount)
+
+    return {
+      totalExpenses,
+      expenseCount,
+      byCategory,
+      byFrequency
+    }
+  } catch (e) {
+    console.error('getExpenseSummary error', e)
+    return {
+      totalExpenses: 0,
+      expenseCount: 0,
+      byCategory: [],
+      byFrequency: []
+    }
+  }
+}
+
+// Calculate net profit (revenue - expenses) for a period
+export async function getNetProfitMetrics(days = 30): Promise<NetProfitMetrics> {
+  try {
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+    const startDateStr = start.toISOString().split('T')[0]
+
+    // Get revenue from paid orders (products)
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('total_amount, payment_status, created_at')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    const ordersRevenue = (orders || []).reduce((sum, o) => sum + Number(o.total_amount ?? 0), 0)
+
+    // Get revenue from paid service bookings
+    const { data: bookings } = await supabase
+      .from('service_bookings')
+      .select('total_amount, payment_status, created_at')
+      .eq('payment_status', 'paid')
+      .gte('created_at', start.toISOString())
+
+    const bookingsRevenue = (bookings || []).reduce((sum, b) => sum + Number(b.total_amount ?? 0), 0)
+
+    // Total revenue = orders + service bookings
+    const revenue = ordersRevenue + bookingsRevenue
+
+    // Get expenses
+    const { data: expenseData } = await supabase
+      .from('expenses')
+      .select('amount, expense_date, frequency')
+      .gte('expense_date', startDateStr)
+
+    let totalExpenses = 0
+    const now = new Date()
+    const periodStart = start
+    const periodEnd = now
+
+    // Calculate recurring expenses within the period
+    for (const expense of (expenseData || []) as any[]) {
+      const amount = Number(expense.amount ?? 0)
+      const expenseDate = new Date(expense.expense_date)
+      
+      // If expense started after the period, skip it
+      if (expenseDate > periodEnd) continue
+      
+      // Calculate the actual start date within our period
+      const effectiveStart = expenseDate > periodStart ? expenseDate : periodStart
+      const effectiveEnd = periodEnd
+      
+      // Calculate days this expense applies within the period
+      const daysActive = Math.max(0, Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+      
+      switch (expense.frequency) {
+        case 'one-time':
+          // One-time expense: add once if within period
+          totalExpenses += amount
+          break
+        case 'daily':
+          // Daily expense: multiply by days active in period
+          totalExpenses += amount * daysActive
+          break
+        case 'weekly':
+          // Weekly expense: multiply by number of weeks in active period
+          const weeksActive = Math.floor(daysActive / 7)
+          totalExpenses += amount * weeksActive
+          break
+        case 'monthly':
+          // Monthly expense: multiply by number of months in active period
+          const monthsActive = Math.floor(daysActive / 30)
+          totalExpenses += amount * monthsActive
+          break
+        case 'yearly':
+          // Yearly expense: prorate based on days active
+          const yearlyProrated = (amount / 365) * daysActive
+          totalExpenses += yearlyProrated
+          break
+      }
+    }
+
+    const netProfit = revenue - totalExpenses
+    const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0
+    const dailyAverage = netProfit / days
+    const monthlyProjection = dailyAverage * 30
+
+    return {
+      revenue,
+      expenses: totalExpenses,
+      netProfit,
+      profitMargin,
+      dailyAverage,
+      monthlyProjection
+    }
+  } catch (e) {
+    console.error('getNetProfitMetrics error', e)
+    return {
+      revenue: 0,
+      expenses: 0,
+      netProfit: 0,
+      profitMargin: 0,
+      dailyAverage: 0,
+      monthlyProjection: 0
+    }
+  }
+}
+
+// Add a new expense
+export async function addExpense(expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) {
+  try {
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([expense])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('addExpense error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data }
+  } catch (e: any) {
+    console.error('addExpense error', e)
+    return { success: false, error: e.message }
+  }
+}
+
+// Update an expense
+export async function updateExpense(id: string, updates: Partial<Expense>) {
+  try {
+    const { data, error } = await supabase
+      .from('expenses')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('updateExpense error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data }
+  } catch (e: any) {
+    console.error('updateExpense error', e)
+    return { success: false, error: e.message }
+  }
+}
+
+// Delete an expense
+export async function deleteExpense(id: string) {
+  try {
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('deleteExpense error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (e: any) {
+    console.error('deleteExpense error', e)
+    return { success: false, error: e.message }
+  }
+}
+
+// Get expense categories (distinct values)
+export async function getExpenseCategories(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('category')
+    
+    if (error || !data) return []
+
+    const uniqueCategories = [...new Set(data.map((e: any) => e.category))]
+    return uniqueCategories.sort()
+  } catch (e) {
+    console.error('getExpenseCategories error', e)
+    return []
+  }
+}
+
