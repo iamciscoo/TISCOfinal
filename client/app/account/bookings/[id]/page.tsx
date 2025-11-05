@@ -51,7 +51,6 @@ type ServiceBooking = {
     duration: string | null
     image: string | null
     features?: string[]
-    gallery?: string[]
   }
   serviceCosts?: {
     id: string
@@ -97,8 +96,7 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
         description,
         duration,
         image,
-        features,
-        gallery
+        features
       )
     `)
     .eq('id', id)
@@ -163,8 +161,7 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
       description: 'Service information not available',
       duration: 'Not specified',
       image: null,
-      features: [],
-      gallery: []
+      features: []
     },
     serviceCosts: costsError || !serviceCosts ? null : {
       id: serviceCosts.id,
