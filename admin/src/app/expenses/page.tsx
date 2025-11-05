@@ -139,16 +139,20 @@ export default function ExpensesPage() {
       })
 
       if (response.ok) {
+        // Close dialog first
+        handleCloseDialog()
+        
+        // Then fetch fresh data
         await fetchExpenses()
+        
         toast({
           title: editingExpense ? 'Expense Updated' : 'Expense Added',
           description: editingExpense 
             ? 'The expense has been updated successfully.' 
             : 'The expense has been added successfully.',
         })
-        handleCloseDialog()
       } else {
-        const data = await response.json()
+        const data = await response.json().catch(() => ({ error: 'Failed to save expense' }))
         setError(data.error || 'Failed to save expense')
         toast({
           title: 'Error',
@@ -172,28 +176,43 @@ export default function ExpensesPage() {
   const handleDelete = async () => {
     if (!deletingExpense) return
 
+    const expenseToDelete = deletingExpense
+    const originalExpenses = [...expenses]
+
     try {
       setSubmitting(true)
-      const response = await fetch(`/api/expenses/${deletingExpense.id}`, {
+      
+      // Optimistic update - remove from UI immediately
+      setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id))
+      
+      // Close dialog immediately for better UX
+      setIsDeleteDialogOpen(false)
+      setDeletingExpense(null)
+
+      const response = await fetch(`/api/expenses/${expenseToDelete.id}`, {
         method: 'DELETE',
       })
 
       if (response.ok) {
+        // Fetch fresh data to ensure consistency
         await fetchExpenses()
         toast({
           title: 'Expense Deleted',
           description: 'The expense has been deleted successfully.',
         })
-        setIsDeleteDialogOpen(false)
-        setDeletingExpense(null)
       } else {
+        // Rollback on error
+        setExpenses(originalExpenses)
+        const errorData = await response.json().catch(() => ({}))
         toast({
           title: 'Error',
-          description: 'Failed to delete expense',
+          description: errorData.error || 'Failed to delete expense',
           variant: 'destructive',
         })
       }
     } catch (error) {
+      // Rollback on error
+      setExpenses(originalExpenses)
       toast({
         title: 'Error',
         description: 'An error occurred while deleting the expense',
