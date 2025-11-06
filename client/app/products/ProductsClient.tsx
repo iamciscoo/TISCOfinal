@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,6 +27,7 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
+import { CategoryBar } from '@/components/CategoryBar'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
 import { VideoCard } from '@/components/shared'
@@ -398,15 +398,14 @@ function ProductsContent() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
         <ShopHero imageSrc="/officespace.png" title="Shop" />
+        {/* Category row below hero */}
+        <div className="mt-4">
+          <CategoryBar categories={categories} />
+        </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Breadcrumb */}
-        <nav className="hidden md:flex items-center space-x-2 text-sm text-gray-600 mb-7">
-          <Link href="/" className="hover:text-blue-600">Home</Link>
-          <span>/</span>
-          <span className="text-gray-900">Products</span>
-        </nav>
+        {/* Breadcrumb removed per design refresh */}
 
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
