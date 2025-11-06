@@ -86,7 +86,7 @@ const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
 
 export const ServicesPreview = () => {
   return (
-    <section className="py-1 bg-white w-full overflow-hidden">
+    <section className="py-1 bg-white w-full overflow-hidden mb-5">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -105,7 +105,7 @@ export const ServicesPreview = () => {
         </div>
 
         {/* Mobile Slider */}
-        <div className="md:hidden mb-12">
+        <div className="md:hidden mb-12 mb-5">
           <div className="-mx-4 px-4">
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 horizontal-scroll scroll-container">
               {services.map((service, index) => (
