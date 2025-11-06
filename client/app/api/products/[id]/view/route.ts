@@ -28,7 +28,7 @@ export async function POST(
     }
 
     // Increment view count atomically using SQL
-    const { data, error } = await supabase.rpc('increment_product_view_count', {
+    const { error } = await supabase.rpc('increment_product_view_count', {
       product_id: id
     })
 

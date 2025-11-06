@@ -31,7 +31,7 @@ export const BrandSlider = () => {
             </h3>
           </div>
           <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
-            We partner with the world's leading technology brands to bring you authentic, quality products
+            We partner with the world&apos;s leading technology brands to bring you authentic, quality products
           </p>
         </div>
         

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 
 /**
@@ -126,7 +126,7 @@ export function SessionTracker() {
   const previousUserIdRef = useRef<string | null>(null)
 
   // Function to end current session
-  const endSession = async () => {
+  const endSession = useCallback(async () => {
     const sessionId = currentSessionIdRef.current
     if (!sessionId) return
 
@@ -140,7 +140,7 @@ export function SessionTracker() {
     } catch (error) {
       console.error('Failed to end session:', error)
     }
-  }
+  }, [])
 
   useEffect(() => {
     // Check if user has changed (sign out or different user sign in)
@@ -163,8 +163,6 @@ export function SessionTracker() {
     
     // Only track once per page load (or after user change)
     if (hasTrackedRef.current) return
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     
     const trackSession = async () => {
       try {

@@ -35,7 +35,6 @@ function pickImageFor(name: string): string | null {
 export function CategoryBar({ categories, className }: CategoryBarProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [imagesLoaded, setImagesLoaded] = useState<Set<string>>(new Set())
 
   // Preload all category images on mount
   useEffect(() => {
@@ -43,9 +42,7 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
     imagesToPreload.forEach(src => {
       const img = new window.Image()
       img.src = src
-      img.onload = () => {
-        setImagesLoaded(prev => new Set(prev).add(src))
-      }
+      // Image preloading happens automatically, no need to track state
     })
   }, [])
 
