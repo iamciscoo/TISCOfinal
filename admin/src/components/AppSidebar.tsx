@@ -20,6 +20,7 @@ import {
   Mail,
   Bell,
   Receipt,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -205,6 +206,14 @@ const AppSidebar = () => {
                   <Link href="/users" onClick={handleMobileNavigation}>
                     <User />
                     {shouldShowText && <span>All Customers</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Customer Metrics">
+                  <Link href="/customers/metrics" onClick={handleMobileNavigation}>
+                    <TrendingUp />
+                    {shouldShowText && <span>Customer Metrics</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

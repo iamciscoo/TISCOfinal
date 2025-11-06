@@ -38,7 +38,8 @@ const ProductsPage = () => {
             rating: product.rating,
             reviews_count: product.reviews_count,
             category: product.product_categories?.[0]?.categories || product.category,
-            categories: product.product_categories || []
+            categories: product.product_categories || [],
+            view_count: product.view_count || 0
           };
         });
         

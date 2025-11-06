@@ -79,6 +79,7 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
       original_price,
       rating,
       reviews_count,
+      view_count,
       slug,
       created_at,
       updated_at,

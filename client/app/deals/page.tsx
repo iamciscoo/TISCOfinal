@@ -46,6 +46,7 @@ interface Deal {
   category_id: string
   rating?: number | null
   reviews_count?: number | null
+  view_count?: number
   stock_quantity: number
   slug: string
   tags: string[]
@@ -59,6 +60,7 @@ export default function DealsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('discount')
+  const [showMostPopular, setShowMostPopular] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -114,8 +116,16 @@ export default function DealsPage() {
       filtered = filtered.filter(deal => deal.category === selectedCategory)
     }
 
-    // Sort
+    // Sort - prioritize Most Popular toggle if enabled
     filtered.sort((a, b) => {
+      // If Most Popular toggle is on, sort by view count first
+      if (showMostPopular) {
+        const viewDiff = (b.view_count || 0) - (a.view_count || 0)
+        if (viewDiff !== 0) return viewDiff
+        // If view counts are equal, fall through to secondary sort
+      }
+      
+      // Apply secondary sort based on sortBy selection
       switch (sortBy) {
         case 'discount':
           return b.discount - a.discount
@@ -149,7 +159,7 @@ export default function DealsPage() {
 
     setFilteredDeals(filtered)
     setCurrentPage(1)
-  }, [searchTerm, selectedCategory, sortBy, deals])
+  }, [searchTerm, selectedCategory, sortBy, showMostPopular, deals])
 
   // Pagination (align with shop page: 12 items for grid, 6 for list)
   const itemsPerPage = viewMode === 'grid' ? 12 : 6
@@ -218,6 +228,31 @@ export default function DealsPage() {
         </Select>
       </div>
 
+      {/* Most Popular Toggle */}
+      <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-blue-50/30">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <label className="text-sm font-semibold block text-gray-900">Most Popular</label>
+            <p className="text-xs text-gray-500 mt-1 leading-tight">Show most viewed deals first</p>
+          </div>
+          <button
+            onClick={() => setShowMostPopular(!showMostPopular)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              showMostPopular ? 'bg-blue-600' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={showMostPopular}
+            aria-label="Toggle most popular filter"
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                showMostPopular ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       {/* Clear Filters */}
       <Button
         variant="outline"
@@ -226,6 +261,7 @@ export default function DealsPage() {
           setSearchTerm('')
           setSelectedCategory('all')
           setSortBy('discount')
+          setShowMostPopular(false)
         }}
       >
         Clear All Filters

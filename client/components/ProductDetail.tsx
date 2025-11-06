@@ -27,6 +27,7 @@ import { ReviewsList } from '@/components/ReviewsList'
 import { LoadingSpinner } from '@/components/shared'
 import { preserveLineBreaks } from '@/lib/text-utils'
 import { ShareModal } from '@/components/ShareModal'
+import { ProductViewTracker } from '@/components/ProductViewTracker'
 
 interface ProductDetailProps {
   product: Product
@@ -273,6 +274,9 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
 
   return (
     <>
+      {/* Track product view */}
+      <ProductViewTracker productId={String(product.id)} />
+      
       {/* Structured Data */}
       <script
         type="application/ld+json"

@@ -19,6 +19,7 @@ export interface Product {
   stock_quantity?: number
   rating?: number | null
   reviews_count?: number | null
+  view_count?: number
   is_featured?: boolean
   is_new?: boolean
   // Deal pricing fields

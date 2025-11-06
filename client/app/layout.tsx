@@ -59,6 +59,8 @@ import CartRealtime from '@/components/CartRealtime'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 // Global auth modal manager (handles login/signup popups)
 import { GlobalAuthModalManager } from '@/components/auth/GlobalAuthModalManager'
+// Session tracker (tracks user sessions with device and browser info)
+import { SessionTracker } from '@/components/SessionTracker'
 
 // ========== SEO STRUCTURED DATA IMPORTS ==========
 // Schema.org structured data components for rich Google search results
@@ -356,6 +358,11 @@ export default async function RootLayout({
             {/* Invisible component that syncs cart across tabs */}
             {/* If user adds item in one tab, other tabs see it instantly */}
             <CartRealtime />
+            
+            {/* ========== SESSION TRACKER COMPONENT ========== */}
+            {/* Tracks user sessions with device, browser, and OS information */}
+            {/* Updates analytics for customer metrics in admin dashboard */}
+            <SessionTracker />
             
             {/* ========== PAGE CONTENT ========== */}
             {/* This is where the actual page content renders */}

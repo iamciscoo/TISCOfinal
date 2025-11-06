@@ -14,6 +14,7 @@ export type ProductColumn = {
   is_active?: boolean;
   rating?: number;
   reviews_count?: number;
+  view_count?: number;
   category?: {
     id: string | number;
     name: string;

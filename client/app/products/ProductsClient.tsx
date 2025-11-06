@@ -51,6 +51,7 @@ function ProductsContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('name')
+  const [showMostPopular, setShowMostPopular] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [isManualSearch, setIsManualSearch] = useState(false) // Track manual search input
@@ -239,8 +240,16 @@ function ProductsContent() {
       })
     }
 
-    // Sort
+    // Sort - prioritize Most Popular toggle if enabled
     filtered.sort((a, b) => {
+      // If Most Popular toggle is on, sort by view count first
+      if (showMostPopular) {
+        const viewDiff = (b.view_count || 0) - (a.view_count || 0)
+        if (viewDiff !== 0) return viewDiff
+        // If view counts are equal, fall through to secondary sort
+      }
+      
+      // Apply secondary sort based on sortBy selection
       switch (sortBy) {
         case 'price-low':
           return a.price - b.price
@@ -265,7 +274,7 @@ function ProductsContent() {
 
     setFilteredProducts(filtered)
     setCurrentPage(1)
-  }, [products, debouncedSearchTerm, selectedCategory, sortBy])
+  }, [products, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular])
 
   // Pagination (4 rows per page in grid view)
   const itemsPerPage = viewMode === 'grid' ? 12 : 6
@@ -273,7 +282,7 @@ function ProductsContent() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
-  const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
+  const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
 
   // Stable handlers to prevent input focus loss
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,6 +294,7 @@ function ProductsContent() {
     setSearchTerm('')
     setSelectedCategory('all')
     setSortBy('name')
+    setShowMostPopular(false)
     setIsManualSearch(false)
   }, [])
 
@@ -339,6 +349,31 @@ function ProductsContent() {
         </Select>
       </div>
 
+      {/* Most Popular Toggle */}
+      <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-blue-50/30">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <label className="text-sm font-semibold block text-gray-900">Most Popular</label>
+            <p className="text-xs text-gray-500 mt-1 leading-tight">Show most viewed products first</p>
+          </div>
+          <button
+            onClick={() => setShowMostPopular(!showMostPopular)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              showMostPopular ? 'bg-blue-600' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={showMostPopular}
+            aria-label="Toggle most popular filter"
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                showMostPopular ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       {/* Clear Filters */}
       <Button
         variant="outline"
@@ -348,7 +383,7 @@ function ProductsContent() {
         Clear All Filters
       </Button>
     </>
-  ), [searchTerm, selectedCategory, sortBy, categories, handleSearchChange, handleClearFilters])
+  ), [searchTerm, selectedCategory, sortBy, showMostPopular, categories, handleSearchChange, handleClearFilters])
 
   // Optimized loading state with skeleton
   if (loading) {

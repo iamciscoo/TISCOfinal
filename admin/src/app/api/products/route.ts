@@ -29,6 +29,7 @@ export async function GET(req: Request) {
         original_price,
         rating,
         reviews_count,
+        view_count,
         created_at,
         updated_at,
         product_images(

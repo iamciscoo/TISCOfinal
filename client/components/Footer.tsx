@@ -177,7 +177,7 @@ export const Footer = () => {
         <div className="border-t border-gray-800 py-6 sm:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
             <div className="text-xs sm:text-sm text-gray-400">
-              © 2024 TISCO Market. All rights reserved.
+              © 2025 TISCO Market. All rights reserved.
             </div>
             <div className="flex space-x-4 sm:space-x-6">
               <Link

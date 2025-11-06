@@ -40,6 +40,7 @@ interface Product {
   updated_at: string;
   rating: number;
   reviews_count: number;
+  view_count: number;
   is_featured: boolean;
   tags?: string;
   slug?: string;
@@ -370,6 +371,10 @@ export default function ViewProductPage() {
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Rating:</span>
                   <span className="text-sm">{product.rating}/5 ({product.reviews_count} reviews)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Page Views:</span>
+                  <span className="text-sm font-semibold text-blue-600">{(product.view_count || 0).toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>

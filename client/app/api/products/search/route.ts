@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
           stock_quantity,
           is_featured,
           is_active,
+          view_count,
           created_at,
           categories:product_categories (
             category:categories (

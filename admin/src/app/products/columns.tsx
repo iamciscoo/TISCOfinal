@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -140,6 +140,33 @@ export const columns: ColumnDef<Product>[] = [
         )}>
           {stock}
         </span>
+      );
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
+  },
+  {
+    accessorKey: "view_count",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="gap-1"
+        >
+          <Eye className="h-4 w-4" />
+          Views
+          <ArrowUpDown className="ml-1 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const viewCount = row.original.view_count || 0;
+      return (
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">
+          <Eye className="h-3.5 w-3.5 text-gray-400" />
+          {viewCount.toLocaleString()}
+        </div>
       );
     },
     enableHiding: true,
