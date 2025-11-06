@@ -14,10 +14,13 @@ export const BrandSlider = () => {
   const logos = [...brandLogos, ...brandLogos]
 
   return (
-    <section className="bg-white py-[10px]">
+    <section className="bg-gradient-to-b from-white via-gray-50 to-white py-4 sm:py-6 mt-2 mb-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
+          <p className="text-sm font-semibold text-green-600 tracking-wider uppercase mb-3">
+            Trusted Brands
+          </p>
           <div className="inline-block">
             <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
               Access Products from
@@ -27,6 +30,9 @@ export const BrandSlider = () => {
               </span>
             </h3>
           </div>
+          <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
+            We partner with the world's leading technology brands to bring you authentic, quality products
+          </p>
         </div>
         
         <div className="brand-slider relative overflow-hidden">
@@ -49,7 +55,7 @@ export const BrandSlider = () => {
                       alt={`${logo.alt} logo`}
                       fill
                       sizes="(max-width: 640px) 180px, 200px"
-                      className="object-contain"
+                      className="object-contain opacity-80 grayscale-[30%] hover:opacity-100 hover:grayscale-0 transition-all duration-300"
                       priority={false}
                     />
                   </div>

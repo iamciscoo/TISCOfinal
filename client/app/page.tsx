@@ -140,9 +140,6 @@ export default function Home() {
           {/* Featured Products - Grid of popular items */}
           <FeaturedProducts />
           
-          {/* Brand Slider - Logos of brands we sell */}
-          <BrandSlider />
-          
           {/* Services Promo Grid - Centered with padding */}
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <ServicesPromoGrid />
@@ -150,6 +147,9 @@ export default function Home() {
           
           {/* Services Preview - Detailed service info */}
           <ServicesPreview />
+          
+          {/* Brand Slider - Logos of brands we sell (moved to bottom for trust signal) */}
+          <BrandSlider />
         </div>
       </main>
       

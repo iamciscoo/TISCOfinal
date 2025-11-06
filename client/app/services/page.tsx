@@ -362,7 +362,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         {/* Why Choose Our Services */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            Why Choose Our Tech Services?
+            Why Choose Us?
           </h2>
           
           {/* Mobile Slider */}
@@ -372,8 +372,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 {[
                   {
                     icon: Award,
-                    title: 'Certified Technicians',
-                    description: 'Certified professionals with extensive hardware and software experience.'
+                    title: 'Certified Technicians and Designers',
+                    description: 'Professionals with extensive hardware, software and design experience.'
                   },
                   {
                     icon: Zap,
@@ -410,8 +410,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             {[
               {
                 icon: Award,
-                title: 'Certified Technicians',
-                description: 'Certified professionals with extensive hardware and software experience.'
+                title: 'Certified Technicians and Designers',
+                description: 'Professionals with extensive hardware, software and design experience.'
               },
               {
                 icon: Zap,

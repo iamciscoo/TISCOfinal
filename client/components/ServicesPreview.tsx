@@ -123,7 +123,7 @@ export const ServicesPreview = () => {
         </div>
 
         {/* Services Grid (md and up) */}
-        <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-8 mb-1">
           {services.map((service, index) => (
             <Link
               key={index}
