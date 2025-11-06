@@ -122,9 +122,46 @@ export function SessionTracker() {
   const { user } = useAuth()
   const hasTrackedRef = useRef(false)
   const activityIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const currentSessionIdRef = useRef<string | null>(null)
+  const previousUserIdRef = useRef<string | null>(null)
+
+  // Function to end current session
+  const endSession = async () => {
+    const sessionId = currentSessionIdRef.current
+    if (!sessionId) return
+
+    try {
+      await fetch('/api/analytics/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      })
+      currentSessionIdRef.current = null
+    } catch (error) {
+      console.error('Failed to end session:', error)
+    }
+  }
 
   useEffect(() => {
-    // Only track once per page load
+    // Check if user has changed (sign out or different user sign in)
+    const userChanged = previousUserIdRef.current !== null && 
+                       previousUserIdRef.current !== (user?.id || null)
+    
+    // If user changed or signed out, end the previous session
+    if (userChanged || (!user && previousUserIdRef.current)) {
+      endSession()
+      hasTrackedRef.current = false
+      // Clear old session ID to force new session creation
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('session_id')
+        sessionStorage.removeItem('session_id_timestamp')
+      }
+    }
+    
+    // Update previous user ID
+    previousUserIdRef.current = user?.id || null
+    
+    // Only track once per page load (or after user change)
     if (hasTrackedRef.current) return
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,6 +192,8 @@ export function SessionTracker() {
           body: JSON.stringify(sessionData)
         })
 
+        // Store current session ID for ending later
+        currentSessionIdRef.current = sessionId
         hasTrackedRef.current = true
 
         // Update session activity every 5 minutes
@@ -173,11 +212,20 @@ export function SessionTracker() {
     trackSession()
 
     return () => {
+      // Cleanup interval
       if (activityIntervalRef.current) {
         clearInterval(activityIntervalRef.current)
       }
+      // End session on component unmount (page unload)
+      if (currentSessionIdRef.current) {
+        // Use sendBeacon for reliable delivery on page unload
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+          const data = JSON.stringify({ session_id: currentSessionIdRef.current })
+          navigator.sendBeacon('/api/analytics/session/end', data)
+        }
+      }
     }
-  }, [user])
+  }, [user, endSession])
 
   return null // This component doesn't render anything
 }

@@ -33,6 +33,10 @@ interface UserMetric {
   total_bookings: number
   total_sessions: number
   last_login: string | null
+  last_order_at: string | null
+  last_order_amount: number | null
+  last_booking_at: string | null
+  last_booking_service: string | null
   primary_device: string
   primary_browser: string
   primary_os: string
@@ -42,6 +46,7 @@ interface UserMetric {
     os: string
     browser: string
     started_at: string
+    ended_at: string | null
     ip_address: string | null
     country: string | null
     city: string | null
@@ -59,6 +64,7 @@ interface Statistics {
 
 export default function CustomerMetricsPage() {
   const [interval, setInterval] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all')
+  const [sortBy, setSortBy] = useState<'registered' | 'sessions' | 'orders' | 'bookings' | 'last_login'>('sessions')
   const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState<Statistics | null>(null)
   const [users, setUsers] = useState<UserMetric[]>([])
@@ -66,12 +72,12 @@ export default function CustomerMetricsPage() {
 
   useEffect(() => {
     fetchMetrics()
-  }, [interval])
+  }, [interval, sortBy])
 
   const fetchMetrics = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/customers/metrics?interval=${interval}`)
+      const response = await fetch(`/api/customers/metrics?interval=${interval}&sortBy=${sortBy}&sortOrder=desc`)
       const result = await response.json()
 
       if (result.success) {
@@ -118,17 +124,32 @@ export default function CustomerMetricsPage() {
           <p className="text-gray-600 mt-1">Comprehensive customer analytics and activity tracking</p>
         </div>
         
-        <Select value={interval} onValueChange={(value: any) => setInterval(value)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select interval" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="daily">Last 24 Hours</SelectItem>
-            <SelectItem value="weekly">Last 7 Days</SelectItem>
-            <SelectItem value="monthly">Last 30 Days</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-3">
+          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sessions">Most Active (Sessions)</SelectItem>
+              <SelectItem value="orders">Most Orders</SelectItem>
+              <SelectItem value="bookings">Most Bookings</SelectItem>
+              <SelectItem value="last_login">Recent Login</SelectItem>
+              <SelectItem value="registered">Recently Registered</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={interval} onValueChange={(value: any) => setInterval(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select interval" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="daily">Last 24 Hours</SelectItem>
+              <SelectItem value="weekly">Last 7 Days</SelectItem>
+              <SelectItem value="monthly">Last 30 Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -325,6 +346,24 @@ export default function CustomerMetricsPage() {
                               <div>
                                 <span className="font-medium">OS:</span> {user.primary_os}
                               </div>
+                              <div>
+                                <span className="font-medium">Last Order:</span> {user.last_order_at ? formatDate(user.last_order_at) : 'Never'}
+                              </div>
+                              {user.last_order_amount && (
+                                <div>
+                                  <span className="font-medium">Last Order Amount:</span> TZS {user.last_order_amount.toLocaleString()}
+                                </div>
+                              )}
+                              {user.last_booking_at && (
+                                <div>
+                                  <span className="font-medium">Last Booking:</span> {formatDate(user.last_booking_at)}
+                                </div>
+                              )}
+                              {user.last_booking_service && (
+                                <div>
+                                  <span className="font-medium">Service:</span> {user.last_booking_service}
+                                </div>
+                              )}
                             </div>
 
                             {user.recent_sessions.length > 0 && (
@@ -334,7 +373,9 @@ export default function CustomerMetricsPage() {
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
-                                        <TableHead>Date/Time</TableHead>
+                                        <TableHead>Started</TableHead>
+                                        <TableHead>Ended</TableHead>
+                                        <TableHead>Duration</TableHead>
                                         <TableHead>Device</TableHead>
                                         <TableHead>Browser</TableHead>
                                         <TableHead>OS</TableHead>
@@ -343,10 +384,21 @@ export default function CustomerMetricsPage() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {user.recent_sessions.map((session) => (
-                                        <TableRow key={session.session_id}>
+                                      {user.recent_sessions.map((session, sessionIndex) => {
+                                        const duration = session.ended_at 
+                                          ? Math.round((new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000 / 60)
+                                          : null
+                                        
+                                        return (
+                                        <TableRow key={`${user.id}-${session.session_id}-${sessionIndex}`}>
                                           <TableCell className="text-sm">
                                             {formatDate(session.started_at)}
+                                          </TableCell>
+                                          <TableCell className="text-sm">
+                                            {session.ended_at ? formatDate(session.ended_at) : <Badge variant="secondary">Active</Badge>}
+                                          </TableCell>
+                                          <TableCell className="text-sm">
+                                            {duration ? `${duration} min` : '-'}
                                           </TableCell>
                                           <TableCell>
                                             <div className="flex items-center gap-2">
@@ -363,7 +415,8 @@ export default function CustomerMetricsPage() {
                                             {session.ip_address || 'N/A'}
                                           </TableCell>
                                         </TableRow>
-                                      ))}
+                                        )
+                                      })}
                                     </TableBody>
                                   </Table>
                                 </div>

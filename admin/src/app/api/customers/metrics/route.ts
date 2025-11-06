@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const interval = searchParams.get('interval') || 'all' // daily, weekly, monthly, all
     const limit = parseInt(searchParams.get('limit') || '100')
+    const sortBy = searchParams.get('sortBy') || 'registered' // registered, sessions, orders, bookings, last_login
+    const sortOrder = searchParams.get('sortOrder') || 'desc' // asc, desc
 
     // Get total registered users
     const { count: totalUsers } = await supabase
@@ -87,16 +89,16 @@ export async function GET(req: NextRequest) {
 
     if (usersError) throw usersError
 
-    // Get orders count per user
+    // Get orders with details per user
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('user_id, id')
+      .select('user_id, id, created_at, total_amount')
       .not('user_id', 'is', null)
 
-    // Get bookings count per user
+    // Get bookings with details per user
     const { data: bookingsData } = await supabase
       .from('service_bookings')
-      .select('user_id, id')
+      .select('user_id, id, created_at')
       .not('user_id', 'is', null)
 
     // Aggregate data
@@ -115,6 +117,12 @@ export async function GET(req: NextRequest) {
       const primaryDevice = Object.entries(deviceStats)
         .sort(([, a]: any, [, b]: any) => b - a)[0]?.[0] || 'unknown'
 
+      // Get last order details
+      const sortedOrders = userOrders.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      const lastOrder = sortedOrders[0]
+
       return {
         id: user.id,
         email: user.email,
@@ -132,6 +140,12 @@ export async function GET(req: NextRequest) {
         total_sessions: userSessions.length,
         last_login: activitySummary?.last_login_at || null,
         
+        // Last order/booking details
+        last_order_at: activitySummary?.last_order_at || lastOrder?.created_at || null,
+        last_order_amount: activitySummary?.last_order_amount || lastOrder?.total_amount || null,
+        last_booking_at: activitySummary?.last_booking_at || null,
+        last_booking_service: activitySummary?.last_booking_service || null,
+        
         // Device information
         primary_device: activitySummary?.primary_device_type || primaryDevice,
         primary_browser: activitySummary?.primary_browser || userSessions[0]?.browser_name || 'Unknown',
@@ -144,12 +158,44 @@ export async function GET(req: NextRequest) {
           os: `${s.os_name || 'Unknown'} ${s.os_version || ''}`.trim(),
           browser: `${s.browser_name || 'Unknown'} ${s.browser_version || ''}`.trim(),
           started_at: s.started_at,
+          ended_at: s.ended_at,
           ip_address: s.ip_address,
           country: s.country,
           city: s.city
         }))
       }
     }) || []
+
+    // Apply sorting
+    userMetrics.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+      
+      switch (sortBy) {
+        case 'sessions':
+          aValue = a.total_sessions
+          bValue = b.total_sessions
+          break
+        case 'orders':
+          aValue = a.total_orders
+          bValue = b.total_orders
+          break
+        case 'bookings':
+          aValue = a.total_bookings
+          bValue = b.total_bookings
+          break
+        case 'last_login':
+          aValue = a.last_login ? new Date(a.last_login).getTime() : 0
+          bValue = b.last_login ? new Date(b.last_login).getTime() : 0
+          break
+        case 'registered':
+        default:
+          aValue = new Date(a.registered_at).getTime()
+          bValue = new Date(b.registered_at).getTime()
+      }
+      
+      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue
+    })
 
     // Calculate aggregate statistics
     const statistics = {
