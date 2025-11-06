@@ -92,7 +92,12 @@ export async function GET() {
       successful: Math.round(buckets.get(m.key)!.successful),
     }))
 
-    return NextResponse.json({ data: out })
+    // No caching for real-time dashboard data
+    const response = NextResponse.json({ data: out });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (err) {
     console.error('Revenue API error', err)
     return NextResponse.json({ error: 'Failed to load revenue data' }, { status: 500 })

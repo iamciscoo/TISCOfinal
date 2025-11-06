@@ -38,12 +38,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({
+    // No caching for real-time admin dashboard
+    const response = NextResponse.json({
       reviews: data,
       totalCount: count,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page
     }, { status: 200 });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });

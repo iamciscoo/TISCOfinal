@@ -7,11 +7,22 @@ import { ProductQuickSearch } from "@/components/ProductQuickSearch";
 
 const ProductsPage = () => {
   const [data, setData] = useState<Product[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (isInitial = false) => {
       try {
-        const response = await fetch("/api/products?limit=50");
+        if (!isInitial) setIsRefreshing(true);
+        
+        // Add timestamp to prevent browser caching
+        const timestamp = Date.now();
+        const response = await fetch(`/api/products?limit=50&_t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         const result = await response.json();
         
         // Transform API products to match the UI format
@@ -46,16 +57,18 @@ const ProductsPage = () => {
         setData(products);
       } catch (error) {
         console.error('Error fetching products:', error);
+      } finally {
+        if (!isInitial) setIsRefreshing(false);
       }
     };
 
     // Initial fetch
-    fetchData();
+    fetchData(true);
 
-    // Poll every 30 seconds to update view counts (lightweight)
+    // Poll every 10 seconds for real-time view count updates
     const pollInterval = setInterval(() => {
-      fetchData();
-    }, 30000); // 30 seconds
+      fetchData(false);
+    }, 10000); // 10 seconds for faster updates
 
     return () => clearInterval(pollInterval);
   }, []);
@@ -63,7 +76,18 @@ const ProductsPage = () => {
   return (
     <div className="space-y-6 pt-2">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
-        <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
+          {isRefreshing && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              <span className="hidden sm:inline">Updating...</span>
+            </div>
+          )}
+        </div>
         <div className="w-full sm:w-auto">
           <ProductQuickSearch />
         </div>

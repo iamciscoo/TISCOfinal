@@ -66,9 +66,11 @@ export async function GET(req: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     
-    // Add cache headers for better performance
+    // No caching for admin dashboard - need real-time view counts
     const response = NextResponse.json({ data }, { status: 200 });
-    response.headers.set('Cache-Control', 'private, max-age=300'); // 5 minutes cache
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
