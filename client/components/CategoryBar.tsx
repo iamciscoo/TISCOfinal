@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/lib/types'
@@ -35,6 +35,19 @@ function pickImageFor(name: string): string | null {
 export function CategoryBar({ categories, className }: CategoryBarProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [imagesLoaded, setImagesLoaded] = useState<Set<string>>(new Set())
+
+  // Preload all category images on mount
+  useEffect(() => {
+    const imagesToPreload = Object.values(imageMap)
+    imagesToPreload.forEach(src => {
+      const img = new window.Image()
+      img.src = src
+      img.onload = () => {
+        setImagesLoaded(prev => new Set(prev).add(src))
+      }
+    })
+  }, [])
 
   // Choose a small curated set to mimic eBay row while using your actual categories
   const displayCategories = useMemo(() => {
@@ -106,6 +119,8 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
                         alt={`${cat.name} icon`} 
                         fill 
                         className="object-cover" 
+                        priority={true}
+                        loading="eager"
                         unoptimized
                       />
                     </div>
@@ -206,7 +221,8 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
                                 fill
                                 className="object-cover object-center"
                                 sizes="320px"
-                                priority={false}
+                                priority={true}
+                                loading="eager"
                                 unoptimized
                               />
                             )

@@ -49,7 +49,15 @@ const ProductsPage = () => {
       }
     };
 
+    // Initial fetch
     fetchData();
+
+    // Poll every 30 seconds to update view counts (lightweight)
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   return (
