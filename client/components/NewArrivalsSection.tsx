@@ -135,7 +135,7 @@ export function NewArrivalsSection() {
 
           <div
             ref={scrollerRef}
-            className="-mx-4 px-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:pb-0 md:overflow-x-hidden md:grid"
+            className="pl-4 -mr-4 pr-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:pb-0 md:overflow-x-hidden md:grid md:mx-0 md:px-0"
             style={{ gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))` }}
           >
             {loading && (

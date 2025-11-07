@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export const FeaturedProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<(Product | null)[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export const FeaturedProducts = () => {
         // **PERFORMANCE FIX: Add cache-busting for real-time updates**
         // Fetch directly from API with no-cache header to bypass browser cache
         const timestamp = Date.now();
-        const response = await fetch(`/api/products/featured?limit=9&_t=${timestamp}`, {
+        const response = await fetch(`/api/products/featured?limit=20&_t=${timestamp}`, {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -24,15 +24,23 @@ export const FeaturedProducts = () => {
         });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch featured products');
+          const errorData = await response.json().catch(() => null);
+          console.error('Featured products API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData
+          });
+          if (isMounted) setProducts([]);
+          return;
         }
         
         const result = await response.json();
         const data = result.data || result;
         
+        // Handle sparse array - keep null values for empty slots
         if (isMounted) setProducts(Array.isArray(data) ? data : []);
       } catch (e) {
-        console.error("Failed to load featured products", e);
+        console.error("Failed to load featured products:", e);
         if (isMounted) setProducts([]);
       }
     })();
@@ -50,44 +58,67 @@ export const FeaturedProducts = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
+  
+  // Derived lists for layouts (preserve ordering, hide nulls in UI)
+  const nonNullProducts = products.filter((p): p is Product => p !== null);
+  const mobileSliderProducts = nonNullProducts.slice(0, 10);
+  let mobileGridProducts = nonNullProducts.slice(10, 20);
+  // Avoid a single card on the last row in 3-col grid (hide the last one if remainder is 1)
+  if (mobileGridProducts.length % 3 === 1) {
+    mobileGridProducts = mobileGridProducts.slice(0, -1);
+  }
   return (
     <section className="pt-2 pb-2 bg-white w-full overflow-hidden">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <div className="inline-block mb-6">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">
-              Featured{" "}
-              <span className="relative inline-block">
-                <span className="relative z-10">Highlights.</span>
-                <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 transform -skew-y-1 opacity-30"></span>
-              </span>
-            </h2>
-          </div>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            We picked them, you love them.
-            <span className="block mt-1 text-gray-500 font-medium">Items you&apos;ll regret missing out on.</span>
+        <div className="mb-8 sm:mb-12">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-3">
+            Featured{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10">Highlights</span>
+              <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 opacity-30 -skew-y-1"></span>
+            </span>
+          </h2>
+          <p className="text-gray-600 mb-4 sm:mb-5 text-base md:text-lg">
+            We picked them, you love them. Items you&apos;ll regret missing out on.
           </p>
         </div>
 
-        {/* Mobile Slider */}
-        <div className="md:hidden mb-8 -mx-4 px-4">
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
-            {products.slice(0, 9).map((product) => (
-              <div key={product.id} className="min-w-[78%] snap-start">
+        {/* Mobile Layout - Slider + Grid */}
+        <div className="md:hidden">
+          {/* First 10 products - Horizontal Slider */}
+          <div className="mb-8">
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 pl-4 -mr-4 pr-4">
+              {mobileSliderProducts.map((product) => (
+                <div key={product.id} className="min-w-[78%] snap-start">
+                  <ProductCard
+                    product={product}
+                    compact
+                    className="rounded-xl border border-gray-100"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Remaining products (11-20) - 3 Column Grid */}
+          {mobileGridProducts.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {mobileGridProducts.map((product) => (
                 <ProductCard
+                  key={product.id}
                   product={product}
                   compact
                   className="rounded-xl border border-gray-100"
                 />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Desktop/Tablet Grid - 3x3 layout */}
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-6 mb-12 max-w-6xl mx-auto">
-          {products.slice(0, 9).map((product) => (
+        {/* Desktop/Tablet Grid - 4 rows × 5 products per row (only show available products) */}
+        <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-6 mb-12 max-w-7xl mx-auto">
+          {nonNullProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

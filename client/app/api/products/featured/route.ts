@@ -11,8 +11,9 @@ const supabase = createClient(
 )
 
 const getFeaturedProductsSchema = z.object({
-  limit: z.number().min(1).max(50).optional().default(9)
-})
+  limit: z.number().min(1).max(50).optional().default(20),
+  _t: z.number().optional() // Cache-busting timestamp
+}).passthrough() // Allow other query params
 
 // GET /api/products/featured
 export const GET = withMiddleware(
@@ -52,12 +53,9 @@ export const GET = withMiddleware(
             )
           )
         `)
-        .eq('is_featured', true)                                          // **Uses idx_products_featured_order_nulls_created**
+        .eq('is_featured', true)                                          // **ONLY featured products**
         .eq('is_active', true)                                            // **OPTIMIZATION: Only show active products**
         .gte('stock_quantity', 0)                                         // **OPTIMIZATION: Only show products with stock info**
-        .limit(validatedData.limit)
-        .order('featured_order', { ascending: true, nullsFirst: false })  // **Manual order first (1, 2, 3...), NULLs last**
-        .order('created_at', { ascending: false })                        // **Then by newest for products without manual order**
         .order('is_main', { foreignTable: 'product_images', ascending: false })  // **Main images first**
         .order('sort_order', { foreignTable: 'product_images', ascending: true }) // **Then by sort order**
 
@@ -69,13 +67,49 @@ export const GET = withMiddleware(
     }
 
     if (error) throw error
-    return data
+    return data || []
   }
 
   // **CACHING DISABLED FOR REAL-TIME UPDATES**
   // Always fetch fresh data for instant admin updates
   console.log('🔄 Fetching fresh featured products (caching disabled for real-time updates)')
-  const data = await getFeaturedProductsQuery()
+  const allFeaturedProducts = await getFeaturedProductsQuery()
+  
+  // **SPARSE POSITIONING LOGIC**
+  // 1. Separate products with explicit positions from those without
+  const productsWithPosition = allFeaturedProducts.filter(p => p.featured_order != null)
+  const productsWithoutPosition = allFeaturedProducts.filter(p => p.featured_order == null)
+  
+  // 2. Create sparse array with exact positions (1-20)
+  type ProductOrNull = typeof allFeaturedProducts[number] | null
+  const positionedArray: ProductOrNull[] = new Array(validatedData.limit).fill(null)
+  
+  // 3. Place products at their exact positions
+  productsWithPosition.forEach(product => {
+    const position = product.featured_order! - 1 // Convert to 0-indexed
+    if (position >= 0 && position < validatedData.limit) {
+      positionedArray[position] = product
+    }
+  })
+  
+  // 4. Find empty slots
+  const emptySlots: number[] = []
+  for (let i = 0; i < validatedData.limit; i++) {
+    if (positionedArray[i] === null) {
+      emptySlots.push(i)
+    }
+  }
+  
+  // 5. Randomly assign products without explicit positions to empty slots
+  const shuffledProducts = [...productsWithoutPosition].sort(() => Math.random() - 0.5)
+  shuffledProducts.forEach((product, index) => {
+    if (index < emptySlots.length) {
+      positionedArray[emptySlots[index]] = product
+    }
+  })
+  
+  // 6. Filter out null values for return (keep sparse structure)
+  const data = positionedArray
 
   const response = Response.json(createSuccessResponse(data))
   

@@ -94,7 +94,7 @@ export const PromotionalCards = () => {
         </div>
         {/* Mobile Slider */}
         <div className="md:hidden">
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 pl-4 -mr-4 pr-4 scrollbar-hide">
             {promotionalCards.map((card) => (
               <Link key={card.id} href={card.ctaLink} className="group min-w-[90%] sm:min-w-[85%] snap-start">
                 <div className="flex items-center justify-between h-36 sm:h-32 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 px-4 sm:px-5 overflow-hidden active:scale-[0.99] transition">

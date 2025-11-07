@@ -25,7 +25,7 @@ const formSchema = z.object({
   is_featured: z.boolean(),
   is_new: z.boolean(),
   is_deal: z.boolean(),
-  featured_order: z.number().int().min(1).optional(),
+  featured_order: z.number().int().min(1).max(20).optional(),
   original_price: z.number().min(0.01).optional(),
   deal_price: z.number().min(0.01).optional(),
   images: z.any().optional(),
@@ -540,15 +540,36 @@ const AddProductPage = () => {
                     <Input 
                       type="number"
                       min="1"
-                      placeholder="1"
+                      max="20"
+                      placeholder="Leave empty for random"
                       value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        if (value === '') {
+                          field.onChange(undefined)
+                        } else {
+                          const parsed = parseInt(value)
+                          if (!isNaN(parsed)) {
+                            field.onChange(parsed)
+                          }
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Allow backspace, delete, arrow keys, tab
+                        if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                          return
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormDescription>
-                    Set display order on homepage (1=first, 2=second, etc). Leave empty to order by creation date.
+                    Set exact position on homepage (1-20). Leave empty for automatic random assignment.
                     <br />
-                    <span className="text-amber-600 font-medium">Note: If another product has this number, it will be cleared automatically.</span>
+                    <span className="text-blue-600 font-medium">📐 Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
+                    <br />
+                    <span className="text-green-600 font-medium">✨ Only assigned products are shown - empty positions are hidden</span>
+                    <br />
+                    <span className="text-amber-600 font-medium">⚠️ Duplicate positions will be cleared automatically</span>
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
