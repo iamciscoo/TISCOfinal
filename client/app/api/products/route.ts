@@ -189,19 +189,16 @@ export const GET = withMiddleware(
   withValidation(getProductsSchema),    // Validate and parse query parameters
   withErrorHandler                      // Handle errors and format responses
 )(async (req: NextRequest, validatedData: z.infer<typeof getProductsSchema>) => {
-  // **CACHING DISABLED FOR REAL-TIME UPDATES**
-  // Always fetch fresh data from database for instant admin updates
-  console.log('🔄 Fetching fresh product data (caching disabled for real-time updates)')
+  // Fetch products with optimized query
   const products = await getProductsQuery(validatedData)
   
   // Return successful response with products data
   const response = Response.json(createSuccessResponse(products))
   
-  // Set no-cache headers to ensure fresh data always
-  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-  response.headers.set('CDN-Cache-Control', 'no-cache')
-  response.headers.set('Pragma', 'no-cache')
-  response.headers.set('Expires', '0')
+  // Smart caching: 30 seconds fresh, serve stale for 60s while revalidating in background
+  // This provides instant responses while staying relatively up-to-date
+  response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+  response.headers.set('CDN-Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
   response.headers.set('Vary', 'Accept-Encoding')
   
   return response

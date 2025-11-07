@@ -18,10 +18,147 @@ import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { OrderColumn as Order } from "@/lib/ui-types";
 import { formatToEAT } from "@/lib/utils";
 
+// Actions Cell Component - needs to be separate to use hooks
+function OrderActionsCell({ order }: { order: Order }) {
+  const router = useRouter();
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => navigator.clipboard.writeText(order.id)}
+        >
+          Copy order ID
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            const params = new URLSearchParams({
+              tab: 'send',
+              email: order.customerEmail || '',
+              name: order.customerName || '',
+              subject: `Order ${order.id.slice(0, 8)}`
+            })
+            router.push(`/notifications?${params.toString()}`)
+          }}
+        >
+          Send info
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Link href={`/orders/${order.id}`}>View details</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Link href={`/users/${order.customerId}`}>View customer</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={async () => {
+            // Use admin's own mark-paid endpoint with direct database access
+            const response = await fetch(`/api/orders/${order.id}/mark-paid`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            })
+            
+            if (response.ok) {
+              const result = await response.json()
+              toast({ title: "Order marked as paid - Customer notification sent" })
+              console.log('Payment success notification sent:', result)
+              window.location.reload()
+            } else {
+              const error = await response.json()
+              toast({ title: `Failed to mark as paid: ${error.error}`, variant: "destructive" })
+              console.error('Mark paid error:', error)
+            }
+          }}
+        >
+          Mark as paid
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                onClick={async () => {
+                  const response = await fetch(`/api/orders/${order.id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                      status: 'processing',
+                      reason: 'Status updated by admin'
+                    })
+                  })
+                  if (response.ok) {
+                    toast({ title: "Order updated successfully" })
+                    window.location.reload()
+                  } else {
+                    toast({ title: "Failed to update order", variant: "destructive" })
+                  }
+                }}
+              >
+                Mark as processing
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  const response = await fetch(`/api/orders/${order.id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                      status: 'delivered',
+                      reason: 'Status updated by admin'
+                    })
+                  })
+                  if (response.ok) {
+                    toast({ title: "Order updated successfully" })
+                    window.location.reload()
+                  } else {
+                    toast({ title: "Failed to update order", variant: "destructive" })
+                  }
+                }}
+              >
+                Mark as delivered
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600"
+          onClick={async () => {
+            const confirmed = window.confirm(`Cancel order ${order.id}?`);
+            if (!confirmed) return;
+            const response = await fetch(`/api/orders/${order.id}/status`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                status: 'cancelled',
+                reason: 'Cancelled by admin'
+              })
+            })
+            if (response.ok) {
+              toast({ title: "Order cancelled successfully" })
+              window.location.reload()
+            } else {
+              toast({ title: "Failed to cancel order", variant: "destructive" })
+            }
+          }}
+        >
+          Cancel order
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export const columns: ColumnDef<Order>[] = [
   {
@@ -174,147 +311,6 @@ export const columns: ColumnDef<Order>[] = [
   {
     id: "actions",
     enableHiding: false,
-    cell: ({ row }) => {
-      const order = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(order.id)}
-            >
-              Copy order ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link href={`/orders/${order.id}`}>View details</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href={`/users/${order.customerId}`}>View customer</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={async () => {
-                // Use admin's own mark-paid endpoint with direct database access
-                const response = await fetch(`/api/orders/${order.id}/mark-paid`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                })
-                
-                if (response.ok) {
-                  const result = await response.json()
-                  toast({ title: "Order marked as paid - Customer notification sent" })
-                  console.log('Payment success notification sent:', result)
-                  window.location.reload()
-                } else {
-                  const error = await response.json()
-                  toast({ title: `Failed to mark as paid: ${error.error}`, variant: "destructive" })
-                  console.error('Mark paid error:', error)
-                }
-              }}
-            >
-              Mark as paid
-            </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const response = await fetch(`/api/orders/${order.id}/status`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                          status: 'processing',
-                          reason: 'Status updated by admin'
-                        })
-                      })
-                      if (response.ok) {
-                        toast({ title: "Order updated successfully" })
-                        window.location.reload()
-                      } else {
-                        toast({ title: "Failed to update order", variant: "destructive" })
-                      }
-                    }}
-                  >
-                    Mark as processing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const response = await fetch(`/api/orders/${order.id}/status`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                          status: 'shipped',
-                          reason: 'Status updated by admin'
-                        })
-                      })
-                      if (response.ok) {
-                        toast({ title: "Order updated successfully" })
-                        window.location.reload()
-                      } else {
-                        toast({ title: "Failed to update order", variant: "destructive" })
-                      }
-                    }}
-                  >
-                    Mark as shipped
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      const response = await fetch(`/api/orders/${order.id}/status`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                          status: 'delivered',
-                          reason: 'Status updated by admin'
-                        })
-                      })
-                      if (response.ok) {
-                        toast({ title: "Order updated successfully" })
-                        window.location.reload()
-                      } else {
-                        toast({ title: "Failed to update order", variant: "destructive" })
-                      }
-                    }}
-                  >
-                    Mark as delivered
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={async () => {
-                const confirmed = window.confirm(`Cancel order ${order.id}?`);
-                if (!confirmed) return;
-                const response = await fetch(`/api/orders/${order.id}/status`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    status: 'cancelled',
-                    reason: 'Cancelled by admin'
-                  })
-                })
-                if (response.ok) {
-                  toast({ title: "Order cancelled successfully" })
-                  window.location.reload()
-                } else {
-                  toast({ title: "Failed to cancel order", variant: "destructive" })
-                }
-              }}
-            >
-              Cancel order
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <OrderActionsCell order={row.original} />,
   },
 ];

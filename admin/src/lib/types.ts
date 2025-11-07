@@ -164,13 +164,12 @@ export interface ServiceBooking {
   notes?: string
   created_at: string
   updated_at: string
-  // Relations
   service?: Service
   user?: User
 }
 
 // Admin-specific types
-export interface AdminStats {
+export type AdminStats = {
   totalProducts: number
   totalOrders: number
   totalUsers: number
@@ -179,6 +178,8 @@ export interface AdminStats {
   serviceRevenue: number
   pendingOrders: number
   lowStockProducts: number
+  netRevenue?: number
+  totalExpenses?: number
 }
 
 export interface DashboardData {

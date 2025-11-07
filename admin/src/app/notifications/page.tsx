@@ -262,6 +262,7 @@ export default function NotificationsPage() {
   // Loading states - track if we're doing something async
   const [isRefreshing, setIsRefreshing] = useState(false)      // Are we refreshing the data?
   const [isClearingAll, setIsClearingAll] = useState(false)    // Are we deleting all notifications?
+  const [isSavingRecipient, setIsSavingRecipient] = useState(false)  // Are we saving a recipient?
   
   // Pagination states - control which page we're on
   const [currentPage, setCurrentPage] = useState(1)    // Which page are we showing? (1, 2, 3, etc.)
@@ -1785,6 +1786,7 @@ export default function NotificationsPage() {
 
               <Button
                 onClick={async () => {
+                  setIsSavingRecipient(true)
                   try {
                     const res = await fetch('/api/admin/notifications/recipients', {
                       method: 'POST',
@@ -1809,11 +1811,20 @@ export default function NotificationsPage() {
                     }
                   } catch (e) {
                     toast.error('Failed to save recipient')
+                  } finally {
+                    setIsSavingRecipient(false)
                   }
                 }}
-                disabled={!newRecipient.email}
+                disabled={!newRecipient.email || isSavingRecipient}
               >
-                {isEditing ? 'Update Recipient' : 'Add Recipient'}
+                {isSavingRecipient ? (
+                  <>
+                    <span className="animate-pulse">Saving</span>
+                    <span className="ml-1 animate-bounce">...</span>
+                  </>
+                ) : (
+                  isEditing ? 'Update Recipient' : 'Add Recipient'
+                )}
               </Button>
               {isEditing && (
                 <Button

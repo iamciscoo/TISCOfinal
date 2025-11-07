@@ -17,14 +17,14 @@ const Homepage = async () => {
       <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-2 lg:grid-cols-4">
         <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Net Revenue</CardTitle>
             <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center flex-shrink-0">
               <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-300" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-base sm:text-xl lg:text-2xl font-bold text-foreground">TZS {stats.totalRevenue.toLocaleString()}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">All time revenue</p>
+            <div className="text-base sm:text-xl lg:text-2xl font-bold text-foreground">TZS {(stats.netRevenue || 0).toLocaleString()}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Revenue minus expenses</p>
           </CardContent>
         </Card>
         

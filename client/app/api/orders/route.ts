@@ -424,6 +424,34 @@ export async function POST(req: Request) {
     
     logger.info('Order items created successfully', { orderId: order.id, count: orderItems.length })
 
+    // Reduce stock quantities for ordered products
+    // This prevents overselling and ensures accurate stock availability
+    logger.dbQuery('UPDATE', 'products', { action: 'reduce_stock', orderId: order.id })
+    for (const item of validatedItems) {
+      const { error: stockError } = await supabase.rpc('reduce_product_stock', {
+        p_product_id: item.product_id,
+        p_quantity: item.quantity
+      })
+      
+      if (stockError) {
+        logger.error('Stock reduction failed - rolling back order', stockError, { 
+          orderId: order.id, 
+          productId: item.product_id,
+          quantity: item.quantity 
+        })
+        
+        // Rollback: Delete order items and order
+        await supabase.from('order_items').delete().eq('order_id', order.id)
+        await supabase.from('orders').delete().eq('id', order.id)
+        
+        return NextResponse.json({ 
+          error: 'Failed to reserve stock. Please try again or contact support if the issue persists.',
+          details: stockError.message 
+        }, { status: 409 })
+      }
+    }
+    logger.info('Stock reduced successfully for all order items', { orderId: order.id })
+
     // Clear user's cart in the database to keep client and server in sync
     try {
       await supabase
@@ -433,9 +461,6 @@ export async function POST(req: Request) {
     } catch (e) {
       logger.warn('Non-fatal: failed to clear user cart after order creation', { userId: user.id, error: errInfo(e) })
     }
-
-    // Inventory policy: do not decrement stock at order creation.
-    // Stock will be decremented when the order is marked as 'delivered'.
 
     // Invalidate caches for this user's orders and this order
     try {

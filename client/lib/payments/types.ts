@@ -165,6 +165,7 @@ export type PaymentLogEvent =
   | 'session_expired'
   | 'notification_sent'
   | 'notification_failed'
+  | 'stock_reduction_failed'
 
 export interface PaymentLogData {
   event_type: PaymentLogEvent

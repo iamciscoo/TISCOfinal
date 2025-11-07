@@ -644,6 +644,27 @@ export async function getAdminStats(): Promise<AdminStats> {
   }
 }
 
+// Get all-time net revenue (paid orders + paid bookings - expenses)
+export async function getAllTimeNetRevenue(): Promise<{ netRevenue: number; totalExpenses: number; totalRevenue: number }> {
+  try {
+    const [{ data: ordersData }, { data: bookingsData }, { data: expensesData }] = await Promise.all([
+      supabase.from('orders').select('total_amount').eq('payment_status', 'paid'),
+      supabase.from('service_bookings').select('total_amount').eq('payment_status', 'paid'),
+      supabase.from('expenses').select('amount')
+    ])
+
+    const ordersRevenue = (ordersData || []).reduce((sum, order: any) => sum + Number(order.total_amount ?? 0), 0)
+    const bookingsRevenue = (bookingsData || []).reduce((sum, booking: any) => sum + Number(booking.total_amount ?? 0), 0)
+    const totalExpenses = (expensesData || []).reduce((sum, expense: any) => sum + Number(expense.amount ?? 0), 0)
+    const totalRevenue = ordersRevenue + bookingsRevenue
+    const netRevenue = totalRevenue - totalExpenses
+
+    return { netRevenue, totalExpenses, totalRevenue }
+  } catch (error) {
+    return { netRevenue: 0, totalExpenses: 0, totalRevenue: 0 }
+  }
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const emptyStats: AdminStats = {
     totalProducts: 0,
@@ -654,13 +675,16 @@ export async function getDashboardData(): Promise<DashboardData> {
     serviceRevenue: 0,
     pendingOrders: 0,
     lowStockProducts: 0,
+    netRevenue: 0,
+    totalExpenses: 0,
   }
 
-  const [statsRes, ordersRes, productsRes, usersRes] = await Promise.allSettled([
+  const [statsRes, ordersRes, productsRes, usersRes, netRevenueRes] = await Promise.allSettled([
     getAdminStats(),
     getOrders(5),
     getProducts(5),
     getUsers(5),
+    getAllTimeNetRevenue(),
   ])
 
   if (ordersRes.status === 'rejected') {
@@ -673,8 +697,15 @@ export async function getDashboardData(): Promise<DashboardData> {
     console.error('Error fetching recent users:', usersRes.reason)
   }
 
+  const baseStats = statsRes.status === 'fulfilled' ? statsRes.value : emptyStats
+  const netRevenueData = netRevenueRes.status === 'fulfilled' ? netRevenueRes.value : { netRevenue: 0, totalExpenses: 0 }
+
   return {
-    stats: statsRes.status === 'fulfilled' ? statsRes.value : emptyStats,
+    stats: {
+      ...baseStats,
+      netRevenue: netRevenueData.netRevenue,
+      totalExpenses: netRevenueData.totalExpenses,
+    },
     recentOrders: ordersRes.status === 'fulfilled' ? ordersRes.value : [],
     topProducts: productsRes.status === 'fulfilled' ? productsRes.value : [],
     recentUsers: usersRes.status === 'fulfilled' ? usersRes.value : [],

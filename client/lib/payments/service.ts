@@ -570,9 +570,32 @@ export async function createOrderFromSession(
       })
     } else {
       console.log(`✅ Created ${orderItems.length} order items`)
+      
+      // Reduce stock for ordered products (mobile payment orders only, not updates)
+      console.log(`📦 Reducing stock for ${orderItems.length} products`)
+      for (const item of orderItems) {
+        const { error: stockError } = await supabase.rpc('reduce_product_stock', {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity
+        })
+        
+        if (stockError) {
+          console.error(`⚠️ Stock reduction failed for product ${item.product_id}:`, stockError.message)
+          // Log error but don't fail - payment already succeeded
+          await logPaymentEvent('stock_reduction_failed', {
+            session_id: session.id,
+            order_id: order.id,
+            user_id: session.user_id,
+            error: `Stock reduction failed: ${stockError.message}`,
+            details: { product_id: item.product_id, quantity: item.quantity }
+          })
+        } else {
+          console.log(`✅ Stock reduced for product ${item.product_id} (qty: ${item.quantity})`)
+        }
+      }
     }
   } else {
-    console.log(`♻️ Order items already exist, skipping creation`)
+    console.log(`♻️ Order items already exist, skipping creation and stock reduction`)
   }
 
   await logPaymentEvent('order_created', {
