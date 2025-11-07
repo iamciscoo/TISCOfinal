@@ -40,6 +40,7 @@ export async function GET(req: Request) {
           created_at
         ),
         product_categories(
+          category_id,
           categories(
             id,
             name,

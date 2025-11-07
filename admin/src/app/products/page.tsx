@@ -5,8 +5,16 @@ import { Product, columns } from "./columns";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { ProductQuickSearch } from "@/components/ProductQuickSearch";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 const ProductsPage = () => {
   const [data, setData] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
@@ -54,6 +62,7 @@ const ProductsPage = () => {
           };
         });
         
+        setAllProducts(products);
         setData(products);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -73,11 +82,55 @@ const ProductsPage = () => {
     return () => clearInterval(pollInterval);
   }, []);
 
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const result = await response.json();
+        setCategories(result.data || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
+  // Filter products by category
+  useEffect(() => {
+    if (selectedCategory === "all") {
+      setData(allProducts);
+    } else {
+      const filtered = allProducts.filter(product => {
+        // Check if product has categories array (product_categories)
+        if (product.categories && Array.isArray(product.categories) && product.categories.length > 0) {
+          // product_categories structure: [{ category_id: 'uuid', categories: {...} }]
+          return product.categories.some((cat: any) => cat.category_id === selectedCategory);
+        }
+        
+        // Fallback to direct category object
+        if (product.category) {
+          return product.category.id === selectedCategory;
+        }
+        
+        return false;
+      });
+      
+      setData(filtered);
+    }
+  }, [selectedCategory, allProducts]);
+
   return (
     <div className="space-y-6 pt-2">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {data.length}
+            </span>
+          </div>
           {isRefreshing && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -88,7 +141,19 @@ const ProductsPage = () => {
             </div>
           )}
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="all">All Categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
           <ProductQuickSearch />
         </div>
       </div>
