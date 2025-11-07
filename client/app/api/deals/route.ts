@@ -8,6 +8,7 @@ const supabase = createClient(
 
 export async function GET() {
   try {
+    console.log('[Deals API] Fetching deals from database...')
     const { data: dealProducts, error } = await supabase
       .from('products')
       .select(`
@@ -21,8 +22,19 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching deals:', error)
+      console.error('[Deals API] Error fetching deals:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    console.log('[Deals API] Found', dealProducts?.length || 0, 'deal products')
+    if (dealProducts && dealProducts.length > 0) {
+      console.log('[Deals API] Sample product:', {
+        id: dealProducts[0].id,
+        name: dealProducts[0].name,
+        is_deal: dealProducts[0].is_deal,
+        product_categories: dealProducts[0].product_categories,
+        category_id: dealProducts[0].category_id
+      })
     }
 
     // Transform the data to include discount percentage and proper image handling
@@ -35,6 +47,9 @@ export async function GET() {
       const mainImage = product.product_images?.find((img: { is_main: boolean; url: string }) => img.is_main) || product.product_images?.[0]
       const imageUrl = mainImage?.url || product.image_url || '/circular.svg'
 
+      // Get category from product_categories relation
+      const categoryData = product.product_categories?.[0]?.categories
+      
       return {
         id: product.id,
         name: product.name,
@@ -44,11 +59,12 @@ export async function GET() {
         currentPrice: product.deal_price || product.price,
         discount: discountPercentage,
         image_url: imageUrl,
-        category: product.categories?.[0]?.category?.name || 'General',
-        category_id: product.category_id,
+        category: categoryData?.name || 'General',
+        category_id: categoryData?.id || product.category_id,
         rating: product.rating ?? null,
         reviews_count: product.reviews_count ?? null,
         stock_quantity: product.stock_quantity,
+        view_count: product.view_count || 0,
         is_featured: product.is_featured,
         is_new: product.is_new,
         slug: product.slug,
@@ -56,6 +72,17 @@ export async function GET() {
         created_at: product.created_at
       }
     }) || []
+
+    console.log('[Deals API] Transformed', transformedDeals.length, 'deals')
+    if (transformedDeals.length > 0) {
+      console.log('[Deals API] Sample transformed deal:', {
+        id: transformedDeals[0].id,
+        name: transformedDeals[0].name,
+        category: transformedDeals[0].category,
+        category_id: transformedDeals[0].category_id,
+        discount: transformedDeals[0].discount
+      })
+    }
 
     return NextResponse.json({ 
       deals: transformedDeals,

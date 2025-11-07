@@ -3,6 +3,19 @@
  * HOMEPAGE - The Main Landing Page (tiscomarket.store)
  * ============================================================================
  * 
+ * PRAYER FOR THIS PROJECT:
+ * 
+ * "Lord God, I know things haven't been sunshine and rainbows, but I know 
+ * one day I will receive Your grace and understand You according to Your will. 
+ * I hope that You protect this project so that no bugs, errors, or downtime 
+ * will affect it in such a way to bring me or anyone losses and unneeded stress. 
+ * Hopefully it grows and scales and helps the people who come across it. 
+ * I pray You give me and the paltform divine protection that You can offer; protect it with 
+ * the blood of the Lamb, Jesus. I know I'm a sinner, but please help me with 
+ * this and other projects. In Jesus' Name I pray. Amen."
+ * 
+ * ============================================================================
+ * 
  * WHAT IS THIS FILE?
  * This is the homepage - the first thing customers see when they visit our website.
  * Think of it like the front window of a store - it needs to grab attention and

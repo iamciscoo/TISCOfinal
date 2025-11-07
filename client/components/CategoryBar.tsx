@@ -173,7 +173,7 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
                             </li>
                             <li>
                               <Link
-                                href={`/search?query=${encodeURIComponent(cat.name || '')}`}
+                                href={`/search?category=${encodeURIComponent(String(cat.id))}`}
                                 className="hover:text-blue-700"
                               >
                                 Search {cat.name}
@@ -194,9 +194,6 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
                           <ul className="space-y-2 text-sm text-gray-700">
                             <li>
                               <Link href="/products" className="hover:text-blue-700">All products</Link>
-                            </li>
-                            <li>
-                              <Link href="/search" className="hover:text-blue-700">Advanced search</Link>
                             </li>
                             <li>
                               <Link href="/deals" className="hover:text-blue-700">All deals</Link>

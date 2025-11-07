@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,6 +31,8 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import Image from 'next/image'
+import { getCategories } from '@/lib/database'
+import { Category } from '@/lib/types'
 
 import { LoadingSpinner, VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
@@ -54,9 +57,11 @@ interface Deal {
 }
 
 
-export default function DealsPage() {
+function DealsContent() {
+  const searchParams = useSearchParams()
   const [deals, setDeals] = useState<Deal[]>([])
   const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('discount')
@@ -73,31 +78,63 @@ export default function DealsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [currentPage])
   
-  // Fetch deals from API
+  // Fetch deals and categories from API
   useEffect(() => {
-    const fetchDeals = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/deals')
-        if (!response.ok) {
+        const [dealsResponse, categoriesData] = await Promise.all([
+          fetch('/api/deals'),
+          getCategories()
+        ])
+        if (!dealsResponse.ok) {
           throw new Error('Failed to fetch deals')
         }
-        const data = await response.json()
-        setDeals(data.deals || [])
-        setFilteredDeals(data.deals || [])
+        const dealsData = await dealsResponse.json()
+        console.log('[Deals] Fetched deals:', dealsData.deals?.length || 0)
+        console.log('[Deals] Fetched categories:', categoriesData?.length || 0)
+        if (dealsData.deals?.length > 0) {
+          console.log('[Deals] Sample deal:', dealsData.deals[0])
+        }
+        setDeals(dealsData.deals || [])
+        setFilteredDeals(dealsData.deals || [])
+        setCategories(categoriesData || [])
       } catch (err) {
+        console.error('[Deals] Error fetching data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load deals')
       } finally {
         setLoading(false)
       }
     }
     
-    fetchDeals()
+    fetchData()
   }, [])
   
-  // Removed unused responsive columns tracking to reduce noise
+  // Initialize category from URL (?category=)
+  useEffect(() => {
+    const param = searchParams?.get('category')
+    if (!param || !categories.length) return
+    
+    const paramLower = String(param).toLowerCase()
+    console.log('[Deals] URL category param:', param, 'Categories loaded:', categories.length)
+    
+    // Try to match category by ID, slug, or name
+    const match = categories.find((c) => {
+      const cid = String(c.id).toLowerCase()
+      const cslug = (c.slug || '').toLowerCase()
+      const cname = (c.name || '').toLowerCase()
+      return cid === paramLower || cslug === paramLower || cname === paramLower
+    })
+    
+    if (match) {
+      console.log('[Deals] Matched category:', match.name, 'ID:', match.id)
+      setSelectedCategory(String(match.id))
+    } else {
+      console.log('[Deals] No category match found for:', param)
+    }
+  }, [searchParams, categories])
   
-  const categories = Array.from(new Set(deals.map(deal => deal.category)))
+  // Removed unused responsive columns tracking to reduce noise
 
   // Filter and sort deals
   useEffect(() => {
@@ -111,9 +148,24 @@ export default function DealsPage() {
       )
     }
 
-    // Category filter
+    // Category filter - support both category name and ID
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(deal => deal.category === selectedCategory)
+      console.log('[Deals] Filtering by category:', selectedCategory)
+      const matchingCategory = categories.find(c => String(c.id) === selectedCategory)
+      console.log('[Deals] Matching category object:', matchingCategory)
+      console.log('[Deals] Deals before filter:', filtered.length)
+      console.log('[Deals] Sample deal categories:', filtered.slice(0, 3).map(d => ({ name: d.name, category: d.category, category_id: d.category_id })))
+      
+      filtered = filtered.filter(deal => {
+        // Check if selectedCategory is a category ID
+        if (matchingCategory) {
+          // Match by category name
+          return deal.category === matchingCategory.name
+        }
+        // Fallback: match by category name directly
+        return deal.category === selectedCategory
+      })
+      console.log('[Deals] Deals after filter:', filtered.length)
     }
 
     // Sort - prioritize Most Popular toggle if enabled
@@ -159,7 +211,7 @@ export default function DealsPage() {
 
     setFilteredDeals(filtered)
     setCurrentPage(1)
-  }, [searchTerm, selectedCategory, sortBy, showMostPopular, deals])
+  }, [searchTerm, selectedCategory, sortBy, showMostPopular, deals, categories])
 
   // Pagination (align with shop page: 12 items for grid, 6 for list)
   const itemsPerPage = viewMode === 'grid' ? 12 : 6
@@ -202,8 +254,8 @@ export default function DealsPage() {
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
+              <SelectItem key={category.id} value={String(category.id)}>
+                {category.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -550,5 +602,17 @@ export default function DealsPage() {
       <Footer />
       <CartSidebar />
     </div>
+  )
+}
+
+export default function DealsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner text="Loading deals..." />
+      </div>
+    }>
+      <DealsContent />
+    </Suspense>
   )
 }

@@ -151,8 +151,8 @@ export async function GET(req: NextRequest) {
         primary_browser: activitySummary?.primary_browser || userSessions[0]?.browser_name || 'Unknown',
         primary_os: activitySummary?.primary_os || userSessions[0]?.os_name || 'Unknown',
         
-        // Recent session details
-        recent_sessions: userSessions.slice(0, 5).map(s => ({
+        // All user sessions (for pagination in UI)
+        recent_sessions: userSessions.map(s => ({
           session_id: s.session_id,
           device_type: s.device_type,
           os: `${s.os_name || 'Unknown'} ${s.os_version || ''}`.trim(),

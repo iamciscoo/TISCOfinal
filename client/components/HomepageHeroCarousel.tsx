@@ -35,7 +35,7 @@ const heroSlides: HeroSlide[] = [
     description: 'New products added every week. No outdated inventory, no stale selections. Just the latest and greatest, straight to your door.',
     image: '/homehero2.jpg',
     cta: 'See What\'s New',
-    ctaLink: '/products?filter=new',
+    ctaLink: '/products?category=new',
     ctaIcon: Sparkles
   },
   {

@@ -59,7 +59,7 @@ export const FeaturedProducts = () => {
             <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">
               Featured{" "}
               <span className="relative inline-block">
-                <span className="relative z-10">Products</span>
+                <span className="relative z-10">Highlights.</span>
                 <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 transform -skew-y-1 opacity-30"></span>
               </span>
             </h2>

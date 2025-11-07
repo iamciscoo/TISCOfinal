@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -19,7 +20,18 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Users, Monitor, Smartphone, Tablet, TrendingUp, ShoppingBag, Calendar } from 'lucide-react'
+import { Users, Monitor, Smartphone, Tablet, TrendingUp, ShoppingBag, Calendar, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { useToast } from '@/hooks/use-toast'
 
 interface UserMetric {
   id: string
@@ -69,6 +81,16 @@ export default function CustomerMetricsPage() {
   const [statistics, setStatistics] = useState<Statistics | null>(null)
   const [users, setUsers] = useState<UserMetric[]>([])
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [resetUserId, setResetUserId] = useState<string | null>(null)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [globalResetLoading, setGlobalResetLoading] = useState(false)
+  const [showGlobalResetDialog, setShowGlobalResetDialog] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sessionPages, setSessionPages] = useState<Record<string, number>>({})
+  const rowsPerPage = 20
+  const sessionsPerPage = 20
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchMetrics()
@@ -77,7 +99,11 @@ export default function CustomerMetricsPage() {
   const fetchMetrics = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/customers/metrics?interval=${interval}&sortBy=${sortBy}&sortOrder=desc`)
+      // Add cache-busting timestamp to force fresh data
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/customers/metrics?interval=${interval}&sortBy=${sortBy}&sortOrder=desc&_t=${timestamp}`, {
+        cache: 'no-store'
+      })
       const result = await response.json()
 
       if (result.success) {
@@ -107,6 +133,110 @@ export default function CustomerMetricsPage() {
     return new Date(dateString).toLocaleString()
   }
 
+  // Filter users based on search query
+  const filteredUsers = users.filter(user => {
+    const query = searchQuery.toLowerCase()
+    return (
+      user.full_name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.phone?.toLowerCase().includes(query) ||
+      user.city?.toLowerCase().includes(query) ||
+      user.country?.toLowerCase().includes(query)
+    )
+  })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage)
+  const startIndex = (currentPage - 1) * rowsPerPage
+  const endIndex = startIndex + rowsPerPage
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const handleGlobalSessionsReset = async () => {
+    try {
+      setGlobalResetLoading(true)
+      const response = await fetch('/api/customers/reset-all-sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset all sessions')
+      }
+
+      toast({
+        title: "✅ Successfully reset all sessions",
+        description: `Deleted ${result.data.deletedSessions} sessions globally. Total Sessions and breakdowns have been recalculated.`,
+      })
+
+      // Refresh the metrics data
+      setCurrentPage(1)
+      setSearchQuery('')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await fetchMetrics()
+    } catch (error) {
+      console.error('Error resetting all sessions:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to reset all sessions',
+        variant: "destructive",
+      })
+    } finally {
+      setGlobalResetLoading(false)
+      setShowGlobalResetDialog(false)
+    }
+  }
+
+  const handleResetUser = async (userId: string) => {
+    try {
+      setResetLoading(true)
+      const response = await fetch('/api/customers/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset user metrics')
+      }
+
+      // Show success toast
+      toast({
+        title: "✅ Successfully reset metrics",
+        description: `Deleted ${result.data.deletedCounts.sessions} sessions, ${result.data.deletedCounts.reviews} reviews, and ${result.data.deletedCounts.activitySummary} activity summaries for ${result.data.user.name}. Device, browser, and OS statistics have been recalculated.`,
+      })
+
+      // Refresh the metrics data and reset pagination
+      setCurrentPage(1)
+      setSearchQuery('')
+      // Small delay to ensure database changes are committed
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await fetchMetrics()
+    } catch (error) {
+      console.error('Error resetting user metrics:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to reset user metrics',
+        variant: "destructive",
+      })
+    } finally {
+      setResetLoading(false)
+      setResetUserId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -125,6 +255,15 @@ export default function CustomerMetricsPage() {
         </div>
         
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowGlobalResetDialog(true)}
+            disabled={globalResetLoading}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset All Sessions
+          </Button>
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
@@ -267,6 +406,22 @@ export default function CustomerMetricsPage() {
         <CardHeader>
           <CardTitle>User Activity Details</CardTitle>
           <CardDescription>Individual user metrics and session information</CardDescription>
+          
+          {/* Search Bar */}
+          <div className="flex items-center gap-2 pt-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, phone, city..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Showing {paginatedUsers.length} of {filteredUsers.length} users
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -285,7 +440,14 @@ export default function CustomerMetricsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {paginatedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No users found matching your search.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedUsers.map((user) => (
                   <React.Fragment key={user.id}>
                     <TableRow className="cursor-pointer hover:bg-gray-50">
                       <TableCell className="font-medium">{user.full_name}</TableCell>
@@ -314,13 +476,25 @@ export default function CustomerMetricsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
-                        >
-                          {expandedUser === user.id ? 'Hide' : 'Details'}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                          >
+                            {expandedUser === user.id ? 'Hide' : 'Details'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                            onClick={() => setResetUserId(user.id)}
+                            disabled={resetLoading}
+                            title="Reset user metrics (clears sessions and reviews)"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     
@@ -366,9 +540,20 @@ export default function CustomerMetricsPage() {
                               )}
                             </div>
 
-                            {user.recent_sessions.length > 0 && (
+                            {user.recent_sessions.length > 0 && (() => {
+                              const currentSessionPage = sessionPages[user.id] || 1
+                              const totalSessionPages = Math.ceil(user.recent_sessions.length / sessionsPerPage)
+                              const sessionStartIdx = (currentSessionPage - 1) * sessionsPerPage
+                              const paginatedSessions = user.recent_sessions.slice(sessionStartIdx, sessionStartIdx + sessionsPerPage)
+                              
+                              return (
                               <>
-                                <h4 className="font-semibold mt-4">Recent Sessions</h4>
+                                <div className="flex items-center justify-between mt-4">
+                                  <h4 className="font-semibold">Recent Sessions</h4>
+                                  <span className="text-xs text-gray-500">
+                                    {user.recent_sessions.length} total sessions
+                                  </span>
+                                </div>
                                 <div className="overflow-x-auto">
                                   <Table>
                                     <TableHeader>
@@ -384,7 +569,7 @@ export default function CustomerMetricsPage() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {user.recent_sessions.map((session, sessionIndex) => {
+                                      {paginatedSessions.map((session, sessionIndex) => {
                                         const duration = session.ended_at 
                                           ? Math.round((new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000 / 60)
                                           : null
@@ -420,19 +605,165 @@ export default function CustomerMetricsPage() {
                                     </TableBody>
                                   </Table>
                                 </div>
+                                {totalSessionPages > 1 && (
+                                  <div className="flex items-center justify-between pt-3 border-t mt-3">
+                                    <div className="text-xs text-gray-500">
+                                      Page {currentSessionPage} of {totalSessionPages}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSessionPages(prev => ({
+                                          ...prev,
+                                          [user.id]: Math.max(1, (prev[user.id] || 1) - 1)
+                                        }))}
+                                        disabled={currentSessionPage === 1}
+                                      >
+                                        <ChevronLeft className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSessionPages(prev => ({
+                                          ...prev,
+                                          [user.id]: Math.min(totalSessionPages, (prev[user.id] || 1) + 1)
+                                        }))}
+                                        disabled={currentSessionPage === totalSessionPages}
+                                      >
+                                        <ChevronRight className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </>
-                            )}
+                              )
+                            })()}
                           </div>
                         </TableCell>
                       </TableRow>
                     )}
                   </React.Fragment>
-                ))}
+                ))
+                )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={resetUserId !== null} onOpenChange={(open: boolean) => !open && setResetUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset User Metrics?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the following data for this user.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              <li>All user sessions (login history)</li>
+              <li>Product reviews</li>
+              <li>Activity summary statistics</li>
+            </ul>
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+              <p className="font-medium">Statistics Update:</p>
+              <p className="text-xs mt-1">Device, browser, and OS breakdowns will be automatically recalculated after deletion.</p>
+            </div>
+            <p className="font-semibold text-amber-600 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>This action cannot be undone!</span>
+            </p>
+            <p className="text-xs text-gray-500">
+              Note: User account, order history, and bookings will be preserved.
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => resetUserId && handleResetUser(resetUserId)}
+              disabled={resetLoading}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {resetLoading ? 'Resetting...' : 'Reset Metrics'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Global Sessions Reset Dialog */}
+      <AlertDialog open={showGlobalResetDialog} onOpenChange={(open: boolean) => !open && setShowGlobalResetDialog(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset All Sessions Globally?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset ALL user sessions platform-wide.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="font-semibold text-red-800">⚠️ Warning: This is a platform-wide reset!</p>
+              <p className="text-sm text-red-700 mt-1">This will affect ALL users and will:</p>
+            </div>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              <li>Delete all user sessions for every user</li>
+              <li>Reset Total Sessions count to 0</li>
+              <li>Clear Device breakdown statistics</li>
+              <li>Clear Browser breakdown statistics</li>
+              <li>Clear OS breakdown statistics</li>
+              <li>Update all user activity summaries</li>
+            </ul>
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+              <p className="font-medium">What will be preserved:</p>
+              <p className="text-xs mt-1">User accounts, orders, bookings, and reviews will remain unchanged.</p>
+            </div>
+            <p className="font-semibold text-red-600 flex items-center gap-2 text-lg">
+              <span>🚨</span>
+              <span>This action cannot be undone!</span>
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={globalResetLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleGlobalSessionsReset}
+              disabled={globalResetLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {globalResetLoading ? 'Resetting All Sessions...' : 'Reset All Sessions'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
