@@ -302,7 +302,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               src={productImages[selectedImageIndex] || '/circular.svg'}
               alt={`${product.name} - Image ${selectedImageIndex + 1}`}
               fill
-              className="object-cover rounded-lg"
+              className="object-contain rounded-lg bg-white"
               sizes="(max-width: 768px) 100vw, 50vw"
               priority={selectedImageIndex === 0}
               quality={85}
@@ -391,7 +391,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
                     </svg>
-                    Scroll to view all {productImages.length} images
+                    Swipe to view all {productImages.length} images
                   </span>
                 </div>
               )}

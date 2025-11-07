@@ -44,6 +44,7 @@ type FormData = z.infer<typeof formSchema>;
 const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<Array<{ file: File; url: string; id: string }>>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -172,8 +173,45 @@ const AddProductPage = () => {
     }
   };
 
+  const removePreviewImage = (id: string) => {
+    setImagePreview(prev => prev.filter(img => img.id !== id));
+    
+    // Update form field
+    const dt = new DataTransfer();
+    imagePreview
+      .filter(img => img.id !== id)
+      .forEach(img => dt.items.add(img.file));
+    form.setValue('images', dt.files.length > 0 ? dt.files : null);
+  };
+
+  const movePreviewImage = (id: string, direction: 'up' | 'down') => {
+    setImagePreview(prev => {
+      const idx = prev.findIndex(img => img.id === id);
+      if (idx === -1) return prev;
+      
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev;
+      
+      const newArray = [...prev];
+      [newArray[idx], newArray[swapIdx]] = [newArray[swapIdx], newArray[idx]];
+      
+      // Update form with new order (outside of render)
+      setTimeout(() => {
+        const dt = new DataTransfer();
+        newArray.forEach(img => dt.items.add(img.file));
+        form.setValue('images', dt.files);
+      }, 0);
+      
+      return newArray;
+    });
+  };
+
   return (
-    <div className="p-6">      <h1 className="text-2xl font-bold mb-4">Add New Product</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
+        <p className="text-gray-600 mt-2">Create a new product with images, pricing, and categories</p>
+      </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
@@ -316,56 +354,163 @@ const AddProductPage = () => {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="images"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Images</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="file" 
-                    accept="image/jpeg,image/png,image/webp,image/gif" 
-                    multiple 
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (files && files.length > 0) {
-                        // Validate file types and sizes before setting
-                        const validFiles = Array.from(files).filter(file => {
-                          const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
-                          const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
-                          return isValidType && isValidSize;
-                        });
+          {/* Image Upload Section */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Product Images</h2>
+              <p className="text-sm text-gray-600 mt-1">Upload and arrange product images. First image will be the main display.</p>
+            </div>
+            
+            <div className="p-6">
+              <FormField
+                control={form.control}
+                name="images"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <label 
+                            htmlFor="file-upload" 
+                            className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ pointerEvents: loading ? 'none' : 'auto' }}
+                          >
+                            <span>Choose Files</span>
+                          </label>
+                          <span className="text-sm text-gray-600">
+                            {imagePreview.length > 0 ? `${imagePreview.length} file(s) selected` : 'No file chosen'}
+                          </span>
+                          <input 
+                            id="file-upload"
+                            type="file" 
+                            accept="image/jpeg,image/png,image/webp,image/gif" 
+                            multiple 
+                            disabled={loading}
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                const validFiles = Array.from(files).filter(file => {
+                                  const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
+                                  const isValidSize = file.size <= 5 * 1024 * 1024;
+                                  return isValidType && isValidSize;
+                                });
+                                
+                                if (validFiles.length !== files.length) {
+                                  toast({
+                                    title: "Warning",
+                                    description: `${files.length - validFiles.length} file(s) skipped (invalid type or >5MB)`,
+                                    variant: "destructive"
+                                  });
+                                }
+                                
+                                if (validFiles.length > 0) {
+                                  // Create previews
+                                  const previews = validFiles.map(file => ({
+                                    file,
+                                    url: URL.createObjectURL(file),
+                                    id: `${Date.now()}-${Math.random()}`
+                                  }));
+                                  setImagePreview(previews);
+                                  
+                                  const dt = new DataTransfer();
+                                  validFiles.forEach(file => dt.items.add(file));
+                                  field.onChange(dt.files);
+                                  
+                                  toast({
+                                    title: "Images selected",
+                                    description: `${validFiles.length} image(s) ready to upload`
+                                  });
+                                } else {
+                                  field.onChange(null);
+                                  setImagePreview([]);
+                                }
+                              } else {
+                                field.onChange(null);
+                                setImagePreview([]);
+                              }
+                            }}
+                          />
+                        </div>
                         
-                        if (validFiles.length !== files.length) {
-                          toast({
-                            title: "Warning",
-                            description: `${files.length - validFiles.length} file(s) were skipped (invalid type or size > 5MB)`,
-                            variant: "destructive"
-                          });
-                        }
+                        {/* Image Preview Grid */}
+                        {imagePreview.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+                            {imagePreview.map((img, index) => (
+                              <div key={img.id} className="relative group border-2 rounded-lg p-2 bg-white shadow-sm hover:shadow-md transition-all">
+                                <div className="relative aspect-square rounded-md overflow-hidden bg-gray-100">
+                                  <img 
+                                    src={img.url} 
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {index === 0 && (
+                                    <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-lg">
+                                      ⭐ Main
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="mt-2 flex items-center justify-between gap-1">
+                                  <span className="text-xs font-medium text-gray-700">#{index + 1}</span>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => movePreviewImage(img.id, 'up')}
+                                      disabled={index === 0}
+                                      className="h-7 w-7 p-0"
+                                      title="Move up"
+                                    >
+                                      ↑
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => movePreviewImage(img.id, 'down')}
+                                      disabled={index === imagePreview.length - 1}
+                                      className="h-7 w-7 p-0"
+                                      title="Move down"
+                                    >
+                                      ↓
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => removePreviewImage(img.id)}
+                                      className="h-7 w-7 p-0"
+                                      title="Remove"
+                                    >
+                                      ×
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         
-                        if (validFiles.length > 0) {
-                          // Convert back to FileList-like object
-                          const dt = new DataTransfer();
-                          validFiles.forEach(file => dt.items.add(file));
-                          field.onChange(dt.files);
-                        } else {
-                          field.onChange(null);
-                        }
-                      } else {
-                        field.onChange(null);
-                      }
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Upload one or more images (JPEG, PNG, WebP, GIF). Max 5MB each. The first will be set as the main image.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                        {imagePreview.length === 0 && (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <div className="text-5xl mb-3">📸</div>
+                            <p className="text-sm font-medium text-gray-700">No images selected</p>
+                            <p className="text-xs text-gray-500 mt-1">Choose files above to preview</p>
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription className="mt-4 text-xs">
+                      <span className="font-medium">Supported:</span> JPEG, PNG, WebP, GIF • <span className="font-medium">Max size:</span> 5MB per image
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
           <FormField
             control={form.control}
             name="is_featured"
@@ -490,9 +635,30 @@ const AddProductPage = () => {
               />
             </>
           )}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Creating..." : "Create Product"}
-          </Button>
+          <div className="flex items-center justify-between pt-6 border-t">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => router.push('/products')}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="min-w-[150px]"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                "Create Product"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

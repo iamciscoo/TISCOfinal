@@ -29,8 +29,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Pencil, Trash2, DollarSign, Calendar, Tag, FileText, AlertCircle } from "lucide-react"
+import { Plus, Pencil, Trash2, DollarSign, Calendar, Tag, FileText, AlertCircle, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from 'next/navigation'
 import type { Expense } from "@/lib/database"
 
 const EXPENSE_CATEGORIES = [
@@ -71,6 +72,7 @@ function formatDate(dateStr: string) {
 
 export default function ExpensesPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -375,7 +377,11 @@ export default function ExpensesPage() {
                 </TableHeader>
                 <TableBody>
                   {expenses.map((expense) => (
-                    <TableRow key={expense.id}>
+                    <TableRow 
+                      key={expense.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => router.push(`/expenses/${expense.id}`)}
+                    >
                       <TableCell className="font-medium">{formatDate(expense.expense_date)}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
@@ -391,19 +397,37 @@ export default function ExpensesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(expense)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/expenses/${expense.id}`)
+                            }}
                             className="h-8 w-8 p-0"
+                            title="View details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEdit(expense)
+                            }}
+                            className="h-8 w-8 p-0"
+                            title="Edit"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setDeletingExpense(expense)
                               setIsDeleteDialogOpen(true)
                             }}
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

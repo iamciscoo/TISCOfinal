@@ -51,6 +51,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [images, setImages] = useState<ProductImage[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<Array<{ file: File; preview: string; id: string; displayOrder?: number }>>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [id, setId] = useState<string>('');
   const { toast } = useToast();
   const router = useRouter();
@@ -58,6 +60,13 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     params.then(({ id }) => setId(id));
   }, [params]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      pendingFiles.forEach(p => URL.revokeObjectURL(p.preview));
+    };
+  }, [pendingFiles]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -87,94 +96,205 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     } catch {}
   };
 
-  const handleUploadImages = async (files: FileList | null) => {
+  const handleUploadImages = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setImageLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('productId', id);
-      formData.append('is_main', 'false');
-      Array.from(files).forEach((f) => formData.append('files', f));
-      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!uploadRes.ok) {
-        const j = await uploadRes.json().catch(() => ({}));
-        throw new Error(j?.error || 'Image upload failed');
-      }
-      await reloadProduct();
-      toast({ title: 'Images uploaded', description: 'Gallery updated.' });
-    } catch (e: any) {
-      toast({ title: 'Upload failed', description: e?.message || 'Could not upload images', variant: 'destructive' });
-    } finally {
-      setImageLoading(false);
-    }
+    
+    // Store files with preview URLs and display order
+    const maxOrder = Math.max(
+      ...images.map(i => i.sort_order ?? 0),
+      ...pendingFiles.map(p => p.displayOrder ?? 0),
+      0
+    );
+    
+    const newPending = Array.from(files).map((file, idx) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      id: `pending-${Date.now()}-${Math.random()}`,
+      displayOrder: maxOrder + idx + 1
+    }));
+    setPendingFiles(prev => [...prev, ...newPending]);
+    
+    toast({ 
+      title: 'Images selected', 
+      description: `${newPending.length} image(s) will be uploaded when you click Update Product` 
+    });
   };
 
-  const handleSetMain = async (imageId: string) => {
+  const uploadPendingImages = async () => {
+    if (pendingFiles.length === 0) return;
+    
     setImageLoading(true);
     try {
-      const res = await fetch(`/api/product-images/${imageId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_main: true })
+      // Sort pending files by displayOrder before uploading
+      const sortedPending = [...pendingFiles].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      
+      // Upload each file with its position to maintain order
+      const uploadPromises = sortedPending.map(async (p, index) => {
+        const formData = new FormData();
+        formData.append('productId', id);
+        formData.append('is_main', 'false');
+        formData.append('sort_order', String(p.displayOrder ?? index + 1));
+        formData.append('files', p.file);
+        
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (!uploadRes.ok) {
+          const j = await uploadRes.json().catch(() => ({}));
+          throw new Error(j?.error || 'Image upload failed');
+        }
+        return uploadRes.json();
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || 'Failed to set main image');
-      }
+      
+      await Promise.all(uploadPromises);
+      
+      // Clean up preview URLs
+      pendingFiles.forEach(p => URL.revokeObjectURL(p.preview));
+      
+      // Clear pending files after successful upload
+      setPendingFiles([]);
       await reloadProduct();
+      
+      toast({ title: 'Images uploaded', description: 'Gallery updated successfully.' });
     } catch (e: any) {
-      toast({ title: 'Action failed', description: e?.message || 'Could not set main image', variant: 'destructive' });
+      toast({ 
+        title: 'Upload failed', 
+        description: e?.message || 'Could not upload images', 
+        variant: 'destructive' 
+      });
+      throw e; // Re-throw to prevent form submission if upload fails
     } finally {
       setImageLoading(false);
     }
   };
 
-  const handleDelete = async (imageId: string) => {
+  const removePendingFile = (pendingId: string) => {
+    const toRemove = pendingFiles.find(p => p.id === pendingId);
+    if (toRemove) {
+      URL.revokeObjectURL(toRemove.preview);
+    }
+    setPendingFiles(prev => prev.filter(p => p.id !== pendingId));
+    toast({ 
+      title: 'File removed', 
+      description: 'Pending image removed from queue' 
+    });
+  };
+
+  const saveImageOrder = async () => {
+    try {
+      setImageLoading(true);
+      const updates = images.map((img, index) => ({
+        id: img.id,
+        sort_order: index + 1
+      }));
+      
+      await Promise.all(
+        updates.map(update =>
+          fetch(`/api/product-images/${update.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: update.sort_order })
+          })
+        )
+      );
+    } catch (e: any) {
+      toast({ 
+        title: 'Failed to save order', 
+        description: e?.message || 'Could not save image order', 
+        variant: 'destructive' 
+      });
+      throw e;
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+
+  const handleSetMain = (imageId: string) => {
+    // Optimistic update only - save on form submit
+    setImages(prev => prev.map(img => ({
+      ...img,
+      is_main: img.id === imageId
+    })));
+    
+    toast({ 
+      title: 'Main image changed', 
+      description: 'Click "Update Product" to save changes',
+      duration: 2000
+    });
+  };
+
+  const handleDelete = (imageId: string) => {
     if (!imageId || imageId === 'undefined' || imageId === 'null') {
       toast({ title: 'Delete failed', description: 'Invalid image ID', variant: 'destructive' });
       return;
     }
     
-    setImageLoading(true);
-    try {
-      const res = await fetch(`/api/product-images/${imageId}`, { method: 'DELETE' });
-      
-      if (!res.ok && res.status !== 204) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || 'Failed to delete image');
-      }
-      await reloadProduct();
-      toast({ title: 'Success', description: 'Image deleted successfully' });
-    } catch (e: any) {
-      toast({ title: 'Delete failed', description: e?.message || 'Could not delete image', variant: 'destructive' });
-    } finally {
-      setImageLoading(false);
-    }
+    // Optimistic update - mark for deletion
+    setDeletedImageIds(prev => [...prev, imageId]);
+    setImages(prev => prev.filter(img => img.id !== imageId));
+    
+    toast({ 
+      title: 'Image marked for deletion', 
+      description: 'Click "Update Product" to save changes',
+      duration: 2000
+    });
   };
 
-  const handleMove = async (imageId: string, direction: 'up' | 'down') => {
-    const sorted = [...images].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.created_at.localeCompare(b.created_at));
-    const idx = sorted.findIndex((i) => i.id === imageId);
-    if (idx === -1) return;
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
-    const a = sorted[idx];
-    const b = sorted[swapIdx];
+  // Unified move function for both uploaded and pending images
+  const handleMoveUnified = (itemId: string, direction: 'up' | 'down') => {
+    // Create unified list sorted by display order
+    type UnifiedItem = { id: string; type: 'uploaded' | 'pending'; data: any; position: number };
     
-    setImageLoading(true);
-    try {
-      // PERFORMANCE FIX: Make API calls in parallel instead of sequential
-      const [res1, res2] = await Promise.all([
-        fetch(`/api/product-images/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: b.sort_order }) }),
-        fetch(`/api/product-images/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort_order: a.sort_order }) })
-      ]);
-      if (!res1.ok || !res2.ok) throw new Error('Failed to reorder');
-      await reloadProduct();
-    } catch (e: any) {
-      toast({ title: 'Reorder failed', description: e?.message || 'Could not reorder images', variant: 'destructive' });
-    } finally {
-      setImageLoading(false);
-    }
+    const uploadedItems: UnifiedItem[] = images
+      .map(img => ({ 
+        id: img.id, 
+        type: 'uploaded' as const, 
+        data: img,
+        position: img.sort_order ?? 0
+      }));
+    
+    const pendingItems: UnifiedItem[] = pendingFiles.map(p => ({ 
+      id: p.id, 
+      type: 'pending' as const, 
+      data: p,
+      position: p.displayOrder ?? 999
+    }));
+    
+    const allItems = [...uploadedItems, ...pendingItems]
+      .sort((a, b) => a.position - b.position);
+    
+    const idx = allItems.findIndex(item => item.id === itemId);
+    if (idx === -1) return;
+    
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= allItems.length) return;
+    
+    // Swap items in unified list
+    const reordered = [...allItems];
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    
+    // Assign new display orders to ALL items based on their new position
+    const reorderedWithNewPositions = reordered.map((item, newIdx) => ({
+      ...item,
+      position: newIdx + 1
+    }));
+    
+    // Separate back and assign proper orders
+    const newUploaded = reorderedWithNewPositions
+      .filter(item => item.type === 'uploaded')
+      .map(item => ({ ...item.data, sort_order: item.position }));
+    
+    const newPending = reorderedWithNewPositions
+      .filter(item => item.type === 'pending')
+      .map(item => ({ ...item.data, displayOrder: item.position }));
+    
+    setImages(newUploaded);
+    setPendingFiles(newPending);
+    
+    toast({ 
+      title: 'Order changed', 
+      description: 'Click "Update Product" to save the new order',
+      duration: 2000
+    });
   };
 
   useEffect(() => {
@@ -240,6 +360,36 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const onSubmit = async (values: FormData) => {
     setLoading(true);
     try {
+      // Delete marked images
+      if (deletedImageIds.length > 0) {
+        await Promise.all(
+          deletedImageIds.map(imageId =>
+            fetch(`/api/product-images/${imageId}`, { method: 'DELETE' })
+          )
+        );
+        setDeletedImageIds([]);
+      }
+
+      // Save main image changes
+      const mainImage = images.find(img => img.is_main);
+      if (mainImage) {
+        await fetch(`/api/product-images/${mainImage.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_main: true })
+        });
+      }
+
+      // Save image order changes to database
+      if (images.length > 0) {
+        await saveImageOrder();
+      }
+
+      // Upload pending images after saving order
+      if (pendingFiles.length > 0) {
+        await uploadPendingImages();
+      }
+
       const productData = values;
       const payload = { ...productData };
 
@@ -271,100 +421,264 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Edit Product</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
+        <p className="text-gray-600 mt-2">Update product details, images, and settings</p>
+      </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="space-y-3">
-            <div>
-              <FormLabel>Images</FormLabel>
-              <div className="mt-2">
-                <Input type="file" accept="image/*" multiple onChange={(e) => handleUploadImages(e.target.files)} />
-                <FormDescription>Upload additional images. Use controls below to set main and reorder.</FormDescription>
-              </div>
+          {/* IMPROVED: Image Management Section with Better UI */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Product Images</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Upload and manage product images. The main image appears on product cards.
+              </p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {images.map((img, index) => (
-                <div key={img.id || `image-${index}`} className="border rounded-lg p-3 space-y-3 bg-white shadow-sm">
-                  <div className="relative w-full h-32 bg-gray-50 rounded-md overflow-hidden">
+            
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <label 
+                  htmlFor="file-upload-edit" 
+                  className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ pointerEvents: imageLoading ? 'none' : 'auto' }}
+                >
+                  <span>Choose Files</span>
+                </label>
+                <span className="text-sm text-gray-600">
+                  {images.length > 0 ? `${images.length} image(s) uploaded` : 'No images yet'}
+                  {pendingFiles.length > 0 && (
+                    <span className="ml-2 text-amber-600 font-medium">
+                      + {pendingFiles.length} pending
+                    </span>
+                  )}
+                </span>
+                <input 
+                  id="file-upload-edit"
+                  type="file" 
+                  accept="image/jpeg,image/png,image/webp,image/gif" 
+                  multiple 
+                  onChange={(e) => {
+                    handleUploadImages(e.target.files)
+                    // Reset input so same file can be selected again
+                    e.target.value = ''
+                  }}
+                  disabled={imageLoading}
+                  className="hidden"
+                />
+                {imageLoading && (
+                  <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                    Processing...
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-600">
+                <span className="font-medium">Supported:</span> JPEG, PNG, WebP, GIF • <span className="font-medium">Max size:</span> 5MB per image
+              </p>
+
+              {pendingFiles.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {pendingFiles.length} image{pendingFiles.length !== 1 ? 's' : ''} pending upload
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      These images will be uploaded when you click "Update Product" below
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Unified Gallery - Uploaded and Pending Images Combined */}
+              {(() => {
+                // Create unified array for rendering, respecting displayOrder
+                const uploadedItems = images
+                  .map(img => ({ 
+                    type: 'uploaded' as const, 
+                    data: img, 
+                    position: img.sort_order ?? 0 
+                  }));
+                
+                const pendingItems = pendingFiles.map(p => ({ 
+                  type: 'pending' as const, 
+                  data: p,
+                  position: p.displayOrder ?? 999
+                }));
+                
+                const allItems = [...uploadedItems, ...pendingItems]
+                  .sort((a, b) => a.position - b.position);
+                
+                return allItems.map((item, displayIndex) => {
+                  const isFirst = displayIndex === 0;
+                  const isLast = displayIndex === allItems.length - 1;
+                  
+                  if (item.type === 'uploaded') {
+                    const img = item.data;
+                    return (
+                <div key={img.id} className="border-2 rounded-lg p-3 space-y-3 bg-white shadow-md hover:shadow-lg transition-shadow relative">
+                  <div className="relative w-full h-40 bg-gray-100 rounded-md overflow-hidden group">
                     <Image 
                       src={img.url} 
-                      alt={`Product image ${index + 1}`} 
+                      alt={`Product image ${displayIndex + 1}`} 
                       fill 
-                      sizes="200px" 
-                      className="object-cover transition-transform hover:scale-105" 
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" 
+                      className="object-cover transition-all duration-300 group-hover:scale-110" 
                     />
                     {img.is_main && (
-                      <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                        Main
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-lg">
+                        ⭐ Main
+                      </div>
+                    )}
+                    {imageLoading && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-3 border-white border-t-transparent"></div>
                       </div>
                     )}
                   </div>
                   
                   <div className="space-y-2">
-                    <div className="text-xs flex items-center justify-between text-gray-600">
-                      <span className={img.is_main ? 'text-green-600 font-medium' : ''}>
-                        {img.is_main ? 'Main Image' : `Gallery #${img.sort_order ?? index + 1}`}
+                    <div className="text-xs flex items-center justify-between text-gray-700">
+                      <span className={img.is_main ? 'text-green-600 font-bold' : 'font-medium'}>
+                        {img.is_main ? '⭐ Main Image' : `#${displayIndex + 1} Gallery`}
                       </span>
-                      <span className="text-gray-400">
-                        {new Date(img.created_at).toLocaleDateString()}
+                      <span className="text-gray-500 text-[10px]">
+                        {new Date(img.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                     
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {!img.is_main && (
                         <Button 
                           type="button" 
                           variant="secondary" 
                           size="sm"
                           onClick={() => handleSetMain(img.id)}
-                          className="text-xs"
+                          disabled={imageLoading}
+                          className="text-xs flex-1 min-w-[80px] font-medium"
                         >
                           Set Main
                         </Button>
                       )}
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleMove(img.id, 'up')}
-                        className="text-xs"
-                        disabled={index === 0}
-                      >
-                        ↑
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleMove(img.id, 'down')}
-                        className="text-xs"
-                        disabled={index === images.length - 1}
-                      >
-                        ↓
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleMoveUnified(img.id, 'up')}
+                          className="text-xs px-2 h-8"
+                          disabled={isFirst || imageLoading}
+                          title="Move up"
+                        >
+                          ↑
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleMoveUnified(img.id, 'down')}
+                          className="text-xs px-2 h-8"
+                          disabled={isLast || imageLoading}
+                          title="Move down"
+                        >
+                          ↓
+                        </Button>
+                      </div>
                       <Button 
                         type="button" 
                         variant="destructive" 
                         size="sm"
                         onClick={() => handleDelete(img.id)}
-                        className="text-xs"
+                        disabled={imageLoading}
+                        className="text-xs px-3 h-8 font-medium"
+                        title="Delete image"
                       >
-                        Delete
+                        🗑️ Delete
                       </Button>
                     </div>
                   </div>
                 </div>
-              ))}
-              {images.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                    );
+                  } else {
+                    const pending = item.data;
+                    return (
+                <div key={pending.id} className="border-2 rounded-lg p-3 space-y-3 bg-white shadow-md hover:shadow-lg transition-shadow relative">
+                  <div className="relative w-full h-40 bg-gray-100 rounded-md overflow-hidden group">
+                    <img
+                      src={pending.preview}
+                      alt={`Pending ${displayIndex + 1}`}
+                      className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+                    />
+                    <div className="absolute top-2 left-2 bg-gray-500 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-lg">
+                      Pending
+                    </div>
+                  </div>
+                  
                   <div className="space-y-2">
-                    <div className="text-4xl">📸</div>
-                    <div className="text-sm font-medium">No images uploaded yet</div>
-                    <div className="text-xs">Upload images using the file input above</div>
+                    <div className="text-xs flex items-center justify-between text-gray-700">
+                      <span className="font-medium">
+                        #{displayIndex + 1} Gallery
+                      </span>
+                      <span className="text-gray-500 text-[10px] font-semibold">
+                        Not uploaded
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1.5">
+                      <div className="flex gap-1 flex-1">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleMoveUnified(pending.id, 'up')}
+                          className="text-xs px-2 h-8"
+                          disabled={isFirst}
+                          title="Move up"
+                        >
+                          ↑
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleMoveUnified(pending.id, 'down')}
+                          className="text-xs px-2 h-8"
+                          disabled={isLast}
+                          title="Move down"
+                        >
+                          ↓
+                        </Button>
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => removePendingFile(pending.id)}
+                        className="text-xs px-3 h-8 font-medium"
+                        title="Remove from queue"
+                      >
+                        🗑️ Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                    );
+                  }
+                });
+              })()}
+
+              {images.length === 0 && pendingFiles.length === 0 && (
+                <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="space-y-3">
+                    <div className="text-6xl">📸</div>
+                    <div className="text-base font-semibold text-gray-700">No images uploaded yet</div>
+                    <div className="text-sm text-gray-500">Upload images using the file input above to get started</div>
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </div>
           <FormField
@@ -637,9 +951,30 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               />
             </>
           )}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Update Product"}
-          </Button>
+          <div className="flex items-center justify-between pt-6 border-t">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => router.push('/products')}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="min-w-[150px]"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                "Update Product"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

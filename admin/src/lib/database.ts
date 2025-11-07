@@ -1359,6 +1359,31 @@ export async function getExpenses(params?: {
   }
 }
 
+// Get a single expense by ID
+export async function getExpenseById(id: string): Promise<{ success: boolean; data?: Expense; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('getExpenseById error:', error)
+      return { success: false, error: error.message || 'Expense not found' }
+    }
+
+    if (!data) {
+      return { success: false, error: 'Expense not found' }
+    }
+
+    return { success: true, data: data as Expense }
+  } catch (e: any) {
+    console.error('getExpenseById error:', e)
+    return { success: false, error: e.message || 'Failed to fetch expense' }
+  }
+}
+
 // Get expense summary for a date range
 export async function getExpenseSummary(days = 30): Promise<ExpenseSummary> {
   try {

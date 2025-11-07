@@ -121,16 +121,51 @@ export async function POST(req: Request) {
     if (productId) {
       console.log(`Creating database records for product ${productId}`);
       const isMain = String(isMainParam).toLowerCase() === 'true';
-      const sortOrder = Number.isFinite(parseInt(orderParam)) ? parseInt(orderParam) : 0;
       
       try {
-        const rows = uploaded.map((u, idx) => ({
-          product_id: productId,
-          url: u.url,
-          path: u.path,
-          is_main: isMain && idx === 0, // apply is_main to first file only if set
-          sort_order: sortOrder + idx,
-        }));
+        // BUGFIX: Get the current max sort_order to assign sequential values
+        const { data: existingImages, error: fetchError } = await supabase
+          .from('product_images')
+          .select('sort_order')
+          .eq('product_id', productId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        
+        if (fetchError) {
+          console.error('Error fetching existing images:', fetchError);
+        }
+        
+        // Use provided sort_order if available, otherwise calculate automatically
+        const providedOrder = orderParam ? parseInt(orderParam, 10) : null;
+        
+        let rows;
+        if (providedOrder !== null && !isNaN(providedOrder)) {
+          // Use the provided sort_order directly
+          console.log(`Using provided sort_order: ${providedOrder}`);
+          rows = uploaded.map((u, idx) => ({
+            product_id: productId,
+            url: u.url,
+            path: u.path,
+            is_main: isMain && idx === 0,
+            sort_order: providedOrder + idx,
+          }));
+        } else {
+          // Calculate automatically from max + 1
+          const maxSortOrder = existingImages && existingImages.length > 0 
+            ? (existingImages[0].sort_order ?? 0) 
+            : 0;
+          const startingSortOrder = Math.max(maxSortOrder + 1, 1);
+          
+          console.log(`Existing max sort_order: ${maxSortOrder}, starting from: ${startingSortOrder}`);
+          
+          rows = uploaded.map((u, idx) => ({
+            product_id: productId,
+            url: u.url,
+            path: u.path,
+            is_main: isMain && idx === 0,
+            sort_order: startingSortOrder + idx,
+          }));
+        }
         
         console.log(`Inserting ${rows.length} image record(s)`);
         const { data: inserted, error: insertErr } = await supabase
