@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Product, columns } from "./columns";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { ProductQuickSearch } from "@/components/ProductQuickSearch";
@@ -22,72 +22,80 @@ const ProductsPage = () => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedFeatured, setSelectedFeatured] = useState<string | undefined>(undefined);
+  const [selectedDeal, setSelectedDeal] = useState<string | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async (isInitial = false) => {
-      try {
-        if (!isInitial) setIsRefreshing(true);
+  const fetchData = useCallback(async (isInitial = false) => {
+    try {
+      if (!isInitial) setIsRefreshing(true);
+      
+      // Add timestamp to prevent browser caching
+      const timestamp = Date.now();
+      const response = await fetch(`/api/products?limit=50&_t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      const result = await response.json();
+      
+      // Transform API products to match the UI format
+      const products = (result.data || []).map((product: any) => {
+        const description = product.description || "";
+        const imgs = product.product_images as any[] | undefined;
+        const mainFromList = imgs?.find((img: any) => img.is_main)?.url || imgs?.[0]?.url;
+        const mainImage = mainFromList || product.image_url || "/circular.svg";
         
-        // Add timestamp to prevent browser caching
-        const timestamp = Date.now();
-        const response = await fetch(`/api/products?limit=50&_t=${timestamp}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        const result = await response.json();
-        
-        // Transform API products to match the UI format
-        const products = (result.data || []).map((product: any) => {
-          const description = product.description || "";
-          const imgs = product.product_images as any[] | undefined;
-          const mainFromList = imgs?.find((img: any) => img.is_main)?.url || imgs?.[0]?.url;
-          const mainImage = mainFromList || product.image_url || "/circular.svg";
-          
-          return {
-            id: product.id,
-            name: product.name,
-            shortDescription: description.substring(0, 60) + (description.length > 60 ? "..." : ""),
-            description,
-            price: Number(product.price ?? 0),
-            sizes: ["Standard"],
-            colors: ["Default"],
-            images: {
-              "Default": mainImage
-            },
-            stock_quantity: product.stock_quantity,
-            is_featured: !!product.is_featured,
-            is_active: !!product.is_active,
-            rating: product.rating,
-            reviews_count: product.reviews_count,
-            category: product.product_categories?.[0]?.categories || product.category,
-            categories: product.product_categories || [],
-            view_count: product.view_count || 0
-          };
-        });
-        
-        setAllProducts(products);
-        setData(products);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        if (!isInitial) setIsRefreshing(false);
-      }
-    };
+        return {
+          id: product.id,
+          name: product.name,
+          shortDescription: description.substring(0, 60) + (description.length > 60 ? "..." : ""),
+          description,
+          price: Number(product.price ?? 0),
+          deal_price: product.deal_price != null ? Number(product.deal_price) : null,
+          original_price: product.original_price != null ? Number(product.original_price) : null,
+          is_deal: !!product.is_deal,
+          sizes: ["Standard"],
+          colors: ["Default"],
+          images: {
+            "Default": mainImage
+          },
+          stock_quantity: product.stock_quantity,
+          is_featured: !!product.is_featured,
+          is_active: !!product.is_active,
+          rating: product.rating,
+          reviews_count: product.reviews_count,
+          category: product.product_categories?.[0]?.categories || product.category,
+          categories: product.product_categories || [],
+          view_count: product.view_count || 0
+        };
+      });
+      
+      setAllProducts(products);
+      setData(products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      if (!isInitial) setIsRefreshing(false);
+    }
+  }, []);
 
+  useEffect(() => {
     // Initial fetch
     fetchData(true);
+  }, [fetchData]);
 
-    // Poll every 10 seconds for real-time view count updates
-    const pollInterval = setInterval(() => {
+  // Refresh when window gains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
       fetchData(false);
-    }, 10000); // 10 seconds for faster updates
-
-    return () => clearInterval(pollInterval);
-  }, []);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchData]);
 
   // Fetch categories
   useEffect(() => {
@@ -104,12 +112,13 @@ const ProductsPage = () => {
     fetchCategories();
   }, []);
 
-  // Filter products by category
+  // Filter products by category, featured, and deal status
   useEffect(() => {
-    if (selectedCategory === "all") {
-      setData(allProducts);
-    } else {
-      const filtered = allProducts.filter(product => {
+    let filtered = [...allProducts];
+    
+    // Apply category filter
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(product => {
         // Check if product has categories array (product_categories)
         if (product.categories && Array.isArray(product.categories) && product.categories.length > 0) {
           // product_categories structure: [{ category_id: 'uuid', categories: {...} }]
@@ -123,34 +132,43 @@ const ProductsPage = () => {
         
         return false;
       });
-      
-      setData(filtered);
     }
-  }, [selectedCategory, allProducts]);
+    
+    // Apply featured filter
+    if (selectedFeatured) {
+      const isFeatured = selectedFeatured === "featured";
+      filtered = filtered.filter(product => product.is_featured === isFeatured);
+    }
+    
+    // Apply deal filter
+    if (selectedDeal) {
+      const isDeal = selectedDeal === "deal";
+      filtered = filtered.filter(product => {
+        // A product is a deal if it has deal_price set
+        const hasDealPrice = (product as any).deal_price != null && (product as any).deal_price > 0;
+        return isDeal ? hasDealPrice : !hasDealPrice;
+      });
+    }
+    
+    setData(filtered);
+  }, [selectedCategory, selectedFeatured, selectedDeal, allProducts]);
 
   return (
     <div className="space-y-6 pt-2">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">All Products</h1>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+      <div className="flex flex-col gap-4 pb-6 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            All Products
+            <span className="inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2.5 rounded-md text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               {data.length}
             </span>
-          </div>
-          {isRefreshing && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              <span className="hidden sm:inline">Updating...</span>
-            </div>
-          )}
+          </h1>
+          <ProductQuickSearch />
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:min-w-[400px]">
+        
+        <div className="flex flex-col sm:flex-row gap-3">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-[200px] h-10 font-medium">
+            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -162,7 +180,28 @@ const ProductsPage = () => {
               ))}
             </SelectContent>
           </Select>
-          <ProductQuickSearch />
+          
+          <Select value={selectedFeatured} onValueChange={(v) => setSelectedFeatured(v === 'all' ? undefined : v)}>
+            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
+              <SelectValue placeholder="Featured" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="featured">Featured Only</SelectItem>
+              <SelectItem value="not-featured">Not Featured</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedDeal} onValueChange={(v) => setSelectedDeal(v === 'all' ? undefined : v)}>
+            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
+              <SelectValue placeholder="Deals" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="deal">Deals Only</SelectItem>
+              <SelectItem value="not-deal">No Deals</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
