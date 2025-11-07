@@ -2,6 +2,7 @@ import AppBarChart from "@/components/AppBarChart";
 import DailyRevenueChart from "@/components/revenue/DailyRevenueChart";
 import PaymentMethodDonut from "@/components/revenue/PaymentMethodDonut";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 import {
   getAdminStats,
   getDailyRevenue,
@@ -206,12 +207,12 @@ const RevenuePage = async () => {
             <CardTitle className="text-sm font-medium text-indigo-900">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <a 
+            <Link 
               href="/expenses" 
               className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
             >
               Manage Expenses →
-            </a>
+            </Link>
           </CardContent>
         </Card>
       </div>
