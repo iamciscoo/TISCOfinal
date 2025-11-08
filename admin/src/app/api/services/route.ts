@@ -35,13 +35,22 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
+    const includeArchived = searchParams.get('include_archived') === 'true'
     
     const offset = (page - 1) * limit
 
     let query = supabase
       .from('services')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
+    
+    // Only filter for active services if not explicitly including archived
+    if (!includeArchived) {
+      query = query.eq('is_active', true)
+    }
+    
+    query = query
+      .order('display_order', { ascending: true }) // Order by custom display order
+      .order('created_at', { ascending: false }) // Then by creation date
 
     if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
@@ -88,12 +97,62 @@ export async function POST(request: NextRequest) {
       features,
       duration,
       image,
-      gallery,
+      display_order,
     } = body
 
     // Validate required fields
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+
+    // Handle smart ordering for new services
+    const finalDisplayOrder = display_order ?? 0
+
+    if (display_order !== undefined && display_order > 0) {
+      // Check if another service already has this display_order
+      const { data: conflictingService } = await supabase
+        .from('services')
+        .select('id, display_order')
+        .eq('display_order', display_order)
+        .maybeSingle()
+
+      if (conflictingService) {
+        // Get the maximum display_order
+        const { data: maxService } = await supabase
+          .from('services')
+          .select('display_order')
+          .order('display_order', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        const maxOrder = maxService?.display_order ?? 0
+        
+        // Move conflicting service to the bottom (max + 1)
+        await supabase
+          .from('services')
+          .update({ display_order: maxOrder + 1 })
+          .eq('id', conflictingService.id)
+
+        console.log(`✓ New service: Moved conflicting service ${conflictingService.id} to bottom (${maxOrder + 1})`)
+        
+        // Shift all services at or after the new position down by 1
+        const { data: servicesToShift } = await supabase
+          .from('services')
+          .select('id, display_order')
+          .gte('display_order', display_order)
+          .neq('id', conflictingService.id)
+          .order('display_order', { ascending: false }) // Update in reverse order to avoid conflicts
+
+        if (servicesToShift && servicesToShift.length > 0) {
+          for (const service of servicesToShift) {
+            await supabase
+              .from('services')
+              .update({ display_order: service.display_order + 1 })
+              .eq('id', service.id)
+          }
+          console.log(`✓ Shifted ${servicesToShift.length} services down to make room`)
+        }
+      }
     }
 
     const { data, error } = await supabase
@@ -104,7 +163,8 @@ export async function POST(request: NextRequest) {
         features: features || [],
         duration,
         image,
-        gallery: gallery || []
+        display_order: finalDisplayOrder,
+        is_active: true // New services are active by default
       })
       .select()
       .single()

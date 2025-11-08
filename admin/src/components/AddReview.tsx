@@ -109,12 +109,12 @@ const AddReview = ({ onCreated }: AddReviewProps) => {
     `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email;
 
   return (
-    <SheetContent aria-describedby={undefined} className="px-4 sm:px-6">
+    <SheetContent aria-describedby={undefined} className="px-4 sm:px-6 overflow-y-auto">
       <SheetHeader>
         <SheetTitle className="mb-4">Add Review</SheetTitle>
       </SheetHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4 pb-8">
               <FormField
                 control={form.control}
                 name="product_id"

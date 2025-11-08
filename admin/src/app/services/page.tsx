@@ -24,7 +24,9 @@ async function getServices() {
     const { data, error, count } = await supabase
       .from('services')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .eq('is_active', true) // Only show active services (archived services hidden)
+      .order('display_order', { ascending: true }) // Order by custom display order
+      .order('created_at', { ascending: false }) // Then by creation date
       .limit(100)
 
     if (error) {
@@ -57,12 +59,19 @@ export default async function ServicesPage() {
             Manage your service offerings
           </p>
         </div>
-        <Button asChild className="w-full sm:w-auto h-11 sm:h-10 min-h-[44px] sm:min-h-0">
-          <Link href="/services/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Service
-          </Link>
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button asChild variant="outline" className="flex-1 sm:flex-none h-11 sm:h-10 min-h-[44px] sm:min-h-0">
+            <Link href="/services/archived">
+              View Archived
+            </Link>
+          </Button>
+          <Button asChild className="flex-1 sm:flex-none h-11 sm:h-10 min-h-[44px] sm:min-h-0">
+            <Link href="/services/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Service
+            </Link>
+          </Button>
+        </div>
       </div>
       
       <Suspense fallback={<div className="text-center py-8 text-sm sm:text-base">Loading services...</div>}>

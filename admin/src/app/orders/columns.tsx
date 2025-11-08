@@ -16,16 +16,47 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Download } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { OrderColumn as Order } from "@/lib/ui-types";
 import { formatToEAT } from "@/lib/utils";
+import { downloadReceipt } from "@/lib/receipt-generator";
 
 // Actions Cell Component - needs to be separate to use hooks
 function OrderActionsCell({ order }: { order: Order }) {
   const router = useRouter();
+  
+  // Handle receipt download
+  const handleDownloadReceipt = async () => {
+    try {
+      toast({ title: "Generating receipt...", description: "Please wait" })
+      
+      // Fetch order data from API
+      const response = await fetch(`/api/orders/${order.id}/receipt`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch order data')
+      }
+      
+      const { order: orderData } = await response.json()
+      
+      // Generate and download PDF using client-side library (now async)
+      await downloadReceipt(orderData)
+      
+      toast({ 
+        title: "Receipt downloaded successfully", 
+        description: `Receipt for order #${order.id.slice(0, 8)}` 
+      })
+    } catch (error) {
+      console.error('Receipt download error:', error)
+      toast({ 
+        title: "Failed to generate receipt", 
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive" 
+      })
+    }
+  }
   
   return (
     <DropdownMenu>
@@ -132,6 +163,10 @@ function OrderActionsCell({ order }: { order: Order }) {
           </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleDownloadReceipt}>
+          <Download className="mr-0.5 h-4 w-4" />
+          Download Receipt
+        </DropdownMenuItem>
         <DropdownMenuItem
           className="text-red-600"
           onClick={async () => {

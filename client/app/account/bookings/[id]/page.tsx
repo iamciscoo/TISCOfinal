@@ -21,6 +21,7 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { createClient } from '@supabase/supabase-js'
 import { formatToEAT } from '@/lib/utils'
+import { DownloadServiceReceiptButton } from '@/components/DownloadServiceReceiptButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -488,6 +489,16 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                     {(booking.payment_status || 'pending')}
                   </Badge>
                 </div>
+
+                {/* Download Receipt Button for Paid Bookings */}
+                {booking.payment_status === 'paid' && (
+                  <div className="pt-4 border-t">
+                    <DownloadServiceReceiptButton 
+                      booking={booking} 
+                      serviceCosts={booking.serviceCosts || null} 
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 

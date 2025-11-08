@@ -21,6 +21,7 @@ const getData = async (): Promise<ServiceBookingRow[]> => {
         customerName: fullName,
         customerEmail: b.user?.email || "-",
         status: b.status || "pending",
+        payment_status: b.payment_status,
         scheduledDate: scheduledISO,
         total: Number(b.total_amount ?? 0),
         createdAt: b.created_at,

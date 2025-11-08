@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { formatToEAT } from '@/lib/utils'
+import { DownloadReceiptButton } from '@/components/DownloadReceiptButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -267,6 +268,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <DownloadReceiptButton order={order} />
                 <Button asChild className="w-full" variant="outline">
                   <Link href="/account/orders">Back to Orders</Link>
                 </Button>

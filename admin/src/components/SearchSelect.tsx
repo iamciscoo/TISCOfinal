@@ -140,7 +140,7 @@ export const SearchSelect = <T,>({
           </svg>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(90vw,360px)] p-3" align="start">
+      <PopoverContent className="w-[min(90vw,360px)] p-3 z-[100]" align="start">
         <div className="space-y-2">
           <Input
             placeholder={placeholder}

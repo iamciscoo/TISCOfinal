@@ -138,7 +138,9 @@ async function getDbServices(): Promise<DbService[]> {
     const { data: services, error } = await supabase
       .from('services')
       .select('*')
-      .order('created_at', { ascending: false })
+      .eq('is_active', true) // Only show active services to customers
+      .order('display_order', { ascending: true }) // Order by custom display order
+      .order('created_at', { ascending: false }) // Then by creation date
 
     if (error) {
       console.error('Services database error:', error)

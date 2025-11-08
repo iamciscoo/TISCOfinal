@@ -17,11 +17,12 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import ServiceCostPanel from "@/components/ServiceCostPanel";
 import { formatToEAT } from "@/lib/utils";
+import { downloadServiceBookingReceipt } from "@/lib/service-booking-receipt-generator";
 
 export type ServiceBookingRow = {
   id: string;
@@ -29,6 +30,7 @@ export type ServiceBookingRow = {
   customerName: string;
   customerEmail: string;
   status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | string;
+  payment_status?: string;
   scheduledDate?: string;
   total: number;
   createdAt: string;
@@ -214,6 +216,64 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
         }
       };
 
+      const handleDownloadReceipt = async () => {
+        try {
+          // Always get fresh data (avoid cache delays after saving costs)
+          const detailsRes = await fetch(`/api/service-bookings/${booking.id}/details`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-store' }
+          });
+          if (!detailsRes.ok) {
+            throw new Error('Failed to fetch booking details');
+          }
+          const details = await detailsRes.json();
+
+          // Prefer costs from details endpoint, but if not present or empty, fallback to service-costs API
+          let serviceCosts = details.serviceCosts ?? null;
+          if (!serviceCosts || (Array.isArray(serviceCosts.items) && serviceCosts.items.length === 0)) {
+            try {
+              const costsRes = await fetch(`/api/service-costs/${booking.id}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-store' }
+              });
+              if (costsRes.ok) {
+                const json = await costsRes.json();
+                const c = json?.data;
+                if (c) {
+                  serviceCosts = {
+                    id: c.id,
+                    service_fee: Number(c.service_fee || 0),
+                    discount: Number(c.discount || 0),
+                    currency: c.currency || 'TZS',
+                    subtotal: Number(c.subtotal || 0),
+                    total: Number(c.total || 0),
+                    notes: c.notes || null,
+                    items: Array.isArray(c.items) ? c.items.map((it: any) => ({
+                      id: it.id,
+                      name: it.name,
+                      unit_price: Number(it.unit_price || 0),
+                      quantity: Number(it.quantity || 0),
+                      unit: it.unit || 'unit'
+                    })) : []
+                  };
+                }
+              }
+            } catch (e) {
+              console.warn('Fallback fetch of service costs failed:', e);
+            }
+          }
+
+          await downloadServiceBookingReceipt({
+            booking: details.booking,
+            serviceCosts
+          });
+          toast({ title: 'Success', description: 'Receipt downloaded successfully' });
+        } catch (error) {
+          console.error('Failed to download receipt:', error);
+          toast({ title: 'Error', description: 'Failed to download receipt. Please try again.', variant: 'destructive' });
+        }
+      };
+
       return (
         <Sheet>
           <DropdownMenu>
@@ -229,6 +289,15 @@ export const columns: ColumnDef<ServiceBookingRow>[] = [
                 Copy booking ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {booking.payment_status === 'paid' && (
+                <>
+                  <DropdownMenuItem onClick={handleDownloadReceipt}>
+                    <Download className="mr-0.5 h-4 w-4" />
+                    Download Receipt
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <SheetTrigger asChild>
                 <DropdownMenuItem>Manage costs</DropdownMenuItem>
               </SheetTrigger>

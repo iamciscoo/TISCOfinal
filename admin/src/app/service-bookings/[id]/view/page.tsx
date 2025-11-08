@@ -15,12 +15,14 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { formatToEAT } from "@/lib/utils";
+import DownloadReceiptButton from "./DownloadReceiptButton";
 
 interface BookingDetailsData {
   booking: {
@@ -82,59 +84,43 @@ interface BookingDetailsData {
 
 async function getBookingDetails(id: string): Promise<BookingDetailsData | null> {
   try {
-    // Fetch booking details with related service and user data
-    const { data: booking, error: bookingError } = await supabase
-      .from("service_bookings")
+    // Fetch base booking first
+    const { data: base, error: baseErr } = await supabase
+      .from('service_bookings')
       .select(`
-        id,
-        service_id,
-        user_id,
-        service_type,
-        description,
-        preferred_date,
-        preferred_time,
-        contact_email,
-        contact_phone,
-        customer_name,
-        status,
-        notes,
-        created_at,
-        updated_at,
-        total_amount,
-        payment_status,
-        services:service_id (
-          id,
-          title,
-          description,
-          features,
-          duration,
-          image,
-          gallery,
-          created_at,
-          updated_at
-        ),
-        users:user_id (
-          id,
-          email,
-          first_name,
-          last_name,
-          phone,
-          address_line_1,
-          address_line_2,
-          city,
-          state,
-          postal_code,
-          country,
-          created_at
-        )
+        id, service_id, user_id, service_type, description, preferred_date, preferred_time,
+        contact_email, contact_phone, customer_name, status, notes, created_at, updated_at,
+        total_amount, payment_status
       `)
-      .eq("id", id)
-      .single();
+      .eq('id', id)
+      .maybeSingle();
 
-    if (bookingError) {
-      console.error("Booking fetch error:", bookingError);
+    if (baseErr) {
+      console.error('Booking fetch error:', {
+        code: (baseErr as any)?.code,
+        message: (baseErr as any)?.message,
+        details: (baseErr as any)?.details,
+      });
       return null;
     }
+
+    if (!base) {
+      console.warn('Booking not found:', id);
+      return null;
+    }
+
+    // Fetch related service and user separately (more reliable than FK embeds)
+    const [{ data: svc }, { data: usr }] = await Promise.all([
+      supabase.from('services').select('id,title,description,features,duration,image,gallery,created_at,updated_at').eq('id', base.service_id).maybeSingle(),
+      supabase.from('users').select('id,email,first_name,last_name,phone,address_line_1,address_line_2,city,state,postal_code,country,created_at').eq('id', base.user_id).maybeSingle(),
+    ]);
+
+    // Compose booking object
+    const booking: any = {
+      ...base,
+      services: svc || null,
+      users: usr || null
+    };
 
     // Fetch any service costs associated with this booking
     const { data: serviceCosts, error: costsError } = await supabase
@@ -156,22 +142,56 @@ async function getBookingDetails(id: string): Promise<BookingDetailsData | null>
         )
       `)
       .eq("booking_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (costsError) {
       console.error("Service costs fetch error:", costsError);
     }
 
+    // Normalize serviceCosts data structure
+    let normalizedServiceCosts = null;
+    if (!costsError && serviceCosts) {
+      normalizedServiceCosts = {
+        id: serviceCosts.id,
+        service_fee: serviceCosts.service_fee || 0,
+        discount: serviceCosts.discount || 0,
+        currency: serviceCosts.currency || 'TZS',
+        subtotal: serviceCosts.subtotal || 0,
+        total: serviceCosts.total || 0,
+        notes: serviceCosts.notes || null,
+        items: Array.isArray(serviceCosts.service_booking_cost_items) 
+          ? serviceCosts.service_booking_cost_items.map(item => ({
+              id: item.id,
+              name: item.name,
+              unit_price: item.unit_price,
+              quantity: item.quantity,
+              unit: item.unit
+            }))
+          : []
+      };
+
+      console.log('Admin: Service costs loaded for booking:', {
+        bookingId: id,
+        hasServiceCosts: true,
+        itemsCount: normalizedServiceCosts.items.length,
+        subtotal: normalizedServiceCosts.subtotal,
+        serviceFee: normalizedServiceCosts.service_fee,
+        discount: normalizedServiceCosts.discount,
+        total: normalizedServiceCosts.total
+      });
+    } else {
+      console.log('Admin: No service costs found for booking:', id);
+    }
+
     return {
       booking: {
         ...booking,
-        services: Array.isArray(booking.services) ? booking.services[0] || null : booking.services,
-        users: Array.isArray(booking.users) ? booking.users[0] : booking.users
+        services: booking.services,
+        users: booking.users
       },
-      serviceCosts: costsError || !serviceCosts ? null : {
-        ...serviceCosts,
-        items: serviceCosts.service_booking_cost_items || []
-      }
+      serviceCosts: normalizedServiceCosts
     };
   } catch (error) {
     console.error("Error fetching booking details:", error);
@@ -243,6 +263,12 @@ export default async function BookingDetailsPage({
             <p className="text-xs sm:text-sm text-muted-foreground truncate" title={booking.id}>ID: {booking.id}</p>
           </div>
           <div className="flex gap-2 shrink-0">
+            {booking.payment_status === 'paid' && (
+              <DownloadReceiptButton 
+                booking={booking} 
+                serviceCosts={serviceCosts} 
+              />
+            )}
             <Button variant="outline" asChild className="min-h-[44px] sm:min-h-[36px]">
               <Link href={`/service-bookings/${booking.id}`}>
                 Edit Booking

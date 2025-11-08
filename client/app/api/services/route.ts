@@ -13,7 +13,9 @@ export async function GET() {
     const { data: services, error } = await supabase
       .from('services')
       .select('*')
-      .order('created_at', { ascending: false })
+      .eq('is_active', true) // Only show active services
+      .order('display_order', { ascending: true }) // Order by custom display order
+      .order('created_at', { ascending: false }) // Then by creation date
 
     if (error) {
       console.error('Services fetch error:', error)

@@ -22,6 +22,7 @@ export default function NewServicePage() {
     features: [] as string[],
     duration: '',
     image: '',
+    display_order: 0,
   })
   const [newFeature, setNewFeature] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -147,6 +148,20 @@ export default function NewServicePage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
                   placeholder="e.g., 2-4 hours"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="display_order">Display Order</Label>
+                <Input
+                  id="display_order"
+                  type="number"
+                  value={formData.display_order}
+                  onChange={(e) => setFormData(prev => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Lower numbers appear first. 0 = default order.
+                </p>
               </div>
 
               <div>

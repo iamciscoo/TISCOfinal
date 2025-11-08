@@ -1272,10 +1272,10 @@ export async function notifyAdminBookingCreated(bookingData: {
 }): Promise<void> {
   try {
     // Try to fetch admin recipients from database
+    // Note: notification_recipients doesn't have a 'type' column
     const { data: recipients, error } = await supabase
       .from('notification_recipients')
       .select('email, name')
-      .eq('type', 'admin')
       .eq('is_active', true)
     
     if (error || !recipients || recipients.length === 0) {
