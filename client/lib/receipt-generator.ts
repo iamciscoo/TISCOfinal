@@ -304,7 +304,7 @@ export async function generateOrderReceipt(order: Order): Promise<jsPDF> {
     },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 75, overflow: (items.length <= 10 ? 'ellipsize' : 'linebreak') } as any,
+      1: { cellWidth: 75, overflow: (items.length <= 10 ? 'ellipsize' : 'linebreak') as 'ellipsize' | 'linebreak' | 'visible' | 'hidden' },
       2: { cellWidth: 18, halign: 'center' },
       3: { cellWidth: 32, halign: 'right' },
       4: { cellWidth: 32, halign: 'right' }
@@ -317,6 +317,7 @@ export async function generateOrderReceipt(order: Order): Promise<jsPDF> {
   })
   
   // Get position after table
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   yPos = (doc as any).lastAutoTable.finalY + (items.length <= 10 ? 6 : 8)
 
   // ===========================

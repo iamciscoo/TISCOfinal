@@ -25,8 +25,46 @@ interface ServiceCosts {
   items: ServiceCostItem[]
 }
 
+interface Booking {
+  id: string
+  service_type: string
+  description?: string | null
+  status: string | null
+  payment_status?: string
+  total_amount: number | null
+  preferred_date?: string | null
+  preferred_time?: string | null
+  contact_email: string
+  contact_phone?: string | null
+  customer_name: string
+  notes?: string | null
+  created_at: string
+  updated_at: string
+  services?: {
+    id: string
+    title: string
+    description: string
+    features: string[]
+    duration: string
+    image?: string
+  } | null
+  users?: {
+    id: string
+    email: string
+    first_name?: string | null
+    last_name?: string | null
+    phone?: string | null
+    address_line_1?: string | null
+    address_line_2?: string | null
+    city?: string | null
+    state?: string | null
+    postal_code?: string | null
+    country?: string | null
+  }
+}
+
 interface DownloadServiceReceiptButtonProps {
-  booking: any // The booking data already loaded on the page
+  booking: Booking
   serviceCosts: ServiceCosts | null
 }
 

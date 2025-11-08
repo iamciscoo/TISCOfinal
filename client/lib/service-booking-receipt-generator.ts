@@ -26,15 +26,15 @@ interface ServiceCosts {
 interface Customer {
   id: string
   email: string
-  first_name?: string
-  last_name?: string
-  phone?: string
-  address_line_1?: string
-  address_line_2?: string
-  city?: string
-  state?: string
-  postal_code?: string
-  country?: string
+  first_name?: string | null
+  last_name?: string | null
+  phone?: string | null
+  address_line_1?: string | null
+  address_line_2?: string | null
+  city?: string | null
+  state?: string | null
+  postal_code?: string | null
+  country?: string | null
 }
 
 interface Service {
@@ -49,16 +49,16 @@ interface Service {
 interface ServiceBooking {
   id: string
   service_type: string
-  description?: string
-  status: string
+  description?: string | null
+  status: string | null
   payment_status?: string
-  total_amount: number
-  preferred_date?: string
-  preferred_time?: string
+  total_amount: number | null
+  preferred_date?: string | null
+  preferred_time?: string | null
   contact_email: string
-  contact_phone?: string
+  contact_phone?: string | null
   customer_name: string
-  notes?: string
+  notes?: string | null
   created_at: string
   updated_at: string
   services?: Service | null
@@ -217,7 +217,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
   doc.setFont('helvetica', 'bold')
   doc.text('Status:', rightCol, yPos)
   doc.setFont('helvetica', 'normal')
-  doc.text(booking.status.replace(/_/g, ' ').toUpperCase(), rightCol + 32, yPos)
+  doc.text((booking.status || 'pending').replace(/_/g, ' ').toUpperCase(), rightCol + 32, yPos)
   
   yPos += 4.5
   if (booking.payment_status) {
@@ -400,7 +400,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
       },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 60, overflow: 'ellipsize' } as any,
+        1: { cellWidth: 60, overflow: 'ellipsize' as 'ellipsize' | 'linebreak' | 'visible' | 'hidden' },
         2: { cellWidth: 25, halign: 'center' },
         3: { cellWidth: 30, halign: 'right' },
         4: { cellWidth: 30, halign: 'right' }
@@ -408,6 +408,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
       margin: { left: 20, right: 20, bottom: 40 }
     })
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     yPos = (doc as any).lastAutoTable.finalY + 8
   } else if (serviceCosts) {
     // No items but we have costs - show a simple breakdown
@@ -422,7 +423,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
   // TOTALS SECTION
   // ===========================
   
-  const totalAmount = serviceCosts?.total || booking.total_amount
+  const totalAmount = serviceCosts?.total || booking.total_amount || 0
   const totalUSD = convertToUSD(totalAmount)
   
   // Create a full-width breakdown section instead of just a box
@@ -461,7 +462,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('TOTAL (TZS):', leftMargin, yPos)
-    doc.text(formatCurrency(serviceCosts.total || totalAmount, 'TZS'), rightMargin, yPos, { align: 'right' })
+    doc.text(formatCurrency(serviceCosts.total || totalAmount || 0, 'TZS'), rightMargin, yPos, { align: 'right' })
     
     // USD approximation
     yPos += 5
@@ -469,7 +470,7 @@ export async function generateServiceBookingReceipt(data: ServiceBookingReceiptD
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(107, 114, 128)
     doc.text('Approx. USD:', leftMargin, yPos)
-    doc.text(formatCurrency(convertToUSD(serviceCosts.total || totalAmount), 'USD'), rightMargin, yPos, { align: 'right' })
+    doc.text(formatCurrency(convertToUSD(serviceCosts.total || totalAmount || 0), 'USD'), rightMargin, yPos, { align: 'right' })
   } else {
     // Simple total only
     const leftMargin = 30

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { notificationService } from '@/lib/notifications/service'
+import { notificationService, NotificationEvent } from '@/lib/notifications/service'
 
 /**
  * Generic notification endpoint that supports multiple notification events
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // Send notification using the unified notification service
     const notificationId = await notificationService.sendNotification({
-      event: mappedEvent as any,
+      event: mappedEvent as NotificationEvent,
       recipient_email,
       recipient_name: recipient_name || 'Customer',
       data: data || {}

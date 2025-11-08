@@ -864,30 +864,42 @@ export const emailTemplates = {
   admin_notification: (data: AdminNotificationData) => {
     const previewText = data.title || 'Admin Notification from TISCOマーケット'
     
+    // Determine priority-based styling
+    const priorityConfig = {
+      low: { bgColor: '#6b7280', icon: '🔔' },
+      medium: { bgColor: '#f59e0b', icon: '🔔' },
+      high: { bgColor: '#dc2626', icon: '🔔' },
+      urgent: { bgColor: '#991b1b', icon: '🔔' }
+    }
+    
+    const priority = data.priority || 'medium'
+    const config = priorityConfig[priority]
+    
     const content = `
-      <!-- Alert Icon -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+      <!-- Alert Icon - Centered with proper mobile support -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
           <td align="center">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="background: #dc2626; border-radius: 50%; width: 64px; height: 64px; margin: 0 auto;">
+            <!-- Icon centered using table for better email client support -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
               <tr>
-                <td style="text-align: center; vertical-align: middle; padding: 18px;">
-                  <span style="font-size: 28px; line-height: 1;">🔔</span>
+                <td align="center" valign="middle" style="width: 72px; height: 72px; background: ${config.bgColor}; border-radius: 50%; text-align: center; vertical-align: middle;">
+                  <span style="color: #ffffff; font-size: 36px; line-height: 72px; display: inline-block;">${config.icon}</span>
                 </td>
               </tr>
             </table>
-            <div style="height: 16px;"></div>
-            <h1 class="heading-1 dark-text" style="margin: 0 0 8px 0; color: #111827; text-align: center; font-size: 20px; font-weight: 700; line-height: 1.3;">${data.title || 'Admin Alert'}</h1>
-            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; font-size: 14px; line-height: 1.5;">Action may be required</p>
+            <div style="height: 24px;"></div>
+            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; text-align: center;">${data.title || 'Admin Alert'}</h1>
+            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Action may be required</p>
           </td>
         </tr>
       </table>
 
-      <!-- Alert Message Card -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #fca5a5; border-left: 4px solid #dc2626; border-radius: 8px; margin: 24px 0;">
+      <!-- Alert Message Card with proper spacing -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #fca5a5; border-left: 4px solid #dc2626; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="padding: 24px;">
-            <p class="dark-text" style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6; font-weight: 500;">
+          <td style="padding: 28px;">
+            <p class="dark-text" style="margin: 0; color: #111827; font-size: 16px; line-height: 1.6; font-weight: 500;">
               ${data.message}
             </p>
           </td>
@@ -895,35 +907,45 @@ export const emailTemplates = {
       </table>
 
       ${data.order_id ? `
-      <!-- Order Details Card -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 24px 0;">
+      <!-- Order Details Card with improved layout -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="padding: 24px;">
-            <h3 class="heading-3 dark-text" style="margin: 0 0 16px 0; color: #111827; font-size: 16px; font-weight: 700;">Order Information</h3>
+          <td style="padding: 28px;">
+            <h3 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #111827;">Order Information</h3>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
-                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500; width: 35%;">Order ID</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">#${data.order_id}</td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Order ID</td>
+                <td class="text-small dark-text" style="padding: 12px 0; color: #111827; font-size: 14px; font-weight: 700; text-align: right;">#${data.order_id}</td>
               </tr>
               ${data.customer_name ? `
               <tr>
-                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Customer</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.customer_name}</td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Customer</td>
+                <td class="text-small dark-text" style="padding: 12px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.customer_name}</td>
               </tr>` : ''}
               ${data.customer_email ? `
               <tr>
-                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Email</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #2563eb; font-size: 14px; font-weight: 600; text-align: right;"><a href="mailto:${data.customer_email}" style="color: #2563eb; text-decoration: none;">${data.customer_email}</a></td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Email</td>
+                <td class="text-small" style="padding: 12px 0; font-size: 14px; font-weight: 600; text-align: right;"><a href="mailto:${data.customer_email}" style="color: #2563eb; text-decoration: none;">${data.customer_email}</a></td>
               </tr>` : ''}
-              ${data.total_amount && data.currency ? `
+              ${data.items_count ? `
               <tr>
-                <td class="text-small dark-text-secondary" style="padding: 12px 0 8px 0; color: #6b7280; font-size: 14px; font-weight: 500; border-top: 1px solid #e5e7eb;">Total Amount</td>
-                <td class="text-small dark-text" style="padding: 12px 0 8px 0; color: #059669; font-size: 16px; font-weight: 700; text-align: right; border-top: 1px solid #e5e7eb;">${data.currency} ${data.total_amount}</td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Items Count</td>
+                <td class="text-small dark-text" style="padding: 12px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.items_count} ${data.items_count === 1 ? 'item' : 'items'}</td>
               </tr>` : ''}
               ${data.payment_method ? `
               <tr>
-                <td class="text-small dark-text-secondary" style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Payment Method</td>
-                <td class="text-small dark-text" style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.payment_method}</td>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Payment Method</td>
+                <td class="text-small dark-text" style="padding: 12px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.payment_method}</td>
+              </tr>` : ''}
+              ${data.payment_status ? `
+              <tr>
+                <td class="text-small dark-text-secondary" style="padding: 12px 0; color: #6b7280; font-size: 14px; font-weight: 500;">Payment Status</td>
+                <td class="text-small" style="padding: 12px 0; font-size: 14px; font-weight: 700; text-align: right; color: ${data.payment_status === 'paid' ? '#059669' : '#f59e0b'}; text-transform: capitalize;">${data.payment_status}</td>
+              </tr>` : ''}
+              ${data.total_amount && data.currency ? `
+              <tr>
+                <td class="text-small dark-text-secondary" style="padding: 16px 0 12px 0; color: #6b7280; font-size: 14px; font-weight: 500; border-top: 2px solid #e5e7eb;">Total Amount</td>
+                <td class="text-small" style="padding: 16px 0 12px 0; color: #059669; font-size: 18px; font-weight: 700; text-align: right; border-top: 2px solid #e5e7eb;">${data.currency} ${data.total_amount}</td>
               </tr>` : ''}
             </table>
           </td>
@@ -931,33 +953,27 @@ export const emailTemplates = {
       </table>` : ''}
       
       ${data.action_url ? `
-      <!-- Action Button -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+      <!-- Action Button - Mobile responsive -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
         <tr>
           <td align="center" style="padding: 0 20px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-              <tr>
-                <td>
-                  <a href="${data.action_url}" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center; min-width: 200px; max-width: 90%;">View Order Details</a>
-                </td>
-              </tr>
-            </table>
+            <a href="${data.action_url}" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border-radius: 8px; min-width: 200px; max-width: 90%;">View Order Details</a>
           </td>
         </tr>
       </table>` : ''}
       
-      <!-- Quick Actions -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 32px 0;">
+      <!-- Quick Actions Card with proper spacing -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="padding: 20px; text-align: center;">
-            <p class="text-small dark-text" style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Need to take action or have questions?</p>
+          <td style="padding: 24px; text-align: center;">
+            <p class="text-small dark-text" style="margin: 0 0 16px 0; color: #111827; font-size: 15px; font-weight: 600; line-height: 1.5;">Need to take action or have questions?</p>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
               <tr>
-                <td style="padding: 0 12px;">
-                  <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-size: 14px; font-weight: 600;">📱 WhatsApp</a>
+                <td style="padding: 0 16px;">
+                  <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-size: 14px; font-weight: 600;">📱 WhatsApp Support</a>
                 </td>
-                <td style="padding: 0 12px; border-left: 1px solid #e2e8f0;">
-                  <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 600;">✉️ Email</a>
+                <td style="padding: 0 16px; border-left: 2px solid #e5e7eb;">
+                  <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 600;">✉️ Email Support</a>
                 </td>
               </tr>
             </table>
