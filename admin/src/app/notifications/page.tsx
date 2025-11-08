@@ -201,13 +201,22 @@ const priorityColors = {
  * Example: When a customer places an order, we send them an "order_created" email
  */
 const NOTIFICATION_EVENTS = [
+  // Specific event names
   'order_created',              // Customer placed an order
   'payment_success',            // Payment went through successfully
   'payment_failed',             // Payment was declined
   'booking_created',            // Customer booked a service
   'contact_message_received',   // Someone filled out the contact form
   'user_registered',            // New user signed up
-  'admin_order_created'         // Notify admin about new orders
+  'admin_order_created',        // Notify admin about new orders
+  
+  // Simplified category names (for better grouping)
+  'orders',                     // All order-related notifications
+  'payments',                   // All payment-related notifications
+  'bookings',                   // All booking-related notifications
+  'contact',                    // All contact-related notifications
+  'users',                      // All user-related notifications
+  'management'                  // Management-level notifications
 ] as const
 
 /**
@@ -1863,9 +1872,16 @@ export default function NotificationsPage() {
                             </div>
                           ) : (
                             Array.isArray(r.notification_categories) && r.notification_categories.length > 0 && (
-                              <Badge variant="secondary" className="text-xs max-w-[200px] truncate" title={r.notification_categories.join(', ')}>
-                                {r.notification_categories.join(', ')}
-                              </Badge>
+                              <div className="flex flex-wrap gap-1">
+                                {r.notification_categories.map((cat) => (
+                                  <Badge key={cat} variant="secondary" className="text-xs whitespace-nowrap">
+                                    {cat === 'all' 
+                                      ? 'All Events' 
+                                      : cat.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                                    }
+                                  </Badge>
+                                ))}
+                              </div>
                             )
                           )}
                         </div>

@@ -1465,7 +1465,7 @@ export default function CheckoutPage() {
                   {/* Order Items */}
                   <div>
                     <h3 className="font-semibold mb-3">Order Items ({totalItems})</h3>
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                       {displayItems.map((item) => (
                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                           <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
@@ -1525,7 +1525,16 @@ export default function CheckoutPage() {
                       : 'hover:opacity-90 active:scale-[0.98] sm:hover:scale-[1.02]'
                   } touch-manipulation`}
                 >
-                  {isProcessing ? 'Processing...' : (paymentTimeout ? 'Payment Pending...' : 'Place Order')}
+                  {isProcessing ? (
+                    <span className="flex items-center gap-1">
+                      Processing
+                      <span className="inline-flex gap-0.5">
+                        <span className="animate-bounce [animation-delay:0ms]">.</span>
+                        <span className="animate-bounce [animation-delay:150ms]">.</span>
+                        <span className="animate-bounce [animation-delay:300ms]">.</span>
+                      </span>
+                    </span>
+                  ) : (paymentTimeout ? 'Payment Pending...' : 'Place Order')}
                   {!isProcessing && !paymentTimeout && <ArrowRight className="h-4 w-4 ml-2" />}
                 </Button>
               ) : (

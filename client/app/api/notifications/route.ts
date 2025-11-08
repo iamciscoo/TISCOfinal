@@ -1,76 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { notifyBookingCreated, notifyAdminBookingCreated } from '@/lib/notifications/service'
+import { notificationService } from '@/lib/notifications/service'
 
+/**
+ * Generic notification endpoint that supports multiple notification events
+ * Accepts event + data payload and sends appropriate notification
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { type, data } = body
+    const { event, recipient_email, recipient_name, data, type } = body
 
-    if (!type || !data) {
-      return NextResponse.json({ error: 'Missing type or data' }, { status: 400 })
+    // Support both new event-based format and legacy type format
+    const notificationEvent = event || type
+
+    if (!notificationEvent) {
+      return NextResponse.json({ error: 'Missing event or type' }, { status: 400 })
     }
 
-    let notificationId: string
-
-    switch (type) {
-      case 'order_created':
-        if (!data.order_id || !data.customer_email || !data.customer_name) {
-          return NextResponse.json({ error: 'Missing required order data' }, { status: 400 })
-        }
-        
-        // Note: Customer already received order confirmation during order creation
-        // Admin notifications are handled during order creation
-        // This endpoint should not send duplicate notifications for order events
-        console.log('Order notifications already handled during order creation - skipping duplicates')
-        notificationId = 'skipped-duplicate-order-notification'
-
-        break
-
-      case 'booking_created':
-        if (!data.booking_id || !data.contact_email || !data.service_name) {
-          return NextResponse.json({ error: 'Missing required booking data' }, { status: 400 })
-        }
-        
-        // Send customer booking notification
-        try {
-          notificationId = await notifyBookingCreated({
-            booking_id: data.booking_id,
-            contact_email: data.contact_email,
-            customer_name: data.customer_name || 'Unknown User',
-            service_name: data.service_name || 'Unknown Service',
-            preferred_date: data.preferred_date || 'Not specified',
-            preferred_time: data.preferred_time || 'Not specified',
-            description: data.description || 'No description provided',
-            service_type: data.service_type || 'standard'
-          })
-          console.log('Customer booking notification sent successfully:', notificationId)
-        } catch (error) {
-          console.error('Failed to send customer booking notification:', error)
-          notificationId = 'failed-customer-booking-notification'
-        }
-
-        // Send admin booking notifications
-        try {
-          await notifyAdminBookingCreated({
-            booking_id: data.booking_id,
-            contact_email: data.contact_email,
-            customer_name: data.customer_name || 'Unknown User',
-            service_name: data.service_name || 'Unknown Service',
-            preferred_date: data.preferred_date || 'Not specified',
-            preferred_time: data.preferred_time || 'Not specified',
-            description: data.description || 'No description provided',
-            service_type: data.service_type || 'standard'
-          })
-          console.log('Admin booking notification sent successfully')
-        } catch (error) {
-          console.error('Failed to send admin booking notification:', error)
-        }
-
-        break
-
-      default:
-        return NextResponse.json({ error: 'Unsupported notification type' }, { status: 400 })
+    // For legacy compatibility, map old 'type' to new 'event' format
+    const eventMap: Record<string, string> = {
+      'order_created': 'order_created',
+      'booking_created': 'booking_created',
+      'payment_success': 'payment_success',
+      'payment_failed': 'payment_failed'
     }
+
+    const mappedEvent = eventMap[notificationEvent] || notificationEvent
+
+    // Validate required fields
+    if (!recipient_email) {
+      return NextResponse.json({ error: 'Missing recipient_email' }, { status: 400 })
+    }
+
+    console.log(`📧 Sending ${mappedEvent} notification to ${recipient_email}`)
+
+    // Send notification using the unified notification service
+    const notificationId = await notificationService.sendNotification({
+      event: mappedEvent as any,
+      recipient_email,
+      recipient_name: recipient_name || 'Customer',
+      data: data || {}
+    })
+
+    console.log(`✅ ${mappedEvent} notification sent successfully:`, notificationId)
 
     return NextResponse.json({ 
       success: true, 
@@ -79,7 +51,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: unknown) {
-    console.error('Notification API error:', error)
+    console.error('❌ Notification API error:', error)
     return NextResponse.json({ 
       error: 'Failed to send notification',
       details: error instanceof Error ? error.message : 'Unknown error'

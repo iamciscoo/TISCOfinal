@@ -101,56 +101,50 @@ export async function POST(req: NextRequest, { params }: Params) {
         completed_at: new Date().toISOString()
       })
 
-    console.log('Order updated successfully, sending notifications...')
+    console.log('Order updated successfully, sending payment confirmation email...')
 
-    // Send payment success notification using client backend notification service
+    // Send payment success notification email to customer
     try {
-      const notificationData = {
-        order_id: id,
-        customer_email: customerEmail,
-        customer_name: customerName,
-        amount: orderData.total_amount?.toString() || '0',
-        currency: orderData.currency || 'TZS',
-        payment_method: 'Direct Pay - Confirmed',
-        transaction_id: `OFFICE_${id.slice(0, 8)}_${Date.now()}`
+      const notificationPayload = {
+        event: 'payment_success',
+        recipient_email: customerEmail,
+        recipient_name: customerName,
+        data: {
+          order_id: id,
+          customer_email: customerEmail,
+          customer_name: customerName,
+          amount: orderData.total_amount?.toString() || '0',
+          currency: orderData.currency || 'TZS',
+          payment_method: 'Direct Payment - Confirmed by Admin',
+          transaction_id: `OFFICE_${id.slice(0, 8)}_${Date.now()}`,
+          order_items: orderData.order_items?.map((item: any) => ({
+            name: item.products?.name || 'Product',
+            quantity: item.quantity,
+            price: item.price
+          })) || []
+        }
       }
 
-      // Create notification record in database
-      await supabase
-        .from('notifications')
-        .insert({
-          event: 'payment_success',
-          recipient_email: customerEmail,
-          recipient_name: customerName,
-          subject: 'Payment Confirmed - Order Processing',
-          content: `Your payment for order #${id.slice(0, 8)} has been confirmed. Order is now processing.`,
-          metadata: notificationData,
-          status: 'pending'
-        })
+      // Send notification via client backend API
+      const clientApiUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'https://tiscomarket.store'
+      const notificationResponse = await fetch(`${clientApiUrl}/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(notificationPayload)
+      })
 
-      console.log('✅ Payment success notification queued')
-
-      // Trigger notification processing on client backend
-      try {
-        const processResponse = await fetch('https://tiscomarket.store/api/notifications/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (processResponse.ok) {
-          const processResult = await processResponse.json()
-          console.log('📬 Notification processing triggered:', processResult)
-        } else {
-          console.warn('⚠️ Failed to trigger notification processing')
-        }
-      } catch (processError) {
-        console.warn('⚠️ Could not trigger notification processing:', processError)
+      if (notificationResponse.ok) {
+        const notificationResult = await notificationResponse.json()
+        console.log('✅ Payment confirmation email sent successfully:', notificationResult)
+      } else {
+        const errorText = await notificationResponse.text()
+        console.error('❌ Failed to send payment confirmation email:', errorText)
       }
     } catch (emailError) {
-      console.error('❌ Failed to queue payment success notification:', emailError)
-      // Don't fail the operation if email fails
+      console.error('❌ Error sending payment confirmation email:', emailError)
+      // Don't fail the order update if email fails - email is nice-to-have
     }
 
     return NextResponse.json({ 
