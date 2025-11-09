@@ -89,8 +89,8 @@ export const ServicesPreview = () => {
     <section className="py-1 bg-white w-full overflow-hidden mb-5">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-block mb-6">
+        <div className="mb-12">
+          <div className="mb-6">
             <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
               <span className="relative inline-block">
                 <span className="relative z-10">Top</span>
@@ -99,7 +99,7 @@ export const ServicesPreview = () => {
               {" "}Services
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl leading-relaxed">
             We handle the <span className="font-semibold text-gray-800">builds</span>, the <span className="font-semibold text-gray-800">installs</span>, and the <span className="font-semibold text-gray-800">headaches</span>.
           </p>
         </div>
