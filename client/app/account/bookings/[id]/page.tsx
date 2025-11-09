@@ -22,6 +22,7 @@ import { CartSidebar } from '@/components/CartSidebar'
 import { createClient } from '@supabase/supabase-js'
 import { formatToEAT } from '@/lib/utils'
 import { DownloadServiceReceiptButton } from '@/components/DownloadServiceReceiptButton'
+import { PriceDisplay } from '@/components/PriceDisplay'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -179,9 +180,6 @@ const getServiceBooking = async (id: string, userId: string): Promise<ServiceBoo
   return booking
 }
 
-const formatTZS = (amount: number) => {
-  return `TZS ${Math.round(amount).toLocaleString()}`
-}
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -427,7 +425,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                               <span className="text-gray-600">
                                 {item.name} ({item.quantity} {item.unit})
                               </span>
-                              <span>{formatTZS(item.unit_price * item.quantity)}</span>
+                              <PriceDisplay price={item.unit_price * item.quantity} />
                             </div>
                           ))}
                         </div>
@@ -443,22 +441,22 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Subtotal</span>
-                        <span>{formatTZS(booking.serviceCosts.subtotal)}</span>
+                        <PriceDisplay price={booking.serviceCosts.subtotal} />
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>+ Service Fee</span>
-                        <span>{formatTZS(booking.serviceCosts.service_fee)}</span>
+                        <PriceDisplay price={booking.serviceCosts.service_fee} />
                       </div>
                       {booking.serviceCosts.discount > 0 && (
                         <div className="flex justify-between text-sm">
                           <span>- Discount</span>
-                          <span>{formatTZS(booking.serviceCosts.discount)}</span>
+                          <PriceDisplay price={booking.serviceCosts.discount} />
                         </div>
                       )}
                       <div className="border-t pt-2">
                         <div className="flex justify-between font-semibold">
                           <span>Total</span>
-                          <span>{formatTZS(booking.serviceCosts.total)}</span>
+                          <PriceDisplay price={booking.serviceCosts.total} className="font-semibold" />
                         </div>
                       </div>
                     </div>
@@ -478,7 +476,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                     {/* Fallback to basic total_amount */}
                     <div className="flex justify-between items-center text-lg font-semibold">
                       <span>Total Amount</span>
-                      <span>{formatTZS(Number(booking.total_amount ?? 0))}</span>
+                      <PriceDisplay price={Number(booking.total_amount ?? 0)} className="font-semibold text-lg" />
                     </div>
                   </>
                 )}

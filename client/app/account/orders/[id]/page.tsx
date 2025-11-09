@@ -12,6 +12,7 @@ import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { formatToEAT } from '@/lib/utils'
 import { DownloadReceiptButton } from '@/components/DownloadReceiptButton'
+import { PriceDisplay } from '@/components/PriceDisplay'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -159,9 +160,6 @@ function statusColor(status: string) {
   }
 }
 
-const formatPrice = (amount: number) => {
-  return `TZS ${Math.round(amount).toLocaleString()}`
-}
 
 export default async function OrderDetailsPage({ params }: PageProps) {
   const { id } = await params
@@ -226,7 +224,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                       {order.payment_status || 'pending'}
                     </Badge>
                   </div>
-                  <div><span className="font-medium">Total:</span> {formatPrice(order.total_amount || 0)}</div>
+                  <div className="flex items-center gap-2"><span className="font-medium">Total:</span> <PriceDisplay price={order.total_amount || 0} /></div>
                 </div>
                 {order.shipping_address && (
                   <div>
@@ -253,7 +251,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                       </div>
                     </div>
                     <div className="text-right font-semibold text-sm sm:text-base flex-shrink-0">
-                      {formatPrice((item.price * item.quantity))}
+                      <PriceDisplay price={item.price * item.quantity} className="font-semibold" />
                     </div>
                   </div>
                 ))}

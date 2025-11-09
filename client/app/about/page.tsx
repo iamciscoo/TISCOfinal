@@ -87,10 +87,7 @@ import { MobileSlider } from '@/components/ui/mobile-slider'    // Carousel for 
 // Icons from lucide-react library (lightweight icon set)
 import { 
   Users,        // People icon (for team section)
-  Award,        // Trophy icon (for achievements)
-  Shield,       // Shield icon (for trust/security)
-  Heart,        // Heart icon (for passion/care)
-  Clock,        // Clock icon (for speed/time)
+  Clock,        // Clock icon (for timeline)
   CheckCircle   // Checkmark icon (for completed features)
 } from 'lucide-react'
 
@@ -231,38 +228,30 @@ export default function AboutPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">What Drives Us</h2>
           
           {/* Desktop Grid */}
-          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                icon: Award,
                 title: 'Your Tech Partner',
                 description: 'We want to be the first place you think of when you need tech gear or professional setup services. No hunting around — just one reliable source.'
               },
               {
-                icon: Clock,
                 title: 'Speed That Matters',
                 description: 'Your time is valuable. Fast delivery, quick installations, rapid support responses — because waiting around is frustrating.'
               },
               {
-                icon: Shield,
                 title: 'Honest Dealings',
                 description: 'Fair prices, genuine reviews, authentic products. We believe trust is built through transparency, not marketing fluff.'
               },
               {
-                icon: Heart,
                 title: 'Finding the Unfindable',
                 description: 'Those rare components and niche gadgets others don\'t carry? We specialize in tracking down exactly what you need.'
               }
             ].map((value, index) => {
-              const IconComponent = value.icon
               return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                <Card key={index} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <IconComponent className="h-8 w-8 text-gray-700" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-3">{value.title}</h3>
-                    <p className="text-sm text-gray-600">{value.description}</p>
+                    <h3 className="font-semibold text-lg text-gray-900 mb-3">{value.title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">{value.description}</p>
                   </CardContent>
                 </Card>
               )
@@ -274,35 +263,27 @@ export default function AboutPage() {
             <MobileSlider itemsPerView={1} showDots={true} showArrows={true}>
               {[
                 {
-                  icon: Award,
                   title: 'Your Tech Partner',
                   description: 'We want to be the first place you think of when you need tech gear or professional setup services. No hunting around — just one reliable source.'
                 },
                 {
-                  icon: Clock,
                   title: 'Speed That Matters',
                   description: 'Your time is valuable. Fast delivery, quick installations, rapid support responses — because waiting around is frustrating.'
                 },
                 {
-                  icon: Shield,
                   title: 'Honest Dealings',
                   description: 'Fair prices, genuine reviews, authentic products. We believe trust is built through transparency, not marketing fluff.'
                 },
                 {
-                  icon: Heart,
                   title: 'Finding the Unfindable',
                   description: 'Those rare components and niche gadgets others don\'t carry? We specialize in tracking down exactly what you need.'
                 }
               ].map((value, index) => {
-                const IconComponent = value.icon
                 return (
-                  <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                  <Card key={index} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <IconComponent className="h-8 w-8 text-gray-700" />
-                      </div>
-                      <h3 className="font-semibold text-gray-900 mb-3">{value.title}</h3>
-                      <p className="text-sm text-gray-600">{value.description}</p>
+                      <h3 className="font-semibold text-lg text-gray-900 mb-3">{value.title}</h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">{value.description}</p>
                     </CardContent>
                   </Card>
                 )
@@ -316,35 +297,26 @@ export default function AboutPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-8 sm:mb-12">Why We&apos;re Different</h2>
           
           {/* Desktop Grid */}
-          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                icon: CheckCircle,
                 title: 'Complete Solutions',
                 description: 'Why juggle multiple vendors? We handle both the products you need and the professional services to set them up — all in one place.'
               },
               {
-                icon: Clock,
                 title: 'No Bureaucratic Nonsense',
                 description: 'Skip the complicated processes and endless phone trees. We cut through industry complexity to get things done quickly.'
               },
               {
-                icon: Users,
                 title: 'Built for Community',
                 description: 'We work with businesses and customers who share our values: efficiency, authenticity, and getting things done right the first time.'
               }
             ].map((feature, index) => {
-              const IconComponent = feature.icon
               return (
                 <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6 flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <IconComponent className="h-6 w-6 text-gray-700" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                      <p className="text-gray-600">{feature.description}</p>
-                    </div>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-xl text-gray-900 mb-3">{feature.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{feature.description}</p>
                   </CardContent>
                 </Card>
               )
@@ -356,32 +328,23 @@ export default function AboutPage() {
             <MobileSlider itemsPerView={1} showDots={true} showArrows={true}>
               {[
                 {
-                  icon: CheckCircle,
                   title: 'Complete Solutions',
                   description: 'Why juggle multiple vendors? We handle both the products you need and the professional services to set them up — all in one place.'
                 },
                 {
-                  icon: Clock,
                   title: 'No Bureaucratic Nonsense',
                   description: 'Skip the complicated processes and endless phone trees. We cut through industry complexity to get things done quickly.'
                 },
                 {
-                  icon: Users,
                   title: 'Built for Community',
                   description: 'We work with businesses and customers who share our values: efficiency, authenticity, and getting things done right the first time.'
                 }
               ].map((feature, index) => {
-                const IconComponent = feature.icon
                 return (
                   <Card key={index} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6 flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <IconComponent className="h-6 w-6 text-gray-700" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                        <p className="text-gray-600">{feature.description}</p>
-                      </div>
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-xl text-gray-900 mb-3">{feature.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{feature.description}</p>
                     </CardContent>
                   </Card>
                 )

@@ -340,7 +340,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 Reserve Your Service
               </h2>
               <p className="text-base md:text-lg text-gray-600 max-w-2xl">
-                Complete the booking form and our team will contact you within <span className="font-semibold text-blue-600">24 hours</span> to confirm your appointment.
+                Complete the booking form and our team will contact you <span className="font-semibold text-blue-600">shortly</span> to confirm your appointment.
               </p>
             </div>
 
