@@ -16,20 +16,20 @@ interface HeroSlide {
 
 const heroSlides: HeroSlide[] = [
   {
-    id: 'pc-building',
-    title: 'Custom PC Building',
-    subtitle: 'Build Your Dream Machine',
-    description: 'Professional custom PC assembly and configuration tailored to your specific needs and budget. From gaming rigs to workstations, we bring your vision to life.',
-    image: '/services/pcbuild.jpeg',
-    cta: 'Book PC Build'
-  },
-  {
     id: 'office-setup',
     title: 'Desktop/Office Space Setup',
     subtitle: 'Transform Your Workspace',
     description: 'Complete workstation and office space configuration for optimal productivity and ergonomics. Multi-monitor setups, cable management, and more.',
     image: '/services/desksetup.jpeg',
     cta: 'Book Office Setup'
+  },
+  {
+    id: 'pc-building',
+    title: 'Custom PC Building',
+    subtitle: 'Build Your Dream Machine',
+    description: 'Professional custom PC assembly and configuration tailored to your specific needs and budget. From gaming rigs to workstations, we bring your vision to life.',
+    image: '/services/pcbuild.jpeg',
+    cta: 'Book PC Build'
   },
   {
     id: 'software-install',

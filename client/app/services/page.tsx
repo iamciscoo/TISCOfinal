@@ -40,10 +40,7 @@ import {
   Cpu, 
   Settings,
   CheckCircle,
-  ArrowRight,
-  Users,
-  Award,
-  Zap
+  ArrowRight
 } from 'lucide-react'
 import { PageLayout } from '@/components/shared'
 import { ServicesHeroCarousel } from '@/components/ServicesHeroCarousel'
@@ -173,8 +170,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
 
         {/* Header */}
-        <div className="text-center mb-16 relative">
-          <div className="inline-block mb-6">
+        <div className="mb-16 relative">
+          <div className="mb-6">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
               <span className="relative inline-block">
                 <span className="relative">Top</span>
@@ -183,7 +180,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
               {" "}Services
             </h1>
           </div>
-          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl leading-relaxed">
             Whether it&apos;s <span className="font-semibold text-gray-800">one rig</span>, a <span className="font-semibold text-gray-800">home space</span>, or an <span className="font-semibold text-gray-800">entire office</span>
             <span className="block mt-2 text-purple-600 font-semibold">we&apos;ve got you covered.</span>
           </p>
@@ -337,20 +334,13 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
 
         {/* Service Booking Form */}
         <section className="mb-16" id="booking-form" data-section="booking">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <div className="inline-block mb-6">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
-                  <span className="relative inline-block">
-                    <span className="relative z-10">Book Your</span>
-                    <span className="absolute bottom-1 left-0 w-full h-3 bg-gradient-to-r from-blue-500 to-blue-600 transform -skew-y-1 opacity-30"></span>
-                  </span>
-                  {" "}Service
-                </h2>
-              </div>
-              <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                Ready to get started?
-                <span className="block mt-2 font-medium text-gray-700">Fill out the form below and we&apos;ll get back to you within <span className="font-bold text-blue-600">24 hours</span>.</span>
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Reserve Your Service
+              </h2>
+              <p className="text-base md:text-lg text-gray-600 max-w-2xl">
+                Complete the booking form and our team will contact you within <span className="font-semibold text-blue-600">24 hours</span> to confirm your appointment.
               </p>
             </div>
 
@@ -363,8 +353,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
 
         {/* Why Choose Our Services */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            Why Choose Us?
+          <h2 className="text-3xl font-bold text-gray-900 mb-12">
+            Why Us?
           </h2>
           
           {/* Mobile Slider */}
@@ -373,29 +363,22 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 horizontal-scroll scroll-container">
                 {[
                   {
-                    icon: Award,
                     title: 'Certified Technicians and Designers',
                     description: 'Professionals with extensive hardware, software and design experience.'
                   },
                   {
-                    icon: Zap,
                     title: 'Fast & Reliable',
                     description: 'Fast service without compromising quality. Most jobs done in 24-48 hours.'
                   },
                   {
-                    icon: Users,
                     title: 'Customer Focused',
                     description: 'Personalized service for your needs and budget. 100% satisfaction guaranteed.'
                   }
                 ].map((benefit, index) => {
-                  const IconComponent = benefit.icon
                   return (
                     <div key={index} className="snap-center shrink-0 w-[85%] sm:w-[70%]">
-                      <Card className="text-center hover:shadow-lg transition-shadow h-full">
+                      <Card className="hover:shadow-lg transition-shadow h-full">
                         <CardContent className="p-6 sm:p-8">
-                          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <IconComponent className="h-8 w-8 text-blue-600" />
-                          </div>
                           <h3 className="font-semibold text-xl text-gray-900 mb-3">{benefit.title}</h3>
                           <p className="text-gray-600">{benefit.description}</p>
                         </CardContent>
@@ -411,28 +394,21 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
           <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: Award,
                 title: 'Certified Technicians and Designers',
                 description: 'Professionals with extensive hardware, software and design experience.'
               },
               {
-                icon: Zap,
                 title: 'Fast & Reliable',
                 description: 'Fast service without compromising quality. Most jobs done in 24-48 hours.'
               },
               {
-                icon: Users,
                 title: 'Customer Focused',
                 description: 'Personalized service for your needs and budget. 100% satisfaction guaranteed.'
               }
             ].map((benefit, index) => {
-              const IconComponent = benefit.icon
               return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                <Card key={index} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-8">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <IconComponent className="h-8 w-8 text-blue-600" />
-                    </div>
                     <h3 className="font-semibold text-xl text-gray-900 mb-3">{benefit.title}</h3>
                     <p className="text-gray-600">{benefit.description}</p>
                   </CardContent>
