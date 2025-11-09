@@ -61,6 +61,7 @@ export async function GET() {
         image_url: imageUrl,
         category: categoryData?.name || 'General',
         category_id: categoryData?.id || product.category_id,
+        brands: product.brands || [],
         rating: product.rating ?? null,
         reviews_count: product.reviews_count ?? null,
         stock_quantity: product.stock_quantity,

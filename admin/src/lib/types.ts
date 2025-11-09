@@ -31,6 +31,7 @@ export interface Product {
   sku?: string
   created_at: string
   updated_at: string
+  brands?: string[]
   // Relations
   category?: Category
   product_images?: ProductImage[]

@@ -3,6 +3,15 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
+type ProductCategory = {
+  category?: {
+    id?: string
+    name?: string
+    slug?: string
+    description?: string
+  } | null
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
@@ -27,6 +36,7 @@ export async function GET(request: NextRequest) {
           is_featured,
           is_active,
           view_count,
+          brands,
           created_at,
           categories:product_categories (
             category:categories (
@@ -34,7 +44,7 @@ export async function GET(request: NextRequest) {
               name${withSlug ? ', slug' : ''}${withDescription ? ', description' : ''}
             )
           ),
-          product_images!inner (
+          product_images (
             id,
             url,
             is_main,
@@ -49,6 +59,7 @@ export async function GET(request: NextRequest) {
         
         // **Use ILIKE for fast pattern matching with GIN indexes**
         // The trigram indexes make ILIKE extremely fast
+        // Search in name and description
         q = q.or(`name.ilike.%${safe}%,description.ilike.%${safe}%`)
         
         // **Order by relevance: exact matches first, then partial matches**
@@ -105,14 +116,97 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to search products' }, { status: 500 })
     }
 
-    // Log search results summary
-    if (query) {
-      console.log(`🔍 Search: "${query}" → ${products?.length || 0} products`)
+      // **BRAND & CATEGORY SEARCH: Also search by brand names and categories**
+    let result = products || []
+    
+    if (query && query.trim().length > 0) {
+      const searchTerm = query.trim().toLowerCase()
+      
+      console.log(`\n🔍 SEARCH DEBUG for "${query}"`)
+      console.log(`Name/desc matches from DB: ${result.length}`)
+      
+      // Get IDs that already matched by name/description
+      const nameDescMatchIds = new Set(result.map(p => p.id))
+      
+      // Fetch ALL active products to search by brands and categories
+      const { data: allProducts, error: allError } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          description,
+          price,
+          image_url,
+          stock_quantity,
+          is_featured,
+          is_active,
+          view_count,
+          brands,
+          created_at,
+          categories:product_categories (
+            category:categories (
+              id,
+              name
+            )
+          ),
+          product_images (
+            id,
+            url,
+            is_main,
+            sort_order
+          )
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(200)
+      
+      if (allError) {
+        console.error('Error fetching all products for extended search:', allError)
+      } else {
+        // Filter products that match by brand OR category
+        const extendedMatches = (allProducts || []).filter(product => {
+          // Skip if already matched by name/description
+          if (nameDescMatchIds.has(product.id)) return false
+          
+          // Check if brands array contains search term
+          let brandMatch = false
+          if (product.brands && Array.isArray(product.brands) && product.brands.length > 0) {
+            brandMatch = product.brands.some(brand => 
+              brand.toLowerCase().includes(searchTerm)
+            )
+          }
+          
+          // Check if category names contain search term
+          let categoryMatch = false
+          if (product.categories && Array.isArray(product.categories)) {
+            categoryMatch = product.categories.some((cat: unknown) => {
+              const catObj = cat as ProductCategory
+              const catName = catObj.category?.name?.toLowerCase() || ''
+              return catName.includes(searchTerm)
+            })
+          }
+          
+          if (brandMatch) {
+            console.log(`✅ BRAND MATCH: "${product.name}" - brands=[${product.brands?.join(', ')}]`)
+          }
+          if (categoryMatch) {
+            const categoryNames = product.categories
+              ?.map((c: unknown) => (c as ProductCategory).category?.name)
+              .filter(Boolean)
+              .join(', ') || ''
+            console.log(`✅ CATEGORY MATCH: "${product.name}" - categories=[${categoryNames}]`)
+          }
+          
+          return brandMatch || categoryMatch
+        })
+        
+        console.log(`Extended matches (brands + categories): ${extendedMatches.length}`)
+        
+        // Combine: name/desc matches first, then extended matches
+        result = [...result, ...extendedMatches]
+        console.log(`Total results: ${result.length}\n`)
+      }
     }
-
-    // **OPTIMIZATION REMOVED: Images are now sorted in database query (idx_product_images_product_main_fast)**
-    // No need for client-side sorting - database handles it via ORDER BY
-    const result = products || []
     
     // Log empty results for monitoring
     if (query && result.length === 0) {

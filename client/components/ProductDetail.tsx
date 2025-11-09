@@ -409,6 +409,14 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                 : (product.categories && 'name' in product.categories ? product.categories.name : 'Electronics')}
             </div>
             
+            {/* Brands */}
+            {product.brands && Array.isArray(product.brands) && product.brands.length > 0 && (
+              <div className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">Brand{product.brands.length > 1 ? 's' : ''}: </span>
+                {product.brands.join(', ')}
+              </div>
+            )}
+            
             {/* Title with Share Button */}
             <div className="flex items-start justify-between gap-3 mb-4">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex-1">{product.name}</h1>

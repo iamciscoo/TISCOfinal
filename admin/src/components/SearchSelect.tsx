@@ -148,34 +148,32 @@ export const SearchSelect = <T,>({
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
-          <div className="border rounded-md">
-            <ScrollArea className="h-56">
-              {loading ? (
-                <div className="p-3 text-sm text-muted-foreground">Loading...</div>
-              ) : options.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground">{emptyText}</div>
-              ) : (
-                <ul className="divide-y">
-                  {options.map((opt) => (
-                    <li key={opt.id}>
-                      <button
-                        type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none"
-                        onClick={() => {
-                          onChange(opt.id);
-                          setSelected(opt);
-                          setOpen(false);
-                        }}
-                        aria-selected={value === opt.id}
-                        role="option"
-                      >
-                        <span className="block truncate">{opt.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </ScrollArea>
+          <div className="border rounded-md max-h-56 overflow-y-auto">
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground">Loading...</div>
+            ) : options.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">{emptyText}</div>
+            ) : (
+              <ul className="divide-y">
+                {options.map((opt) => (
+                  <li key={opt.id}>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-accent focus:bg-accent focus:outline-none text-sm"
+                      onClick={() => {
+                        onChange(opt.id);
+                        setSelected(opt);
+                        setOpen(false);
+                      }}
+                      aria-selected={value === opt.id}
+                      role="option"
+                    >
+                      <span className="block truncate">{opt.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </PopoverContent>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { Category, Product, ProductImage } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useParams } from 'next/navigation';
@@ -26,6 +26,7 @@ const formSchema = z.object({
   category_ids: z.array(z.string())
     .min(1, { message: "At least one category is required!" })
     .max(MAX_CATEGORIES, { message: `Maximum ${MAX_CATEGORIES} categories allowed!` }),
+  brands: z.array(z.string()).optional(),
   stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean().optional(),
   is_new: z.boolean().optional(),
@@ -54,6 +55,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [pendingFiles, setPendingFiles] = useState<Array<{ file: File; preview: string; id: string; displayOrder?: number }>>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [id, setId] = useState<string>('');
+  const [brandInput, setBrandInput] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -75,6 +77,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       description: "",
       price: 0,
       category_ids: [],
+      brands: [],
       stock_quantity: 0,
       is_featured: false,
       is_new: false,
@@ -328,11 +331,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         ).filter(Boolean) || [];
         
         // **FIX: Explicitly convert booleans to ensure checkbox state persists**  
+        // Ensure brands is always an array
+        const brandsArray = Array.isArray(json.data.brands) ? json.data.brands : [];
+
         form.reset({
           name: json.data.name || "",
           description: json.data.description || "",
           price: json.data.price || undefined,
           category_ids: categoryIds,
+          brands: brandsArray,
           stock_quantity: json.data.stock_quantity ?? undefined,
           is_featured: Boolean(json.data.is_featured),
           is_new: Boolean(json.data.is_new),
@@ -529,7 +536,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     />
                     {img.is_main && (
                       <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-lg">
-                        ⭐ Main
+                        Main
                       </div>
                     )}
                     {imageLoading && (
@@ -542,7 +549,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   <div className="space-y-2">
                     <div className="text-xs flex items-center justify-between text-gray-700">
                       <span className={img.is_main ? 'text-green-600 font-bold' : 'font-medium'}>
-                        {img.is_main ? '⭐ Main Image' : `#${displayIndex + 1} Gallery`}
+                        {img.is_main ? 'Main Image' : `#${displayIndex + 1} Gallery`}
                       </span>
                       <span className="text-gray-500 text-[10px]">
                         {new Date(img.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -829,6 +836,83 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           />
           <FormField
             control={form.control}
+            name="brands"
+            render={({ field }) => {
+              const handleAddBrand = () => {
+                const trimmedBrand = brandInput.trim();
+                if (!trimmedBrand) return;
+                
+                const currentBrands = field.value || [];
+                if (!currentBrands.includes(trimmedBrand)) {
+                  field.onChange([...currentBrands, trimmedBrand]);
+                  setBrandInput("");
+                }
+              };
+              
+              return (
+                <FormItem>
+                  <FormLabel>Brands (Optional)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input 
+                          value={brandInput}
+                          onChange={(e) => setBrandInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddBrand();
+                            }
+                          }}
+                          placeholder="Enter brand name"
+                        />
+                        <Button 
+                          type="button" 
+                          onClick={handleAddBrand}
+                          variant="outline"
+                          className="shrink-0"
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      
+                      {field.value && field.value.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {field.value.map((brand, index) => (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              {brand}
+                              <button
+                                type="button"
+                                className="ml-1 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  const newValue = field.value?.filter((_, i) => i !== index) || [];
+                                  field.onChange(newValue);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Enter brand names and click Add. Click the X to remove a brand.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+          <FormField
+            control={form.control}
             name="is_featured"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -881,11 +965,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   <FormDescription>
                     Set exact position on homepage (1-20). Leave empty for automatic random assignment.
                     <br />
-                    <span className="text-blue-600 font-medium">📐 Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
+                    <span className="text-blue-600 font-medium">Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
                     <br />
-                    <span className="text-green-600 font-medium">✨ Only assigned products are shown - empty positions are hidden</span>
+                    <span className="text-green-600 font-medium">Only assigned products are shown - empty positions are hidden</span>
                     <br />
-                    <span className="text-amber-600 font-medium">⚠️ Duplicate positions will be cleared automatically</span>
+                    <span className="text-amber-600 font-medium">Duplicate positions will be cleared automatically</span>
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

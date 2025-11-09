@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, useMemo } from 'react'
+import { useState, useEffect, Suspense, useMemo, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -49,9 +49,34 @@ function SearchResults() {
   const [showMostPopular, setShowMostPopular] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   
-  const productsPerPage = 16
   const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
+
+  // Stable handlers for Sheet auto-close
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setIsFilterSheetOpen(false) // Close sheet on Enter
+    }
+  }, [])
+
+  const handleCategoryChange = useCallback((value: string) => {
+    setSelectedCategory(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm(query) // Reset to original query
+    setSelectedCategory('all')
+    setSortBy('relevance')
+    setShowMostPopular(false)
+    setIsFilterSheetOpen(false) // Close sheet
+  }, [query])
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -141,10 +166,13 @@ function SearchResults() {
           }
           
           // Separate products into direct matches and category matches
-          const directMatches = results.filter((product: Product) => 
-            product.name.toLowerCase().includes(queryLower) || 
-            (product.description || '').toLowerCase().includes(queryLower)
-          )
+          const directMatches = results.filter((product: Product) => {
+            const nameMatch = product.name.toLowerCase().includes(queryLower)
+            const descMatch = (product.description || '').toLowerCase().includes(queryLower)
+            const brandMatch = product.brands && Array.isArray(product.brands) && 
+              product.brands.some(brand => brand.toLowerCase().includes(queryLower))
+            return nameMatch || descMatch || brandMatch
+          })
           
           const categoryMatches = results.filter((product: Product) => 
             !directMatches.some((dp: Product) => dp.id === product.id) && matchesCategory(product)
@@ -180,6 +208,10 @@ function SearchResults() {
         const nameMatch = product.name.toLowerCase().includes(searchLower)
         const descMatch = (product.description || '').toLowerCase().includes(searchLower)
         
+        // Check brands
+        const brandMatch = product.brands && Array.isArray(product.brands) && 
+          product.brands.some(brand => brand.toLowerCase().includes(searchLower))
+        
         // Check category names and descriptions
         let categoryMatch = false
         if (product.categories && Array.isArray(product.categories)) {
@@ -194,7 +226,7 @@ function SearchResults() {
           categoryMatch = catName.includes(searchLower) || catDesc.includes(searchLower)
         }
         
-        return nameMatch || descMatch || categoryMatch
+        return nameMatch || descMatch || brandMatch || categoryMatch
       })
     }
 
@@ -265,10 +297,11 @@ function SearchResults() {
     setCurrentPage(1)
   }, [products, searchTerm, selectedCategory, sortBy, showMostPopular, query])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
-  const startIndex = (currentPage - 1) * productsPerPage
-  const displayedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage)
+  // Pagination: Mobile (3 cols × 5 rows = 15), Tablet/Desktop (4 cols × 4 rows = 16)
+  const itemsPerPage = viewMode === 'grid' ? 16 : 6
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
   if (loading) {
     return (
@@ -315,7 +348,7 @@ function SearchResults() {
 
         {/* Mobile Filters + View Toggle */}
         <div className="flex items-center justify-between mb-8 lg:hidden">
-          <Sheet>
+          <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
@@ -342,9 +375,12 @@ function SearchResults() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
+                      type="search"
+                      inputMode="search"
                       placeholder="Search products..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
                       className="pl-10"
                     />
                   </div>
@@ -353,7 +389,7 @@ function SearchResults() {
                 {/* Category Filter */}
                 <div className="mb-6">
                   <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
@@ -371,7 +407,7 @@ function SearchResults() {
                 {/* Sort By */}
                 <div className="mb-6">
                   <label className="text-sm font-medium mb-2 block">Sort By</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
+                  <Select value={sortBy} onValueChange={handleSortChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -415,12 +451,7 @@ function SearchResults() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    setSearchTerm(query)
-                    setSelectedCategory('all')
-                    setSortBy('relevance')
-                    setShowMostPopular(false)
-                  }}
+                  onClick={handleClearFilters}
                 >
                   Clear All Filters
                 </Button>
@@ -463,9 +494,12 @@ function SearchResults() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
+                      type="search"
+                      inputMode="search"
                       placeholder="Search products..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
                       className="pl-10"
                     />
                   </div>
@@ -474,7 +508,7 @@ function SearchResults() {
                 {/* Category Filter */}
                 <div className="mb-6">
                   <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
@@ -492,7 +526,7 @@ function SearchResults() {
                 {/* Sort By */}
                 <div className="mb-6">
                   <label className="text-sm font-medium mb-2 block">Sort By</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
+                  <Select value={sortBy} onValueChange={handleSortChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -536,12 +570,7 @@ function SearchResults() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    setSearchTerm(query)
-                    setSelectedCategory('all')
-                    setSortBy('relevance')
-                    setShowMostPopular(false)
-                  }}
+                  onClick={handleClearFilters}
                 >
                   Clear All Filters
                 </Button>
@@ -576,7 +605,7 @@ function SearchResults() {
               <>
                 {/* Products Grid */}
                 <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' 
+                  ? 'grid grid-cols-3 md:grid-cols-4 gap-3' 
                   : 'space-y-4'
                 }>
                   {displayedProducts.map((product) => (
@@ -591,37 +620,28 @@ function SearchResults() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-12">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
-                    </Button>
-                    
-                    <div className="flex gap-1">
-                      {[...Array(totalPages)].map((_, i) => (
-                        <Button
-                          key={i + 1}
-                          variant={currentPage === i + 1 ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setCurrentPage(i + 1)}
-                        >
-                          {i + 1}
-                        </Button>
-                      ))}
+                  <div className="flex flex-col items-center gap-3 mt-12">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
                     </div>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
                   </div>
                 )}
               </>

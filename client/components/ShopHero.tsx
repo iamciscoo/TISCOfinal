@@ -123,7 +123,7 @@ export default function ShopHero({
               willChange: "transform, opacity",
             }}
           >
-            <p className="text-white/90 text-sm sm:text-base font-medium tracking-wide">
+            <p className="text-white/70 text-sm sm:text-base font-medium tracking-wide">
               ✨ Discover Amazing Products & Great Deals
             </p>
             

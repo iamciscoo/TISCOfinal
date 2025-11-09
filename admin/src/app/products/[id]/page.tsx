@@ -47,6 +47,7 @@ interface Product {
   is_deal: boolean;
   deal_price?: number;
   original_price?: number;
+  brands?: string[];
   categories?: ProductCategory[];
   product_images?: ProductImage[];
 }
@@ -284,6 +285,15 @@ export default function ViewProductPage() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Tags</label>
                 <p className="text-sm mt-1">{product.tags || 'No tags'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-500">Brands</label>
+                <p className="text-sm mt-1">
+                  {product.brands && Array.isArray(product.brands) && product.brands.length > 0 
+                    ? product.brands.join(', ') 
+                    : '-'}
+                </p>
               </div>
             </CardContent>
           </Card>

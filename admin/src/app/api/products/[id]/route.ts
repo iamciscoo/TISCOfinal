@@ -76,6 +76,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       "deal_price",
       "image_url",
       "featured_order",
+      "brands",
     ] as const;
 
     const updates: Record<string, unknown> = {};

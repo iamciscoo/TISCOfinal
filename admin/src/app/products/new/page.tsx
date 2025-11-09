@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { Category } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ const formSchema = z.object({
   description: z.string().min(1, { message: "Description is required!" }),
   price: z.number().min(0.01, { message: "Price must be greater than 0" }),
   category_ids: z.array(z.string()).min(1, { message: "At least one category is required!" }).max(5, { message: "Maximum 5 categories allowed!" }),
+  brands: z.array(z.string()).optional(),
   stock_quantity: z.number().min(0, { message: "Stock quantity must be 0 or greater" }),
   is_featured: z.boolean(),
   is_new: z.boolean(),
@@ -45,7 +46,8 @@ const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<Array<{ file: File; url: string; id: string }>>([]);
-  const { toast } = useToast();
+  const [brandInput, setBrandInput] = useState("");
+  const { toast} = useToast();
   const router = useRouter();
 
   const form = useForm<FormData>({
@@ -56,6 +58,7 @@ const AddProductPage = () => {
       description: "",
       price: undefined as any,
       category_ids: [],
+      brands: [],
       stock_quantity: undefined as any,
       is_featured: false,
       is_new: false,
@@ -84,6 +87,7 @@ const AddProductPage = () => {
     };
     fetchCategories();
   }, [toast]);
+
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
@@ -354,6 +358,83 @@ const AddProductPage = () => {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="brands"
+            render={({ field }) => {
+              const handleAddBrand = () => {
+                const trimmedBrand = brandInput.trim();
+                if (!trimmedBrand) return;
+                
+                const currentBrands = field.value || [];
+                if (!currentBrands.includes(trimmedBrand)) {
+                  field.onChange([...currentBrands, trimmedBrand]);
+                  setBrandInput("");
+                }
+              };
+              
+              return (
+                <FormItem>
+                  <FormLabel>Brands (Optional)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input 
+                          value={brandInput}
+                          onChange={(e) => setBrandInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddBrand();
+                            }
+                          }}
+                          placeholder="Enter brand name"
+                        />
+                        <Button 
+                          type="button" 
+                          onClick={handleAddBrand}
+                          variant="outline"
+                          className="shrink-0"
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      
+                      {field.value && field.value.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {field.value.map((brand, index) => (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              {brand}
+                              <button
+                                type="button"
+                                className="ml-1 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  const newValue = field.value?.filter((_, i) => i !== index) || [];
+                                  field.onChange(newValue);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Enter brand names and click Add. Click the X to remove a brand.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
           {/* Image Upload Section */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
@@ -446,7 +527,7 @@ const AddProductPage = () => {
                                   />
                                   {index === 0 && (
                                     <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-lg">
-                                      ⭐ Main
+                                      Main
                                     </div>
                                   )}
                                 </div>
@@ -565,11 +646,11 @@ const AddProductPage = () => {
                   <FormDescription>
                     Set exact position on homepage (1-20). Leave empty for automatic random assignment.
                     <br />
-                    <span className="text-blue-600 font-medium">📐 Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
+                    <span className="text-blue-600 font-medium">Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
                     <br />
-                    <span className="text-green-600 font-medium">✨ Only assigned products are shown - empty positions are hidden</span>
+                    <span className="text-green-600 font-medium">Only assigned products are shown - empty positions are hidden</span>
                     <br />
-                    <span className="text-amber-600 font-medium">⚠️ Duplicate positions will be cleared automatically</span>
+                    <span className="text-amber-600 font-medium">Duplicate positions will be cleared automatically</span>
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

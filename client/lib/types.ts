@@ -27,6 +27,7 @@ export interface Product {
   original_price?: number
   deal_price?: number
   tags?: string[]
+  brands?: string[]
   slug?: string
   created_at?: string
   updated_at?: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -47,6 +47,7 @@ interface Deal {
   image_url: string
   category: string
   category_id: string
+  brands?: string[]
   rating?: number | null
   reviews_count?: number | null
   view_count?: number
@@ -63,6 +64,8 @@ function DealsContent() {
   const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('discount')
   const [showMostPopular, setShowMostPopular] = useState(true)
@@ -70,6 +73,7 @@ function DealsContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   
   const { addItem } = useCartStore()
   
@@ -77,6 +81,23 @@ function DealsContent() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [currentPage])
+  
+  // Debounce search term to prevent input focus loss
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchTerm])
   
   // Fetch deals and categories from API
   useEffect(() => {
@@ -95,6 +116,11 @@ function DealsContent() {
         console.log('[Deals] Fetched categories:', categoriesData?.length || 0)
         if (dealsData.deals?.length > 0) {
           console.log('[Deals] Sample deal:', dealsData.deals[0])
+          const withBrands = dealsData.deals.filter((d: Deal) => d.brands && d.brands.length > 0)
+          console.log('[Deals] Deals with brands:', withBrands.length)
+          if (withBrands.length > 0) {
+            console.log('[Deals] Sample deal with brands:', withBrands[0].name, 'brands:', withBrands[0].brands)
+          }
         }
         setDeals(dealsData.deals || [])
         setFilteredDeals(dealsData.deals || [])
@@ -136,16 +162,34 @@ function DealsContent() {
   
   // Removed unused responsive columns tracking to reduce noise
 
-  // Filter and sort deals
+  // Filter and sort deals (use debounced search term)
   useEffect(() => {
     let filtered = [...deals]
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(deal =>
-        deal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deal.description.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    // Enhanced search filter (name, description, brands, categories)
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase()
+      
+      console.log('[Deals] Searching for:', searchLower)
+      filtered = filtered.filter(deal => {
+        // Check deal name and description
+        const nameMatch = deal.name.toLowerCase().includes(searchLower)
+        const descMatch = deal.description.toLowerCase().includes(searchLower)
+        
+        // Check brands
+        const brandMatch = deal.brands && Array.isArray(deal.brands) && deal.brands.length > 0 &&
+          deal.brands.some(brand => brand.toLowerCase().includes(searchLower))
+        
+        if (brandMatch) {
+          console.log('[Deals] Brand match:', deal.name, 'brands:', deal.brands)
+        }
+        
+        // Check category name
+        const categoryMatch = deal.category && 
+          deal.category.toLowerCase().includes(searchLower)
+        
+        return nameMatch || descMatch || brandMatch || categoryMatch
+      })
     }
 
     // Category filter - support both category name and ID
@@ -209,11 +253,13 @@ function DealsContent() {
       }
     })
 
+    console.log('[Deals] Filtered results:', filtered.length)
     setFilteredDeals(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, selectedCategory, sortBy, showMostPopular, deals, categories])
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [deals, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular, categories])
 
-  // Pagination (align with shop page: 16 items for grid with 4 columns, 6 for list)
+  // Pagination: Mobile (3 cols × 5 rows = 15), Tablet/Desktop (4 cols × 4 rows = 16)
+  // Using 16 items as base since we can't detect screen size in state
   const itemsPerPage = viewMode === 'grid' ? 16 : 6
   const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -228,7 +274,37 @@ function DealsContent() {
     })
   }
 
-  const FiltersPanel = () => (
+  // Stable handlers to prevent input focus loss
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }, [])
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setIsFilterSheetOpen(false) // Close sheet on Enter
+    }
+  }, [])
+
+  const handleCategoryChange = useCallback((value: string) => {
+    setSelectedCategory(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm('')
+    setSelectedCategory('all')
+    setSortBy('discount')
+    setShowMostPopular(false)
+    setIsFilterSheetOpen(false)
+  }, [])
+
+  // Memoize FiltersPanel JSX to prevent re-creation on every render (which causes input focus loss)
+  const FiltersPanel = useMemo(() => (
     <>
       {/* Search */}
       <div className="mb-6">
@@ -236,9 +312,12 @@ function DealsContent() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
+            type="search"
+            inputMode="search"
             placeholder="Search deals..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
             className="pl-10"
           />
         </div>
@@ -247,7 +326,7 @@ function DealsContent() {
       {/* Category Filter */}
       <div className="mb-6">
         <label className="text-sm font-medium mb-2 block">Category</label>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
           <SelectTrigger>
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
@@ -265,7 +344,7 @@ function DealsContent() {
       {/* Sort By */}
       <div className="mb-6">
         <label className="text-sm font-medium mb-2 block">Sort By</label>
-        <Select value={sortBy} onValueChange={setSortBy}>
+        <Select value={sortBy} onValueChange={handleSortChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -309,17 +388,12 @@ function DealsContent() {
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => {
-          setSearchTerm('')
-          setSelectedCategory('all')
-          setSortBy('discount')
-          setShowMostPopular(false)
-        }}
+        onClick={handleClearFilters}
       >
         Clear All Filters
       </Button>
     </>
-  )
+  ), [searchTerm, selectedCategory, sortBy, showMostPopular, categories, handleSearchChange, handleSearchKeyDown, handleCategoryChange, handleSortChange, handleClearFilters])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -364,7 +438,7 @@ function DealsContent() {
             {/* Mobile Filters + View Toggle */}
             <div className="flex items-center gap-2 mt-4 lg:mt-0">
               {/* Mobile Filters Sheet Trigger */}
-              <Sheet>
+              <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
                 <SheetTrigger asChild>
                   <Button
                     variant="outline"
@@ -382,7 +456,7 @@ function DealsContent() {
                     <SheetTitle>Filters</SheetTitle>
                   </SheetHeader>
                   <div className="px-4 pb-4 overflow-y-auto">
-                    <FiltersPanel />
+                    {FiltersPanel}
                   </div>
                 </SheetContent>
               </Sheet>
@@ -423,7 +497,7 @@ function DealsContent() {
                     <Filter className="h-5 w-5" />
                     Filters
                   </h3>
-                  <FiltersPanel />
+                  {FiltersPanel}
                 </CardContent>
               </Card>
               {/* Video Card - Below filters on desktop */}
@@ -452,7 +526,7 @@ function DealsContent() {
                 ) : (
                   <>
                     <div className={viewMode === 'grid' 
-                      ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' 
+                      ? 'grid grid-cols-3 md:grid-cols-4 gap-3' 
                       : 'space-y-4'
                     }>
                       {displayedDeals.map((deal) => (

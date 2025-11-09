@@ -57,6 +57,7 @@ function ProductsContent() {
   const [isManualSearch, setIsManualSearch] = useState(false) // Track manual search input
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -71,6 +72,14 @@ function ProductsContent() {
           getProducts(50), // Reduced initial load for better performance
           getCategories()
         ])
+        console.log('[Products] Loaded products:', productsData?.length || 0)
+        if (productsData && productsData.length > 0) {
+          const withBrands = productsData.filter(p => p.brands && p.brands.length > 0)
+          console.log('[Products] Products with brands:', withBrands.length)
+          if (withBrands.length > 0) {
+            console.log('[Products] Sample product with brands:', withBrands[0].name, 'brands:', withBrands[0].brands)
+          }
+        }
         setProducts(productsData || [])
         setCategories(categoriesData || [])
         setFilteredProducts(productsData || [])
@@ -207,13 +216,37 @@ function ProductsContent() {
   useEffect(() => {
     let filtered = [...products]
 
-    // Search filter with debounced term
+    // Enhanced search filter with debounced term (name, description, brands, categories)
     if (debouncedSearchTerm) {
       const searchLower = debouncedSearchTerm.toLowerCase()
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchLower) ||
-        (product.description || '').toLowerCase().includes(searchLower)
-      )
+      console.log('[Products] Searching for:', searchLower)
+      filtered = filtered.filter(product => {
+        // Check product name and description
+        const nameMatch = product.name.toLowerCase().includes(searchLower)
+        const descMatch = (product.description || '').toLowerCase().includes(searchLower)
+        
+        // Check brands
+        const brandMatch = product.brands && Array.isArray(product.brands) && product.brands.length > 0 &&
+          product.brands.some(brand => brand.toLowerCase().includes(searchLower))
+        
+        if (brandMatch) {
+          console.log('[Products] Brand match:', product.name, 'brands:', product.brands)
+        }
+        
+        // Check category names
+        let categoryMatch = false
+        if (product.categories && Array.isArray(product.categories)) {
+          categoryMatch = product.categories.some(cat => {
+            const catName = cat.category?.name?.toLowerCase() || ''
+            return catName.includes(searchLower)
+          })
+        } else if (product.categories && !Array.isArray(product.categories)) {
+          const catName = product.categories.name?.toLowerCase() || ''
+          categoryMatch = catName.includes(searchLower)
+        }
+        
+        return nameMatch || descMatch || brandMatch || categoryMatch
+      })
     }
 
     // Category filter - now supports multiple categories per product
@@ -276,7 +309,8 @@ function ProductsContent() {
     setCurrentPage(1)
   }, [products, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular])
 
-  // Pagination (4 rows per page in grid view with 4 items per row)
+  // Pagination: Mobile (3 cols × 5 rows = 15), Tablet/Desktop (4 cols × 4 rows = 16)
+  // Using 16 items as base since we can't detect screen size in state
   const itemsPerPage = viewMode === 'grid' ? 16 : 6
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -290,12 +324,29 @@ function ProductsContent() {
     setSearchTerm(e.target.value)
   }, [])
 
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setIsFilterSheetOpen(false) // Close sheet on Enter
+    }
+  }, [])
+
+  const handleCategoryChange = useCallback((value: string) => {
+    setSelectedCategory(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value)
+    setIsFilterSheetOpen(false) // Close sheet after selection
+  }, [])
+
   const handleClearFilters = useCallback(() => {
     setSearchTerm('')
     setSelectedCategory('all')
     setSortBy('name')
     setShowMostPopular(false)
     setIsManualSearch(false)
+    setIsFilterSheetOpen(false)
   }, [])
 
   const FiltersPanel = useMemo(() => (
@@ -306,9 +357,12 @@ function ProductsContent() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
+            type="search"
+            inputMode="search"
             placeholder="Search products..."
             value={searchTerm}
             onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
             className="pl-10"
           />
         </div>
@@ -317,7 +371,7 @@ function ProductsContent() {
       {/* Category Filter */}
       <div className="mb-6">
         <label className="text-sm font-medium mb-2 block">Category</label>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
           <SelectTrigger>
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
@@ -335,7 +389,7 @@ function ProductsContent() {
       {/* Sort By */}
       <div className="mb-6">
         <label className="text-sm font-medium mb-2 block">Sort By</label>
-        <Select value={sortBy} onValueChange={setSortBy}>
+        <Select value={sortBy} onValueChange={handleSortChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -383,7 +437,7 @@ function ProductsContent() {
         Clear All Filters
       </Button>
     </>
-  ), [searchTerm, selectedCategory, sortBy, showMostPopular, categories, handleSearchChange, handleClearFilters])
+  ), [searchTerm, selectedCategory, sortBy, showMostPopular, categories, handleSearchChange, handleSearchKeyDown, handleCategoryChange, handleSortChange, handleClearFilters])
 
   // Optimized loading state with skeleton
   if (loading) {
@@ -414,7 +468,7 @@ function ProductsContent() {
                 <div className="h-80 bg-gray-200 rounded-lg"></div>
               </div>
               <div className="lg:col-span-3">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                   {Array.from({ length: 16 }).map((_, i) => (
                     <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
                   ))}
@@ -454,7 +508,7 @@ function ProductsContent() {
           {/* Mobile Filters + View Toggle */}
           <div className="flex items-center gap-2 mt-4 lg:mt-0">
             {/* Mobile Filters Sheet Trigger */}
-            <Sheet>
+            <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
@@ -550,7 +604,7 @@ function ProductsContent() {
                   <div
                     className={
                       viewMode === 'grid'
-                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'
+                        ? 'grid grid-cols-3 md:grid-cols-4 gap-3'
                         : 'space-y-4'
                     }
                   >

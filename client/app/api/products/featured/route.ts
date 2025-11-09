@@ -38,6 +38,7 @@ export const GET = withMiddleware(
           original_price,
           rating,
           reviews_count,
+          brands,
           slug,
           created_at,
           featured_order,
