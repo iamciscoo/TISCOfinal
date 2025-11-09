@@ -1206,7 +1206,7 @@ export async function notifyBookingCreated(bookingData: {
     recipient_email: bookingData.contact_email,
     recipient_name: bookingData.customer_name,
     data: {
-      order_id: bookingData.booking_id,
+      booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id to match template
       customer_name: bookingData.customer_name,
       customer_email: bookingData.contact_email,
       service_name: bookingData.service_name,
@@ -1292,7 +1292,7 @@ export async function notifyAdminBookingCreated(bookingData: {
           event: 'booking_created',
           recipient_email: email.trim(),
           data: {
-            order_id: bookingData.booking_id,
+            booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
             customer_name: bookingData.customer_name || 'Unknown User',
             customer_email: bookingData.contact_email,
             service_name: bookingData.service_name,
@@ -1320,7 +1320,7 @@ export async function notifyAdminBookingCreated(bookingData: {
           event: 'booking_created',
           recipient_email: recipient.email,
           data: {
-            order_id: bookingData.booking_id,
+            booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
             customer_name: bookingData.customer_name || 'Unknown User',
             customer_email: bookingData.contact_email,
             service_name: bookingData.service_name,
@@ -1351,7 +1351,7 @@ export async function notifyAdminBookingCreated(bookingData: {
         event: 'booking_created',
         recipient_email: email.trim(),
         data: {
-          order_id: bookingData.booking_id,
+          booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
           customer_name: bookingData.customer_name || 'Unknown User',
           customer_email: bookingData.contact_email,
           service_name: bookingData.service_name,
