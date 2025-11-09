@@ -27,10 +27,30 @@ export const supabaseAuth = {
     })
   },
 
-  // Sign out (use 'local' scope to avoid 403 errors with global scope)
+  // Sign out with graceful error handling for stale sessions
   async signOut() {
     const supabase = createClient()
-    return await supabase.auth.signOut({ scope: 'local' })
+    
+    try {
+      // Attempt to sign out via API
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      // Ignore 403 or session_not_found errors - session is already invalid
+      console.log('Sign out API call failed (session may already be invalid):', error)
+    }
+    
+    // Always clear local storage regardless of API result
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('sb-hgxvlbpvxbliefqlxzak-auth-token')
+        sessionStorage.clear()
+      } catch (storageError) {
+        console.error('Failed to clear storage:', storageError)
+      }
+    }
+    
+    // Return success - user is effectively signed out
+    return { error: null }
   },
 
   // Get current session

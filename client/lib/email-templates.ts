@@ -690,7 +690,7 @@ export const emailTemplates = {
                     <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
                       <span style="color: #ffffff; font-size: 24px;">🔧</span>
                     </div>
-                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Expert Services</h4>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Tech Services</h4>
                     <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.4; font-size: 13px;">Professional setup, installation, and tech support</p>
                   </div>
                 </td>
@@ -724,7 +724,7 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
         <tr>
           <td style="padding: 24px; text-align: center;">
-            <h3 class="heading-3" style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; font-weight: 600;">🎉 Explore Our Collections</h3>
+            <h3 class="heading-3" style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; font-weight: 600;"> Explore Our Collections</h3>
             <p class="text-body" style="margin: 0 0 20px 0; color: #92400e; line-height: 1.6; font-size: 14px;">From gaming gear and office electronics to unique collectibles and hard-to-find items—we've got something for everyone!</p>
             
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
