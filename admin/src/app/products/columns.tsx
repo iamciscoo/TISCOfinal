@@ -127,7 +127,17 @@ export const columns: ColumnDef<Product>[] = [
   },
   {
     accessorKey: "stock_quantity",
-    header: "Stock",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Stock
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
     cell: ({ row }) => {
       const product = row.original;
       const stock = product.stock_quantity || 0;

@@ -1289,26 +1289,19 @@ export async function notifyAdminBookingCreated(bookingData: {
       
       for (const email of adminEmails) {
         await notificationService.sendNotification({
-          event: 'booking_created',
+          event: 'admin_order_created', // Use admin_notification template
           recipient_email: email.trim(),
+          recipient_name: 'Admin',
           data: {
-            booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
+            notification_type: 'booking_created',
+            title: 'New Service Booking',
+            message: `A new service booking has been received from ${bookingData.customer_name || 'a customer'} (${bookingData.contact_email}).<br><br><strong>Service:</strong> ${bookingData.service_name}<br><strong>Preferred Date:</strong> ${bookingData.preferred_date}<br><strong>Preferred Time:</strong> ${bookingData.preferred_time}<br><br><strong>Description:</strong><br>${bookingData.description || 'No description provided'}`,
+            order_id: bookingData.booking_id,
             customer_name: bookingData.customer_name || 'Unknown User',
             customer_email: bookingData.contact_email,
-            service_name: bookingData.service_name,
-            preferred_date: bookingData.preferred_date,
-            preferred_time: bookingData.preferred_time,
-            description: bookingData.description,
-            order_date: new Date().toLocaleDateString(),
-            total_amount: 'Service Booking',
-            currency: '',
-            items: [{
-              name: bookingData.service_name,
-              quantity: 1,
-              price: 'TBD'
-            }],
-            shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
-            payment_method: 'Service Booking'
+            payment_method: 'Service Booking',
+            payment_status: 'pending',
+            action_url: `https://admin.tiscomarket.store/service-bookings/${bookingData.booking_id}`
           },
           priority: 'high',
         })
@@ -1317,26 +1310,19 @@ export async function notifyAdminBookingCreated(bookingData: {
       // Send to database recipients
       for (const recipient of recipients) {
         await notificationService.sendNotification({
-          event: 'booking_created',
+          event: 'admin_order_created', // Use admin_notification template
           recipient_email: recipient.email,
+          recipient_name: recipient.name || 'Admin',
           data: {
-            booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
+            notification_type: 'booking_created',
+            title: 'New Service Booking',
+            message: `A new service booking has been received from ${bookingData.customer_name || 'a customer'} (${bookingData.contact_email}).<br><br><strong>Service:</strong> ${bookingData.service_name}<br><strong>Preferred Date:</strong> ${bookingData.preferred_date}<br><strong>Preferred Time:</strong> ${bookingData.preferred_time}<br><br><strong>Description:</strong><br>${bookingData.description || 'No description provided'}`,
+            order_id: bookingData.booking_id,
             customer_name: bookingData.customer_name || 'Unknown User',
             customer_email: bookingData.contact_email,
-            service_name: bookingData.service_name,
-            preferred_date: bookingData.preferred_date,
-            preferred_time: bookingData.preferred_time,
-            description: bookingData.description,
-            order_date: new Date().toLocaleDateString(),
-            total_amount: 'Service Booking',
-            currency: '',
-            items: [{
-              name: bookingData.service_name,
-              quantity: 1,
-              price: 'TBD'
-            }],
-            shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
-            payment_method: 'Service Booking'
+            payment_method: 'Service Booking',
+            payment_status: 'pending',
+            action_url: `https://admin.tiscomarket.store/service-bookings/${bookingData.booking_id}`
           },
           priority: 'high',
         })
@@ -1348,26 +1334,19 @@ export async function notifyAdminBookingCreated(bookingData: {
     const adminEmails = process.env.ADMIN_EMAIL?.split(',') || ['info@tiscomarket.store']
     for (const email of adminEmails) {
       await notificationService.sendNotification({
-        event: 'booking_created',
+        event: 'admin_order_created', // Use admin_notification template
         recipient_email: email.trim(),
+        recipient_name: 'Admin',
         data: {
-          booking_id: bookingData.booking_id, // FIXED: Was order_id, now booking_id
+          notification_type: 'booking_created',
+          title: 'New Service Booking',
+          message: `A new service booking has been received from ${bookingData.customer_name || 'a customer'} (${bookingData.contact_email}).<br><br><strong>Service:</strong> ${bookingData.service_name}<br><strong>Preferred Date:</strong> ${bookingData.preferred_date}<br><strong>Preferred Time:</strong> ${bookingData.preferred_time}<br><br><strong>Description:</strong><br>${bookingData.description || 'No description provided'}`,
+          order_id: bookingData.booking_id,
           customer_name: bookingData.customer_name || 'Unknown User',
           customer_email: bookingData.contact_email,
-          service_name: bookingData.service_name,
-          preferred_date: bookingData.preferred_date,
-          preferred_time: bookingData.preferred_time,
-          description: bookingData.description,
-          order_date: new Date().toLocaleDateString(),
-          total_amount: 'Service Booking',
-          currency: '',
-          items: [{
-            name: bookingData.service_name,
-            quantity: 1,
-            price: 'TBD'
-          }],
-          shipping_address: `Service Date: ${bookingData.preferred_date} at ${bookingData.preferred_time}`,
-          payment_method: 'Service Booking'
+          payment_method: 'Service Booking',
+          payment_status: 'pending',
+          action_url: `https://admin.tiscomarket.store/service-bookings/${bookingData.booking_id}`
         },
         priority: 'high',
       })
