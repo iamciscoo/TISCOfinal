@@ -305,7 +305,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         }
 
         // Important: Sign out FIRST so cart sync stops before we clear local cart
-        const result = await supabase.auth.signOut()
+        // Use 'local' scope to avoid 403 errors (global scope requires special permissions)
+        const result = await supabase.auth.signOut({ scope: 'local' })
 
         // Now clear local persisted cart to prevent cross-account carryover
         try {
@@ -318,8 +319,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         return { error: result.error }
       }
 
-      // If no user, just sign out defensively
-      const result = await supabase.auth.signOut()
+      // If no user, just sign out defensively with local scope
+      const result = await supabase.auth.signOut({ scope: 'local' })
       return { error: result.error }
     } finally {
       setLoading(false)

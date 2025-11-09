@@ -27,10 +27,10 @@ export const supabaseAuth = {
     })
   },
 
-  // Sign out
+  // Sign out (use 'local' scope to avoid 403 errors with global scope)
   async signOut() {
     const supabase = createClient()
-    return await supabase.auth.signOut()
+    return await supabase.auth.signOut({ scope: 'local' })
   },
 
   // Get current session

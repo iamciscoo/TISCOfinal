@@ -70,6 +70,27 @@ export default function AuthCallback() {
               // For OAuth users, especially new ones, show profile completion dialog
               // But NOT as a password reset (OAuth users don't need passwords)
               if (isNewUser) {
+                // Send welcome email to new OAuth user
+                try {
+                  const userName = data.user?.user_metadata?.full_name || 
+                                   data.user?.user_metadata?.name || 
+                                   data.user?.email?.split('@')[0] || 
+                                   'New Customer'
+                  
+                  await fetch('/api/notifications/welcome', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: data.user?.email,
+                      name: userName
+                    })
+                  })
+                  console.log('✅ Welcome email sent to new OAuth user')
+                } catch (error) {
+                  console.error('Failed to send welcome email to OAuth user:', error)
+                  // Don't fail the OAuth flow if email fails
+                }
+                
                 setIsNewUser(true)
                 setTimeout(() => {
                   setShowProfileDialog(true)

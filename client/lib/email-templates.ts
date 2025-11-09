@@ -989,90 +989,93 @@ export const emailTemplates = {
   manual_notification: (data: ManualNotificationData) => {
     const priority = data.priority || 'medium'
     
-    // Priority configurations
+    // Priority configurations matching the template design system
     const priorityConfig = {
       low: { 
-        color: '#6b7280', 
-        bgColor: '#f9fafb', 
-        borderColor: '#e5e7eb',
+        color: '#0c4a6e',
+        iconBg: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+        borderColor: '#bfdbfe',
         icon: 'ℹ️',
-        label: 'Information'
+        label: 'Information',
+        badgeColor: '#0284c7'
       },
       medium: { 
-        color: '#2563eb', 
-        bgColor: '#eff6ff', 
-        borderColor: '#bfdbfe',
+        color: '#1e40af',
+        iconBg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        borderColor: '#93c5fd',
         icon: '📋',
-        label: 'Notice'
+        label: 'Notice',
+        badgeColor: '#2563eb'
       },
       high: { 
-        color: '#dc2626', 
-        bgColor: '#fef2f2', 
-        borderColor: '#fecaca',
+        color: '#c2410c',
+        iconBg: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+        borderColor: '#fed7aa',
         icon: '⚠️',
-        label: 'Important'
+        label: 'Important',
+        badgeColor: '#ea580c'
       },
       urgent: { 
-        color: '#991b1b', 
-        bgColor: '#fee2e2', 
-        borderColor: '#fca5a5',
+        color: '#991b1b',
+        iconBg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+        borderColor: '#fecaca',
         icon: '🚨',
-        label: 'Urgent'
+        label: 'Urgent Action Required',
+        badgeColor: '#dc2626'
       }
     }
     
     const config = priorityConfig[priority]
-    const previewText = data.title || 'Message from TISCOマーケット'
+    const previewText = data.title || 'Important message from TISCOマーケット'
     
     const content = `
-      <!-- Priority Banner -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="margin-bottom: 24px;">
+      <!-- Priority Icon & Header -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
-          <td style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 8px; padding: 16px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-              <tr>
-                <td style="vertical-align: middle; width: 40px;">
-                  <div style="width: 32px; height: 32px; background: ${config.color}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 16px; line-height: 1;">${config.icon}</span>
-                  </div>
-                </td>
-                <td style="vertical-align: middle; padding-left: 12px;">
-                  <p class="dark-text" style="margin: 0; color: ${config.color}; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${config.label} • ${priority.toUpperCase()} PRIORITY</p>
-                </td>
-              </tr>
-            </table>
+          <td align="center">
+            <!-- Priority Icon with gradient background matching other templates -->
+            <div style="width: 72px; height: 72px; background: ${config.iconBg}; border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">${config.icon}</span>
+            </div>
+            
+            <!-- Priority Badge -->
+            <div style="display: inline-block; background: ${config.iconBg}; border-radius: 24px; padding: 8px 20px; margin-bottom: 16px;">
+              <p style="margin: 0; color: #ffffff; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${config.label}</p>
+            </div>
+            
+            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; text-align: center; font-size: 28px; line-height: 1.3; font-weight: 700;">
+              ${data.title}
+            </h1>
+            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Please review the message below from our team</p>
           </td>
         </tr>
       </table>
 
-      <!-- Main Content -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
+      <!-- Main Message Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td>
-            <h1 class="heading-1 dark-text" style="margin: 0 0 20px 0; color: #111827; font-size: 20px; line-height: 1.3; font-weight: 700;">
-              ${data.title}
-            </h1>
-            
-            <div class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-              <div class="dark-text" style="color: #374151; font-size: 16px; line-height: 1.7;">
-                ${data.message.split('\n').map(paragraph => 
-                  paragraph.trim() ? `<p class="dark-text" style="margin: 0 0 16px 0;">${paragraph}</p>` : '<br>'
-                ).join('')}
-              </div>
+          <td style="padding: 28px;">
+            <h2 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: ${config.color}; font-weight: 600;">Message Details</h2>
+            <div class="dark-text" style="color: #374151; font-size: 16px; line-height: 1.7;">
+              ${data.message.split('\n').map(paragraph => 
+                paragraph.trim() ? `<p class="dark-text" style="margin: 0 0 16px 0; color: #374151;">${paragraph}</p>` : '<div style="height: 16px;"></div>'
+              ).join('')}
             </div>
           </td>
         </tr>
       </table>
 
-      <!-- Action Button -->
+      <!-- Action Button (if provided) -->
       ${data.action_url ? `
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
         <tr>
           <td align="center">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0">
               <tr>
-                <td>
-                  <a href="${data.action_url}" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">Take Action</a>
+                <td style="border-radius: 8px; background: ${config.iconBg};">
+                  <a href="${data.action_url}" class="btn-primary" style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border-radius: 8px;">
+                    Take Action →
+                  </a>
                 </td>
               </tr>
             </table>
@@ -1080,39 +1083,50 @@ export const emailTemplates = {
         </tr>
       </table>` : ''}
 
-      <!-- Professional Note -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
+      <!-- Important Notice Box -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="padding: 20px;">
-            <p class="dark-text" style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
-            <p class="dark-text-secondary" style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
+          <td style="padding: 24px; text-align: center;">
+            <h3 class="heading-3" style="margin: 0 0 12px 0; color: #92400e; font-size: 16px; font-weight: 600;">📌 Important Information</h3>
+            <p class="text-body" style="margin: 0; color: #92400e; line-height: 1.6; font-size: 14px;">
+              This notification was sent directly by our team. If you have questions about this message, please contact us using the support options below.
+            </p>
           </td>
         </tr>
       </table>
 
-      <!-- Contact Information -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+      <!-- Contact Support Section -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
         <tr>
-          <td style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
-            <h3 class="dark-text" style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
+          <td style="padding: 28px;">
+            <h3 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #0c4a6e; text-align: center; font-weight: 600;">Need Help?</h3>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
-                <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
-                    <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">+255 748 624 684</a>
+                <td style="padding: 12px 8px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">💬</span>
+                    </div>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">WhatsApp</h4>
+                    <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 13px;">+255 748 624 684</a>
                   </div>
                 </td>
-                <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
-                    <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">info@tiscomarket.store</a>
+                <td style="padding: 12px 8px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">✉️</span>
+                    </div>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Email</h4>
+                    <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 13px;">info@tiscomarket.store</a>
                   </div>
                 </td>
-                <td style="width: 33.33%; text-align: center; padding: 12px;">
-                  <div class="card-bg" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                    <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
-                    <a href="https://tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">tiscomarket.store</a>
+                <td style="padding: 12px 8px; vertical-align: top; width: 33.33%;">
+                  <div style="text-align: center;">
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">🌐</span>
+                    </div>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Visit Store</h4>
+                    <a href="${appBaseUrl}" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 13px;">tiscomarket.store</a>
                   </div>
                 </td>
               </tr>
@@ -1122,17 +1136,19 @@ export const emailTemplates = {
       </table>
 
       <!-- Timestamp -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 24px 0;">
         <tr>
-          <td class="card-bg-light" style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
-            <p class="dark-text-muted" style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</p>
+          <td style="padding: 16px; text-align: center;">
+            <p class="dark-text-muted" style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
+              Sent on ${new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
           </td>
         </tr>
       </table>
