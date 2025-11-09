@@ -653,65 +653,65 @@ export const emailTemplates = {
   },
 
   welcome_email: (data: BaseEmailData) => {
-    const previewText = `Welcome aboard! Let's get you started with quality tech`
+    const previewText = `Welcome to TISCO! Your marketplace for quality products across Tanzania`
     const content = `
-      <!-- Welcome Icon -->
+      <!-- Welcome Icon with gradient matching other templates -->
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
           <td align="center">
-            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
-              <span style="color: #ffffff; font-size: 36px; line-height: 1;">🚀</span>
+            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #059669 0%, #047857 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);">
+              <span style="color: #ffffff; font-size: 36px; line-height: 1;">👋</span>
             </div>
-            <h1 class="heading-1" style="margin: 0 0 16px 0; color: #111827; text-align: center;">Welcome to TISCO!</h1>
-            <p class="text-body" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
-            <p class="text-body" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">We're excited to have you join our community. Quality tech, delivered with care to Tanzania.</p>
+            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; text-align: center; font-size: 28px; font-weight: 700;">Welcome to TISCOマーケット!</h1>
+            <p class="text-body dark-text" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name || 'there'},</p>
+            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">We're thrilled to have you join our community! Discover quality products from trusted brands, rare finds, and professional services—all delivered across Tanzania.</p>
           </td>
         </tr>
       </table>
 
-      <!-- What We Offer -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
+      <!-- What We Offer Card -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
         <tr>
           <td style="padding: 28px;">
-            <h2 class="heading-3" style="margin: 0 0 20px 0; color: #0c4a6e; text-align: center;">What Makes Us Different</h2>
+            <h2 class="heading-3 dark-text" style="margin: 0 0 20px 0; color: #0c4a6e; text-align: center; font-weight: 600;">What Makes Us Different</h2>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
-                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                <td style="padding: 12px 8px; vertical-align: top; width: 50%;">
                   <div style="text-align: center;">
-                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
-                      <span style="color: #ffffff; font-size: 24px;">🎮</span>
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">🛍️</span>
                     </div>
-                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Gaming & Electronics</h4>
-                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Latest gaming gear and office electronics</p>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Diverse Selection</h4>
+                    <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.4; font-size: 13px;">Electronics, gaming, collectibles, and rare finds from trusted brands</p>
                   </div>
                 </td>
-                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                <td style="padding: 12px 8px; vertical-align: top; width: 50%;">
                   <div style="text-align: center;">
-                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
                       <span style="color: #ffffff; font-size: 24px;">🔧</span>
                     </div>
-                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Professional Setup</h4>
-                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Expert installation and configuration</p>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Expert Services</h4>
+                    <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.4; font-size: 13px;">Professional setup, installation, and tech support</p>
                   </div>
                 </td>
               </tr>
               <tr>
-                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                <td style="padding: 12px 8px; vertical-align: top; width: 50%;">
                   <div style="text-align: center;">
-                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
                       <span style="color: #ffffff; font-size: 24px;">🚚</span>
                     </div>
-                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Direct Delivery</h4>
-                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">Straight to your door, no complications</p>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Nationwide Delivery</h4>
+                    <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.4; font-size: 13px;">Fast, reliable delivery across all Tanzania regions</p>
                   </div>
                 </td>
-                <td style="padding: 12px 16px; vertical-align: top; width: 50%;">
+                <td style="padding: 12px 8px; vertical-align: top; width: 50%;">
                   <div style="text-align: center;">
-                    <div style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
-                      <span style="color: #ffffff; font-size: 24px;">📞</span>
+                    <div class="card-bg" style="width: 48px; height: 48px; background: #0c4a6e; border-radius: 8px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+                      <span style="color: #ffffff; font-size: 24px;">💬</span>
                     </div>
-                    <h4 class="text-body" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600;">Expert Support</h4>
-                    <p class="text-small" style="margin: 0; color: #374151; line-height: 1.4;">WhatsApp support when you need it</p>
+                    <h4 class="text-body dark-text" style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">Always Available</h4>
+                    <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.4; font-size: 13px;">WhatsApp support whenever you need assistance</p>
                   </div>
                 </td>
               </tr>
@@ -720,20 +720,26 @@ export const emailTemplates = {
         </tr>
       </table>
 
-      <!-- Getting Started -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #ffffff; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
+      <!-- Explore Our Collections -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; margin: 32px 0;">
         <tr>
           <td style="padding: 24px; text-align: center;">
-            <h3 class="heading-3" style="margin: 0 0 16px 0; color: #92400e;">Ready to get started?</h3>
-            <p class="text-body" style="margin: 0 0 24px 0; color: #92400e; line-height: 1.6;">Browse our curated selection of tech products or book a consultation with our experts.</p>
+            <h3 class="heading-3" style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; font-weight: 600;">🎉 Explore Our Collections</h3>
+            <p class="text-body" style="margin: 0 0 20px 0; color: #92400e; line-height: 1.6; font-size: 14px;">From gaming gear and office electronics to unique collectibles and hard-to-find items—we've got something for everyone!</p>
             
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
               <tr>
-                <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/products" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: none;">Browse Products</a>
+                <td style="padding: 0 6px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="border-radius: 8px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                        <a href="${appBaseUrl}/products" class="btn-primary" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center; border-radius: 8px;">Browse Products</a>
+                      </td>
+                    </tr>
+                  </table>
                 </td>
-                <td style="padding: 0 8px;">
-                  <a href="${appBaseUrl}/services" class="btn-secondary" style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; display: inline-block; padding: 14px 30px; color: #374151; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center;">View Services</a>
+                <td style="padding: 0 6px;">
+                  <a href="${appBaseUrl}/services" class="btn-secondary" style="background: #ffffff; border: 2px solid #92400e; border-radius: 8px; display: inline-block; padding: 12px 26px; color: #92400e; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center;">View Services</a>
                 </td>
               </tr>
             </table>
@@ -741,18 +747,33 @@ export const emailTemplates = {
         </tr>
       </table>
 
-      <!-- Contact Info -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #ffffff; border-radius: 8px; border: 1px solid #e5e7eb; border-left: 4px solid #6b7280; margin: 32px 0;">
+      <!-- Categories Showcase -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 32px 0;">
+        <tr>
+          <td style="padding: 24px; text-align: center;">
+            <h3 class="heading-3 dark-text" style="margin: 0 0 16px 0; color: #0c4a6e; font-size: 16px; font-weight: 600;">Popular Categories</h3>
+            <p class="text-small dark-text-secondary" style="margin: 0; color: #6b7280; line-height: 1.5; font-size: 13px;">
+              🎮 Gaming • 💻 Electronics • 🏢 Office Equipment • 🎨 Collectibles • ⭐ Rare Finds • 🔌 Accessories • 📱 Tech Gadgets • 🛠️ Professional Services
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Contact Support -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border-radius: 8px; border: 1px solid #e5e7eb; border-left: 4px solid #059669; margin: 32px 0;">
         <tr>
           <td style="padding: 20px; text-align: center;">
-            <p class="text-small" style="margin: 0 0 12px 0; color: #374151; font-weight: 600;">Questions? We're here to help!</p>
+            <p class="text-small dark-text" style="margin: 0 0 12px 0; color: #374151; font-weight: 600; font-size: 14px;">Need Help Getting Started?</p>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
               <tr>
-                <td style="padding: 0 16px;">
-                  <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">📱 WhatsApp Support</a>
+                <td style="padding: 0 12px;">
+                  <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 13px;">💬 WhatsApp Support</a>
                 </td>
-                <td style="padding: 0 16px; border-left: 1px solid #e2e8f0;">
-                  <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">✉️ Email Us</a>
+                <td style="padding: 0 12px; border-left: 1px solid #e2e8f0;">
+                  <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 13px;">📧 Email Us</a>
+                </td>
+                <td style="padding: 0 12px; border-left: 1px solid #e2e8f0;">
+                  <a href="${appBaseUrl}" style="color: #0c4a6e; text-decoration: none; font-weight: 600; font-size: 13px;">🌐 Visit Store</a>
                 </td>
               </tr>
             </table>

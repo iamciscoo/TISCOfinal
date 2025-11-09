@@ -304,24 +304,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           console.error('LOGOUT DEBUG: Cart abandonment operation failed (non-blocking):', error)
         }
 
-        // Important: Sign out FIRST so cart sync stops before we clear local cart
-        // Use 'local' scope to avoid 403 errors (global scope requires special permissions)
-        const result = await supabase.auth.signOut({ scope: 'local' })
+        // Attempt Supabase sign out, but handle session errors gracefully
+        // 403 errors mean session is already invalid, which is fine for logout
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch (signOutError) {
+          // Ignore 403 or session_not_found errors - session is already gone
+          console.log('Sign out API call failed (session may already be invalid):', signOutError)
+        }
 
-        // Now clear local persisted cart to prevent cross-account carryover
+        // Always clear local storage regardless of API result
         try {
           useCartStore.getState().clearCart()
           if (typeof window !== 'undefined') {
             localStorage.removeItem('tisco-cart-storage')
+            // Clear all Supabase session data
+            localStorage.removeItem('sb-hgxvlbpvxbliefqlxzak-auth-token')
+            sessionStorage.clear()
           }
         } catch {}
 
-        return { error: result.error }
+        // Manually trigger auth state change since we're clearing locally
+        setUser(null)
+        setSession(null)
+
+        return { error: null } // Success - user is signed out
       }
 
-      // If no user, just sign out defensively with local scope
-      const result = await supabase.auth.signOut({ scope: 'local' })
-      return { error: result.error }
+      // If no user, just clear local storage
+      try {
+        await supabase.auth.signOut({ scope: 'local' })
+      } catch {
+        // Ignore errors
+      }
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sb-hgxvlbpvxbliefqlxzak-auth-token')
+        sessionStorage.clear()
+      }
+      
+      return { error: null }
     } finally {
       setLoading(false)
     }
