@@ -65,6 +65,7 @@ interface AdminNotificationData extends BaseEmailData {
   title: string
   message: string
   action_url?: string
+  action_label?: string
   priority?: 'low' | 'medium' | 'high' | 'urgent'
   order_id?: string
   customer_email?: string
@@ -864,19 +865,19 @@ export const emailTemplates = {
   admin_notification: (data: AdminNotificationData) => {
     const previewText = data.title || 'Admin Notification from TISCOマーケット'
     
-    // Determine priority-based styling
+    // Determine priority-based styling (use orange for medium priority to match order notifications)
     const priorityConfig = {
       low: { bgColor: '#6b7280', icon: '🔔' },
-      medium: { bgColor: '#f59e0b', icon: '🔔' },
+      medium: { bgColor: '#f59e0b', icon: '🔔' }, // Orange for medium priority
       high: { bgColor: '#dc2626', icon: '🔔' },
       urgent: { bgColor: '#991b1b', icon: '🔔' }
     }
     
-    const priority = data.priority || 'medium'
+    const priority = data.priority || 'high' // Default to high for admin notifications
     const config = priorityConfig[priority]
     
     const content = `
-      <!-- Alert Icon - Centered with proper mobile support -->
+      <!-- Alert Icon - EXACTLY matches order confirmation layout -->
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 32px;">
         <tr>
           <td align="center">
@@ -889,17 +890,18 @@ export const emailTemplates = {
               </tr>
             </table>
             <div style="height: 24px;"></div>
-            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; text-align: center;">${data.title || 'Admin Alert'}</h1>
-            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; text-align: center; line-height: 1.6;">Action may be required</p>
+            <h1 class="heading-1 dark-text" style="margin: 0 0 16px 0; color: #111827; font-size: 28px; font-weight: 700; text-align: center;">${data.title || 'Admin Alert'}</h1>
+            ${data.customer_name ? `<p class="text-body dark-text" style="margin: 0 0 8px 0; color: #374151; text-align: center;">Hi ${data.customer_name},</p>` : ''}
+            <p class="text-body dark-text-secondary" style="margin: 0; color: #6b7280; font-size: 16px; text-align: center; line-height: 1.6;">Action may be required</p>
           </td>
         </tr>
       </table>
 
-      <!-- Alert Message Card with proper spacing -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #fca5a5; border-left: 4px solid #dc2626; border-radius: 12px; margin: 32px 0;">
+      <!-- Alert Message Card - Clean white box with red left border -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-left: 4px solid #dc2626; border-radius: 8px; margin: 32px 0;">
         <tr>
-          <td style="padding: 28px;">
-            <p class="dark-text" style="margin: 0; color: #111827; font-size: 16px; line-height: 1.6; font-weight: 500;">
+          <td style="padding: 24px;">
+            <p class="dark-text" style="margin: 0; color: #374151; font-size: 15px; line-height: 1.7; font-weight: 400;">
               ${data.message}
             </p>
           </td>

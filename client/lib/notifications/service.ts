@@ -432,103 +432,28 @@ class NotificationService {
         const message = this.buildAdminNotificationMessage(record)
         const actionUrl = this.getActionUrl(record)
         
+        // Use the proper admin_notification template from email-templates.ts
+        const { emailTemplates } = await import('@/lib/email-templates')
+        const htmlContent = emailTemplates.admin_notification({
+          title: eventName,
+          message: message,
+          priority: 'high',
+          notification_type: record.event,
+          customer_name: name, // Admin recipient name
+          recipient_email: email,
+          action_url: actionUrl,
+          action_label: 'View Details',
+          // Include notification metadata
+          order_id: record.id, // Using notification ID as reference
+          customer_email: record.recipient_email // Original customer email if available
+        })
+        
         const adminEmail: SendPulseEmail = {
           to: email,
-          subject: `[TISCO Admin] ${eventName} - Action Required`,
-          html: `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>TISCO Admin Notification - ${eventName}</title>
-    <style>
-        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-        .ExternalClass { width: 100%; }
-        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
-        @media only screen and (max-width: 600px) {
-            .mobile-center { text-align: center !important; }
-            .mobile-full { width: 100% !important; }
+          subject: `Admin Alert 🔔 Action may be required`,
+          html: htmlContent,
+          replyTo: 'info@tiscomarket.store',
         }
-    </style>
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f8fafc;">
-    
-    <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc;">
-        <div style="background: #1e293b; padding: 2rem; text-align: left;">
-            <table role="presentation" width="100%" style="border-collapse:collapse;">
-                <tr>
-                    <td style="width:64px;padding-right:12px;vertical-align:middle;text-align:left;">
-                        <div style="width: 48px; height: 48px; background: #f97316; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; font-weight: bold;">
-                            🔔
-                        </div>
-                    </td>
-                    <td style="vertical-align:middle;text-align:left;">
-                        <h1 style="color: white; margin: 0; font-size: 2rem;">TISCOマーケット Admin</h1>
-                        <p style="color: #cbd5e1; margin: 0.5rem 0 0 0;">${eventName} Notification</p>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        
-        <div style="padding: 2rem; background: white; margin: 1rem;">
-            <h2 style="color: #1e293b; margin-bottom: 1rem;">Hello ${name},</h2>
-            <p style="color: #374151; line-height: 1.6;">This is an automated notification from your TISCO Market administration system. Please review the details below and take any necessary action.</p>
-            
-            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1.5rem; margin: 1.5rem 0;">
-                <h3 style="color: #92400e; margin: 0 0 1rem 0; font-size: 1.1rem;">⚠️ ${eventName} Alert</h3>
-                <div style="color: #374151; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6;">
-                    ${message}
-                </div>
-            </div>
-            
-            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
-                <h3 style="color: #1e293b; margin-bottom: 1rem;">Notification Details</h3>
-                <p><strong>Event Type:</strong> ${record.event}</p>
-                <p><strong>Notification ID:</strong> ${record.id}</p>
-                <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-TZ', { timeZone: 'Africa/Dar_es_Salaam' })} EAT</p>
-                ${record.recipient_email ? `<p><strong>Customer Email:</strong> ${record.recipient_email}</p>` : ''}
-                ${record.recipient_name ? `<p><strong>Customer Name:</strong> ${record.recipient_name}</p>` : ''}
-            </div>
-            
-            ${actionUrl ? `
-            <div style="text-align: left; margin: 2rem 0;">
-                <a href="${actionUrl}" style="padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; text-align: center; transition: all 0.2s; background: #2563eb; color: white; border: none;">
-                    View Details in Admin Panel
-                </a>
-            </div>
-            ` : ''}
-            
-            <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin: 2rem 0; border-left: 4px solid #3b82f6;">
-                <p style="color: #374151; margin: 0; font-size: 14px;">
-                    <strong>Action Required:</strong> Please log into the admin panel to review this notification and take appropriate action if necessary. This ensures optimal customer service and system management.
-                </p>
-            </div>
-        </div>
-        
-        <div style="background: #f1f5f9; padding: 1rem; margin: 1rem 0; font-size: 14px; color: #374151; text-align: left; border-radius: 4px;">
-            <p style="margin: 0; font-weight: 600;">TISCOマーケット Administration System</p>
-            <p style="margin: 0.5rem 0 0 0;">
-                <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none;">info@tiscomarket.store</a> | 
-                <a href="tel:+255748624684" style="color: #2563eb; text-decoration: none;">+255 748 624 684</a> | 
-                <a href="https://admin.tiscomarket.store" style="color: #2563eb; text-decoration: none;">Admin Panel</a>
-            </p>
-            <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #64748b;">
-                This is an automated administrative notification. Please do not reply to this email.
-            </p>
-        </div>
-    </div>
-    
-    <div style="max-width: 600px; margin: 0 auto; text-align: center; color: #64748b; font-size: 12px; padding: 1rem;">
-        TISCOマーケット Administrative System | Confidential & Internal Use Only
-    </div>
-</body>
-</html>`,
-        replyTo: 'info@tiscomarket.store',
-      }
 
       await sendEmailViaSendPulse(this.config, adminEmail)
       logger.notificationEvent('Admin notification sent', { email, event: record.event })
