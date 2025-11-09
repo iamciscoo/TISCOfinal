@@ -276,8 +276,8 @@ function ProductsContent() {
     setCurrentPage(1)
   }, [products, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular])
 
-  // Pagination (4 rows per page in grid view)
-  const itemsPerPage = viewMode === 'grid' ? 12 : 6
+  // Pagination (4 rows per page in grid view with 4 items per row)
+  const itemsPerPage = viewMode === 'grid' ? 16 : 6
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
@@ -414,8 +414,8 @@ function ProductsContent() {
                 <div className="h-80 bg-gray-200 rounded-lg"></div>
               </div>
               <div className="lg:col-span-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 12 }).map((_, i) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {Array.from({ length: 16 }).map((_, i) => (
                     <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
                   ))}
                 </div>
@@ -550,7 +550,7 @@ function ProductsContent() {
                   <div
                     className={
                       viewMode === 'grid'
-                        ? 'grid grid-cols-3 gap-2'
+                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'
                         : 'space-y-4'
                     }
                   >

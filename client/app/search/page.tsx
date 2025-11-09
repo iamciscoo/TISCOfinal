@@ -50,7 +50,7 @@ function SearchResults() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   
-  const productsPerPage = 12
+  const productsPerPage = 16
   const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
 
   // Scroll to top when page changes
@@ -576,7 +576,7 @@ function SearchResults() {
               <>
                 {/* Products Grid */}
                 <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-3 gap-2' 
+                  ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' 
                   : 'space-y-4'
                 }>
                   {displayedProducts.map((product) => (

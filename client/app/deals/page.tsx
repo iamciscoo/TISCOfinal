@@ -213,8 +213,8 @@ function DealsContent() {
     setCurrentPage(1)
   }, [searchTerm, selectedCategory, sortBy, showMostPopular, deals, categories])
 
-  // Pagination (align with shop page: 12 items for grid, 6 for list)
-  const itemsPerPage = viewMode === 'grid' ? 12 : 6
+  // Pagination (align with shop page: 16 items for grid with 4 columns, 6 for list)
+  const itemsPerPage = viewMode === 'grid' ? 16 : 6
   const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)
@@ -452,7 +452,7 @@ function DealsContent() {
                 ) : (
                   <>
                     <div className={viewMode === 'grid' 
-                      ? 'grid grid-cols-3 gap-2' 
+                      ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' 
                       : 'space-y-4'
                     }>
                       {displayedDeals.map((deal) => (

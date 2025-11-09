@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface HeroSlide {
@@ -69,9 +69,10 @@ export const ServicesHeroCarousel = () => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const update = () => {
-      const max = Math.max(1, window.innerHeight * 0.6)
+      // Reach full compression after ~50% viewport scroll for snappier transition
+      const max = Math.max(1, window.innerHeight * 0.5)
       const y = window.scrollY
-      const p = Math.min(0.8, Math.max(0, y / max)) // Limit max scroll effect to 0.8
+      const p = Math.min(1, Math.max(0, y / max))
       el.style.setProperty('--p', String(prefersReduced ? 0 : p))
     }
 
@@ -135,9 +136,9 @@ export const ServicesHeroCarousel = () => {
                  h-[28vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] xl:h-[60vh]"
       style={{
         containerType: 'inline-size',
-        clipPath: 'inset(0 0 calc(var(--p,0) * min(20vh, 30%)) 0 round 1.5rem)',
-        // Pull the next section upward by a proportional amount
-        marginBottom: 'calc(var(--p,0) * min(-20vh, -30%))',
+        clipPath: 'inset(0 0 calc(var(--p,0) * 30vh) 0 round 1.5rem)',
+        // Pull the next section upward by the same amount we clip, removing the perceived gap
+        marginBottom: 'calc(var(--p,0) * -30vh)',
         transition: 'clip-path 150ms ease-out, margin-bottom 150ms ease-out',
       } as React.CSSProperties}
     >
@@ -254,6 +255,20 @@ export const ServicesHeroCarousel = () => {
           }}
         />
       </div>
+
+      {/* Pause/Play Button */}
+      <button
+        onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+        className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 p-2 sm:p-2.5 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all duration-200 backdrop-blur-sm cursor-pointer"
+        aria-label={isAutoPlaying ? 'Pause carousel' : 'Play carousel'}
+        title={isAutoPlaying ? 'Pause' : 'Play'}
+      >
+        {isAutoPlaying ? (
+          <Pause className="h-4 w-4 sm:h-4 sm:w-4" />
+        ) : (
+          <Play className="h-4 w-4 sm:h-4 sm:w-4" />
+        )}
+      </button>
     </section>
   )
 }
