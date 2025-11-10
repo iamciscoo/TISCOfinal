@@ -87,6 +87,18 @@ function ProductsContent() {
     prevSheetOpen.current = isFilterSheetOpen
   }, [isFilterSheetOpen])
 
+  // Callback for mobile category selection - scroll to products view
+  const handleMobileCategorySelect = useCallback(() => {
+    // Only auto-scroll on mobile/tablet
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+    if (isMobile) {
+      const anchor = gridRef.current
+      const offset = 380 // Show filters button, video card, and start of products grid
+      const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    }
+  }, [])
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
@@ -512,7 +524,10 @@ function ProductsContent() {
         <ShopHero imageSrc="/officespace.png" title="Shop" />
         {/* Category row below hero */}
         <div className="mt-4">
-          <CategoryBar categories={categories} />
+          <CategoryBar 
+            categories={categories} 
+            onMobileCategorySelect={handleMobileCategorySelect}
+          />
         </div>
       </div>
       

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { withMiddleware, withValidation, withErrorHandler, createSuccessResponse } from '@/lib/middleware'
+import { PAGINATION_LIMITS, applyListOptimizations } from '@/lib/optimized-queries'
 
 export const runtime = 'nodejs'
 
@@ -11,7 +12,7 @@ const supabase = createClient(
 )
 
 const getFeaturedProductsSchema = z.object({
-  limit: z.number().min(1).max(50).optional().default(20),
+  limit: z.number().min(1).max(50).optional().default(PAGINATION_LIMITS.featured),
   _t: z.number().optional() // Cache-busting timestamp
 }).passthrough() // Allow other query params
 
@@ -21,8 +22,8 @@ export const GET = withMiddleware(
   withErrorHandler
 )(async (req: NextRequest, validatedData: z.infer<typeof getFeaturedProductsSchema>) => {
   const getFeaturedProductsQuery = async () => {
-    const buildQuery = (withSlug: boolean) =>
-      supabase
+    const buildQuery = (withSlug: boolean) => {
+      const query = supabase
         .from('products')
         .select(`
           id,
@@ -42,10 +43,9 @@ export const GET = withMiddleware(
           slug,
           created_at,
           featured_order,
-          product_images (
+          product_images!inner(
             url,
-            is_main,
-            sort_order
+            is_main
           ),
           categories:product_categories!fk_product_categories_product_id (
             category:categories (
@@ -54,11 +54,13 @@ export const GET = withMiddleware(
             )
           )
         `)
-        .eq('is_featured', true)                                          // **ONLY featured products**
-        .eq('is_active', true)                                            // **OPTIMIZATION: Only show active products**
-        .gte('stock_quantity', 0)                                         // **OPTIMIZATION: Only show products with stock info**
-        .order('is_main', { foreignTable: 'product_images', ascending: false })  // **Main images first**
-        .order('sort_order', { foreignTable: 'product_images', ascending: true }) // **Then by sort order**
+        .eq('is_featured', true)        // **ONLY featured products**
+        .eq('is_active', true)          // **OPTIMIZATION: Only show active products**
+        .gte('stock_quantity', 0)       // **OPTIMIZATION: Only show products with stock info**
+      
+      // Apply optimized ordering using helper
+      return applyListOptimizations(query)
+    }
 
     let { data, error } = await buildQuery(true)
     if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {
@@ -78,15 +80,16 @@ export const GET = withMiddleware(
   
   // **SPARSE POSITIONING LOGIC**
   // 1. Separate products with explicit positions from those without
-  const productsWithPosition = allFeaturedProducts.filter(p => p.featured_order != null)
-  const productsWithoutPosition = allFeaturedProducts.filter(p => p.featured_order == null)
+  type FeaturedProduct = typeof allFeaturedProducts[number]
+  const productsWithPosition = allFeaturedProducts.filter((p: FeaturedProduct) => p.featured_order != null)
+  const productsWithoutPosition = allFeaturedProducts.filter((p: FeaturedProduct) => p.featured_order == null)
   
   // 2. Create sparse array with exact positions (1-20)
-  type ProductOrNull = typeof allFeaturedProducts[number] | null
+  type ProductOrNull = FeaturedProduct | null
   const positionedArray: ProductOrNull[] = new Array(validatedData.limit).fill(null)
   
   // 3. Place products at their exact positions
-  productsWithPosition.forEach(product => {
+  productsWithPosition.forEach((product: FeaturedProduct) => {
     const position = product.featured_order! - 1 // Convert to 0-indexed
     if (position >= 0 && position < validatedData.limit) {
       positionedArray[position] = product

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 export type CategoryBarProps = {
   categories: Category[]
   className?: string
+  onMobileCategorySelect?: () => void // Callback when category selected on mobile
 }
 
 // Map featured categories to provided hero images
@@ -32,7 +33,7 @@ function pickImageFor(name: string): string | null {
   return matchKey ? imageMap[matchKey] : null
 }
 
-export function CategoryBar({ categories, className }: CategoryBarProps) {
+export function CategoryBar({ categories, className, onMobileCategorySelect }: CategoryBarProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -140,7 +141,14 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
                 key={String(cat.id)}
                 href={`/products?category=${encodeURIComponent(String(cat.id))}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b last:border-b-0"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  // Trigger scroll callback for mobile category selection
+                  if (onMobileCategorySelect) {
+                    // Small delay to allow navigation to start before scroll
+                    setTimeout(() => onMobileCategorySelect(), 100)
+                  }
+                }}
               >
                 {(() => {
                   const img = pickImageFor(cat.name || '')

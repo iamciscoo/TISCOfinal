@@ -144,9 +144,15 @@ export function getDiscountPercent(product: Product): number | null {
  * Gets the primary image URL for a product with clear fallback hierarchy
  * Priority: main product_image > first product_image > legacy image_url > fallback
  * @param product - Product object with image data
- * @returns Image URL string
+ * @param size - Image size preset for optimization (default: 'medium')
+ * @param format - Image format for optimization (default: 'webp')
+ * @returns Optimized image URL string
  */
-export function getImageUrl(product: Product): string {
+export function getImageUrl(
+  product: Product,
+  size: ImageSize = 'medium',
+  format: 'webp' | 'auto' = 'webp'
+): string {
   // CLEAR FALLBACK HIERARCHY:
   // 1. Main image from product_images table (is_main = true)
   // 2. First image from product_images table (sorted by sort_order)
@@ -161,17 +167,17 @@ export function getImageUrl(product: Product): string {
       return (a.sort_order || 0) - (b.sort_order || 0)
     })
     
-    // Return first valid URL from sorted images
+    // Return first valid URL from sorted images with optimization
     for (const image of sortedImages) {
       if (image.url && image.url.trim()) {
-        return getSupabaseImageUrl(image.url)
+        return getSupabaseImageUrl(image.url, size, format)
       }
     }
   }
   
   // Legacy fallback for products without product_images
   if (product.image_url && product.image_url.trim()) {
-    return getSupabaseImageUrl(product.image_url)
+    return getSupabaseImageUrl(product.image_url, size, format)
   }
   
   // Final fallback
@@ -179,11 +185,31 @@ export function getImageUrl(product: Product): string {
 }
 
 /**
- * Constructs a full Supabase Storage URL from a relative path
- * @param path - Relative path to the image in Supabase storage
- * @returns Full URL to the image or fallback
+ * Image size presets for responsive images
  */
-export function getSupabaseImageUrl(path: string): string {
+export const IMAGE_SIZES = {
+  thumbnail: { width: 150, height: 150, quality: 80 },
+  small: { width: 300, height: 300, quality: 85 },
+  medium: { width: 600, height: 600, quality: 90 },
+  large: { width: 1200, height: 1200, quality: 95 },
+  full: { width: undefined, height: undefined, quality: 100 }
+} as const
+
+export type ImageSize = keyof typeof IMAGE_SIZES
+
+/**
+ * Constructs an optimized Supabase Storage URL with automatic transformations
+ * Leverages Supabase's built-in image optimization for faster loading
+ * @param path - Relative path to the image in Supabase storage
+ * @param size - Preset size for image optimization (default: 'medium')
+ * @param format - Image format (default: 'webp' for best compression)
+ * @returns Optimized URL with transformation parameters
+ */
+export function getSupabaseImageUrl(
+  path: string,
+  size: ImageSize = 'medium',
+  format: 'webp' | 'auto' = 'webp'
+): string {
   if (!path) return '/circular.svg'
   
   // If it's already a full URL, return as is
@@ -193,15 +219,40 @@ export function getSupabaseImageUrl(path: string): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!supabaseUrl) return '/circular.svg'
   
-  return `${supabaseUrl}/storage/v1/object/public/product-images/${path}`
+  const baseUrl = `${supabaseUrl}/storage/v1/object/public/product-images/${path}`
+  
+  // Get size config
+  const sizeConfig = IMAGE_SIZES[size]
+  
+  // Build transformation parameters for Supabase image optimization
+  const params = new URLSearchParams()
+  
+  if (sizeConfig.width) params.append('width', sizeConfig.width.toString())
+  if (sizeConfig.height) params.append('height', sizeConfig.height.toString())
+  if (sizeConfig.quality) params.append('quality', sizeConfig.quality.toString())
+  
+  // Format conversion (webp provides best compression with quality)
+  if (format !== 'auto') params.append('format', format)
+  
+  // Add resize mode for better image fitting
+  params.append('resize', 'contain')
+  
+  const queryString = params.toString()
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
 /**
- * Gets all available images for a product in priority order
+ * Gets all available images for a product in priority order with optimization
  * @param product - Product object with image data
- * @returns Array of image URLs sorted by priority (main first, then by sort_order)
+ * @param size - Image size preset for optimization (default: 'medium')
+ * @param format - Image format for optimization (default: 'webp')
+ * @returns Array of optimized image URLs sorted by priority (main first, then by sort_order)
  */
-export function getAllProductImages(product: Product): string[] {
+export function getAllProductImages(
+  product: Product,
+  size: ImageSize = 'medium',
+  format: 'webp' | 'auto' = 'webp'
+): string[] {
   const images: string[] = []
   
   if (product.product_images && product.product_images.length > 0) {
@@ -212,12 +263,18 @@ export function getAllProductImages(product: Product): string[] {
       return (a.sort_order || 0) - (b.sort_order || 0)
     })
     
-    images.push(...sortedImages.map(img => img.url).filter((url): url is string => Boolean(url)))
+    // Transform URLs with optimization parameters
+    const optimizedUrls = sortedImages
+      .map(img => img.url)
+      .filter((url): url is string => Boolean(url))
+      .map(url => getSupabaseImageUrl(url, size, format))
+    
+    images.push(...optimizedUrls)
   }
   
   // Add legacy image_url if not already included
-  if (product.image_url && !images.includes(product.image_url)) {
-    images.push(product.image_url)
+  if (product.image_url && !images.some(img => img.includes(product.image_url!))) {
+    images.push(getSupabaseImageUrl(product.image_url, size, format))
   }
   
   return images.length > 0 ? images : ['/circular.svg']
