@@ -25,6 +25,7 @@ const imageMap: Record<string, string> = {
   'health': '/shoppage/health%20and%20beauty.png',
   'beauty': '/shoppage/health%20and%20beauty.png',
   'new': '/shoppage/New.png',
+  'entertainment': '/shoppage/Entertainment.jpeg',
 }
 
 function pickImageFor(name: string): string | null {
