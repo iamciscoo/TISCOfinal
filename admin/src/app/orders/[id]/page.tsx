@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getOrderById, getUserById } from '@/lib/database'
 import type { Order as DbOrder, OrderItem as DbOrderItem, Address, User } from '@/lib/types'
 import { formatToEAT } from '@/lib/utils'
+import { SendInfoButton } from './SendInfoButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,9 +89,16 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             Placed on {formatToEAT(order.created_at, { dateStyle: 'medium', timeStyle: 'short' })}
           </p>
         </div>
-        <Link href="/orders" className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:underline">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Orders
-        </Link>
+        <div className="flex items-center gap-3">
+          <SendInfoButton
+            orderId={String(order.id)}
+            customerEmail={customer?.email || ''}
+            customerName={customerName || ''}
+          />
+          <Link href="/orders" className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:underline">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Orders
+          </Link>
+        </div>
       </div>
 
       {/* Mobile-optimized status cards */}
