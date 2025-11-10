@@ -83,11 +83,11 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
           icon: quantumLoaded ? (
             <div 
               dangerouslySetInnerHTML={{
-                __html: '<l-quantum size="50" speed="1.75" color="#0066CC"></l-quantum>'
+                __html: '<l-quantum size="40" speed="1.75" color="#0066CC"></l-quantum>'
               }}
             />
           ) : (
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           ),
           title: 'Processing Your Request',
           message: 'Setting up your service booking and sending notifications...',
@@ -98,7 +98,7 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
       
       case 'success':
         return {
-          icon: <CheckCircle className="w-12 h-12 text-green-600" />,
+          icon: <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />,
           title: 'Request Submitted Successfully!',
           message: 'Your service booking has been created. You will receive a confirmation email shortly.',
           showClose: true,
@@ -108,7 +108,7 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
       
       case 'error':
         return {
-          icon: <XCircle className="w-12 h-12 text-red-600" />,
+          icon: <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-600" />,
           title: 'Request Failed',
           message: errorMessage || 'Something went wrong while processing your request. Please try again.',
           showClose: true,
@@ -126,36 +126,36 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="processing-title"
       aria-describedby="processing-description"
     >
       <div 
-        className={`relative max-w-md w-full mx-4 ${content.bgColor} ${content.borderColor} border rounded-xl p-8 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200`}
+        className={`relative max-w-sm w-full ${content.bgColor} ${content.borderColor} border rounded-xl p-5 sm:p-6 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200`}
       >
         {/* Close button - only show when not processing */}
         {content.showClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1 rounded-full hover:bg-black/10 transition-colors"
+            className="absolute top-3 right-3 p-1 rounded-full hover:bg-black/10 transition-colors"
             aria-label="Close dialog"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         )}
 
         <div className="text-center">
           {/* Icon */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-3">
             {content.icon}
           </div>
           
           {/* Title */}
           <h3 
             id="processing-title"
-            className="text-xl font-semibold text-gray-900 mb-3"
+            className="text-base sm:text-lg font-semibold text-gray-900 mb-2"
           >
             {content.title}
           </h3>
@@ -163,7 +163,7 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
           {/* Message */}
           <p 
             id="processing-description"
-            className="text-gray-700 mb-4 leading-relaxed"
+            className="text-sm text-gray-700 mb-3 leading-relaxed"
           >
             {content.message}
           </p>
@@ -172,7 +172,7 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
           {status === 'error' && (
             <Button 
               onClick={onClose}
-              className="bg-gray-900 hover:bg-gray-800"
+              className="bg-gray-900 hover:bg-gray-800 text-sm"
             >
               Try Again
             </Button>
@@ -180,7 +180,7 @@ export const ServiceProcessingOverlay: React.FC<ServiceProcessingOverlayProps> =
           
           {/* Processing indicator */}
           {status === 'processing' && (
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600">
               This may take a moment...
             </div>
           )}

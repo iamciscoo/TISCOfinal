@@ -60,12 +60,27 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // Handle www to non-www redirect (permanent 301)
+  const { pathname } = request.nextUrl
+  
+  // Handle www to non-www redirect (permanent 301) - BEFORE any processing
   const hostname = request.headers.get('host') || ''
   if (hostname.startsWith('www.')) {
     const url = request.nextUrl.clone()
     url.host = hostname.replace('www.', '')
     return NextResponse.redirect(url, { status: 301 })
+  }
+
+  // Fast path: Skip auth for webhooks and certain auth endpoints
+  if (pathname.startsWith('/api/payments/mobile/webhook') || 
+      pathname.startsWith('/api/webhooks') ||
+      (pathname.startsWith('/api/auth/') && pathname !== '/api/auth/sync')) {
+    return NextResponse.next()
+  }
+
+  // Fast path: Skip Supabase client creation for truly public routes
+  const isPublic = isPublicRoute(pathname)
+  if (isPublic && !pathname.startsWith('/api/')) {
+    return NextResponse.next()
   }
 
   let response = NextResponse.next({
@@ -156,20 +171,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { pathname } = request.nextUrl
-
-  // Allow webhooks and specific auth endpoints to pass through without middleware auth check
-  // But NOT /api/auth/sync which requires authentication
-  if (pathname.startsWith('/api/payments/mobile/webhook') || 
-      pathname.startsWith('/api/webhooks') ||
-      (pathname.startsWith('/api/auth/') && pathname !== '/api/auth/sync')) {
-    return response
-  }
-
-  // Check if route is public
-  const isPublic = isPublicRoute(pathname)
-  
-  if (isPublic) {
+  // Note: pathname and isPublic already checked above before Supabase client creation
+  // For public API routes, still check if they need auth
+  if (isPublic && pathname.startsWith('/api/')) {
+    // Public API routes still get response with session cookies
     return response
   }
 
