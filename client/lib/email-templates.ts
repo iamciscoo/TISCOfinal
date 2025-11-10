@@ -980,7 +980,7 @@ export const emailTemplates = {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
         <tr>
           <td align="center" style="padding: 0 20px;">
-            <a href="${data.action_url}" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border-radius: 8px; min-width: 200px; max-width: 90%;">View Order Details</a>
+            <a href="${data.action_url}" class="btn-primary" style="background: #2563eb; display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border-radius: 8px; min-width: 200px; max-width: 90%;">${data.action_label || (data.order_id ? 'View Order Details' : 'View Details')}</a>
           </td>
         </tr>
       </table>` : ''}
