@@ -244,7 +244,7 @@ export const Navbar = () => {
             <Link
               href="/"
               aria-label="TISCO Market Home"
-              className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md transition-all duration-200 hover:opacity-80"
+              className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md transition-all duration-150 hover:opacity-80 active:opacity-60 active:scale-95"
             >
               <Image
                 src="/circular.svg"
@@ -263,7 +263,7 @@ export const Navbar = () => {
           {/* Mobile Centered Shop link */}
           <Link
             href="/products"
-            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-900 font-medium hover:text-blue-600 transition-colors"
+            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-900 font-medium hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150"
             aria-label="Shop Products"
           >
             Shop
@@ -325,16 +325,16 @@ export const Navbar = () => {
 
           {/* Navigation Links - Desktop */}
           <nav className="hidden md:flex items-center space-x-3 lg:space-x-6 xl:space-x-8" role="navigation">
-            <Link href="/products" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
+            <Link href="/products" className="text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base">
               Shop
             </Link>
-            <Link href="/services" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
+            <Link href="/services" className="text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base">
               Services
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
+            <Link href="/about" className="text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base">
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm lg:text-base">
+            <Link href="/contact" className="text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base">
               Contact
             </Link>
           </nav>
@@ -354,7 +354,7 @@ export const Navbar = () => {
               <div className="flex items-center gap-1 md:gap-2">
                 <Link 
                   href="/account" 
-                  className="hidden lg:inline text-sm text-gray-800 hover:text-blue-600 transition-colors"
+                  className="hidden lg:inline text-sm text-gray-800 hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150"
                 >
                   Orders
                 </Link>
@@ -374,7 +374,7 @@ export const Navbar = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="relative transition-colors" 
+              className="relative transition-all duration-150 hover:bg-gray-100 active:bg-gray-200 active:scale-95" 
               onClick={openCart}
               aria-label={`Shopping cart ${mounted && cartCount > 0 ? `with ${cartCount} items` : ''}`}
             >
@@ -407,7 +407,7 @@ export const Navbar = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden transition-colors"
+              className="md:hidden transition-all duration-150 hover:bg-gray-100 active:bg-gray-200 active:scale-95"
               onClick={toggleMenu}
               aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={isMenuOpen}
@@ -450,28 +450,28 @@ export const Navbar = () => {
               {/* Mobile Navigation Links */}
               <Link
                 href="/products"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                 onClick={closeMenu}
               >
                 Shop
               </Link>
               <Link
                 href="/services"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                 onClick={closeMenu}
               >
                 Services
               </Link>
               <Link
                 href="/about"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                 onClick={closeMenu}
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                 onClick={closeMenu}
               >
                 Contact
@@ -481,7 +481,7 @@ export const Navbar = () => {
               {isLoaded && isSignedIn && (
                 <Link
                   href="/account"
-                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                   onClick={closeMenu}
                 >
                   Orders
@@ -491,7 +491,7 @@ export const Navbar = () => {
               {/* Mobile Sign In */}
               {isLoaded && !isSignedIn && (
                 <SignInButton 
-                  className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors rounded-md hover:bg-gray-50"
+                  className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                   variant="ghost"
                 >
                   <User className="h-4 w-4 inline mr-2" />

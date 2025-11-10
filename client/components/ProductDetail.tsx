@@ -54,6 +54,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
   const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [imageLoading, setImageLoading] = useState(false)
   
   const { addItem, setItemQuantity, openCart } = useCartStore()
   
@@ -89,45 +90,91 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
     return { reviewCount, rating }
   }, [actualReviews])
 
-  // Load related products by category (only when section becomes visible)
+  // Load related products with smart matching: category > brand > random
   useEffect(() => {
     if (!shouldLoadRelated) return
     
     let isMounted = true
     const loadRelatedProducts = async () => {
       try {
-        let data: Product[] = []
+        let relatedItems: Product[] = []
+        const currentProductId = String(product.id)
+        const targetCount = 6
         
-        // Try to get products from the same category if category_id exists
+        // Step 1: Try to get products from the same category
         if (product.category_id) {
-          data = await api.getProductsByCategory(String(product.category_id))
-        } else {
-          // Fallback: get featured products if no category
-          data = await api.getFeaturedProducts(8)
+          try {
+            const categoryProducts = await api.getProductsByCategory(String(product.category_id))
+            if (Array.isArray(categoryProducts)) {
+              relatedItems = categoryProducts.filter((p: Product) => String(p.id) !== currentProductId)
+            }
+          } catch {
+            console.log('Category products fetch failed, continuing...')
+          }
+        }
+        
+        // Step 2: If we don't have enough, try products with same brand
+        if (relatedItems.length < targetCount && product.brands && product.brands.length > 0) {
+          try {
+            const allProducts = await api.getProducts(50)
+            if (Array.isArray(allProducts)) {
+              const productBrands = product.brands
+              const brandProducts = allProducts.filter((p: Product) => 
+                String(p.id) !== currentProductId && 
+                p.brands && p.brands.some(b => productBrands.includes(b)) &&
+                !relatedItems.some(existing => String(existing.id) === String(p.id))
+              )
+              relatedItems = [...relatedItems, ...brandProducts]
+            }
+          } catch {
+            console.log('Brand products fetch failed, continuing...')
+          }
+        }
+        
+        // Step 3: If still not enough, get random products
+        if (relatedItems.length < targetCount) {
+          try {
+            const randomProducts = await api.getProducts(30)
+            if (Array.isArray(randomProducts)) {
+              const filtered = randomProducts.filter((p: Product) => 
+                String(p.id) !== currentProductId &&
+                !relatedItems.some(existing => String(existing.id) === String(p.id))
+              )
+              relatedItems = [...relatedItems, ...filtered]
+            }
+          } catch {
+            console.log('Random products fetch failed, continuing...')
+          }
+        }
+        
+        // Step 4: Final fallback - get featured products
+        if (relatedItems.length === 0) {
+          try {
+            const featuredProducts = await api.getFeaturedProducts(targetCount)
+            if (Array.isArray(featuredProducts)) {
+              relatedItems = featuredProducts.filter((p: Product) => String(p.id) !== currentProductId)
+            }
+          } catch {
+            console.error('All product fetching methods failed')
+          }
         }
         
         if (!isMounted) return
         
-        // Filter out current product and limit to 4 items
-        const filtered = Array.isArray(data) ? data.filter((p: Product) => String(p.id) !== String(product.id)) : []
-        setRelatedProducts(filtered.slice(0, 4))
+        // Set exactly 6 products (or whatever we have)
+        setRelatedProducts(relatedItems.slice(0, targetCount))
       } catch (error) {
         console.error('Failed to load related products:', error)
-        // Try fallback: get any products
-        try {
-          const fallbackData = await api.getProducts(8)
-          if (!isMounted) return
-          const filtered = Array.isArray(fallbackData) ? fallbackData.filter((p: Product) => String(p.id) !== String(product.id)) : []
-          setRelatedProducts(filtered.slice(0, 4))
-        } catch (fallbackError) {
-          console.error('Failed to load fallback products:', fallbackError)
+        // Ensure we never show empty state
+        if (isMounted) {
+          setRelatedProducts([])
         }
       }
     }
     
     loadRelatedProducts()
     return () => { isMounted = false }
-  }, [shouldLoadRelated, product.category_id, product.id])
+  }, [shouldLoadRelated, product.category_id, product.brands, product.id])
 
   // Fetch actual reviews to calculate real rating
   useEffect(() => {
@@ -151,10 +198,14 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   }, [product.stock_quantity])
   
   const handleImageSelect = useCallback((index: number) => {
-    setSelectedImageIndex(index)
-  }, [])
+    if (index !== selectedImageIndex) {
+      setImageLoading(true)
+      setSelectedImageIndex(index)
+    }
+  }, [selectedImageIndex])
   
   const handleImageNavigation = useCallback((direction: 'prev' | 'next') => {
+    setImageLoading(true)
     setSelectedImageIndex(prev => {
       if (direction === 'prev') {
         return Math.max(0, prev - 1)
@@ -298,6 +349,11 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
         <div className="space-y-3 md:space-y-4">
           {/* Main Image */}
           <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                <LoadingSpinner size="lg" />
+              </div>
+            )}
             <Image
               src={productImages[selectedImageIndex] || '/circular.svg'}
               alt={`${product.name} - Image ${selectedImageIndex + 1}`}
@@ -306,6 +362,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               sizes="(max-width: 768px) 100vw, 50vw"
               priority={selectedImageIndex === 0}
               quality={85}
+              onLoad={() => setImageLoading(false)}
             />
             
             
@@ -338,10 +395,21 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
             
             {/* Image counter */}
             {productImages.length > 1 && (
-              <div className="absolute bottom-4 right-4 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-sm">
+              <div className="absolute bottom-4 right-4 bg-black/80 text-white px-2.5 py-1 rounded text-sm font-medium">
                 {selectedImageIndex + 1} / {productImages.length}
               </div>
             )}
+            
+            {/* Floating Cart Shortcut - Bottom Left */}
+            <Button
+              onClick={handleAddToCart}
+              disabled={product.stock_quantity === 0 || isAddingToCart}
+              size="lg"
+              className="absolute bottom-3 left-3 w-9 h-9 sm:w-10 sm:h-10 p-0 rounded-full shadow-lg hover:shadow-xl active:scale-95 transition-all duration-150 z-20 bg-black/80 hover:bg-black/90 border-none"
+              aria-label="Quick add to cart"
+            >
+              <ShoppingCart className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-white" />
+            </Button>
           </div>
 
           {/* Thumbnail Images - Horizontal Scrollable Gallery */}
@@ -404,9 +472,10 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           {/* Product Title & Category */}
           <div>
             <div className="text-sm text-blue-600 font-medium mb-2">
-              {Array.isArray(product.categories) && product.categories.length > 0 
+              {product.category || 
+               (Array.isArray(product.categories) && product.categories.length > 0 
                 ? product.categories[0]?.category?.name || 'Electronics'
-                : (product.categories && 'name' in product.categories ? product.categories.name : 'Electronics')}
+                : (product.categories && 'name' in product.categories ? product.categories.name : 'Electronics'))}
             </div>
             
             {/* Brands */}
@@ -588,31 +657,51 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
 
           {shouldLoadRelated ? (
             <>
-              {/* Mobile Slider */}
-              <div className="md:hidden -mx-4 px-4">
-                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
-                  {relatedProducts.length > 0 ? (
-                    relatedProducts.map((rp) => (
-                      <div key={String(rp.id)} className="min-w-[78%] snap-start">
-                        <ProductCard product={rp} compact className="rounded-xl border border-gray-100" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 w-full">No related products found.</div>
+              {relatedProducts.length > 0 ? (
+                <>
+                  {/* Horizontal Slider for All Screens */}
+                  <div className="-mx-4 px-4">
+                    <div 
+                      className="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      <style jsx>{`
+                        .hide-scrollbar::-webkit-scrollbar {
+                          display: none;
+                        }
+                      `}</style>
+                      {relatedProducts.map((rp) => (
+                        <div 
+                          key={String(rp.id)} 
+                          className="min-w-[70%] sm:min-w-[45%] md:min-w-[32%] lg:min-w-[23%] xl:min-w-[18%] snap-start"
+                        >
+                          <ProductCard 
+                            product={rp} 
+                            compact 
+                            className="h-full rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Scroll hint */}
+                  {relatedProducts.length > 3 && (
+                    <div className="mt-4 text-center">
+                      <span className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded-full border border-gray-200 inline-flex items-center gap-1.5">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                        </svg>
+                        Swipe to explore all {relatedProducts.length} related items
+                      </span>
+                    </div>
                   )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Loading related products...</p>
                 </div>
-              </div>
-
-              {/* Desktop/Tablet Grid */}
-              <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {relatedProducts.length > 0 ? (
-                  relatedProducts.map((rp) => (
-                    <ProductCard key={String(rp.id)} product={rp} />
-                  ))
-                ) : (
-                  <div className="col-span-full text-center text-gray-500">No related products found.</div>
-                )}
-              </div>
+              )}
             </>
           ) : (
             <div className="flex justify-center py-8">

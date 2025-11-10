@@ -78,9 +78,10 @@ function SearchResults() {
     setIsFilterSheetOpen(false) // Close sheet
   }, [query])
 
-  // Scroll to top when page changes
+  // Scroll to results when page changes (account for navbar + header)
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll to a position that shows results (not behind navbar)
+    window.scrollTo({ top: 280, behavior: 'smooth' })
   }, [currentPage])
 
   // Debounced URL sync for refine input
@@ -297,8 +298,9 @@ function SearchResults() {
     setCurrentPage(1)
   }, [products, searchTerm, selectedCategory, sortBy, showMostPopular, query])
 
-  // Pagination: Mobile (3 cols × 5 rows = 15), Tablet/Desktop (4 cols × 4 rows = 16)
-  const itemsPerPage = viewMode === 'grid' ? 16 : 6
+  // Pagination: Mobile (3 cols × 6 rows = 18), Desktop (4 cols × 5 rows = 20)
+  // Using 18 items for mobile-first approach
+  const itemsPerPage = viewMode === 'grid' ? 18 : 6
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)

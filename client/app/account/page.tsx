@@ -201,11 +201,13 @@ export default function AccountDashboard() {
                   )}
                   <div>
                     <h3 className="font-semibold text-lg">{user?.user_metadata?.first_name || user?.email}</h3>
-                    <p className="text-gray-600 text-sm">Member since 2024</p>
+                    <p className="text-gray-600 text-sm">
+                      Member since {user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear()}
+                    </p>
                   </div>
                 </div>
                 <div className="mb-6">
-                  <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+                  <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)} className="active:scale-95 transition-all duration-150">
                     Edit Profile
                   </Button>
                 </div>
@@ -223,7 +225,7 @@ export default function AccountDashboard() {
                   <Link href="/account/orders" className="w-full">
                     <Button
                       variant="outline"
-                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400"
+                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150"
                       size="lg"
                     >
                       <Package className="h-5 w-5 text-black" />
@@ -236,7 +238,7 @@ export default function AccountDashboard() {
                   <Link href="/account/bookings" className="w-full">
                     <Button
                       variant="outline"
-                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400"
+                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150"
                       size="lg"
                     >
                       <Calendar className="h-5 w-5 text-black" />
@@ -300,7 +302,7 @@ export default function AccountDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Recent Orders</CardTitle>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild className="active:scale-95 transition-all duration-150">
                       <Link href="/account/orders">View All</Link>
                     </Button>
                   </div>
@@ -311,7 +313,7 @@ export default function AccountDashboard() {
                       <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
                       <p className="text-gray-600 mb-6">When you place your first order, it will appear here.</p>
-                      <Button asChild>
+                      <Button asChild className="active:scale-95 transition-all duration-150">
                         <Link href="/products">Start Shopping</Link>
                       </Button>
                     </div>
@@ -349,7 +351,7 @@ export default function AccountDashboard() {
                           </div>
                           <div className="sm:text-right text-left w-full sm:w-auto">
                             <p className="font-semibold">{formatPrice(order.total_amount || 0)}</p>
-                            <Button variant="outline" size="sm" className="mt-1 w-full sm:w-auto" asChild>
+                            <Button variant="outline" size="sm" className="mt-1 w-full sm:w-auto active:scale-95 transition-all duration-150" asChild>
                               <Link href={`/account/orders/${order.id}`}>View Details</Link>
                             </Button>
                           </div>
@@ -365,7 +367,7 @@ export default function AccountDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Recent Services</CardTitle>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild className="active:scale-95 transition-all duration-150">
                       <Link href="/account/bookings">View All</Link>
                     </Button>
                   </div>
@@ -378,7 +380,7 @@ export default function AccountDashboard() {
                       <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
                       <p className="text-gray-600 mb-6">When you book a service, it will appear here.</p>
-                      <Button asChild>
+                      <Button asChild className="active:scale-95 transition-all duration-150">
                         <Link href="/services">Browse Services</Link>
                       </Button>
                     </div>
@@ -406,7 +408,7 @@ export default function AccountDashboard() {
                             </div>
                           </div>
                           <div className="sm:text-right text-left w-full sm:w-auto">
-                            <Button variant="outline" size="sm" className="mt-1 w-full sm:w-auto" asChild>
+                            <Button variant="outline" size="sm" className="mt-1 w-full sm:w-auto active:scale-95 transition-all duration-150" asChild>
                               <Link href={`/account/bookings/${b.id}`}>View Details</Link>
                             </Button>
                           </div>

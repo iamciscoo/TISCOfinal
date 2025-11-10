@@ -77,9 +77,10 @@ function DealsContent() {
   
   const { addItem } = useCartStore()
   
-  // Scroll to top when page changes
+  // Scroll to deals grid when page changes (account for navbar + hero)
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll to a position that shows deals (not behind navbar)
+    window.scrollTo({ top: 320, behavior: 'smooth' })
   }, [currentPage])
   
   // Debounce search term to prevent input focus loss
@@ -258,9 +259,9 @@ function DealsContent() {
     setCurrentPage(1) // Reset to first page when filters change
   }, [deals, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular, categories])
 
-  // Pagination: Mobile (3 cols × 5 rows = 15), Tablet/Desktop (4 cols × 4 rows = 16)
-  // Using 16 items as base since we can't detect screen size in state
-  const itemsPerPage = viewMode === 'grid' ? 16 : 6
+  // Pagination: Mobile (3 cols × 6 rows = 18), Desktop (4 cols × 5 rows = 20)
+  // Using 18 items for mobile-first approach
+  const itemsPerPage = viewMode === 'grid' ? 18 : 6
   const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)

@@ -172,7 +172,7 @@ function OrdersContent() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-4 sm:pb-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6 sm:mb-8 overflow-x-auto">
-          <Link href="/account" className="hover:text-blue-600 flex items-center gap-1 whitespace-nowrap">
+          <Link href="/account" className="hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150 flex items-center gap-1 whitespace-nowrap">
             <ArrowLeft className="h-4 w-4" />
             Account
           </Link>
@@ -246,7 +246,7 @@ function OrdersContent() {
               }
             </p>
             {(!searchTerm && statusFilter === 'all') && (
-              <Button asChild>
+              <Button asChild className="active:scale-95 transition-all duration-150">
                 <Link href="/products">
                   Start Shopping
                 </Link>
@@ -338,7 +338,7 @@ function OrdersContent() {
 
                     {/* Actions */}
                     <div className="flex justify-end">
-                      <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+                      <Button variant="outline" size="sm" asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150">
                         <Link href={`/account/orders/${order.id}`}>
                           <Eye className="h-4 w-4 mr-1" />
                           View Details

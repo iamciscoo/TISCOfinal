@@ -182,7 +182,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-6 sm:pb-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 mb-6 sm:mb-8">
-          <Link href="/account/orders" className="hover:text-blue-600 flex items-center gap-1">
+          <Link href="/account/orders" className="hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150 flex items-center gap-1">
             <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             Orders
           </Link>
@@ -190,92 +190,89 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           <span className="text-gray-900 truncate">Order #{id.slice(0, 8)}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Summary */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <span className="text-base sm:text-lg">Order Details</span>
-                  <Badge variant="secondary" className={`${statusColor(order.status)} border-0 text-xs sm:text-sm`}>
-                    <span className="flex items-center gap-1">
-                      <StatusIcon status={order.status} />
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+        {/* Actions Card - Displayed at top on mobile */}
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row gap-3">
+            <DownloadReceiptButton order={order} />
+            <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150" variant="outline">
+              <Link href="/account/orders">Back to Orders</Link>
+            </Button>
+            <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150">
+              <Link href="/products">Continue Shopping</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
+          {/* Order Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="text-base sm:text-lg">Order Details</span>
+                <Badge variant="secondary" className={`${statusColor(order.status)} border-0 text-xs sm:text-sm`}>
+                  <span className="flex items-center gap-1">
+                    <StatusIcon status={order.status} />
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </span>
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs sm:text-sm text-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="truncate"><span className="font-medium">Order ID:</span> <span className="text-xs">{order.id}</span></div>
+                <div><span className="font-medium">Placed on:</span> {formatToEAT(order.created_at)}</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Payment:</span> 
+                  <Badge 
+                    variant="secondary"
+                    className={
+                      order.payment_status === 'paid' 
+                        ? 'bg-green-100 text-green-800 border-0' 
+                        : order.payment_status === 'failed'
+                        ? 'bg-red-100 text-red-800 border-0'
+                        : 'bg-yellow-100 text-yellow-800 border-0'
+                    }
+                  >
+                    {order.payment_status || 'pending'}
                   </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-xs sm:text-sm text-gray-700">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="truncate"><span className="font-medium">Order ID:</span> <span className="text-xs">{order.id}</span></div>
-                  <div><span className="font-medium">Placed on:</span> {formatToEAT(order.created_at)}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Payment:</span> 
-                    <Badge 
-                      variant="secondary"
-                      className={
-                        order.payment_status === 'paid' 
-                          ? 'bg-green-100 text-green-800 border-0' 
-                          : order.payment_status === 'failed'
-                          ? 'bg-red-100 text-red-800 border-0'
-                          : 'bg-yellow-100 text-yellow-800 border-0'
-                      }
-                    >
-                      {order.payment_status || 'pending'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2"><span className="font-medium">Total:</span> <PriceDisplay price={order.total_amount || 0} /></div>
                 </div>
-                {order.shipping_address && (
-                  <div>
-                    <span className="font-medium">Delivery to:</span> {order.shipping_address}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2"><span className="font-medium">Total:</span> <PriceDisplay price={order.total_amount || 0} /></div>
+              </div>
+              {order.shipping_address && (
+                <div>
+                  <span className="font-medium">Delivery to:</span> {order.shipping_address}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Items</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {order.order_items?.map((item: OrderItem) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-md gap-2">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                      {item.products?.image_url && (
-                        <Image src={item.products.image_url} alt={item.products.name} width={48} height={48} className="rounded flex-shrink-0 w-12 h-12" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm sm:text-base truncate">{item.products?.name}</div>
-                        <div className="text-xs sm:text-sm text-gray-600">Qty: {item.quantity}</div>
-                      </div>
-                    </div>
-                    <div className="text-right font-semibold text-sm sm:text-base flex-shrink-0">
-                      <PriceDisplay price={item.price * item.quantity} className="font-semibold" />
+          {/* Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Items</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {order.order_items?.map((item: OrderItem) => (
+                <div key={item.id} className="flex items-center justify-between p-3 border rounded-md gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    {item.products?.image_url && (
+                      <Image src={item.products.image_url} alt={item.products.name} width={48} height={48} className="rounded flex-shrink-0 w-12 h-12" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm sm:text-base truncate">{item.products?.name}</div>
+                      <div className="text-xs sm:text-sm text-gray-600">Qty: {item.quantity}</div>
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Side actions */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <DownloadReceiptButton order={order} />
-                <Button asChild className="w-full" variant="outline">
-                  <Link href="/account/orders">Back to Orders</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link href="/products">Continue Shopping</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                  <div className="text-right font-semibold text-sm sm:text-base flex-shrink-0">
+                    <PriceDisplay price={item.price * item.quantity} className="font-semibold" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

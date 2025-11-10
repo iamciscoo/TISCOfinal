@@ -25,7 +25,7 @@ export type ProductWithRelations = {
 };
 
 // Normalize server product to shared UI Product type
-export function normalizeToProduct(p: ProductWithRelations): UIProduct {
+export function normalizeToProduct(p: ProductWithRelations & { categories_direct?: { name: string } }): UIProduct {
   const images: ProductImage[] | undefined = p.product_images
     ? p.product_images.map(img => ({
         url: img.url ?? undefined,
@@ -34,6 +34,9 @@ export function normalizeToProduct(p: ProductWithRelations): UIProduct {
       }))
     : undefined
 
+  // Get category name from direct relationship first, then fall back to join table
+  const categoryName = p.categories_direct?.name || p.categories?.[0]?.category?.name;
+
   return {
     id: p.id,
     name: p.name,
@@ -41,6 +44,7 @@ export function normalizeToProduct(p: ProductWithRelations): UIProduct {
     price: Number(p.price) || 0,
     image_url: p.image_url ?? undefined,
     category_id: p.categories?.[0]?.category?.id ?? undefined,
+    category: categoryName ?? undefined,
     categories: p.categories || undefined,
     product_images: images,
     stock_quantity: p.stock_quantity ?? undefined,
@@ -80,6 +84,7 @@ export async function fetchProductByIdOrSlug(idOrSlug: string): Promise<ProductW
       .from('products')
       .select(`
         *,
+        categories_direct:categories!category_id (name),
         product_images (
           url,
           is_main,

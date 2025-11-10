@@ -42,21 +42,21 @@ export const Footer = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 active:bg-gray-700 active:scale-95 p-2 transition-all duration-150"
               >
                 <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 active:bg-gray-700 active:scale-95 p-2 transition-all duration-150"
               >
                 <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-white hover:bg-gray-800/50 p-2 transition-colors"
+                className="text-gray-400 hover:text-white hover:bg-gray-800/50 active:bg-gray-700 active:scale-95 p-2 transition-all duration-150"
               >
                 <Instagram className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
@@ -70,7 +70,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/products"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Shop
                 </Link>
@@ -78,7 +78,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/services"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Services
                 </Link>
@@ -86,7 +86,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/deals"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Special Deals
                 </Link>
@@ -94,7 +94,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/about"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   About
                 </Link>
@@ -102,7 +102,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/contact"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Contact
                 </Link>
@@ -119,7 +119,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/contact"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Contact Us
                 </Link>
@@ -127,7 +127,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/faq"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   FAQ
                 </Link>
@@ -135,7 +135,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/delivery-guide"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm"
+                  className="text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150 text-xs sm:text-sm inline-block"
                 >
                   Delivery Guide
                 </Link>
@@ -182,19 +182,19 @@ export const Footer = () => {
             <div className="flex space-x-4 sm:space-x-6">
               <Link
                 href="/privacy"
-                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150"
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
-                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/cookies"
-                className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-gray-400 hover:text-white active:text-blue-400 transition-all duration-150"
               >
                 Cookie Policy
               </Link>

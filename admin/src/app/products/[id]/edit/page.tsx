@@ -729,11 +729,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormLabel>Price</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    step="0.01"
+                    type="text" 
+                    inputMode="decimal"
                     placeholder="0.00"
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                    value={field.value === undefined || field.value === null ? '' : String(field.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        field.onChange(undefined);
+                        return;
+                      }
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        const parsed = parseFloat(value);
+                        field.onChange(isNaN(parsed) ? undefined : parsed);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        field.onChange(undefined);
+                      } else if (!isNaN(parseFloat(value))) {
+                        field.onChange(parseFloat(value));
+                      }
+                    }}
                   />
                 </FormControl>
                 <FormDescription>Enter the price of the product.</FormDescription>
@@ -749,10 +767,28 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormLabel>Stock Quantity</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="0"
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
+                    value={field.value === undefined || field.value === null ? '' : String(field.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        field.onChange(undefined);
+                        return;
+                      }
+                      if (/^\d+$/.test(value)) {
+                        field.onChange(parseInt(value));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        field.onChange(undefined);
+                      } else if (!isNaN(parseInt(value))) {
+                        field.onChange(parseInt(value));
+                      }
+                    }}
                   />
                 </FormControl>
                 <FormDescription>Enter the available stock quantity.</FormDescription>
@@ -1002,7 +1038,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormControl>
                   <Checkbox
                     checked={Boolean(field.value)}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      // Auto-populate original_price with current price when deal is checked
+                      if (checked) {
+                        const currentPrice = form.getValues('price');
+                        const currentOriginalPrice = form.getValues('original_price');
+                        if (currentPrice && currentPrice > 0 && (!currentOriginalPrice || currentOriginalPrice === 0)) {
+                          form.setValue('original_price', currentPrice);
+                        }
+                      }
+                    }}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
@@ -1022,11 +1068,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     <FormLabel>Original Price</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        step="0.01"
+                        type="text" 
+                        inputMode="decimal"
                         placeholder="0.00"
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                        value={field.value === undefined || field.value === null ? '' : String(field.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || value === '0') {
+                            field.onChange(undefined);
+                            return;
+                          }
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            const parsed = parseFloat(value);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || value === '0') {
+                            field.onChange(undefined);
+                          } else if (!isNaN(parseFloat(value))) {
+                            field.onChange(parseFloat(value));
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormDescription>Enter the original price before discount.</FormDescription>
@@ -1042,11 +1106,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     <FormLabel>Deal Price</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        step="0.01"
+                        type="text" 
+                        inputMode="decimal"
                         placeholder="0.00"
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                        value={field.value === undefined || field.value === null ? '' : String(field.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || value === '0') {
+                            field.onChange(undefined);
+                            return;
+                          }
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            const parsed = parseFloat(value);
+                            field.onChange(isNaN(parsed) ? undefined : parsed);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || value === '0') {
+                            field.onChange(undefined);
+                          } else if (!isNaN(parseFloat(value))) {
+                            field.onChange(parseFloat(value));
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormDescription>Enter the discounted deal price.</FormDescription>

@@ -292,7 +292,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
         {/* Header */}
         <div className="mb-6">
           <Link href="/account/bookings">
-            <Button variant="ghost" className="mb-4" size="sm">
+            <Button variant="ghost" className="mb-4 active:bg-gray-200 active:scale-95 transition-all duration-150" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Bookings
             </Button>
@@ -542,7 +542,7 @@ const ServiceBookingDetailsPage = async ({ params }: { params: Promise<{ id: str
                   Have questions about your booking? Our support team is here to help.
                 </p>
                 <Link href="/contact">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full active:scale-95 transition-all duration-150">
                     <Mail className="h-4 w-4 mr-2" />
                     Contact Support
                   </Button>
