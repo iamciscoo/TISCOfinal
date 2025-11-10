@@ -55,6 +55,8 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const [thumbnailErrors, setThumbnailErrors] = useState<Set<number>>(new Set())
   
   const { addItem, setItemQuantity, openCart } = useCartStore()
   
@@ -200,12 +202,14 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const handleImageSelect = useCallback((index: number) => {
     if (index !== selectedImageIndex) {
       setImageLoading(true)
+      setImageError(false) // Reset error state when changing images
       setSelectedImageIndex(index)
     }
   }, [selectedImageIndex])
   
   const handleImageNavigation = useCallback((direction: 'prev' | 'next') => {
     setImageLoading(true)
+    setImageError(false) // Reset error state when navigating
     setSelectedImageIndex(prev => {
       if (direction === 'prev') {
         return Math.max(0, prev - 1)
@@ -355,7 +359,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               </div>
             )}
             <Image
-              src={productImages[selectedImageIndex] || '/circular.svg'}
+              src={imageError ? '/circular.svg' : (productImages[selectedImageIndex] || '/circular.svg')}
               alt={`${product.name} - Image ${selectedImageIndex + 1}`}
               fill
               className="object-contain rounded-lg bg-white"
@@ -363,6 +367,12 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               priority={selectedImageIndex === 0}
               quality={85}
               onLoad={() => setImageLoading(false)}
+              onError={() => {
+                console.error(`Failed to load image: ${productImages[selectedImageIndex]}`)
+                setImageLoading(false)
+                setImageError(true)
+              }}
+              unoptimized={imageError} // Skip optimization for fallback image
             />
             
             
@@ -433,12 +443,17 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                     onClick={() => handleImageSelect(index)}
                   >
                     <Image
-                      src={image || '/circular.svg'}
+                      src={thumbnailErrors.has(index) ? '/circular.svg' : (image || '/circular.svg')}
                       alt={`${product.name} thumbnail ${index + 1}`}
                       fill
                       className="object-cover rounded-lg"
                       sizes="100px"
                       quality={60}
+                      onError={() => {
+                        console.error(`Failed to load thumbnail ${index}: ${image}`)
+                        setThumbnailErrors(prev => new Set(prev).add(index))
+                      }}
+                      unoptimized={thumbnailErrors.has(index)}
                     />
                     {/* Index indicator */}
                     <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold transition-all ${

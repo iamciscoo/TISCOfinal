@@ -5,7 +5,7 @@ import { Plus, Minus, ShoppingCart, Trash2, ShoppingBag, ArrowRight } from 'luci
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import Link from 'next/link'
-import Image from 'next/image'
+import { SafeImage } from '@/components/SafeImage'
 import { useCartStore } from '@/lib/store'
 import { PriceDisplay } from '@/components/PriceDisplay'
 
@@ -68,7 +68,7 @@ export const CartSidebar = () => {
                       {/* Product Image */}
                       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                         {item.image_url ? (
-                          <Image
+                          <SafeImage
                             src={item.image_url}
                             alt={item.name}
                             width={80}

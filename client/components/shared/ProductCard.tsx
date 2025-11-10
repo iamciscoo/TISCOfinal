@@ -44,6 +44,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   className,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const addItem = useCartStore((state) => state.addItem)
   
   // Pre-calculate values to avoid recalculation on re-renders
@@ -84,11 +85,16 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
             <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex-shrink-0">
               <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} className="relative block w-full h-full">
                 <Image
-                  src={imageUrl}
+                  src={imageError ? '/circular.svg' : imageUrl}
                   alt={`${product.name} product image`}
                   fill
                   className="object-cover rounded-l-lg transition-transform duration-300 group-hover:scale-105"
                   sizes="(max-width: 640px) 128px, 192px"
+                  onError={() => {
+                    console.error(`Failed to load product image for ${product.name}: ${imageUrl}`)
+                    setImageError(true)
+                  }}
+                  unoptimized={imageError}
                 />
               </Link>
               {/* Stock Status Badge */}
@@ -183,11 +189,16 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           compact ? "mb-1 sm:mb-2" : "mb-3"
         )}>
           <Image
-            src={imageUrl}
+            src={imageError ? '/circular.svg' : imageUrl}
             alt={`${product.name} product image`}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes={compact ? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"}
+            onError={() => {
+              console.error(`Failed to load product image for ${product.name}: ${imageUrl}`)
+              setImageError(true)
+            }}
+            unoptimized={imageError}
           />
           
           {/* Stock Status Badge */}

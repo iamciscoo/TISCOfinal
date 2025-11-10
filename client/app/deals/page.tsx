@@ -77,10 +77,15 @@ function DealsContent() {
   
   const { addItem } = useCartStore()
   
-  // Scroll to deals grid when page changes (account for navbar + hero)
+  // Scroll to top ONLY on page 1, otherwise scroll to deals grid
   useEffect(() => {
-    // Scroll to a position that shows deals (not behind navbar)
-    window.scrollTo({ top: 320, behavior: 'smooth' })
+    if (currentPage === 1) {
+      // Page 1 - scroll to absolute top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      // Other pages - scroll to deals grid (account for navbar + hero)
+      window.scrollTo({ top: 320, behavior: 'smooth' })
+    }
   }, [currentPage])
   
   // Debounce search term to prevent input focus loss

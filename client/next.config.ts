@@ -33,6 +33,9 @@ const nextConfig: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Configure image quality values (required for Next.js 16+)
     qualities: [60, 75, 85, 90, 100],
+    // Increase timeout for large images from Supabase storage
+    loader: 'default',
+    loaderFile: undefined,
   },
   trailingSlash: false,
   output: 'standalone',

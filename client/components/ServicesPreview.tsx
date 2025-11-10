@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, Cpu, Monitor, Settings } from "lucide-react";
-import Image from "next/image";
+import { SafeImage } from "@/components/SafeImage";
 import Link from "next/link";
 
 const services = [
@@ -42,7 +42,7 @@ const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
       <CardContent className="p-3 pb-0">
         {/* Service Image */}
         <div className="relative h-40 overflow-hidden rounded-md bg-gray-100 mb-3">
-          <Image
+          <SafeImage
             src={service.image}
             alt={service.title}
             fill

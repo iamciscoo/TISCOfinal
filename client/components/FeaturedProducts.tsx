@@ -90,7 +90,7 @@ export const FeaturedProducts = () => {
           <div className="mb-8">
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 pl-4 -mr-4 pr-4">
               {mobileSliderProducts.map((product) => (
-                <div key={product.id} className="min-w-[78%] snap-start">
+                <div key={product.id} className="min-w-[65%] snap-start">
                   <ProductCard
                     product={product}
                     compact

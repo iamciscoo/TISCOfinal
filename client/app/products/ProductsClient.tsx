@@ -59,10 +59,15 @@ function ProductsContent() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
-  // Scroll to products grid when page changes (account for navbar + hero)
+  // Scroll to top ONLY on page 1, otherwise scroll to products grid
   useEffect(() => {
-    // Scroll to a position that shows products (not behind navbar)
-    window.scrollTo({ top: 320, behavior: 'smooth' })
+    if (currentPage === 1) {
+      // Page 1 - scroll to absolute top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      // Other pages - scroll to products grid (account for navbar + hero)
+      window.scrollTo({ top: 320, behavior: 'smooth' })
+    }
   }, [currentPage])
 
   // Fetch data

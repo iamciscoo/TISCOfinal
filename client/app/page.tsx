@@ -132,14 +132,15 @@ export default function Home() {
         {/* Hero Carousel Container - Centered with padding */}
         {/* max-w-7xl = maximum width, mx-auto = center horizontally */}
         {/* px-4 sm:px-6 lg:px-8 = responsive padding (more padding on larger screens) */}
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 md:pt-2 lg:pt-4 pb-8 sm:pb-12">
+        {/* Reduced bottom padding for tighter spacing */}
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 md:pt-2 lg:pt-4 pb-4 sm:pb-6">
           {/* Big sliding banner/carousel at top */}
           <HomepageHeroCarousel />
         </div>
         
         {/* Content Sections Container - Vertical spacing between sections */}
-        {/* space-y-8 sm:space-y-12 md:space-y-16 = responsive vertical spacing */}
-        <div className="w-full space-y-8 sm:space-y-12 md:space-y-16">
+        {/* Reduced vertical spacing for tighter layout */}
+        <div className="w-full space-y-4 sm:space-y-6 md:space-y-10">
           
           {/* Promotional Cards - Special deals and category highlights */}
           <PromotionalCards />

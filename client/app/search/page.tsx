@@ -78,10 +78,15 @@ function SearchResults() {
     setIsFilterSheetOpen(false) // Close sheet
   }, [query])
 
-  // Scroll to results when page changes (account for navbar + header)
+  // Scroll to top ONLY on page 1, otherwise scroll to results
   useEffect(() => {
-    // Scroll to a position that shows results (not behind navbar)
-    window.scrollTo({ top: 280, behavior: 'smooth' })
+    if (currentPage === 1) {
+      // Page 1 - scroll to absolute top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      // Other pages - scroll to results (account for navbar + header)
+      window.scrollTo({ top: 280, behavior: 'smooth' })
+    }
   }, [currentPage])
 
   // Debounced URL sync for refine input
