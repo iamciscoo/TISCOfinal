@@ -155,7 +155,7 @@ const ProductsPage = () => {
 
   return (
     <div className="space-y-6 pt-2">
-      <div className="flex flex-col gap-4 pb-6 border-b">
+      <div className="flex flex-col gap-4 pb-6 border-b px-3 sm:px-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             All Products
@@ -166,42 +166,48 @@ const ProductsPage = () => {
           <ProductQuickSearch />
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedFeatured} onValueChange={(v) => setSelectedFeatured(v === 'all' ? undefined : v)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
-              <SelectValue placeholder="Featured" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="featured">Featured Only</SelectItem>
-              <SelectItem value="not-featured">Not Featured</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedDeal} onValueChange={(v) => setSelectedDeal(v === 'all' ? undefined : v)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10 font-medium">
-              <SelectValue placeholder="Deals" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="deal">Deals Only</SelectItem>
-              <SelectItem value="not-deal">No Deals</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:items-center sm:gap-3">
+          <div className="col-span-1">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-[180px] h-11 min-h-[44px] font-medium rounded-md">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-1">
+            <Select value={selectedFeatured} onValueChange={(v) => setSelectedFeatured(v === 'all' ? undefined : v)}>
+              <SelectTrigger className="w-full sm:w-[180px] h-11 min-h-[44px] font-medium rounded-md">
+                <SelectValue placeholder="Featured" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="featured">Featured Only</SelectItem>
+                <SelectItem value="not-featured">Not Featured</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-2 sm:col-span-1">
+            <Select value={selectedDeal} onValueChange={(v) => setSelectedDeal(v === 'all' ? undefined : v)}>
+              <SelectTrigger className="w-full sm:w-[180px] h-11 min-h-[44px] font-medium rounded-md">
+                <SelectValue placeholder="Deals" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="deal">Deals Only</SelectItem>
+                <SelectItem value="not-deal">No Deals</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       

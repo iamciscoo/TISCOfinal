@@ -25,7 +25,7 @@ export function PageLayout<TData, TValue>({
         <h1 className="text-base sm:text-lg lg:text-xl font-semibold">{title}</h1>
         {addEntityButton}
       </div>
-      <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+      <div className="overflow-x-auto px-3 sm:px-0">
         <DataTable 
           columns={columns} 
           data={data} 
