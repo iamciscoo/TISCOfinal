@@ -12,7 +12,7 @@ const services = [
     features: [
       "Component consultation",
       "Professional assembly",
-      "1-year warranty",
+      "Warranty",
     ],
     image: "/services/pcbuild.jpeg",
   },

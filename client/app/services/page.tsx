@@ -66,7 +66,7 @@ const services: Service[] = [
       'Professional assembly',
       'Cable management',
       'BIOS & OS setup',
-      '1-year warranty',
+      'Warranty',
       'Performance testing'
     ],
     image: '/services/pcbuild.jpeg',

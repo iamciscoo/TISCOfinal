@@ -69,8 +69,8 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
   return (
     <section className="mb-16">
       {showHeader && (
-        <div className="text-center mb-12">
-          <div className="inline-block mb-6">
+        <div className="text-left mb-12">
+          <div className="mb-6">
             <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">
               <span className="relative inline-block">
                 <span className="relative z-10">Power Up</span>
@@ -79,9 +79,9 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
               {" "}Your Experience
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Essential services designed to
-            <span className="block mt-1 font-semibold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">elevate your lifestyle</span>
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl leading-relaxed">
+            Essential services designed to{" "}
+            <span className="font-semibold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">elevate your lifestyle</span>
           </p>
         </div>
       )}
@@ -195,7 +195,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
         {/* Large Main Card */}
         <Link 
           href={promoCards[0].href}
-          className="block group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-120"
+          className="block group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-[420px]"
         >
           <div className="relative w-full h-full">
             <Image
