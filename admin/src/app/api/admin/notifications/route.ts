@@ -106,7 +106,7 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
   
   const config = priorityConfig[priority]
   const formattedMessage = input.message.split('\n').map(paragraph => 
-    paragraph.trim() ? `<p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.7;">${paragraph}</p>` : '<br>'
+    paragraph.trim() ? `<p class="dark-text-secondary" style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.7;">${paragraph}</p>` : '<br>'
   ).join('')
   
   return `<!DOCTYPE html>
@@ -116,44 +116,114 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="date=no">
+    <meta name="format-detection" content="address=no">
+    <meta name="format-detection" content="email=no">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
     <title>${input.title}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
+        /* Reset Styles */
         body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
         .ExternalClass { width: 100%; }
+        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+        #outlook a { padding: 0; }
+        .ReadMsgBody { width: 100%; }
+        
         .btn-primary { 
             background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
             border-radius: 8px !important; padding: 16px 32px !important; color: #ffffff !important;
             text-decoration: none !important; font-weight: 600 !important; font-size: 16px !important;
         }
+        
         @media only screen and (max-width: 600px) {
             .mobile-center { text-align: center !important; }
-            .mobile-full { width: 100% !important; }
+            .mobile-full { width: 100% !important; display: block !important; margin: 8px 0 !important; }
             .mobile-padding { padding: 16px !important; }
+        }
+        
+        /* DISABLE Dark Mode Completely - Force Light Mode Always */
+        @media (prefers-color-scheme: dark) {
+            /* Force everything to light mode - Gmail iPhone fix */
+            * { 
+                background-color: inherit !important;
+                color: inherit !important;
+            }
+            
+            body { 
+                background-color: #f8fafc !important; 
+                color: #111827 !important;
+            }
+            
+            .email-body { background-color: #f8fafc !important; }
+            .email-container { background-color: #ffffff !important; }
+            table, td, th, div, p, span { background-color: transparent !important; }
+
+            /* Keep header dark with white text */
+            [style*="#0f172a"] {
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
+            }
+            [style*="#0f172a"] * {
+                color: #ffffff !important;
+            }
+
+            /* Gmail iOS/Android specific wrappers - enforce readable light theme */
+            u + .body { background-color: #f8fafc !important; }
+            [data-ogsc], [data-ogsb] { background-color: #f8fafc !important; }
+            [data-ogsc] .email-container, [data-ogsb] .email-container { background-color: #ffffff !important; }
+            [data-ogsc] .footer-bg, [data-ogsb] .footer-bg { background: #ffffff !important; border-top-color: #e5e7eb !important; }
+            [data-ogsc] .card-bg, [data-ogsb] .card-bg { background-color: #ffffff !important; border-color: #e5e7eb !important; }
+            [data-ogsc] .card-bg-light, [data-ogsb] .card-bg-light { background-color: #f9fafb !important; border-color: #e5e7eb !important; }
+            [data-ogsc] h1, [data-ogsc] h2, [data-ogsc] h3, [data-ogsc] p, [data-ogsc] td, [data-ogsc] li, [data-ogsc] .text-body, [data-ogsc] .dark-text { color: #111827 !important; }
+            [data-ogsc] .dark-text-secondary, [data-ogsb] .dark-text-secondary { color: #374151 !important; }
+            [data-ogsc] a, [data-ogsb] a { color: #2563eb !important; }
+
+            /* Header hero fix: force solid dark background + white text in Gmail dark mode */
+            .header-hero { background: #0f172a !important; background-image: none !important; }
+            .header-hero h1, .header-hero p, .header-hero div, .header-hero span { color: #ffffff !important; }
+            .logo-disc { background: rgba(255,255,255,0.14) !important; }
+
+            [data-ogsc] .header-hero, [data-ogsb] .header-hero { background: #0f172a !important; background-image: none !important; }
+            [data-ogsc] .header-hero *, [data-ogsb] .header-hero * { color: #ffffff !important; }
+            [data-ogsc] .logo-disc, [data-ogsb] .logo-disc { background: rgba(255,255,255,0.14) !important; }
         }
     </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+<body class="email-body" style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-body" style="background-color: #f8fafc;">
         <tr>
             <td align="center" style="padding: 20px 10px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow: hidden;">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); padding: 40px 32px; border-radius: 16px 16px 0 0; position: relative; overflow: hidden;">
+                        <td class="header-hero" bgcolor="#0f172a" style="background-color: #0f172a; padding: 40px 32px; position: relative; overflow: hidden;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td width="100" style="vertical-align: middle; padding-right: 20px;">
                                         <!-- Modern Futuristic Logo -->
-                                        <div style="width: 80px; height: 80px; display: table-cell; vertical-align: middle; text-align: center; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border-radius: 50%; backdrop-filter: blur(10px);">
-                                            <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 900; color: #ffffff; font-size: 16px; line-height: 18px; margin: 0; padding: 0; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">TISCO</div>
-                                            <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 600; color: #e2e8f0; font-size: 11px; line-height: 13px; margin: 3px 0 0 0; padding: 0; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">マーケット</div>
-                                        </div>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" class="logo-disc" style="width: 80px; height: 80px; background: rgba(255,255,255,0.14); border-radius: 50%; margin: 0;">
+                                          <tr>
+                                            <td style="vertical-align: middle; text-align: center; padding: 18px 5px;">
+                                              <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 900; color: #ffffff; font-size: 14px; line-height: 16px; margin: 0; padding: 0; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">TISCO</div>
+                                              <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-weight: 600; color: #e2e8f0; font-size: 9px; line-height: 11px; margin: 2px 0 0 0; padding: 0; letter-spacing: 0.3px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); white-space: nowrap;">マーケット</div>
+                                            </td>
+                                          </tr>
+                                        </table>
                                     </td>
                                     <td style="vertical-align: middle;">
-                                        <h1 style="margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 0.5px;">TISCOマーケット</h1>
-                                        <p style="margin: 12px 0 0 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; color: #cbd5e1; line-height: 1.4; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Electronics • Tech Service Solutions • Rare Antiques • Hard-to-Find Collectibles • Trusted Tanzania</p>
+                                        <h1 style="margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 28px; font-weight: 800; color: #ffffff; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 0.5px;">TISCOマーケット</h1>
+                                        <p style="margin: 8px 0 0 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 14px; color: #cbd5e1; line-height: 1.5; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Your Trusted Online Marketplace • Tech • Rare Finds • Services • Unique Items • Delivered Across Tanzania</p>
                                     </td>
                                 </tr>
                             </table>
@@ -183,11 +253,11 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                             </table>
 
                             <!-- Main Content -->
-                            <h1 style="margin: 0 0 24px 0; color: #111827; font-size: 28px; line-height: 1.2; font-weight: 700;">
+                            <h1 class="dark-text" style="margin: 0 0 24px 0; color: #111827; font-size: 28px; line-height: 1.2; font-weight: 700;">
                                 ${input.title}
                             </h1>
                             
-                            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                            <div class="card-bg" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin: 24px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
                                 <div style="color: #374151; font-size: 16px; line-height: 1.7;">
                                     ${formattedMessage}
                                 </div>
@@ -210,11 +280,11 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                             </table>` : ''}
 
                             <!-- Professional Note -->
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="card-bg-light" style="background: #f8fafc; border-radius: 8px; border-left: 4px solid ${config.color}; margin: 32px 0;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
-                                        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
+                                        <p class="dark-text-secondary" style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Professional Service Guarantee</p>
+                                        <p class="dark-text-secondary" style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">This message was sent as part of our commitment to keeping you informed about important updates and information relevant to your experience with TISCOマーケット.</p>
                                     </td>
                                 </tr>
                             </table>
@@ -223,24 +293,24 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
                                 <tr>
                                     <td style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
-                                        <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
+                                        <h3 class="dark-text-secondary" style="margin: 0 0 16px 0; color: #374151; font-size: 16px; font-weight: 600; text-align: center;">Need Assistance?</h3>
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                             <tr>
                                                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
+                                                    <div class="card-bg-light" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">WhatsApp Support</p>
                                                         <a href="https://wa.me/255748624684" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 14px;">+255 748 624 684</a>
                                                     </div>
                                                 </td>
                                                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
+                                                    <div class="card-bg-light" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Email Support</p>
                                                         <a href="mailto:info@tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">info@tiscomarket.store</a>
                                                     </div>
                                                 </td>
                                                 <td style="width: 33.33%; text-align: center; padding: 12px;">
-                                                    <div style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
-                                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
+                                                    <div class="card-bg-light" style="background: #f0f9ff; border-radius: 8px; padding: 16px;">
+                                                        <p class="dark-text" style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Visit Store</p>
                                                         <a href="https://tiscomarket.store" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 14px;">tiscomarket.store</a>
                                                     </div>
                                                 </td>
@@ -253,8 +323,8 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                             <!-- Timestamp -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
                                 <tr>
-                                    <td style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
-                                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
+                                    <td class="card-bg-light" style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 6px;">
+                                        <p class="dark-text-muted" style="margin: 0; color: #9ca3af; font-size: 12px;">Sent on ${new Date().toLocaleDateString('en-US', { 
                                           weekday: 'long', 
                                           year: 'numeric', 
                                           month: 'long', 
@@ -269,12 +339,12 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 32px; background-color: #f8fafc; border-radius: 0 0 16px 16px; border-top: 1px solid #e2e8f0;">
+                        <td class="footer-bg" style="padding: 40px 32px; background: #ffffff; border-radius: 0 0 16px 16px; border-top: 1px solid rgba(226, 232, 240, 0.8);">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td align="center">
-                                        <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
-                                        <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Your trusted technology partner in Tanzania</p>
+                                        <p class="dark-text" style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #374151;">TISCOマーケット</p>
+                                        <p class="dark-text-secondary" style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">Your Trusted Online Marketplace • Tech • Rare Finds • Services • Unique Items • Delivered Across Tanzania</p>
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
                                             <tr>
                                                 <td style="padding: 0 12px;">
@@ -285,7 +355,7 @@ function renderAdminNotificationHtml(input: { title: string; message: string; ac
                                                 </td>
                                             </tr>
                                         </table>
-                                        <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
+                                        <p class="dark-text-muted" style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2024 TISCOマーケット. All rights reserved.</p>
                                     </td>
                                 </tr>
                             </table>
