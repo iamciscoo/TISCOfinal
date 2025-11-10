@@ -60,6 +60,14 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // Handle www to non-www redirect (permanent 301)
+  const hostname = request.headers.get('host') || ''
+  if (hostname.startsWith('www.')) {
+    const url = request.nextUrl.clone()
+    url.host = hostname.replace('www.', '')
+    return NextResponse.redirect(url, { status: 301 })
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
