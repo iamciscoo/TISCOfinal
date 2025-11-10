@@ -448,7 +448,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-center gap-3">
                 <label 
                   htmlFor="file-upload-edit" 
-                  className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white font-semibold rounded-full cursor-pointer transition-all duration-150 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   style={{ pointerEvents: imageLoading ? 'none' : 'auto' }}
                 >
                   <span>Choose Files</span>
@@ -805,6 +805,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <FormControl>
                   <div className="space-y-3">
                     <Select
+                      value=""
                       onValueChange={(categoryId) => {
                         if (field.value.length >= MAX_CATEGORIES) {
                           toast({
@@ -815,11 +816,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                           return;
                         }
                         if (!field.value.includes(categoryId)) {
+                          const category = categories.find(c => c.id.toString() === categoryId);
                           field.onChange([...field.value, categoryId]);
+                          toast({
+                            title: "Category added",
+                            description: `${category?.name || 'Category'} has been added to this product`,
+                          });
                         }
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Add a category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -841,20 +847,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                             <Badge
                               key={categoryId}
                               variant="secondary"
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 pr-1"
                             >
-                              {category?.name || 'Unknown'}
+                              <span>{category?.name || 'Unknown'}</span>
                               <button
                                 type="button"
-                                className="ml-1 hover:text-destructive"
+                                className="ml-1 rounded-sm hover:bg-destructive/20 p-0.5 transition-colors"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   e.preventDefault();
+                                  const categoryName = category?.name || 'Category';
                                   const newValue = field.value.filter(id => id !== categoryId);
                                   field.onChange(newValue);
+                                  toast({
+                                    title: "Category removed",
+                                    description: `${categoryName} has been removed from this product`,
+                                  });
                                 }}
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-3 w-3 hover:text-destructive" />
                               </button>
                             </Badge>
                           );
@@ -1041,12 +1052,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     onCheckedChange={(checked) => {
                       field.onChange(checked);
                       // Auto-populate original_price with current price when deal is checked
+                      // Use queueMicrotask to avoid flushSync errors in React 19
                       if (checked) {
-                        const currentPrice = form.getValues('price');
-                        const currentOriginalPrice = form.getValues('original_price');
-                        if (currentPrice && currentPrice > 0 && (!currentOriginalPrice || currentOriginalPrice === 0)) {
-                          form.setValue('original_price', currentPrice);
-                        }
+                        queueMicrotask(() => {
+                          const currentPrice = form.getValues('price');
+                          const currentOriginalPrice = form.getValues('original_price');
+                          if (currentPrice && currentPrice > 0 && (!currentOriginalPrice || currentOriginalPrice === 0)) {
+                            form.setValue('original_price', currentPrice);
+                          }
+                        });
                       }
                     }}
                   />
