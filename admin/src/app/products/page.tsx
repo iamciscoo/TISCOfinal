@@ -155,7 +155,7 @@ const ProductsPage = () => {
 
   return (
     <div className="space-y-6 pt-2">
-      <div className="flex flex-col gap-4 pb-6 border-b px-3 sm:px-0">
+      <div className="flex flex-col gap-4 pb-6 border-b px-4 sm:px-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             All Products
