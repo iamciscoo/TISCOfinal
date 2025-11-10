@@ -74,6 +74,8 @@ function DealsContent() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const prevSheetOpen = useRef(false)
   
   const { addItem } = useCartStore()
   
@@ -104,6 +106,20 @@ function DealsContent() {
       }
     }
   }, [searchTerm])
+
+  // When mobile filter sheet closes, scroll to show Filters + Video + Deals grid
+  useEffect(() => {
+    if (prevSheetOpen.current && !isFilterSheetOpen) {
+      const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+      if (isMobile) {
+        const anchor = gridRef.current
+        const offset = 380 // Show filters button, video card, and start of deals grid
+        const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      }
+    }
+    prevSheetOpen.current = isFilterSheetOpen
+  }, [isFilterSheetOpen])
   
   // Fetch deals and categories from API
   useEffect(() => {
@@ -517,6 +533,8 @@ function DealsContent() {
 
           {/* Deals Grid/List */}
           <div className="lg:col-span-3">
+            {/* Anchor used for mobile scroll into view when filters close */}
+            <div ref={gridRef} aria-hidden className="h-0" />
             {!loading && !error && (
               <>
                 {filteredDeals.length === 0 ? (

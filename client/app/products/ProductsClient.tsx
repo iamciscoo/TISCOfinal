@@ -58,6 +58,8 @@ function ProductsContent() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const prevSheetOpen = useRef(false)
 
   // Scroll to top ONLY on page 1, otherwise scroll to products grid
   useEffect(() => {
@@ -69,6 +71,21 @@ function ProductsContent() {
       window.scrollTo({ top: 320, behavior: 'smooth' })
     }
   }, [currentPage])
+
+  // When mobile filter sheet closes (after user selects/sets filters), scroll to show Filters + Video + Products
+  useEffect(() => {
+    if (prevSheetOpen.current && !isFilterSheetOpen) {
+      // Only auto-scroll on mobile/tablet to avoid jarring desktop jumps
+      const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+      if (isMobile) {
+        const anchor = gridRef.current
+        const offset = 380 // Show filters button, video card, and start of products grid
+        const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      }
+    }
+    prevSheetOpen.current = isFilterSheetOpen
+  }, [isFilterSheetOpen])
 
   // Fetch data
   useEffect(() => {
@@ -591,6 +608,8 @@ function ProductsContent() {
 
           {/* Products Grid/List */}
           <div className="lg:col-span-3">
+            {/* Anchor used for mobile scroll into view when filters close */}
+            <div ref={gridRef} aria-hidden className="h-0" />
             <ErrorBoundary fallback={ProductsErrorFallback}>
               {displayedProducts.length === 0 ? (
                 <Card>

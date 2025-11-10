@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/lib/types'
@@ -35,6 +35,7 @@ function pickImageFor(name: string): string | null {
 export function CategoryBar({ categories, className }: CategoryBarProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   // Preload all category images on mount
   useEffect(() => {
@@ -78,15 +79,42 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
     return prioritized
   }, [categories])
 
+  // Close on outside tap/click or Escape when mobile menu is open
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+
+    const handlePointer = (e: MouseEvent | TouchEvent) => {
+      if (!containerRef.current) return
+      if (!containerRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', handlePointer, { passive: true })
+    document.addEventListener('touchstart', handlePointer, { passive: true })
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handlePointer)
+      document.removeEventListener('touchstart', handlePointer)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [mobileMenuOpen])
+
   return (
-    <div className={cn('relative', className)}>
+    <div ref={containerRef} className={cn('relative', className)}>
       {/* Mobile Dropdown */}
       <div className="md:hidden w-full border rounded-xl bg-white relative">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="w-full flex items-center justify-between px-4 py-3 text-gray-800"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="popular-categories-menu"
         >
-          <span className="font-medium">Categories</span>
+          <span className="font-medium">Popular Categories</span>
           <svg
             className={cn('w-5 h-5 transition-transform', mobileMenuOpen && 'rotate-180')}
             fill="none"
@@ -96,9 +124,17 @@ export function CategoryBar({ categories, className }: CategoryBarProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
+        {/* Screen overlay to allow tap-outside close on mobile */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-40 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
         
         {mobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
+          <div id="popular-categories-menu" className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
             {displayCategories.map((cat) => (
               <Link
                 key={String(cat.id)}

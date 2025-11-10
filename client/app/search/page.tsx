@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, useMemo, useCallback } from 'react'
+import { useState, useEffect, Suspense, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,8 @@ function SearchResults() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const prevSheetOpen = useRef(false)
   
   const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
 
@@ -88,6 +90,20 @@ function SearchResults() {
       window.scrollTo({ top: 280, behavior: 'smooth' })
     }
   }, [currentPage])
+
+  // When mobile filter sheet closes, scroll to show Filters button and top of results grid
+  useEffect(() => {
+    if (prevSheetOpen.current && !isFilterSheetOpen) {
+      const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+      if (isMobile) {
+        const anchor = gridRef.current
+        const offset = 240 // Show filters button and start of search results grid (no video card on search)
+        const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      }
+    }
+    prevSheetOpen.current = isFilterSheetOpen
+  }, [isFilterSheetOpen])
 
   // Debounced URL sync for refine input
   const updateUrlDebounced = useMemo(
@@ -587,6 +603,8 @@ function SearchResults() {
 
           {/* Results Grid/List */}
           <div className="lg:col-span-3">
+            {/* Anchor used for mobile scroll into view when filters close */}
+            <div ref={gridRef} aria-hidden className="h-0" />
             {displayedProducts.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-16">
