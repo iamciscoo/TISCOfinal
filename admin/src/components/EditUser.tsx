@@ -82,97 +82,110 @@ const EditUser = ({ userId, defaultValues }: EditUserProps) => {
     }
   }
   return (
-    <SheetContent aria-describedby={undefined}>
-      <SheetHeader>
-        <SheetTitle className="mb-4">Edit User</SheetTitle>
+    <SheetContent aria-describedby={undefined} className="flex flex-col p-0">
+      <SheetHeader className="px-4 py-3 border-b shrink-0">
+        <SheetTitle className="text-base sm:text-lg">Edit User</SheetTitle>
       </SheetHeader>
-      <Form {...form}>
-        <form className="space-y-8 mt-4" onSubmit={form.handleSubmit(onSubmit)}>
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} autoComplete="name" />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user full name.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" autoComplete="email" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Only admin can see your email.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input type="tel" autoComplete="tel" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Only admin can see your phone number (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input autoComplete="street-address" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user address (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input autoComplete="address-level2" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter user city (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Saving..." : "Save changes"}
-          </Button>
-        </form>
-      </Form>
+      
+      {/* Scrollable Form Container */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <Form {...form}>
+          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Full Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} autoComplete="name" className="h-9" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Enter user full name.
+                  </FormDescription>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" autoComplete="email" {...field} className="h-9" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Only admin can see your email.
+                  </FormDescription>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Phone</FormLabel>
+                  <FormControl>
+                    <Input type="tel" autoComplete="tel" {...field} className="h-9" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Only admin can see your phone number (optional)
+                  </FormDescription>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Address</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="street-address" {...field} className="h-9" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Enter user address (optional)
+                  </FormDescription>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">City</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="address-level2" {...field} className="h-9" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Enter user city (optional)
+                  </FormDescription>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+      </div>
+      
+      {/* Fixed Footer with Save Button */}
+      <div className="border-t px-4 py-3 shrink-0 bg-white">
+        <Button 
+          type="submit" 
+          disabled={form.formState.isSubmitting}
+          onClick={form.handleSubmit(onSubmit)}
+          className="w-full h-9 text-sm"
+        >
+          {form.formState.isSubmitting ? "Saving..." : "Save changes"}
+        </Button>
+      </div>
     </SheetContent>
   );
 };
