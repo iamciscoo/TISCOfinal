@@ -339,8 +339,8 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md shadow-2xl border-gray-200 max-h-[90vh] p-0 flex flex-col">
-        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+      <DialogContent className="sm:max-w-md shadow-2xl border-gray-200 max-h-[85vh] sm:max-h-[88vh] p-0 flex flex-col">
+        <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-4">
           <DialogTitle className="text-lg font-semibold">
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
           </DialogTitle>
@@ -352,15 +352,15 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ minHeight: 0 }}>
-            <div className="space-y-4 py-2">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-1" style={{ minHeight: 0 }}>
+            <div className="space-y-2.5 sm:space-y-3 py-1.5">
               {error && (
                 <div role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
               )}
 
               {/* Avatar Section */}
-              <div className="space-y-2">
-                <Label>Avatar</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-sm">Avatar</Label>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gray-200">
                     {previewUrl || avatarUrl ? (
@@ -401,24 +401,24 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
                 <p className="text-xs text-muted-foreground">Square image recommended, max 2MB.</p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="first_name">First name</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="first_name" className="text-sm">First name</Label>
                 <Input id="first_name" value={profile.first_name} onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))} placeholder="John" disabled={fetching || loading} />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="last_name">Last name</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="last_name" className="text-sm">Last name</Label>
                 <Input id="last_name" value={profile.last_name} onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" disabled={fetching || loading} />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="email" className="text-sm">Email</Label>
                 <Input id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" disabled={fetching || loading} />
                 <p className="text-xs text-muted-foreground">Changing email may require confirmation.</p>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone (optional)</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="phone" className="text-sm">Phone (optional)</Label>
                 <Input id="phone" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="255700000000 (optional)" disabled={fetching || loading} />
                 <p className="text-xs text-muted-foreground">Optional. Can be added later for order delivery. International format preferred (e.g., 255700000000).</p>
               </div>
@@ -634,14 +634,14 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
                 </div>
               )}
 
-              {/* Spacer for better scrolling experience */}
-              <div className="h-6" aria-hidden="true" />
+              {/* Minimal spacer for better scrolling experience */}
+              <div className="h-2" aria-hidden="true" />
             </div>
         </div>
 
-        <div className="flex-shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-white">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading} className="rounded-full h-10 px-6">Cancel</Button>
-          <Button onClick={handleSave} disabled={loading || fetching} className="rounded-full h-10 px-6 font-medium">{loading ? "Saving..." : "Save"}</Button>
+        <div className="flex-shrink-0 flex justify-end gap-2 px-4 sm:px-6 py-2.5 sm:py-4 border-t border-gray-200 bg-white">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading} className="rounded-full h-10 px-4 sm:px-6 text-sm">Cancel</Button>
+          <Button onClick={handleSave} disabled={loading || fetching} className="rounded-full h-10 px-4 sm:px-6 font-medium text-sm">{loading ? "Saving..." : "Save"}</Button>
         </div>
       </DialogContent>
     </Dialog>
