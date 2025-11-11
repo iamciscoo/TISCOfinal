@@ -339,7 +339,7 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] p-0 flex flex-col z-[100]">
+      <DialogContent className="sm:max-w-md shadow-2xl border-gray-200 max-h-[90vh] p-0 flex flex-col">
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
           <DialogTitle className="text-lg font-semibold">
             {isPasswordReset ? 'Complete Password Reset' : 'Profile'}
@@ -370,8 +370,9 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
                     )}
                   </div>
                   <div className="flex-1">
-                    <Input
+                    <input
                       type="file"
+                      id="avatar-upload"
                       accept="image/*"
                       onChange={(e) => {
                         const f = e.target.files?.[0] || null
@@ -379,8 +380,22 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
                         if (f) setPreviewUrl(URL.createObjectURL(f))
                       }}
                       disabled={fetching || loading}
-                      className="text-sm"
+                      className="hidden"
                     />
+                    <label htmlFor="avatar-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={fetching || loading}
+                        className="w-full rounded-full h-10 text-sm font-medium cursor-pointer hover:bg-gray-50 active:scale-95 transition-transform"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document.getElementById('avatar-upload')?.click()
+                        }}
+                      >
+                        {selectedFile ? selectedFile.name : 'Choose File'}
+                      </Button>
+                    </label>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Square image recommended, max 2MB.</p>
@@ -625,8 +640,8 @@ export function ProfileDialog({ open, onOpenChange, isPasswordReset = false }: P
         </div>
 
         <div className="flex-shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-white">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
-          <Button onClick={handleSave} disabled={loading || fetching}>{loading ? "Saving..." : "Save"}</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading} className="rounded-full h-10 px-6">Cancel</Button>
+          <Button onClick={handleSave} disabled={loading || fetching} className="rounded-full h-10 px-6 font-medium">{loading ? "Saving..." : "Save"}</Button>
         </div>
       </DialogContent>
     </Dialog>

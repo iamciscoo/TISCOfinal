@@ -266,6 +266,41 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           </DialogDescription>
         </DialogHeader>
 
+        {/* Google Sign In - Show First */}
+        {(mode === 'signin' || mode === 'signup') && (
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full h-11 rounded-full text-base font-medium"
+            >
+              <FcGoogle className="h-5 w-5 mr-2" />
+              Continue with Google
+            </Button>
+            
+            {/* Show Google authentication errors */}
+            {error && error.includes('Google') && (
+              <div className="text-sm text-red-600 flex items-center gap-2">
+                <X className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {mode === 'signup' && (
@@ -423,43 +458,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full h-11 rounded-full text-base font-medium" disabled={loading}>
             {getSubmitText()}
           </Button>
 
-          {(mode === 'signin' || mode === 'signup') && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full"
-              >
-                <FcGoogle className="h-4 w-4 mr-2" />
-                Continue with Google
-              </Button>
-              
-              {/* Show Google authentication errors */}
-              {error && error.includes('Google') && (
-                <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
-                  <X className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-            </>
-          )}
 
           <div className="text-center space-y-2">
             {mode === 'signin' && (
