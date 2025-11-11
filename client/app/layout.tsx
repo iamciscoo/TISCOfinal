@@ -61,6 +61,8 @@ import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 import { GlobalAuthModalManager } from '@/components/auth/GlobalAuthModalManager'
 // Session tracker (tracks user sessions with device and browser info)
 import { SessionTracker } from '@/components/SessionTracker'
+// Google Analytics tracking (business intelligence and customer insights)
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 
 // ========== SEO STRUCTURED DATA IMPORTS ==========
 // Schema.org structured data components for rich Google search results
@@ -280,6 +282,10 @@ export default async function RootLayout({
       {/* ========== HEAD SECTION - Invisible Metadata ========== */}
       {/* Everything in <head> doesn't show on page but is crucial for SEO and functionality */}
       <head>
+        {/* Google Analytics - Tracks user behavior and business metrics */}
+        <GoogleAnalytics />
+        
+        {/* SEO Structured Data for rich search results */}
         <OrganizationSchema />
         <WebsiteSchema />
         <SiteNavigationSchema />
