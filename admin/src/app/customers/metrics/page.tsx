@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Users, Monitor, Smartphone, Tablet, TrendingUp, ShoppingBag, Calendar, RotateCcw, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Users, Monitor, Smartphone, Tablet, TrendingUp, ShoppingBag, Calendar, RotateCcw, Search, ChevronLeft, ChevronRight, Eye, EyeOff, Columns } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useToast } from '@/hooks/use-toast'
 
 interface UserMetric {
@@ -91,6 +99,38 @@ export default function CustomerMetricsPage() {
   const rowsPerPage = 20
   const sessionsPerPage = 20
   const { toast } = useToast()
+
+  // Column visibility state - Orders and Bookings hidden by default for mobile
+  const [columnVisibility, setColumnVisibility] = useState({
+    email: true,
+    registered: true,
+    orders: false, // Hidden by default for cleaner mobile view
+    bookings: false, // Hidden by default for cleaner mobile view
+    sessions: true,
+    lastLogin: true,
+    device: true,
+  })
+
+  const toggleColumn = (column: keyof typeof columnVisibility) => {
+    setColumnVisibility(prev => ({ ...prev, [column]: !prev[column] }))
+  }
+
+  // Close expanded user details when clicking outside
+  useEffect(() => {
+    if (!expandedUser) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      // Don't close if clicking inside the expanded section or the View button
+      if (target.closest('[data-expanded-row]') || target.closest('[data-view-button]')) {
+        return
+      }
+      setExpandedUser(null)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [expandedUser])
 
   useEffect(() => {
     fetchMetrics()
@@ -246,26 +286,27 @@ export default function CustomerMetricsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="space-y-3 sm:space-y-4">
         <div>
-          <h1 className="text-3xl font-bold">Customer Metrics</h1>
-          <p className="text-gray-600 mt-1">Comprehensive customer analytics and activity tracking</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Customer Metrics</h1>
+          <p className="text-gray-600 mt-1 text-xs sm:text-sm">Comprehensive customer analytics and activity tracking</p>
         </div>
         
-        <div className="flex gap-3">
+        {/* Filters - Stack on Mobile */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Button
             variant="outline"
             onClick={() => setShowGlobalResetDialog(true)}
             disabled={globalResetLoading}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 w-full sm:w-auto text-xs sm:text-sm h-9"
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
             Reset All Sessions
           </Button>
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs sm:text-sm">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -278,7 +319,7 @@ export default function CustomerMetricsPage() {
           </Select>
           
           <Select value={interval} onValueChange={(value: any) => setInterval(value)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs sm:text-sm">
               <SelectValue placeholder="Select interval" />
             </SelectTrigger>
             <SelectContent>
@@ -293,50 +334,50 @@ export default function CustomerMetricsPage() {
 
       {/* Statistics Cards */}
       {statistics && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Users</CardTitle>
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.total_users}</div>
-              <p className="text-xs text-muted-foreground">Registered on platform</p>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{statistics.total_users}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Registered on platform</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Active Users</CardTitle>
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.unique_users_in_period}</div>
-              <p className="text-xs text-muted-foreground">In selected period</p>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{statistics.unique_users_in_period}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">In selected period</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Sessions</CardTitle>
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.total_sessions}</div>
-              <p className="text-xs text-muted-foreground">In selected period</p>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{statistics.total_sessions}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">In selected period</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Orders & Bookings</CardTitle>
-              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Orders & Bookings</CardTitle>
+              <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-lg sm:text-2xl font-bold">
                 {users.reduce((sum, u) => sum + u.total_orders + u.total_bookings, 0)}
               </div>
-              <p className="text-xs text-muted-foreground">Total transactions</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Total transactions</p>
             </CardContent>
           </Card>
         </div>
@@ -344,56 +385,56 @@ export default function CustomerMetricsPage() {
 
       {/* Device, Browser, OS Breakdown */}
       {statistics && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3">
           <Card>
-            <CardHeader>
-              <CardTitle>Device Breakdown</CardTitle>
-              <CardDescription>Sessions by device type</CardDescription>
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardTitle className="text-sm sm:text-base">Device Breakdown</CardTitle>
+              <CardDescription className="text-xs">Sessions by device type</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 p-3 sm:p-4 pt-2">
               {Object.entries(statistics.device_breakdown || {}).map(([device, count]) => (
-                <div key={device} className="flex items-center justify-between">
+                <div key={device} className="flex items-center justify-between text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     {getDeviceIcon(device)}
                     <span className="capitalize">{device}</span>
                   </div>
-                  <Badge variant="secondary">{count}</Badge>
+                  <Badge variant="secondary" className="text-xs">{count}</Badge>
                 </div>
               ))}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Browser Breakdown</CardTitle>
-              <CardDescription>Sessions by browser</CardDescription>
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardTitle className="text-sm sm:text-base">Browser Breakdown</CardTitle>
+              <CardDescription className="text-xs">Sessions by browser</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 p-3 sm:p-4 pt-2">
               {Object.entries(statistics.browser_breakdown || {})
                 .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 5)
                 .map(([browser, count]) => (
-                  <div key={browser} className="flex items-center justify-between">
-                    <span>{browser}</span>
-                    <Badge variant="secondary">{count}</Badge>
+                  <div key={browser} className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="truncate">{browser}</span>
+                    <Badge variant="secondary" className="text-xs ml-2">{count}</Badge>
                   </div>
                 ))}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>OS Breakdown</CardTitle>
-              <CardDescription>Sessions by operating system</CardDescription>
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardTitle className="text-sm sm:text-base">OS Breakdown</CardTitle>
+              <CardDescription className="text-xs">Sessions by operating system</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 p-3 sm:p-4 pt-2">
               {Object.entries(statistics.os_breakdown || {})
                 .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 5)
                 .map(([os, count]) => (
-                  <div key={os} className="flex items-center justify-between">
-                    <span>{os}</span>
-                    <Badge variant="secondary">{count}</Badge>
+                  <div key={os} className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="truncate">{os}</span>
+                    <Badge variant="secondary" className="text-xs ml-2">{count}</Badge>
                   </div>
                 ))}
             </CardContent>
@@ -403,40 +444,117 @@ export default function CustomerMetricsPage() {
 
       {/* User Details Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>User Activity Details</CardTitle>
-          <CardDescription>Individual user metrics and session information</CardDescription>
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="text-sm sm:text-base">User Activity Details</CardTitle>
+          <CardDescription className="text-xs">Individual user metrics and session information</CardDescription>
           
-          {/* Search Bar */}
-          <div className="flex items-center gap-2 pt-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          {/* Search Bar and Column Toggle */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 sm:pt-4">
+            <div className="relative flex-1 max-w-full sm:max-w-sm">
+              <Search className="absolute left-2 top-2 sm:top-2.5 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, phone, city..."
+                placeholder="Search by name, email, phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
+                className="pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
               />
             </div>
-            <div className="text-sm text-muted-foreground">
-              Showing {paginatedUsers.length} of {filteredUsers.length} users
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                    <Columns className="h-3 w-3 mr-2" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs">Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.email}
+                    onCheckedChange={() => toggleColumn('email')}
+                    className="text-xs"
+                  >
+                    Email
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.registered}
+                    onCheckedChange={() => toggleColumn('registered')}
+                    className="text-xs"
+                  >
+                    Registered
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.orders}
+                    onCheckedChange={() => toggleColumn('orders')}
+                    className="text-xs"
+                  >
+                    Orders
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.bookings}
+                    onCheckedChange={() => toggleColumn('bookings')}
+                    className="text-xs"
+                  >
+                    Bookings
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.sessions}
+                    onCheckedChange={() => toggleColumn('sessions')}
+                    className="text-xs"
+                  >
+                    Sessions
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.lastLogin}
+                    onCheckedChange={() => toggleColumn('lastLogin')}
+                    className="text-xs"
+                  >
+                    Last Login
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={columnVisibility.device}
+                    onCheckedChange={() => toggleColumn('device')}
+                    className="text-xs"
+                  >
+                    Device
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                Showing {paginatedUsers.length} of {filteredUsers.length}
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead>Orders</TableHead>
-                  <TableHead>Bookings</TableHead>
-                  <TableHead>Sessions</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead>Primary Device</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">User</TableHead>
+                  {columnVisibility.sessions && (
+                    <TableHead className="text-xs whitespace-nowrap">Sessions</TableHead>
+                  )}
+                  {columnVisibility.lastLogin && (
+                    <TableHead className="text-xs whitespace-nowrap">Last Login</TableHead>
+                  )}
+                  {columnVisibility.orders && (
+                    <TableHead className="text-xs whitespace-nowrap">Orders</TableHead>
+                  )}
+                  {columnVisibility.bookings && (
+                    <TableHead className="text-xs whitespace-nowrap">Bookings</TableHead>
+                  )}
+                  {columnVisibility.email && (
+                    <TableHead className="text-xs whitespace-nowrap hidden sm:table-cell">Email</TableHead>
+                  )}
+                  {columnVisibility.registered && (
+                    <TableHead className="text-xs whitespace-nowrap hidden md:table-cell">Registered</TableHead>
+                  )}
+                  {columnVisibility.device && (
+                    <TableHead className="text-xs whitespace-nowrap hidden lg:table-cell">Device</TableHead>
+                  )}
+                  <TableHead className="text-xs whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -450,49 +568,65 @@ export default function CustomerMetricsPage() {
                   paginatedUsers.map((user) => (
                   <React.Fragment key={user.id}>
                     <TableRow className="cursor-pointer hover:bg-gray-50">
-                      <TableCell className="font-medium">{user.full_name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{new Date(user.registered_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm">{user.full_name}</TableCell>
+                      {columnVisibility.sessions && (
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{user.total_sessions}</Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.lastLogin && (
+                        <TableCell className="text-xs text-gray-600">
+                          {formatDate(user.last_login)}
+                        </TableCell>
+                      )}
+                      {columnVisibility.orders && (
+                        <TableCell>
+                          <Badge variant={user.total_orders > 0 ? 'default' : 'secondary'} className="text-xs">
+                            {user.total_orders}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.bookings && (
+                        <TableCell>
+                          <Badge variant={user.total_bookings > 0 ? 'default' : 'secondary'} className="text-xs">
+                            {user.total_bookings}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.email && (
+                        <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{user.email}</TableCell>
+                      )}
+                      {columnVisibility.registered && (
+                        <TableCell className="text-xs sm:text-sm hidden md:table-cell">{new Date(user.registered_at).toLocaleDateString()}</TableCell>
+                      )}
+                      {columnVisibility.device && (
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center gap-2">
+                            {getDeviceIcon(user.primary_device)}
+                            <span className="capitalize text-xs">{user.primary_device}</span>
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell>
-                        <Badge variant={user.total_orders > 0 ? 'default' : 'secondary'}>
-                          {user.total_orders}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.total_bookings > 0 ? 'default' : 'secondary'}>
-                          {user.total_bookings}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{user.total_sessions}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {formatDate(user.last_login)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getDeviceIcon(user.primary_device)}
-                          <span className="capitalize text-sm">{user.primary_device}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                            className="text-xs h-7 px-2"
+                            data-view-button
                           >
-                            {expandedUser === user.id ? 'Hide' : 'Details'}
+                            {expandedUser === user.id ? 'Hide' : 'View'}
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-7 px-2"
                             onClick={() => setResetUserId(user.id)}
                             disabled={resetLoading}
-                            title="Reset user metrics (clears sessions and reviews)"
+                            title="Reset user metrics"
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -500,11 +634,22 @@ export default function CustomerMetricsPage() {
                     
                     {/* Expanded Row with Session Details */}
                     {expandedUser === user.id && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="bg-gray-50 p-4">
-                          <div className="space-y-4">
-                            <h4 className="font-semibold">User Information</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <TableRow data-expanded-row>
+                        <TableCell colSpan={9} className="bg-gray-50 p-3 sm:p-4 border-l-4 border-blue-500" data-expanded-row>
+                          <div className="space-y-3 sm:space-y-4" data-expanded-row>
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm sm:text-base font-semibold text-gray-900">User Information</h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setExpandedUser(null)}
+                                className="text-xs h-6 px-2"
+                                data-view-button
+                              >
+                                Close
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                               <div>
                                 <span className="font-medium">Phone:</span> {user.phone || 'N/A'}
                               </div>
@@ -548,10 +693,10 @@ export default function CustomerMetricsPage() {
                               
                               return (
                               <>
-                                <div className="flex items-center justify-between mt-4">
-                                  <h4 className="font-semibold">Recent Sessions</h4>
+                                <div className="flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+                                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Recent Sessions</h4>
                                   <span className="text-xs text-gray-500">
-                                    {user.recent_sessions.length} total sessions
+                                    {user.recent_sessions.length} total
                                   </span>
                                 </div>
                                 <div className="overflow-x-auto">
