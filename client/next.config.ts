@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
     ]
   },
   async headers() {
+    const isProduction = process.env.NODE_ENV === 'production'
+    
     return [
       {
         source: '/sitemap.xml',
@@ -91,6 +93,25 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // Content Security Policy - Comprehensive XSS protection
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com https://checkout.stripe.com https://unpkg.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https: http:",
+              "media-src 'self' blob:",
+              "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com wss://*.supabase.co https://api.zenopay.net",
+              "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests"
+            ].join('; ')
+          },
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
@@ -103,10 +124,40 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
+          // Strict referrer policy
           {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains; preload',
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
           },
+          // Permissions Policy (restrict dangerous features)
+          {
+            key: 'Permissions-Policy',
+            value: [
+              'camera=()',
+              'microphone=()',
+              'geolocation=()',
+              'interest-cohort=()',
+              'payment=(self)',
+              'usb=()',
+              'bluetooth=()',
+              'autoplay=(self)',
+              'fullscreen=(self)'
+            ].join(', ')
+          },
+          // HSTS (only in production with HTTPS)
+          ...(isProduction ? [{
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          }] : []),
+          // Cross-Origin policies
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin'
+          },
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'same-origin'
+          }
         ],
       },
       // **CACHING DISABLED FOR REAL-TIME UPDATES**
@@ -122,6 +173,10 @@ const nextConfig: NextConfig = {
             key: 'CDN-Cache-Control',
             value: 'no-cache',
           },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          }
         ],
       },
       {
@@ -135,6 +190,10 @@ const nextConfig: NextConfig = {
             key: 'CDN-Cache-Control',
             value: 'no-cache',
           },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          }
         ],
       },
       {
@@ -144,8 +203,39 @@ const nextConfig: NextConfig = {
             key: 'Cache-Control',
             value: 'no-cache, no-store, must-revalidate',
           },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          // CSRF protection header
+          {
+            key: 'X-CSRF-Protection',
+            value: 'required'
+          }
         ],
       },
+      // Webhook endpoints need special handling
+      {
+        source: '/api/payments/mobile/webhook',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'https://api.zenopay.net'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'POST'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          }
+        ]
+      }
     ]
   },
 };

@@ -12,6 +12,8 @@ import {
   logPaymentEvent
 } from '@/lib/payments/service'
 import type { ZenoPayWebhookPayload } from '@/lib/payments/types'
+import { validateWebhookSecurity, validateWebhookPayload } from '@/lib/security/webhook'
+import { sanitizeJsonPayload, validateRequestSize } from '@/lib/security/sanitizer'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // Max 60 seconds for webhook processing
@@ -23,21 +25,56 @@ export async function POST(req: NextRequest) {
   console.log(`📍 [${webhookId}] Timestamp: ${new Date().toISOString()}`)
   
   try {
-    // Parse webhook payload
-    const payload: ZenoPayWebhookPayload = await req.json()
+    // Get raw payload for signature verification
+    const rawPayload = await req.text()
     
-    console.log(`📦 [${webhookId}] Payload:`, JSON.stringify(payload, null, 2))
+    // Validate request size (max 100KB for webhook payloads)
+    validateRequestSize(rawPayload, 100)
     
-    // Validate required fields
-    if (!payload.order_id || !payload.payment_status) {
-      console.error(`❌ [${webhookId}] Missing required fields`)
+    // Security validation
+    const securityCheck = validateWebhookSecurity(req, rawPayload, {
+      secret: process.env.ZENOPAY_WEBHOOK_SECRET,
+      allowedIPs: process.env.ZENOPAY_ALLOWED_IPS?.split(',') || [],
+      maxRequests: 50, // Max 50 webhooks per minute per IP
+      windowMs: 60000,
+      requireSignature: process.env.NODE_ENV === 'production'
+    })
+    
+    if (!securityCheck.valid) {
+      console.error(`🔒 [${webhookId}] Security validation failed: ${securityCheck.error}`)
       return NextResponse.json(
-        { error: 'Missing required fields: order_id, payment_status' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    // Parse webhook payload
+    let payload: ZenoPayWebhookPayload
+    try {
+      payload = JSON.parse(rawPayload)
+    } catch {
+      console.error(`❌ [${webhookId}] Invalid JSON payload`)
+      return NextResponse.json(
+        { error: 'Invalid JSON payload' },
+        { status: 400 }
+      )
+    }
+    
+    // Sanitize payload
+    const sanitizedPayload = sanitizeJsonPayload(payload as unknown as Record<string, unknown>) as unknown as ZenoPayWebhookPayload
+    
+    console.log(`📦 [${webhookId}] Payload received and validated`)
+    
+    // Validate payload structure
+    if (!validateWebhookPayload(sanitizedPayload as unknown as Record<string, unknown>)) {
+      console.error(`❌ [${webhookId}] Invalid payload structure`)
+      return NextResponse.json(
+        { error: 'Invalid payload structure' },
         { status: 400 }
       )
     }
 
-    const { order_id: transactionRef, payment_status, reference, transid } = payload
+    const { order_id: transactionRef, payment_status, reference, transid } = sanitizedPayload
 
     // Process all success statuses from ZenoPay
     const successStatuses = ['COMPLETED', 'SUCCESSFUL', 'SUCCESS', 'SETTLED', 'APPROVED']

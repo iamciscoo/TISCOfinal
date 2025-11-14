@@ -15,8 +15,14 @@ async function verifySignedSession(token: string | undefined, secret: string | u
   if (!ts || !sig) return false
   const maxAgeMs = 24 * 60 * 60 * 1000
   if (Date.now() - ts > maxAgeMs) return false
-  // If no secret (e.g., local dev misconfig), allow token presence to avoid lockout
-  if (!secret) return true
+  // SECURITY: Only allow dev fallback in development mode
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Admin session secret missing in production!')
+      return false
+    }
+    return true // Only allow in development
+  }
   try {
     const enc = new TextEncoder()
     const key = await crypto.subtle.importKey(
