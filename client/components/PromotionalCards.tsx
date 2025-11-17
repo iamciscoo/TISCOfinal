@@ -18,9 +18,18 @@ interface PromoCard {
 
 const promotionalCards: PromoCard[] = [
   {
+    id: 'my-space',
+    title: 'Your Personal Space',
+    description: 'Products curated just for you, exactly the way you like them.',
+    ctaText: 'Visit My Space',
+    ctaLink: '/account/my-space',
+    imageSrc: '/Myspace.jpeg',
+    imageAlt: 'Personalized shopping experience'
+  },
+  {
     id: 'deals',
     title: 'Exclusive Deals & Offers',
-    description: 'Save big with our discounts.',
+    description: 'Save big with our discounts. This is where the good stuff lives',
     ctaText: 'Shop Deals',
     ctaLink: '/deals',
     imageSrc: '/homehero3.jpg',
@@ -51,7 +60,7 @@ export const PromotionalCards = () => {
     <section className="py-3 sm:py-10 bg-white relative overflow-hidden mb-3">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop/Tablet Grid */}
-        <div className="hidden md:grid grid-cols-3 gap-3 md:gap-4">
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {promotionalCards.map((card, index) => (
             <Link 
               key={card.id} 
@@ -59,11 +68,11 @@ export const PromotionalCards = () => {
               className="group block"
             >
               <div
-                className="flex items-center justify-between h-28 md:h-32 lg:h-36 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 px-3 md:px-4 lg:px-5 xl:px-6 overflow-hidden transition-all hover:shadow-md"
+                className="flex flex-col justify-between rounded-2xl bg-white shadow-sm ring-1 ring-black/5 p-3 md:p-4 lg:p-5 xl:p-6 gap-2 transition-all hover:shadow-md h-full min-h-[240px] md:min-h-[260px] lg:min-h-[280px]"
               >
                 {/* Text */}
-                <div className="flex-1 pr-2 md:pr-3 lg:pr-4 min-w-0 overflow-hidden">
-                  <h3 className="text-gray-900 text-xs md:text-sm lg:text-base xl:text-lg font-semibold leading-tight truncate">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-gray-900 text-xs md:text-sm lg:text-base xl:text-lg font-semibold leading-tight line-clamp-2 break-words">
                     {card.title}
                   </h3>
                   <p className="text-gray-500 text-[10px] md:text-xs lg:text-sm mt-0.5 md:mt-1 hidden lg:block line-clamp-2">
@@ -74,14 +83,14 @@ export const PromotionalCards = () => {
                     <ArrowRight className="ml-0.5 md:ml-1 h-3 w-3 md:h-4 md:w-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
-                {/* Image */}
-                <div className="relative h-full w-20 md:w-24 lg:w-28 xl:w-32 flex-shrink-0">
-                  <div className="absolute inset-y-2 right-0 left-0 rounded-xl overflow-hidden">
+                {/* Image at bottom to avoid text clipping */}
+                <div className="relative w-full h-20 md:h-24 lg:h-28 xl:h-32">
+                  <div className="absolute inset-0 rounded-xl overflow-hidden">
                     <Image
                       src={card.imageSrc}
                       alt={card.imageAlt}
                       fill
-                      sizes="(max-width: 768px) 120px, 160px"
+                      sizes="(min-width: 1024px) 320px, (min-width: 768px) 240px, 100vw"
                       className="object-cover"
                       priority={index === 0}
                       loading={index === 0 ? 'eager' : 'lazy'}

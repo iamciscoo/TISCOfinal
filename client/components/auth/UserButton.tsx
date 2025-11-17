@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User, LogOut, Package } from 'lucide-react'
+import { User, LogOut, Package, Sliders } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 import { ProfileDialog } from '@/components/auth/ProfileDialog'
@@ -79,6 +79,10 @@ export function UserButton({ afterSignOutUrl = '/' }: UserButtonProps) {
           <DropdownMenuItem onClick={() => router.push('/account')}>
             <Package className="mr-2 h-4 w-4" />
             <span>Orders</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/account/my-space')}>
+            <Sliders className="mr-2 h-4 w-4" />
+            <span>My Space</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setProfileOpen(true)} onClick={() => setProfileOpen(true)}>
             <User className="mr-2 h-4 w-4" />

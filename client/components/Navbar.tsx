@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { ShoppingCart, Search, Menu, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,12 +37,14 @@ export const Navbar = () => {
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   
   // External hooks
   const { user, loading } = useAuth()
   const isLoaded = !loading
   const isSignedIn = !!user
   const router = useRouter()
+  const pathname = usePathname()
   const openCart = useCartStore((s) => s.openCart)
   const cartCount = useCartStore((s) => s.items.reduce((t, i) => t + i.quantity, 0))
   
@@ -181,6 +183,16 @@ export const Navbar = () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isMenuOpen, closeMenu])
+
+  // Detect route changes for loading indicator
+  useEffect(() => {
+    setIsNavigating(true)
+    // Keep loading bar visible for 2.5s total (2s animation + 0.5s delay)
+    const timer = setTimeout(() => {
+      setIsNavigating(false)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [pathname])
 
   // Prevent body scroll when menu is open and add global swipe handlers
   useEffect(() => {
@@ -354,9 +366,9 @@ export const Navbar = () => {
               <div className="flex items-center gap-1 md:gap-2">
                 <Link 
                   href="/account" 
-                  className="hidden lg:inline text-sm text-gray-800 hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150"
+                  className="hidden lg:inline text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base"
                 >
-                  Orders
+                  Account
                 </Link>
                 <span className="hidden sm:inline-flex">
                   <UserButton afterSignOutUrl="/" />
@@ -484,7 +496,7 @@ export const Navbar = () => {
                   className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                   onClick={closeMenu}
                 >
-                  Orders
+                  Account
                 </Link>
               )}
 
@@ -503,6 +515,19 @@ export const Navbar = () => {
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Loading Progress Bar */}
+      {isNavigating && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm"
+            style={{
+              width: '100%',
+              animation: 'progressBar 2000ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards'
+            }} 
+          />
+        </div>
+      )}
     </nav>
   )
 }

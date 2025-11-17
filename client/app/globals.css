@@ -370,6 +370,18 @@
   to { transform: translateX(-50%); }       /* Move left by 50% (then loop) */
 }
 
+/* Shimmer animation for loading indicators */
+@keyframes shimmer {
+  from { background-position: 200% center; }  /* Start off-screen right */
+  to { background-position: -200% center; }   /* Move to off-screen left */
+}
+
+/* Progress bar animation - fills from left to right */
+@keyframes progressBar {
+  from { width: 0%; }     /* Start at 0% (left edge) */
+  to { width: 100%; }     /* Fill to 100% (complete) */
+}
+
 /* ========== PERFORMANCE OPTIMIZATIONS ========== */
 
 /* Optimize elements that scroll (improves smoothness on all devices) */
@@ -491,4 +503,20 @@ body:has(nav[class*="fixed"]) .main-content {
     animation-iteration-count: 1 !important;  /* Play only once */
     transition-duration: 0.01ms !important;  /* Nearly instant transitions */
   }
+}
+
+/* ========== CUSTOM ANIMATIONS ========== */
+
+/* Fade in animation for hero carousel */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 1s ease-in-out;
 }

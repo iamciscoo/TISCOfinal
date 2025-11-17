@@ -215,6 +215,9 @@ export function getSupabaseImageUrl(
   // If it's already a full URL, return as is
   if (path.startsWith('http')) return path
   
+  // If it's a local fallback image (starts with /), return as is
+  if (path.startsWith('/')) return path
+  
   // Construct Supabase Storage URL
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!supabaseUrl) return '/circular.svg'

@@ -19,7 +19,8 @@ import {
   CheckCircle,
   Calendar,
   Settings,
-  XCircle
+  XCircle,
+  Sliders
 } from 'lucide-react'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
@@ -206,8 +207,13 @@ export default function AccountDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="mb-6">
-                  <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)} className="active:scale-95 transition-all duration-150">
+                <div className="mb-6 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setProfileOpen(true)} 
+                    className="rounded-full px-6 active:scale-95 transition-all duration-150 touch-manipulation"
+                  >
                     Edit Profile
                   </Button>
                 </div>
@@ -222,30 +228,45 @@ export default function AccountDashboard() {
                     <span className="text-gray-600">Email</span>
                     <span className="font-medium">{user?.email}</span>
                   </div>
-                  <Link href="/account/orders" className="w-full">
-                    <Button
-                      variant="outline"
-                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150"
-                      size="lg"
-                    >
-                      <Package className="h-5 w-5 text-black" />
-                      View All Orders
-                      <ChevronRight className="h-4 w-4 ml-auto text-black" />
-                    </Button>
-                  </Link>
-<br></br>
-                  {/* Navigation to Service Bookings */}
-                  <Link href="/account/bookings" className="w-full">
-                    <Button
-                      variant="outline"
-                      className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150"
-                      size="lg"
-                    >
-                      <Calendar className="h-5 w-5 text-black" />
-                      View All Bookings
-                      <ChevronRight className="h-4 w-4 ml-auto text-black" />
-                    </Button>
-                  </Link>
+                  <div className="space-y-5 sm:space-y-4">
+                    <Link href="/account/orders" className="w-full block">
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150 rounded-full"
+                        size="lg"
+                      >
+                        <Package className="h-5 w-5 text-black" />
+                        View All Orders
+                        <ChevronRight className="h-4 w-4 ml-auto text-black" />
+                      </Button>
+                    </Link>
+
+                    {/* Navigation to Service Bookings */}
+                    <Link href="/account/bookings" className="w-full block">
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150 rounded-full"
+                        size="lg"
+                      >
+                        <Calendar className="h-5 w-5 text-black" />
+                        View All Bookings
+                        <ChevronRight className="h-4 w-4 ml-auto text-black" />
+                      </Button>
+                    </Link>
+
+                    {/* Navigation to My Space */}
+                    <Link href="/account/my-space" className="w-full block">
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center gap-3 border-gray-300 text-black hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 active:scale-95 transition-all duration-150 rounded-full"
+                        size="lg"
+                      >
+                        <Sliders className="h-5 w-5 text-black" />
+                        My Space
+                        <ChevronRight className="h-4 w-4 ml-auto text-black" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>
