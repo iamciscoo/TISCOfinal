@@ -108,6 +108,9 @@ const MySpacePage = () => {
   const sentinelRef = useRef<HTMLDivElement>(null)
   // Hero carousel state
   const [heroIndex, setHeroIndex] = useState(0)
+  // Preference stats
+  const [preferredCount, setPreferredCount] = useState(0)
+  const [totalResultsCount, setTotalResultsCount] = useState(0)
   
   // Select states for dropdowns
   const [maxPrice, setMaxPrice] = useState('')
@@ -291,6 +294,15 @@ const MySpacePage = () => {
       if (res.ok) {
         const data = await res.json()
         const newItems: Product[] = data.products || []
+        
+        // Update preference stats
+        if (data.totalPreferred !== undefined) {
+          setPreferredCount(data.totalPreferred)
+        }
+        if (data.totalResults !== undefined) {
+          setTotalResultsCount(data.totalResults)
+        }
+        
         setProducts((prev) => {
           const byId = new Set(replace ? [] : prev.map((p) => p.id))
           const merged = replace ? [] as Product[] : [...prev]
@@ -660,6 +672,36 @@ const MySpacePage = () => {
                   )
                 ) : (
                   <>
+                    {/* Preference Stats Banner */}
+                    {(preferences.preferred_categories.length > 0 || preferences.followed_brands.length > 0) && preferredCount > 0 && (
+                      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <div className="flex items-center gap-2">
+                              <Heart className="h-5 w-5 text-blue-600 fill-blue-600" />
+                              <div>
+                                <p className="text-sm font-semibold text-blue-900">
+                                  {preferredCount} {preferences.default_sort_order === 'popular' ? 'most popular' : 
+                                   preferences.default_sort_order === 'newest' ? 'newest' : 
+                                   preferences.default_sort_order === 'rating' ? 'highest rated' :
+                                   preferences.default_sort_order === 'price_low' ? 'best value' : ''} from your interests
+                                </p>
+                                <p className="text-xs text-blue-700">
+                                  {preferences.preferred_categories.length > 0 && `${preferences.preferred_categories.join(', ')}`}
+                                  {preferences.preferred_categories.length > 0 && preferences.followed_brands.length > 0 && ' • '}
+                                  {preferences.followed_brands.length > 0 && `${preferences.followed_brands.join(', ')}`}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-blue-800">
+                              <TrendingUp className="h-4 w-4" />
+                              <span className="font-medium">{Math.round((preferredCount / Math.max(totalResultsCount, 1)) * 100)}% match</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {/* Featured Hero */}
                     {(() => {
                       // Get all products matching ANY preference (category OR brand)
