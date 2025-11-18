@@ -605,8 +605,7 @@ function ProductsContent() {
               
               {/* Video Card - Below filters on desktop */}
               <VideoCard 
-                src="/officetour.mp4" 
-                poster="/officespace.png"
+                src="/officetour.mp4"
                 className="w-full h-80 lg:h-96"
               />
             </div>
@@ -615,8 +614,7 @@ function ProductsContent() {
           {/* Mobile Video Card - Positioned after header */}
           <div className="lg:hidden ">
             <VideoCard 
-              src="/officetour.mp4" 
-              poster="/officespace.png"
+              src="/officetour.mp4"
               className="w-full aspect-video"
             />
           </div>

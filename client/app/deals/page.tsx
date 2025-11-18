@@ -503,8 +503,7 @@ function DealsContent() {
         {/* Mobile Video Card - Positioned after header */}
         <div className="lg:hidden mb-5">
           <VideoCard 
-            src="/deals-hero.mp4" 
-            poster="/deals-hero.png"
+            src="/deals-hero.mp4"
             className="w-full aspect-video"
           />
         </div>
@@ -524,8 +523,7 @@ function DealsContent() {
               </Card>
               {/* Video Card - Below filters on desktop */}
               <VideoCard 
-                src="/deals-hero.mp4" 
-                poster="/deals-hero.png"
+                src="/deals-hero.mp4"
                 className="w-full h-80 lg:h-96"
               />
             </div>
