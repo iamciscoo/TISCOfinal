@@ -155,7 +155,7 @@ export function applyActiveFilters<T>(query: T) {
 export const PAGINATION_LIMITS = {
   list: 50,        // Default for list pages (increased from 20)
   search: 20,      // Search suggestions (increased from 10)
-  featured: 15,    // Homepage featured products (increased from 8)
+  featured: 30,    // Homepage featured products (6 rows × 5 products)
   admin: 150,      // Admin dashboard (increased from 50)
   infinite: 30     // Infinite scroll increment (increased from 24)
 } as const

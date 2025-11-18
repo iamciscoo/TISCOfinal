@@ -16,7 +16,7 @@ export const FeaturedProducts = () => {
         // **PERFORMANCE FIX: Add cache-busting for real-time updates**
         // Fetch directly from API with no-cache header to bypass browser cache
         const timestamp = Date.now();
-        const response = await fetch(`/api/products/featured?limit=50&_t=${timestamp}`, {
+        const response = await fetch(`/api/products/featured?limit=30&_t=${timestamp}`, {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -62,7 +62,7 @@ export const FeaturedProducts = () => {
   // Derived lists for layouts (preserve ordering, hide nulls in UI)
   const nonNullProducts = products.filter((p): p is Product => p !== null);
   const mobileSliderProducts = nonNullProducts.slice(0, 10);
-  let mobileGridProducts = nonNullProducts.slice(10, 20);
+  let mobileGridProducts = nonNullProducts.slice(10, 30);
   // Avoid a single card on the last row in 3-col grid (hide the last one if remainder is 1)
   if (mobileGridProducts.length % 3 === 1) {
     mobileGridProducts = mobileGridProducts.slice(0, -1);
@@ -101,7 +101,7 @@ export const FeaturedProducts = () => {
             </div>
           </div>
 
-          {/* Remaining products (11-20) - 3 Column Grid */}
+          {/* Remaining products (11-30) - 3 Column Grid */}
           {mobileGridProducts.length > 0 && (
             <div className="grid grid-cols-3 gap-3 mb-8">
               {mobileGridProducts.map((product) => (
@@ -116,7 +116,7 @@ export const FeaturedProducts = () => {
           )}
         </div>
 
-        {/* Desktop/Tablet Grid - 4 rows × 5 products per row (only show available products) */}
+        {/* Desktop/Tablet Grid - 6 rows × 5 products per row (only show available products) */}
         <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-6 mb-12 max-w-7xl mx-auto">
           {nonNullProducts.map((product) => (
             <ProductCard key={product.id} product={product} />

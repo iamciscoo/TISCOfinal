@@ -987,7 +987,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     <Input 
                       type="number"
                       min="1"
-                      max="20"
+                      max="30"
                       placeholder="Leave empty for random"
                       value={field.value ?? ''}
                       onChange={(e) => {
@@ -1010,9 +1010,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     />
                   </FormControl>
                   <FormDescription>
-                    Set exact position on homepage (1-20). Leave empty for automatic random assignment.
+                    Set exact position on homepage (1-30). Leave empty for automatic random assignment.
                     <br />
-                    <span className="text-blue-600 font-medium">Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4)</span>
+                    <span className="text-blue-600 font-medium">Layout: 5 products per row (Pos 1-5=Row 1, 6-10=Row 2, 11-15=Row 3, 16-20=Row 4, 21-25=Row 5, 26-30=Row 6)</span>
                     <br />
                     <span className="text-green-600 font-medium">Only assigned products are shown - empty positions are hidden</span>
                     <br />
