@@ -27,6 +27,12 @@ remotePatterns.push({
   hostname: 'images.pexels.com',
 })
 
+// Allow placeholder images (fallback for products without images)
+remotePatterns.push({
+  protocol: 'https',
+  hostname: 'via.placeholder.com',
+})
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns,

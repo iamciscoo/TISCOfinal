@@ -36,7 +36,7 @@ const ProductsPage = () => {
       
       // Add timestamp to prevent browser caching
       const timestamp = Date.now();
-      const response = await fetch(`/api/products?limit=50&_t=${timestamp}`, {
+      const response = await fetch(`/api/products?limit=150&_t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',

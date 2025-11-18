@@ -40,7 +40,7 @@ const supabase = createClient(
  * data integrity and prevent invalid requests from reaching the database.
  */
 const getProductsSchema = z.object({
-  limit: z.number().min(1).max(100).optional().default(20),    // Maximum items per page (1-100, default: 20)
+  limit: z.number().min(1).max(200).optional().default(50),    // Maximum items per page (1-200, default: 50)
   offset: z.number().min(0).optional().default(0),             // Starting position for pagination (0+, default: 0)
   category: z.string().uuid().optional(),                      // Category UUID filter (optional)
   featured: z.boolean().optional()                             // Filter for featured products only (optional)

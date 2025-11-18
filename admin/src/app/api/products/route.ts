@@ -10,8 +10,8 @@ export async function GET(req: Request) {
     const limitParam = url.searchParams.get('limit');
     const limitNum = limitParam ? Number(limitParam) : undefined;
     const limit = typeof limitNum === 'number' && !Number.isNaN(limitNum)
-      ? Math.max(1, Math.min(50, limitNum))
-      : 20; // Default limit for better performance
+      ? Math.max(1, Math.min(200, limitNum))
+      : 100; // Default 100 products, max 200 for admin dashboard
 
     let query = supabase
       .from("products")

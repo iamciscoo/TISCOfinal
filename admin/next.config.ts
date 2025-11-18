@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
+      },
     ],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 31536000, // Cache images for 1 year

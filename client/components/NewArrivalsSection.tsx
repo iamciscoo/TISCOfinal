@@ -26,9 +26,9 @@ export function NewArrivalsSection() {
     let mounted = true
     ;(async () => {
       try {
-        // Fetch a modest batch and filter client-side for robust compatibility
+        // Fetch a larger batch to show all new arrivals
         const ts = Date.now()
-        const res = await fetch(`/api/products?limit=50&_t=${ts}`, {
+        const res = await fetch(`/api/products?limit=100&_t=${ts}`, {
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             Pragma: "no-cache",

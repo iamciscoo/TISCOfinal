@@ -12,7 +12,7 @@ const supabase = createClient(
 )
 
 const getFeaturedProductsSchema = z.object({
-  limit: z.number().min(1).max(50).optional().default(PAGINATION_LIMITS.featured),
+  limit: z.number().min(1).max(100).optional().default(PAGINATION_LIMITS.featured),
   _t: z.number().optional() // Cache-busting timestamp
 }).passthrough() // Allow other query params
 

@@ -54,6 +54,10 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 25, // Show 25 products per page
+  })
   const [deleting, setDeleting] = React.useState(false)
   const [isMobile, setIsMobile] = React.useState(false)
   const { handleBulkDelete } = useAdminActions()
@@ -87,6 +91,7 @@ export function DataTable<TData, TValue>({
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -98,6 +103,7 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination,
     },
   })
 
@@ -234,11 +240,25 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 py-3 sm:py-4">
-        <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+        <div className="flex flex-col gap-1 order-2 sm:order-1">
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            {table.getFilteredSelectedRowModel().rows.length} of{' '}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div>
+          <div className="text-xs sm:text-sm font-medium">
+            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+              table.getFilteredRowModel().rows.length
+            )}{' '}
+            of {table.getFilteredRowModel().rows.length} {entityName.toLowerCase()}s
+          </div>
         </div>
-        <div className="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
+          <div className="text-xs sm:text-sm font-medium text-muted-foreground mr-2">
+            Page {table.getState().pagination.pageIndex + 1} of{' '}
+            {table.getPageCount()}
+          </div>
           <Button
             variant="outline"
             size="sm"

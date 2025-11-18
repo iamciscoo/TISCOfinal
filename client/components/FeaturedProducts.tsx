@@ -16,7 +16,7 @@ export const FeaturedProducts = () => {
         // **PERFORMANCE FIX: Add cache-busting for real-time updates**
         // Fetch directly from API with no-cache header to bypass browser cache
         const timestamp = Date.now();
-        const response = await fetch(`/api/products/featured?limit=20&_t=${timestamp}`, {
+        const response = await fetch(`/api/products/featured?limit=50&_t=${timestamp}`, {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'

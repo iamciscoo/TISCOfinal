@@ -153,9 +153,9 @@ export function applyActiveFilters<T>(query: T) {
  * Pagination helper with proper limits
  */
 export const PAGINATION_LIMITS = {
-  list: 20,        // Default for list pages
-  search: 10,      // Search suggestions
-  featured: 8,     // Homepage featured products
-  admin: 50,       // Admin dashboard
-  infinite: 24     // Infinite scroll increment
+  list: 50,        // Default for list pages (increased from 20)
+  search: 20,      // Search suggestions (increased from 10)
+  featured: 15,    // Homepage featured products (increased from 8)
+  admin: 150,      // Admin dashboard (increased from 50)
+  infinite: 30     // Infinite scroll increment (increased from 24)
 } as const

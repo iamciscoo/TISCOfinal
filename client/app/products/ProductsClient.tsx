@@ -104,7 +104,7 @@ function ProductsContent() {
     const fetchData = async () => {
       try {
         const [productsData, categoriesData] = await Promise.all([
-          getProducts(50), // Reduced initial load for better performance
+          getProducts(150), // Fetch all products (increased from 50)
           getCategories()
         ])
         console.log('[Products] Loaded products:', productsData?.length || 0)

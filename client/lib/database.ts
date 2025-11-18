@@ -47,7 +47,7 @@ import { api } from './api-client'
  * const allProducts = await getProducts();
  * ```
  */
-export async function getProducts(limit: number = 20): Promise<Product[]> {
+export async function getProducts(limit: number = 100): Promise<Product[]> {
   try {
     // Use the cached API client instead of direct Supabase queries to:
     // 1. Leverage caching for better performance
