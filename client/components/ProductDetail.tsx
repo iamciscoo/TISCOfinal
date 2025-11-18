@@ -425,11 +425,53 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
           {/* Thumbnail Images - Horizontal Scrollable Gallery */}
           {productImages.length > 1 && (
             <div className="relative">
-              {/* Scroll container - hidden scrollbar with proper padding */}
-              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory py-2 px-1 -mx-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {/* Scroll container - custom scrollbar for desktop, hidden on mobile */}
+              <div className="thumbnail-scroll-container flex gap-3 overflow-x-auto snap-x snap-mandatory py-2 px-1 -mx-1 scroll-smooth">
                 <style jsx>{`
-                  div::-webkit-scrollbar {
-                    display: none;
+                  /* Hide scrollbar on mobile */
+                  @media (max-width: 1023px) {
+                    .thumbnail-scroll-container::-webkit-scrollbar {
+                      display: none;
+                    }
+                    .thumbnail-scroll-container {
+                      scrollbar-width: none;
+                      -ms-overflow-style: none;
+                    }
+                  }
+                  
+                  /* Custom scrollbar for desktop (lg and above) */
+                  @media (min-width: 1024px) {
+                    .thumbnail-scroll-container {
+                      padding-bottom: 12px;
+                    }
+                    
+                    .thumbnail-scroll-container::-webkit-scrollbar {
+                      height: 8px;
+                    }
+                    
+                    .thumbnail-scroll-container::-webkit-scrollbar-track {
+                      background: #f1f5f9;
+                      border-radius: 100px;
+                      margin-left: 4px;
+                      margin-right: 4px;
+                    }
+                    
+                    .thumbnail-scroll-container::-webkit-scrollbar-thumb {
+                      background: linear-gradient(90deg, #3b82f6, #2563eb);
+                      border-radius: 100px;
+                      transition: all 0.3s ease;
+                    }
+                    
+                    .thumbnail-scroll-container::-webkit-scrollbar-thumb:hover {
+                      background: linear-gradient(90deg, #2563eb, #1d4ed8);
+                      box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
+                    }
+                    
+                    /* Firefox */
+                    .thumbnail-scroll-container {
+                      scrollbar-width: thin;
+                      scrollbar-color: #3b82f6 #f1f5f9;
+                    }
                   }
                 `}</style>
                 {productImages.map((image, index) => (
