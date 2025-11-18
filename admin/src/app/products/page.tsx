@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { Product, columns } from "./columns";
 import { PageLayout } from "@/components/shared/PageLayout";
 import { ProductQuickSearch } from "@/components/ProductQuickSearch";
+import { ClearProductsModal } from "@/components/ClearProductsModal";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,6 +28,7 @@ const ProductsPage = () => {
   const [selectedFeatured, setSelectedFeatured] = useState<string | undefined>(undefined);
   const [selectedDeal, setSelectedDeal] = useState<string | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   const fetchData = useCallback(async (isInitial = false) => {
     try {
@@ -163,7 +167,20 @@ const ProductsPage = () => {
               {data.length}
             </span>
           </h1>
-          <ProductQuickSearch />
+          <div className="flex items-center gap-3">
+            <ProductQuickSearch />
+            {allProducts.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowClearModal(true)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear All
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:items-center sm:gap-3">
@@ -217,6 +234,16 @@ const ProductsPage = () => {
         data={data}
         entityName="Product"
         deleteApiBase="/api/products"
+      />
+
+      <ClearProductsModal
+        open={showClearModal}
+        onOpenChange={setShowClearModal}
+        onSuccess={() => {
+          // Refresh the products list
+          fetchData(false);
+        }}
+        productCount={allProducts.length}
       />
     </div>
   );

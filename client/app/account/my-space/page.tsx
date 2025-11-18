@@ -752,6 +752,8 @@ const MySpacePage = () => {
                                       src={hero.product_images?.[0]?.url || hero.image_url || ''}
                                       alt={hero.name}
                                       fill
+                                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 66vw, 800px"
+                                      priority
                                       className="object-cover object-center group-hover:scale-105 transition-all duration-1000 animate-fadeIn"
                                     />
                                   ) : null}
@@ -790,6 +792,7 @@ const MySpacePage = () => {
                                             src={item.product_images?.[0]?.url || item.image_url || ''}
                                             alt={item.name}
                                             fill
+                                            sizes="80px"
                                             className="object-cover group-hover:scale-110 transition-transform duration-300"
                                           />
                                         ) : null}
