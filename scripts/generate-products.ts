@@ -286,6 +286,14 @@ const generators: Record<string, (i: number) => any> = {
 async function main() {
   console.log('🚀 Starting product generation...\n')
   
+  // Check current product count before generation
+  const { count: beforeCount } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+  
+  console.log(`📊 Current products in database: ${beforeCount || 0}`)
+  console.log(`➕ Will add ${PRODUCTS_PER_CAT} products per category\n`)
+  
   const { data: cats } = await supabase.from('categories').select('id, name')
   if (!cats) throw new Error('No categories found')
   
@@ -379,10 +387,21 @@ async function main() {
     }
   }
   
+  // Check final product count after generation
+  const { count: afterCount } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+  
   console.log(`\n🎉 Generation complete!`)
-  console.log(`   Products created: ${totalProducts}`)
+  console.log(`   Products created this run: ${totalProducts}`)
   console.log(`   Images added: ${totalImages}`)
   console.log(`   API calls made: ~${totalImages}`)
+  console.log(`\n📊 Database Summary:`)
+  console.log(`   Before: ${beforeCount || 0} products`)
+  console.log(`   After: ${afterCount || 0} products`)
+  console.log(`   ➕ Net increase: +${(afterCount || 0) - (beforeCount || 0)} products`)
+  console.log(`\n💡 Note: Products are ADDED to existing inventory, not replaced!`)
+  console.log(`   View all products at: ${SUPABASE_URL.replace(/\/$/, '')}/project/default/editor`)
 }
 
 main().catch(console.error)

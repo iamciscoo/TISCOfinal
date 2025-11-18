@@ -2,6 +2,15 @@
 
 ## What Will Happen
 
+⚠️ IMPORTANT: Products are ADDED, not replaced!
+
+Each time you run this script, it **ADDS** new products to your existing inventory. It does **NOT** delete or replace old products. The script will show you:
+- Current product count before generation
+- Number of products added
+- Final product count after generation
+
+This is intentional to allow you to build up a large product catalog over multiple runs.
+
 The script will generate **30 high-quality products** (3 per category):
 
 ### Products Per Category:
