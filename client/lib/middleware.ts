@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
+// Pagination metadata interface
+export interface PaginationMeta {
+  total: number
+  count: number
+  limit: number
+  offset: number
+  hasMore: boolean
+}
+
 // API Response Types
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -8,6 +17,7 @@ export interface ApiResponse<T = unknown> {
   error?: string
   message?: string
   timestamp: string
+  pagination?: PaginationMeta  // Optional pagination metadata
 }
 
 export interface ApiError {
@@ -76,8 +86,8 @@ export class ApiError extends Error {
 export function withValidation<T>(schema: z.ZodSchema<T>) {
   return function (handler: (req: NextRequest, validatedData: T) => Promise<NextResponse>) {
     return async function (req: NextRequest): Promise<NextResponse> {
+      let data: unknown = {}
       try {
-        let data: unknown
 
         if (req.method === 'GET') {
           // Parse URL search params for GET requests
@@ -96,10 +106,16 @@ export function withValidation<T>(schema: z.ZodSchema<T>) {
           data = await req.json()
         }
 
+        console.log('[Validation Middleware] Parsing data:', data)
         const validatedData = schema.parse(data)
+        console.log('[Validation Middleware] Validation successful')
         return await handler(req, validatedData)
       } catch (error) {
         if (error instanceof z.ZodError) {
+          console.error('[Validation Middleware] Validation failed:', {
+            issues: error.issues,
+            data
+          })
           return NextResponse.json(
             createErrorResponse(
               API_ERROR_CODES.VALIDATION_ERROR,

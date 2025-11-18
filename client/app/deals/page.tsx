@@ -126,8 +126,15 @@ function DealsContent() {
     const fetchData = async () => {
       try {
         setLoading(true)
+        const timestamp = Date.now()
         const [dealsResponse, categoriesData] = await Promise.all([
-          fetch('/api/deals'),
+          fetch(`/api/deals?limit=500&_t=${timestamp}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }),
           getCategories()
         ])
         if (!dealsResponse.ok) {
@@ -135,6 +142,7 @@ function DealsContent() {
         }
         const dealsData = await dealsResponse.json()
         console.log('[Deals] Fetched deals:', dealsData.deals?.length || 0)
+        console.log('[Deals] Pagination:', dealsData.pagination)
         console.log('[Deals] Fetched categories:', categoriesData?.length || 0)
         if (dealsData.deals?.length > 0) {
           console.log('[Deals] Sample deal:', dealsData.deals[0])

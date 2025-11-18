@@ -294,6 +294,21 @@ class ApiClient {
 // Create global API client instance
 export const apiClient = new ApiClient()
 
+// Pagination metadata interface
+export interface PaginationMeta {
+  total: number
+  count: number
+  limit: number
+  offset: number
+  hasMore: boolean
+}
+
+// Paginated response interface
+export interface PaginatedResponse<T> {
+  data: T[]
+  pagination: PaginationMeta
+}
+
 // Cached API functions to replace direct Supabase queries
 export const api = {
   // Products
@@ -303,6 +318,16 @@ export const api = {
       () => apiClient.get<Product[]>('/products', limit ? { limit } : undefined),
       cacheTTL.products
     )
+  },
+  
+  // Products with pagination metadata
+  async getProductsPaginated(limit?: number, offset?: number): Promise<PaginatedResponse<Product>> {
+    const params: Record<string, number> = {}
+    if (limit) params.limit = limit
+    if (offset) params.offset = offset
+    
+    // Don't cache paginated requests to ensure fresh counts
+    return apiClient.get<PaginatedResponse<Product>>('/products', params)
   },
 
   async getFeaturedProducts(limit?: number): Promise<Product[]> {

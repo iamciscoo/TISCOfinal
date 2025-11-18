@@ -10,9 +10,20 @@ export async function GET(req: Request) {
     const limitParam = url.searchParams.get('limit');
     const limitNum = limitParam ? Number(limitParam) : undefined;
     const limit = typeof limitNum === 'number' && !Number.isNaN(limitNum)
-      ? Math.max(1, Math.min(200, limitNum))
-      : 100; // Default 100 products, max 200 for admin dashboard
+      ? Math.max(1, Math.min(500, limitNum))  // Increased to 500 for admin
+      : 100; // Default 100 products, max 500 for admin dashboard
 
+    // Build count query with same filters
+    let countQuery = supabase
+      .from("products")
+      .select('*', { count: 'exact', head: true });  // Get count only
+
+    if (q) {
+      const like = `%${q}%`;
+      countQuery = countQuery.ilike('name', like);
+    }
+
+    // Build data query
     let query = supabase
       .from("products")
       .select(`
@@ -25,6 +36,7 @@ export async function GET(req: Request) {
         is_featured,
         is_new,
         is_deal,
+        is_active,
         deal_price,
         original_price,
         rating,
@@ -64,12 +76,31 @@ export async function GET(req: Request) {
 
     query = query.limit(limit);
 
-    const { data, error } = await query;
+    // Execute count and data queries in parallel
+    const [{ count: total, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query
+    ]);
+
+    if (countError) {
+      console.error('[Admin Products API] Count query failed:', countError);
+      return NextResponse.json({ error: countError.message }, { status: 500 });
+    }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     
     // No caching for admin dashboard - need real-time view counts
-    const response = NextResponse.json({ data }, { status: 200 });
+    const response = NextResponse.json({ 
+      success: true,
+      data,
+      pagination: {
+        total: total || 0,
+        count: data?.length || 0,
+        limit,
+        hasMore: (data?.length || 0) >= limit
+      },
+      timestamp: new Date().toISOString()
+    }, { status: 200 });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');

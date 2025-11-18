@@ -29,6 +29,7 @@ const ProductsPage = () => {
   const [selectedDeal, setSelectedDeal] = useState<string | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   const fetchData = useCallback(async (isInitial = false) => {
     try {
@@ -36,7 +37,7 @@ const ProductsPage = () => {
       
       // Add timestamp to prevent browser caching
       const timestamp = Date.now();
-      const response = await fetch(`/api/products?limit=150&_t=${timestamp}`, {
+      const response = await fetch(`/api/products?limit=500&_t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
@@ -44,6 +45,11 @@ const ProductsPage = () => {
         }
       });
       const result = await response.json();
+      
+      // Update total count from API pagination metadata
+      if (result.pagination?.total !== undefined) {
+        setTotalCount(result.pagination.total);
+      }
       
       // Transform API products to match the UI format
       const products = (result.data || []).map((product: any) => {
@@ -164,7 +170,7 @@ const ProductsPage = () => {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             All Products
             <span className="inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2.5 rounded-md text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              {data.length}
+              {totalCount > 0 ? totalCount : data.length}
             </span>
           </h1>
           <div className="flex items-center gap-3">

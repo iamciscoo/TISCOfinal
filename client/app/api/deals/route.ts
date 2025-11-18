@@ -6,9 +6,31 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE!
 )
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('[Deals API] Fetching deals from database...')
+    // Parse query parameters
+    const url = new URL(request.url)
+    const limitParam = url.searchParams.get('limit')
+    const offsetParam = url.searchParams.get('offset')
+    
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam)), 1000) : 100
+    const offset = offsetParam ? Math.max(0, parseInt(offsetParam)) : 0
+    
+    console.log('[Deals API] Fetching deals from database...', { limit, offset })
+    
+    // Get total count of deals
+    const { count: totalDeals, error: countError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_deal', true)
+      .eq('is_active', true)
+    
+    if (countError) {
+      console.error('[Deals API] Error counting deals:', countError)
+      return NextResponse.json({ error: countError.message }, { status: 500 })
+    }
+    
+    // Get paginated deals data
     const { data: dealProducts, error } = await supabase
       .from('products')
       .select(`
@@ -19,7 +41,9 @@ export async function GET() {
         product_images(url, is_main, sort_order)
       `)
       .eq('is_deal', true)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('[Deals API] Error fetching deals:', error)
@@ -86,8 +110,16 @@ export async function GET() {
     }
 
     return NextResponse.json({ 
+      success: true,
       deals: transformedDeals,
-      count: transformedDeals.length 
+      pagination: {
+        total: totalDeals || 0,
+        count: transformedDeals.length,
+        limit,
+        offset,
+        hasMore: (offset + transformedDeals.length) < (totalDeals || 0)
+      },
+      timestamp: new Date().toISOString()
     }, { status: 200 })
 
   } catch (error: unknown) {

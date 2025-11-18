@@ -38,13 +38,15 @@ const supabase = createClient(
  * 
  * Defines the structure and constraints for query parameters to ensure
  * data integrity and prevent invalid requests from reaching the database.
+ * 
+ * Note: URL query parameters are strings, so we use coercion to convert them.
  */
 const getProductsSchema = z.object({
-  limit: z.number().min(1).max(200).optional().default(50),    // Maximum items per page (1-200, default: 50)
-  offset: z.number().min(0).optional().default(0),             // Starting position for pagination (0+, default: 0)
-  category: z.string().uuid().optional(),                      // Category UUID filter (optional)
-  featured: z.boolean().optional()                             // Filter for featured products only (optional)
-})
+  limit: z.coerce.number().min(1).max(1000).optional().default(50),   // Maximum items per page (1-1000, default: 50)
+  offset: z.coerce.number().min(0).optional().default(0),             // Starting position for pagination (0+, default: 0)
+  category: z.string().uuid().optional(),                              // Category UUID filter (optional)
+  featured: z.coerce.boolean().optional()                              // Filter for featured products only (optional)
+}).strip()  // Strip unknown keys (like cache-busting _t parameter)
 
 /**
  * Optimized product query builder with schema-aware fallback handling
@@ -153,7 +155,7 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
  * and category information.
  * 
  * Query Parameters:
- * - limit (optional): Number of products to return (1-100, default: 20)
+ * - limit (optional): Number of products to return (1-200, default: 50)
  * - offset (optional): Starting position for pagination (default: 0)
  * - category (optional): Category UUID to filter by
  * - featured (optional): Boolean to show only featured products
@@ -162,6 +164,13 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
  * {
  *   "success": true,
  *   "data": Product[],
+ *   "pagination": {
+ *     "total": 170,
+ *     "count": 50,
+ *     "limit": 50,
+ *     "offset": 0,
+ *     "hasMore": true
+ *   },
  *   "message": "Products retrieved successfully"
  * }
  * 
@@ -170,18 +179,65 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
  * - 500: Database or server errors
  * 
  * Caching:
- * - Products are cached for 10 minutes to reduce database load
+ * - Products are cached for 30 seconds with stale-while-revalidate
  * - Cache key includes all query parameters for accurate caching
  */
 export const GET = withMiddleware(
   withValidation(getProductsSchema),    // Validate and parse query parameters
   withErrorHandler                      // Handle errors and format responses
 )(async (req: NextRequest, validatedData: z.infer<typeof getProductsSchema>) => {
-  // Fetch products with optimized query
-  const products = await getProductsQuery(validatedData)
+  // Debug logging
+  console.log('[Products API] Request received with params:', {
+    limit: validatedData.limit,
+    offset: validatedData.offset,
+    category: validatedData.category,
+    featured: validatedData.featured
+  })
+  // Build count query with same filters as data query
+  let countQuery = supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })  // Get count only, no data
+    .eq('is_active', true)                         // Same filter as main query
   
-  // Return successful response with products data
-  const response = Response.json(createSuccessResponse(products))
+  // Apply same filters to count query
+  if (validatedData.category) {
+    countQuery = countQuery.eq('category_id', validatedData.category)
+  }
+  if (validatedData.featured) {
+    countQuery = countQuery.eq('is_featured', true)
+  }
+  
+  // Execute count and data queries in parallel for performance
+  const [{ count: total, error: countError }, products] = await Promise.all([
+    countQuery,
+    getProductsQuery(validatedData)
+  ])
+  
+  // Handle count query error
+  if (countError) {
+    console.error('[Products API] Count query failed:', countError)
+    throw countError
+  }
+  
+  // Calculate pagination metadata
+  const totalCount = total || 0
+  const returnedCount = products.length
+  const hasMore = (validatedData.offset + returnedCount) < totalCount
+  
+  // Return successful response with products data and pagination metadata
+  const successResponse = createSuccessResponse(products, 'Products retrieved successfully')
+  // Add pagination metadata to response
+  const responseWithPagination = {
+    ...successResponse,
+    pagination: {
+      total: totalCount,
+      count: returnedCount,
+      limit: validatedData.limit,
+      offset: validatedData.offset,
+      hasMore
+    }
+  }
+  const response = Response.json(responseWithPagination)
   
   // Smart caching: 30 seconds fresh, serve stale for 60s while revalidating in background
   // This provides instant responses while staying relatively up-to-date

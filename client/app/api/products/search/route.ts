@@ -75,12 +75,12 @@ export async function GET(request: NextRequest) {
         .order('is_main', { foreignTable: 'product_images', ascending: false })
         .order('sort_order', { foreignTable: 'product_images', ascending: true })
 
-      // Apply limit (default 20 for search suggestions)
-      const defaultLimit = query ? 20 : 10
+      // Apply limit (default 50 for search, max 500 for scalability)
+      const defaultLimit = query ? 50 : 20
       if (limitParam) {
         const parsed = parseInt(limitParam)
         if (!Number.isNaN(parsed) && parsed > 0) {
-          q = q.limit(Math.min(parsed, 50)) // Max 50 for performance
+          q = q.limit(Math.min(parsed, 500)) // Max 500 for large catalogs
         } else {
           q = q.limit(defaultLimit)
         }
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       // Get IDs that already matched by name/description
       const nameDescMatchIds = new Set(result.map(p => p.id))
       
-      // Fetch ALL active products to search by brands and categories
+      // Fetch more products to search by brands and categories (increased to 500)
       const { data: allProducts, error: allError } = await supabase
         .from('products')
         .select(`
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-        .limit(200)
+        .limit(500) // Increased for better search coverage
       
       if (allError) {
         console.error('Error fetching all products for extended search:', allError)

@@ -21,7 +21,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { getProducts, getCategories } from '@/lib/database'
+import { getCategories } from '@/lib/database'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
@@ -60,6 +60,7 @@ function ProductsContent() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement | null>(null)
   const prevSheetOpen = useRef(false)
+  const [totalProductCount, setTotalProductCount] = useState<number>(0) // Total from database
 
   // Scroll to top ONLY on page 1, otherwise scroll to products grid
   useEffect(() => {
@@ -103,13 +104,51 @@ function ProductsContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsData, categoriesData] = await Promise.all([
-          getProducts(150), // Fetch all products (increased from 50)
-          getCategories()
-        ])
+        // Fetch products with pagination metadata for accurate total count
+        const timestamp = Date.now()
+        const response = await fetch(`/api/products?limit=500&_t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+        
+        console.log('[Products] API response status:', response.status, response.statusText)
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`)
+        }
+        
+        const result = await response.json()
+        console.log('[Products] API response:', {
+          success: result.success,
+          dataLength: result.data?.length || 0,
+          pagination: result.pagination,
+          timestamp: result.timestamp
+        })
+        
+        // Validate response structure
+        if (!result.success) {
+          throw new Error(`API error: ${result.message || result.error || 'Unknown error'}`)
+        }
+        
+        // Extract products and pagination metadata
+        const productsData = result.data || []
+        const paginationMeta = result.pagination
+        
+        // Update total count from server
+        if (paginationMeta?.total !== undefined) {
+          setTotalProductCount(paginationMeta.total)
+          console.log('[Products] Database total count:', paginationMeta.total)
+        }
+        
+        // Fetch categories
+        const categoriesData = await getCategories()
+        
         console.log('[Products] Loaded products:', productsData?.length || 0)
         if (productsData && productsData.length > 0) {
-          const withBrands = productsData.filter(p => p.brands && p.brands.length > 0)
+          const withBrands = productsData.filter((p: Product) => p.brands && p.brands.length > 0)
           console.log('[Products] Products with brands:', withBrands.length)
           if (withBrands.length > 0) {
             console.log('[Products] Sample product with brands:', withBrands[0].name, 'brands:', withBrands[0].brands)
@@ -539,7 +578,7 @@ function ProductsContent() {
           <div className="hidden md:block">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">All Products</h1>
             <p className="text-gray-600">
-              Showing {displayedProducts.length} of {filteredProducts.length} products
+              Showing {displayedProducts.length} of {totalProductCount > 0 ? totalProductCount : filteredProducts.length} products
             </p>
           </div>
           
