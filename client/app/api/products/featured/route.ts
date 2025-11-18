@@ -68,13 +68,7 @@ export const GET = withMiddleware(
       return applyListOptimizations(queryWithImageOrder)
     }
 
-    let { data, error } = await buildQuery(true)
-    if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {
-      const fallback = await buildQuery(false)
-      data = fallback.data
-      error = fallback.error
-    }
-
+    const { data, error } = await buildQuery(true)
     if (error) throw error
     return data || []
   }

@@ -136,23 +136,10 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
     return q // Return configured query builder
   }
 
-  // Attempt query with full schema including slug field
-  let { data, error } = await buildQuery(true)
-  
-  /**
-   * Graceful fallback for schema compatibility
-   * 
-   * If the categories.slug column doesn't exist (error code 42703 or slug-related error),
-   * retry the query without the slug field to maintain backward compatibility.
-   */
-  if (error && (error.code === '42703' || (error.message || '').toLowerCase().includes('slug'))) {
-    console.warn('[Products API] Categories.slug column not found, using fallback query without slug')
-    const fallback = await buildQuery(false)  // Retry without slug field
-    data = fallback.data                      // Use fallback data
-    error = fallback.error                    // Use fallback error state
-  }
+  // Execute query with full schema including slug field
+  const { data, error } = await buildQuery(true)
 
-  // Throw any remaining errors for proper error handling middleware
+  // Throw any errors for proper error handling middleware
   if (error) throw error
   
   return data // Return successfully fetched products
