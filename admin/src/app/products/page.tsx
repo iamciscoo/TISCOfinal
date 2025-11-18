@@ -6,7 +6,8 @@ import { PageLayout } from "@/components/shared/PageLayout";
 import { ProductQuickSearch } from "@/components/ProductQuickSearch";
 import { ClearProductsModal } from "@/components/ClearProductsModal";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ interface Category {
 }
 
 const ProductsPage = () => {
+  const router = useRouter();
   const [data, setData] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -173,17 +175,27 @@ const ProductsPage = () => {
               {totalCount > 0 ? totalCount : data.length}
             </span>
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
             <ProductQuickSearch />
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => router.push('/products/new')}
+              className="gap-2 whitespace-nowrap"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
             {allProducts.length > 0 && (
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setShowClearModal(true)}
-                className="gap-2"
+                className="gap-2 whitespace-nowrap"
               >
                 <Trash2 className="h-4 w-4" />
-                Clear All
+                Delete
               </Button>
             )}
           </div>

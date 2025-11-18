@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { BrandAutocomplete } from "@/components/BrandAutocomplete";
 import React, { useState, useEffect } from "react";
 import type { Category } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +47,6 @@ const AddProductPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<Array<{ file: File; url: string; id: string }>>([]);
-  const [brandInput, setBrandInput] = useState("");
   const { toast} = useToast();
   const router = useRouter();
 
@@ -413,79 +413,22 @@ const AddProductPage = () => {
           <FormField
             control={form.control}
             name="brands"
-            render={({ field }) => {
-              const handleAddBrand = () => {
-                const trimmedBrand = brandInput.trim();
-                if (!trimmedBrand) return;
-                
-                const currentBrands = field.value || [];
-                if (!currentBrands.includes(trimmedBrand)) {
-                  field.onChange([...currentBrands, trimmedBrand]);
-                  setBrandInput("");
-                }
-              };
-              
-              return (
-                <FormItem>
-                  <FormLabel>Brands (Optional)</FormLabel>
-                  <FormControl>
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Input 
-                          value={brandInput}
-                          onChange={(e) => setBrandInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddBrand();
-                            }
-                          }}
-                          placeholder="Enter brand name"
-                        />
-                        <Button 
-                          type="button" 
-                          onClick={handleAddBrand}
-                          variant="outline"
-                          className="shrink-0"
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      
-                      {field.value && field.value.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {field.value.map((brand, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="flex items-center gap-1"
-                            >
-                              {brand}
-                              <button
-                                type="button"
-                                className="ml-1 hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  const newValue = field.value?.filter((_, i) => i !== index) || [];
-                                  field.onChange(newValue);
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Enter brand names and click Add. Click the X to remove a brand.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Brands (Optional)</FormLabel>
+                <FormControl>
+                  <BrandAutocomplete
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Enter brand name"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Start typing to see existing brands or add a new one. Click the X to remove a brand.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           {/* Image Upload Section */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
