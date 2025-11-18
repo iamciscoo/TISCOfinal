@@ -1,0 +1,388 @@
+import { createClient } from '@supabase/supabase-js'
+import { readFileSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const PEXELS_KEY = 'dLDkey2ntrsXAwI81jNlqPKvSvf1bZFQMvnRSzqhqYX05mAcPpaynKYr'
+const PRODUCTS_PER_CAT = 3
+const IMGS_PER_PROD = 6
+const API_DELAY = 18500
+
+// Generate unique run ID for this session
+const RUN_ID = Date.now()
+const randomVariant = () => ['Pro', 'Plus', 'Ultra', 'Max', 'Elite', 'Premium', 'Advanced', 'Standard', 'Deluxe', 'Exclusive'][Math.floor(Math.random() * 10)]
+const randomColor = () => ['Black', 'White', 'Blue', 'Red', 'Gray', 'Navy', 'Green', 'Silver', 'Gold', 'Rose'][Math.floor(Math.random() * 10)]
+const randomSize = () => ['Compact', 'Standard', 'Large', 'XL', 'Mini', 'Mega'][Math.floor(Math.random() * 6)]
+const randomYear = () => 2023 + Math.floor(Math.random() * 3) // 2023-2025
+
+// Load environment variables from client/.env.local
+function loadEnv() {
+  try {
+    const envPath = resolve(__dirname, '../client/.env.local')
+    const envFile = readFileSync(envPath, 'utf-8')
+    const lines = envFile.split('\n')
+    
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      
+      const [key, ...values] = trimmed.split('=')
+      const value = values.join('=').replace(/^["']|["']$/g, '')
+      process.env[key.trim()] = value.trim()
+    }
+  } catch (error) {
+    console.error('⚠️  Could not load .env.local, using process.env')
+  }
+}
+
+loadEnv()
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || ''
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('Missing environment variables. Check client/.env.local has NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE')
+}
+
+console.log('✅ Connected to Supabase:', SUPABASE_URL)
+console.log('✅ Using Pexels API for images')
+console.log('⏰ Estimated completion time: ~60 minutes\n')
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+const slug = (n: string) => n.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '')
+
+async function fetchImages(query: string, count: number) {
+  await new Promise(r => setTimeout(r, API_DELAY))
+  const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`, {
+    headers: { Authorization: PEXELS_KEY }
+  })
+  if (!res.ok) throw new Error(`Pexels error: ${res.status}`)
+  const data = await res.json()
+  return data.photos?.map((p: any) => p.src.large) || []
+}
+
+const generators: Record<string, (i: number) => any> = {
+  'Electronics': i => {
+    const items = [
+      { n: 'Smartphone', b: ['Apple', 'Samsung', 'Xiaomi', 'OnePlus'], p: 800000, q: 'smartphone' },
+      { n: 'Laptop', b: ['Dell', 'HP', 'Lenovo', 'Asus'], p: 1500000, q: 'laptop' },
+      { n: 'Wireless Earbuds', b: ['Sony', 'Bose', 'JBL', 'Beats'], p: 200000, q: 'earbuds' },
+      { n: 'Smartwatch', b: ['Apple', 'Samsung', 'Garmin'], p: 300000, q: 'smartwatch' },
+      { n: 'Tablet', b: ['Apple', 'Samsung', 'Amazon'], p: 600000, q: 'tablet' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const variant = randomVariant()
+    const year = randomYear()
+    return { 
+      name: `${brand} ${x.n} ${variant} ${year}`, 
+      desc: `${randomSize()} ${x.n} from ${brand}. Latest ${year} model with advanced features.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.3), 
+      brands: [brand], 
+      tags: ['tech', 'electronics', x.n.toLowerCase().replace(' ', '-')], 
+      search: `${x.q} ${brand.toLowerCase()}` 
+    }
+  },
+  'Health and Beauty': i => {
+    const items = [
+      { n: 'Facial Serum', b: ['L\'Oreal', 'Neutrogena', 'CeraVe'], p: 45000, q: 'serum' },
+      { n: 'Moisturizer', b: ['Nivea', 'Cetaphil', 'Aveeno'], p: 35000, q: 'moisturizer' },
+      { n: 'Perfume', b: ['Chanel', 'Dior', 'Versace'], p: 120000, q: 'perfume' },
+      { n: 'Shampoo', b: ['Pantene', 'Head & Shoulders'], p: 25000, q: 'shampoo' },
+      { n: 'Body Lotion', b: ['Nivea', 'Vaseline'], p: 30000, q: 'body lotion' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const types = ['Hydrating', 'Nourishing', 'Revitalizing', 'Gentle', 'Advanced']
+    const type = types[Math.floor(Math.random() * types.length)]
+    return { 
+      name: `${brand} ${type} ${x.n} ${randomSize()}`, 
+      desc: `Premium ${type.toLowerCase()} ${x.n.toLowerCase()} by ${brand}. Dermatologist tested.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.2), 
+      brands: [brand], 
+      tags: ['beauty', 'health', 'skincare'], 
+      search: `${x.q} ${brand.toLowerCase()}` 
+    }
+  },
+  'Clothing': i => {
+    const items = [
+      { n: 'T-Shirt', b: ['Nike', 'Adidas', 'Puma', 'Uniqlo'], p: 25000, q: 'tshirt' },
+      { n: 'Jeans', b: ['Levi\'s', 'Wrangler', 'Diesel'], p: 65000, q: 'jeans' },
+      { n: 'Sneakers', b: ['Adidas', 'Nike', 'Puma', 'New Balance'], p: 95000, q: 'sneakers' },
+      { n: 'Hoodie', b: ['Champion', 'Nike', 'Adidas'], p: 75000, q: 'hoodie' },
+      { n: 'Jacket', b: ['North Face', 'Columbia'], p: 150000, q: 'jacket' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const color = randomColor()
+    return { 
+      name: `${brand} ${color} ${x.n} ${randomVariant()}`, 
+      desc: `Stylish ${color.toLowerCase()} ${x.n.toLowerCase()} from ${brand}. Premium quality.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.25), 
+      brands: [brand], 
+      tags: ['clothing', 'fashion', color.toLowerCase()], 
+      search: `${x.q} ${color.toLowerCase()}` 
+    }
+  },
+  'Sports & Fitness.': i => {
+    const items = [
+      { n: 'Running Shoes', b: ['Nike', 'Adidas', 'Asics', 'Brooks'], p: 120000, q: 'running shoes' },
+      { n: 'Yoga Mat', b: ['Lululemon', 'Manduka', 'Gaiam'], p: 45000, q: 'yoga mat' },
+      { n: 'Dumbbells', b: ['Bowflex', 'CAP', 'York'], p: 180000, q: 'dumbbells' },
+      { n: 'Gym Bag', b: ['Nike', 'Adidas', 'Under Armour'], p: 55000, q: 'gym bag' },
+      { n: 'Water Bottle', b: ['Hydro Flask', 'Nalgene'], p: 35000, q: 'water bottle' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const levels = ['Pro', 'Elite', 'Performance', 'Training', 'Sport']
+    const level = levels[Math.floor(Math.random() * levels.length)]
+    return { 
+      name: `${brand} ${level} ${x.n} ${randomSize()}`, 
+      desc: `Professional ${level.toLowerCase()} ${x.n.toLowerCase()} from ${brand}. For serious athletes.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.2), 
+      brands: [brand], 
+      tags: ['sports', 'fitness', 'workout'], 
+      search: `${x.q} ${brand.toLowerCase()}` 
+    }
+  },
+  'Books': i => {
+    const items = [
+      { n: 'Fiction Novel', b: ['Penguin', 'HarperCollins'], p: 35000, q: 'book novel' },
+      { n: 'Self-Help Book', b: ['Random House', 'Simon & Schuster'], p: 28000, q: 'self help book' },
+      { n: 'Biography', b: ['HarperCollins', 'Penguin'], p: 40000, q: 'biography' },
+      { n: 'Cookbook', b: ['Phaidon', 'Chronicle Books'], p: 50000, q: 'cookbook' },
+      { n: 'Business Book', b: ['Wiley', 'McGraw-Hill'], p: 45000, q: 'business book' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const adjectives = ['Essential', 'Complete', 'Ultimate', 'Modern', 'Practical']
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
+    const topics = ['Success', 'Leadership', 'Innovation', 'Mastery', 'Guide']
+    const topic = topics[Math.floor(Math.random() * topics.length)]
+    return { 
+      name: `The ${adj} ${topic} - ${x.n}`, 
+      desc: `${adj} ${x.n.toLowerCase()} published by ${brand}. Bestselling edition.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.15), 
+      brands: [brand], 
+      tags: ['books', 'reading', x.n.toLowerCase().replace(' ', '-')], 
+      search: x.q 
+    }
+  },
+  'Home & Garden': i => {
+    const items = [
+      { n: 'Throw Pillow', b: ['IKEA', 'West Elm', 'Pottery Barn'], p: 35000, q: 'pillow' },
+      { n: 'Table Lamp', b: ['Philips', 'IKEA', 'Wayfair'], p: 75000, q: 'lamp' },
+      { n: 'Plant Pot', b: ['Lechuza', 'Bloem'], p: 25000, q: 'plant pot' },
+      { n: 'Wall Art', b: ['Society6', 'Minted'], p: 65000, q: 'wall art' },
+      { n: 'Storage Basket', b: ['mDesign', 'SimpleHouseware'], p: 28000, q: 'storage basket' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const styles = ['Modern', 'Rustic', 'Contemporary', 'Vintage', 'Minimalist', 'Classic']
+    const style = styles[Math.floor(Math.random() * styles.length)]
+    return { 
+      name: `${brand} ${style} ${x.n} ${randomSize()}`, 
+      desc: `${style} ${x.n.toLowerCase()} from ${brand}. Perfect for home decor.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.25), 
+      brands: [brand], 
+      tags: ['home', 'garden', 'decor', style.toLowerCase()], 
+      search: `${x.q} ${style.toLowerCase()}` 
+    }
+  },
+  'Entertainment': i => {
+    const items = [
+      { n: 'Board Game', b: ['Hasbro', 'Mattel', 'Ravensburger'], p: 45000, q: 'board game' },
+      { n: 'LEGO Set', b: ['LEGO'], p: 95000, q: 'lego' },
+      { n: 'Video Game', b: ['PlayStation', 'Xbox', 'Nintendo'], p: 120000, q: 'video game' },
+      { n: 'Puzzle', b: ['Ravensburger', 'Buffalo Games'], p: 28000, q: 'puzzle' },
+      { n: 'Action Figure', b: ['Hasbro', 'Mattel', 'Funko'], p: 55000, q: 'action figure' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const themes = ['Adventure', 'Fantasy', 'Action', 'Strategy', 'Classic', 'Premium']
+    const theme = themes[Math.floor(Math.random() * themes.length)]
+    return { 
+      name: `${brand} ${theme} ${x.n} ${randomVariant()}`, 
+      desc: `${theme} ${x.n.toLowerCase()} from ${brand}. Hours of entertainment.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.3), 
+      brands: [brand], 
+      tags: ['entertainment', 'games', 'fun'], 
+      search: x.q 
+    }
+  },
+  'Anime Merch': i => {
+    const items = [
+      { n: 'Figure', b: ['Banpresto', 'Good Smile', 'Funko'], p: 85000, q: 'anime figure' },
+      { n: 'Poster', b: ['Crunchyroll', 'AnimePoster'], p: 18000, q: 'anime poster' },
+      { n: 'T-Shirt', b: ['Good Smile', 'Crunchyroll'], p: 35000, q: 'anime shirt' },
+      { n: 'Keychain', b: ['Banpresto', 'Good Smile'], p: 12000, q: 'anime keychain' },
+      { n: 'Plushie', b: ['Banpresto', 'San-ei'], p: 45000, q: 'anime plush' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const series = ['Naruto', 'One Piece', 'Dragon Ball', 'Attack on Titan', 'Demon Slayer', 'My Hero Academia']
+    const anime = series[Math.floor(Math.random() * series.length)]
+    const editions = ['Limited Edition', 'Collector Edition', 'Special Edition', 'Exclusive']
+    const edition = editions[Math.floor(Math.random() * editions.length)]
+    return { 
+      name: `${anime} ${edition} ${x.n}`, 
+      desc: `Official ${anime} ${x.n.toLowerCase()} by ${brand}. ${edition} collectible.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.25), 
+      brands: [brand], 
+      tags: ['anime', 'merch', 'collectible', anime.toLowerCase().replace(' ', '-')], 
+      search: `${x.q} ${anime.toLowerCase()}` 
+    }
+  },
+  'Rare Finds': i => {
+    const items = [
+      { n: 'Vintage Watch', b: ['Rolex', 'Omega', 'Patek Philippe'], p: 850000, q: 'vintage watch' },
+      { n: 'Antique Vase', b: ['Ming', 'Qing', 'Victorian'], p: 450000, q: 'antique vase' },
+      { n: 'Limited Sneaker', b: ['Nike', 'Adidas', 'Jordan'], p: 550000, q: 'limited sneakers' },
+      { n: 'Rare Coin', b: ['Numismatic'], p: 350000, q: 'rare coin' },
+      { n: 'Vintage Camera', b: ['Leica', 'Hasselblad'], p: 650000, q: 'vintage camera' }
+    ]
+    const x = items[i % items.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const years = [1950, 1960, 1970, 1980, 1990, 2000]
+    const year = years[Math.floor(Math.random() * years.length)]
+    const conditions = ['Mint Condition', 'Excellent', 'Pristine', 'Authenticated']
+    const condition = conditions[Math.floor(Math.random() * conditions.length)]
+    return { 
+      name: `${brand} ${x.n} ${year} ${condition}`, 
+      desc: `Rare ${year} ${x.n.toLowerCase()} from ${brand}. ${condition}. Collector's item.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.4), 
+      brands: [brand], 
+      tags: ['rare', 'collectible', 'vintage'], 
+      search: `${x.q} ${brand.toLowerCase()}` 
+    }
+  },
+  'New': i => {
+    const allItems = [
+      { n: 'Smart Device', b: ['TechPro', 'InnoTech'], p: 150000, q: 'smart device' },
+      { n: 'Wireless Speaker', b: ['JBL', 'Bose', 'Sony'], p: 95000, q: 'wireless speaker' },
+      { n: 'Fitness Band', b: ['Fitbit', 'Xiaomi'], p: 75000, q: 'fitness band' },
+      { n: 'Power Station', b: ['Anker', 'RAVPower'], p: 180000, q: 'power station' },
+      { n: 'LED Light Strip', b: ['Philips', 'LIFX'], p: 45000, q: 'led light' }
+    ]
+    const x = allItems[i % allItems.length]
+    const brand = x.b[Math.floor(Math.random() * x.b.length)]
+    const year = new Date().getFullYear()
+    const version = Math.floor(Math.random() * 5) + 1
+    return { 
+      name: `${brand} ${x.n} ${year} v${version}`, 
+      desc: `Brand new ${year} ${x.n.toLowerCase()} from ${brand}. Latest version ${version} release.`, 
+      price: x.p + Math.floor(Math.random() * x.p * 0.2), 
+      brands: [brand], 
+      tags: ['new', 'latest', year.toString()], 
+      search: `${x.q} ${year}` 
+    }
+  }
+}
+
+async function main() {
+  console.log('🚀 Starting product generation...\n')
+  
+  const { data: cats } = await supabase.from('categories').select('id, name')
+  if (!cats) throw new Error('No categories found')
+  
+  let totalProducts = 0
+  let totalImages = 0
+  
+  for (const cat of cats) {
+    const gen = generators[cat.name]
+    if (!gen) {
+      console.log(`⚠️  No generator for "${cat.name}", skipping...`)
+      continue
+    }
+    
+    console.log(`\n📦 Category: ${cat.name}`)
+    
+    for (let i = 0; i < PRODUCTS_PER_CAT; i++) {
+      const prod = gen(i)
+      
+      console.log(`  → Generating "${prod.name}"...`)
+      
+      // Fetch images
+      console.log(`    📸 Fetching ${IMGS_PER_PROD} images...`)
+      const imgUrls = await fetchImages(prod.search, IMGS_PER_PROD)
+      
+      if (imgUrls.length === 0) {
+        console.log(`    ⚠️  No images found, using placeholder`)
+        imgUrls.push('https://via.placeholder.com/800')
+      }
+      
+      // Insert product with proper deal pricing logic
+      const isDeal = Math.random() > 0.7
+      const dealDiscount = 0.15 + (Math.random() * 0.20) // 15-35% off
+      
+      const { data: newProd, error: prodErr } = await supabase
+        .from('products')
+        .insert({
+          name: prod.name,
+          description: prod.desc,
+          price: prod.price,
+          category_id: cat.id,
+          brands: prod.brands,
+          tags: prod.tags,
+          slug: slug(prod.name),
+          stock_quantity: Math.floor(Math.random() * 50) + 10,
+          is_active: true,
+          is_featured: Math.random() > 0.7,
+          is_new: Math.random() > 0.6,
+          is_deal: isDeal,
+          original_price: isDeal ? prod.price : null,
+          deal_price: isDeal ? Math.floor(prod.price * (1 - dealDiscount)) : null
+        })
+        .select()
+        .single()
+      
+      if (prodErr) {
+        console.error(`    ❌ Failed to insert product:`, prodErr.message)
+        continue
+      }
+      
+      // Insert into product_categories junction table
+      const { error: catErr } = await supabase
+        .from('product_categories')
+        .insert({
+          product_id: newProd.id,
+          category_id: cat.id
+        })
+      
+      if (catErr) {
+        console.error(`    ⚠️  Failed to link category:`, catErr.message)
+      }
+      
+      // Insert images
+      const imgs = imgUrls.slice(0, IMGS_PER_PROD).map((url: string, idx: number) => ({
+        product_id: newProd.id,
+        url,
+        is_main: idx === 0,
+        sort_order: idx
+      }))
+      
+      const { error: imgErr } = await supabase.from('product_images').insert(imgs)
+      
+      if (imgErr) {
+        console.error(`    ❌ Failed to insert images:`, imgErr.message)
+      } else {
+        console.log(`    ✅ Added ${imgs.length} images`)
+        totalImages += imgs.length
+      }
+      
+      totalProducts++
+      console.log(`    ✅ Product created successfully!`)
+    }
+  }
+  
+  console.log(`\n🎉 Generation complete!`)
+  console.log(`   Products created: ${totalProducts}`)
+  console.log(`   Images added: ${totalImages}`)
+  console.log(`   API calls made: ~${totalImages}`)
+}
+
+main().catch(console.error)
