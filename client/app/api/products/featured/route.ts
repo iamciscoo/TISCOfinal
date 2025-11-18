@@ -43,9 +43,10 @@ export const GET = withMiddleware(
           slug,
           created_at,
           featured_order,
-          product_images!inner(
+          product_images(
             url,
-            is_main
+            is_main,
+            sort_order
           ),
           categories:product_categories!fk_product_categories_product_id (
             category:categories (
@@ -58,8 +59,13 @@ export const GET = withMiddleware(
         .eq('is_active', true)          // **OPTIMIZATION: Only show active products**
         .gte('stock_quantity', 0)       // **OPTIMIZATION: Only show products with stock info**
       
+      // **OPTIMIZATION: Order product images by main first**
+      const queryWithImageOrder = query
+        .order('is_main', { foreignTable: 'product_images', ascending: false })
+        .order('sort_order', { foreignTable: 'product_images', ascending: true })
+      
       // Apply optimized ordering using helper
-      return applyListOptimizations(query)
+      return applyListOptimizations(queryWithImageOrder)
     }
 
     let { data, error } = await buildQuery(true)

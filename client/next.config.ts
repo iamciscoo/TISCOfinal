@@ -21,6 +21,12 @@ remotePatterns.push({
   hostname: 'lh3.googleusercontent.com',
 })
 
+// Allow Pexels images for product photos
+remotePatterns.push({
+  protocol: 'https',
+  hostname: 'images.pexels.com',
+})
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns,
