@@ -166,18 +166,40 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    
+    console.log(`[DELETE] Starting deletion process for product: ${id}`);
+    
     if (!id) {
+      console.error('[DELETE] Missing product ID parameter');
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
+    // **STEP 0: Verify product exists**
+    const { data: existingProduct, error: checkError } = await supabase
+      .from('products')
+      .select('id, name')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingProduct) {
+      console.error('[DELETE] Product not found:', id);
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    console.log(`[DELETE] Found product: ${existingProduct.name} (${id})`);
+
     // **STEP 1: Fetch product images before deletion**
+    console.log('[DELETE] Fetching product images...');
     const { data: images, error: fetchError } = await supabase
       .from('product_images')
       .select('id, url, path')
       .eq('product_id', id);
 
     if (fetchError) {
-      console.error('Error fetching product images:', fetchError.message);
+      console.error('[DELETE] Error fetching product images:', fetchError.message);
+      // Continue with deletion anyway
+    } else {
+      console.log(`[DELETE] Found ${images?.length || 0} images to delete`);
     }
 
     // **STEP 2: Delete images from storage (if any exist)**
@@ -191,42 +213,55 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
         })
         .filter((path): path is string => Boolean(path));
 
+      console.log(`[DELETE] Extracted ${imagePaths.length} storage paths from ${images.length} images`);
+
       if (imagePaths.length > 0) {
         try {
+          console.log('[DELETE] Deleting images from storage:', imagePaths);
           const { error: storageError } = await supabase.storage
             .from('product-images')
             .remove(imagePaths);
 
           if (storageError) {
-            console.error('Error deleting product images from storage:', storageError.message);
+            console.error('[DELETE] Error deleting product images from storage:', storageError.message);
             // Continue with product deletion even if storage cleanup fails
           } else {
-            console.log(`✅ Deleted ${imagePaths.length} images from storage for product ${id}`);
+            console.log(`✅ [DELETE] Deleted ${imagePaths.length} images from storage for product ${id}`);
           }
         } catch (storageException) {
-          console.error('Exception during storage deletion:', storageException);
+          console.error('[DELETE] Exception during storage deletion:', storageException);
           // Continue with product deletion
         }
       } else {
-        console.warn(`⚠️ No valid image paths extracted for product ${id}`);
+        console.warn(`⚠️ [DELETE] No valid image paths extracted for product ${id}`);
       }
     } else {
-      console.log(`ℹ️ No images to delete for product ${id}`);
+      console.log(`ℹ️ [DELETE] No images to delete for product ${id}`);
     }
 
-    // **STEP 3: Delete product (cascades to product_images and product_categories via FK)**
-    const { error } = await supabase
+    // **STEP 3: Delete product (cascades to product_images, product_categories, and reviews via FK)**
+    console.log('[DELETE] Deleting product from database...');
+    const { error: deleteError, count } = await supabase
       .from("products")
-      .delete()
+      .delete({ count: 'exact' })
       .eq("id", id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (deleteError) {
+      console.error('[DELETE] Error deleting product:', deleteError);
+      return NextResponse.json({ 
+        error: deleteError.message,
+        details: deleteError.details,
+        hint: deleteError.hint
+      }, { status: 500 });
+    }
     
-    console.log('✅ Product deleted successfully with all associated data:', id)
+    console.log(`✅ [DELETE] Product deleted successfully. Rows affected: ${count}`);
+    console.log(`✅ [DELETE] Cascaded deletion of related records (images, categories, reviews) completed`);
     
     return new Response(null, { status: 204 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unexpected error";
+    console.error('[DELETE] Unexpected error during product deletion:', e);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

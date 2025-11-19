@@ -134,31 +134,68 @@ export default function ViewProductPage() {
   };
 
   const handleDelete = async () => {
-    if (!product) return;
+    if (!product) {
+      console.error('No product to delete');
+      return;
+    }
     
-    const confirmed = window.confirm(`Delete product "${product.name}"? This cannot be undone.`);
-    if (!confirmed) return;
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${product.name}"?\n\nThis will permanently delete:\n- The product\n- All product images\n- All product categories\n- All reviews\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmed) {
+      console.log('Delete cancelled by user');
+      return;
+    }
+
+    console.log(`Attempting to delete product: ${product.id} (${product.name})`);
 
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
-      if (!response.ok) {
-        const json = await response.json().catch(() => ({}));
-        throw new Error(json?.error || 'Failed to delete product');
+      console.log(`Delete response status: ${response.status}`);
+      
+      // Handle 204 No Content (successful deletion)
+      if (response.status === 204) {
+        console.log('Product deleted successfully (204 No Content)');
+        toast({
+          title: "Success",
+          description: `Product "${product.name}" has been deleted`,
+        });
+        
+        // Redirect to products list
+        router.push('/products');
+        return;
       }
       
-      toast({
-        title: "Deleted",
-        description: "Product deleted successfully",
-      });
+      // Handle other successful responses (200, etc.)
+      if (response.ok) {
+        console.log('Product deleted successfully');
+        toast({
+          title: "Success",
+          description: `Product "${product.name}" has been deleted`,
+        });
+        
+        router.push('/products');
+        return;
+      }
       
-      router.push('/products');
+      // Handle error responses
+      const json = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Delete failed:', json);
+      throw new Error(json?.error || `Failed to delete product (Status: ${response.status})`);
+      
     } catch (err) {
+      console.error('Delete error:', err);
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to delete product',
+        title: "Delete Failed",
+        description: err instanceof Error ? err.message : 'Failed to delete product. Please try again.',
         variant: "destructive",
       });
     }
