@@ -12,7 +12,7 @@ function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+      ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
 }
@@ -24,41 +24,41 @@ export function NewArrivalsSection() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        // Fetch a larger batch to show all new arrivals
-        const ts = Date.now()
-        const res = await fetch(`/api/products?limit=100&_t=${ts}`, {
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-          },
-        })
-        if (!res.ok) throw new Error("Failed to fetch products")
-        const json = await res.json()
-        const data: Product[] = Array.isArray(json?.data) ? json.data : json
-
-        // Filter by 'is_new' flag OR category named/slugged 'new'
-        const newItems = (data || []).filter((p: Product) => {
-          if (p?.is_new) return true
-          const cats = (p as { categories?: { category?: { name?: string; slug?: string } }[] }).categories || []
-          return cats?.some((c: { category?: { name?: string; slug?: string } }) => {
-            const nm = (c?.category?.name || "").toString().toLowerCase()
-            const sg = (c?.category?.slug || "").toString().toLowerCase()
-            return nm === "new" || sg === "new"
+      ; (async () => {
+        try {
+          // Fetch a larger batch to show all new arrivals
+          const ts = Date.now()
+          const res = await fetch(`/api/products?limit=100&_t=${ts}`, {
+            headers: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              Pragma: "no-cache",
+            },
           })
-        })
+          if (!res.ok) throw new Error("Failed to fetch products")
+          const json = await res.json()
+          const data: Product[] = Array.isArray(json?.data) ? json.data : json
 
-        // Randomize and take up to 7
-        const picked = shuffle(newItems).slice(0, 7)
-        if (mounted) setProducts(picked)
-      } catch (e) {
-        console.error("[NewArrivals] load error:", e)
-        if (mounted) setProducts([])
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    })()
+          // Filter by 'is_new' flag OR category named/slugged 'new'
+          const newItems = (data || []).filter((p: Product) => {
+            if (p?.is_new) return true
+            const cats = (p as { categories?: { category?: { name?: string; slug?: string } }[] }).categories || []
+            return cats?.some((c: { category?: { name?: string; slug?: string } }) => {
+              const nm = (c?.category?.name || "").toString().toLowerCase()
+              const sg = (c?.category?.slug || "").toString().toLowerCase()
+              return nm === "new" || sg === "new"
+            })
+          })
+
+          // Randomize and take up to 7
+          const picked = shuffle(newItems).slice(0, 7)
+          if (mounted) setProducts(picked)
+        } catch (e) {
+          console.error("[NewArrivals] load error:", e)
+          if (mounted) setProducts([])
+        } finally {
+          if (mounted) setLoading(false)
+        }
+      })()
     return () => {
       mounted = false
     }
@@ -117,7 +117,7 @@ export function NewArrivalsSection() {
                   className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
                   aria-label="Scroll left"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
                 </button>
               </div>
               <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
@@ -127,7 +127,7 @@ export function NewArrivalsSection() {
                   className="h-10 w-10 grid place-items-center rounded-full bg-white/90 shadow ring-1 ring-gray-200 hover:bg-white transition"
                   aria-label="Scroll right"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z" /></svg>
                 </button>
               </div>
             </>

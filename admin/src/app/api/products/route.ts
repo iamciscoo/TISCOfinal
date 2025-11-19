@@ -10,8 +10,8 @@ export async function GET(req: Request) {
     const limitParam = url.searchParams.get('limit');
     const limitNum = limitParam ? Number(limitParam) : undefined;
     const limit = typeof limitNum === 'number' && !Number.isNaN(limitNum)
-      ? Math.max(1, Math.min(500, limitNum))  // Increased to 500 for admin
-      : 100; // Default 100 products, max 500 for admin dashboard
+      ? Math.max(1, Math.min(2000, limitNum))  // Increased to 2000 to support larger catalog
+      : 100; // Default 100 products, max 2000 for admin dashboard
 
     // Build count query with same filters
     let countQuery = supabase

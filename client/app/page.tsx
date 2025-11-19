@@ -116,19 +116,19 @@ export default function Home() {
   return (
     // Main container - Full screen height, white background, prevent horizontal scroll
     <div className="min-h-screen bg-white w-full overflow-x-hidden">
-      
+
       {/* Password Reset Handler - Invisible component that detects reset links from emails */}
       <PasswordResetRedirectHandler />
-      
+
       {/* Navigation Bar - Appears at top of page (logo, menu, search, cart button) */}
       <Navbar />
-      
+
       {/* MAIN CONTENT AREA - Everything between navbar and footer */}
       <main className="w-full bg-white">
-        
+
         {/* Mobile Search Bar - Only shows on small screens */}
         <MobileSearchBar />
-        
+
         {/* Hero Carousel Container - Centered with padding */}
         {/* max-w-7xl = maximum width, mx-auto = center horizontally */}
         {/* px-4 sm:px-6 lg:px-8 = responsive padding (more padding on larger screens) */}
@@ -137,11 +137,11 @@ export default function Home() {
           {/* Big sliding banner/carousel at top */}
           <HomepageHeroCarousel />
         </div>
-        
+
         {/* Content Sections Container - Vertical spacing between sections */}
         {/* Reduced vertical spacing for tighter layout */}
         <div className="w-full space-y-4 sm:space-y-6 md:space-y-10">
-          
+
           {/* Promotional Cards - Special deals and category highlights */}
           <PromotionalCards />
 
@@ -150,26 +150,26 @@ export default function Home() {
 
           {/* Rare Finds Section - Unique/hard-to-find products */}
           <RareFinds />
-          
+
           {/* Featured Products - Grid of popular items */}
           <FeaturedProducts />
-          
+
           {/* Services Promo Grid - Centered with padding */}
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <ServicesPromoGrid />
           </div>
-          
+
           {/* Services Preview - Detailed service info */}
           <ServicesPreview />
-          
+
           {/* Brand Slider - Logos of brands we sell (moved to bottom for trust signal) */}
           <BrandSlider />
         </div>
       </main>
-      
+
       {/* Footer - Bottom of page (links, contact info, legal) */}
       <Footer />
-      
+
       {/* Shopping Cart Sidebar - Slides in from right when cart button clicked */}
       <CartSidebar />
     </div>

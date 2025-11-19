@@ -105,7 +105,7 @@ function ProductsContent() {
       try {
         // Fetch products with pagination metadata for accurate total count
         const timestamp = Date.now()
-        const response = await fetch(`/api/products?limit=500&_t=${timestamp}`, {
+        const response = await fetch(`/api/products?limit=2000&_t=${timestamp}`, {
           cache: 'no-store',
           headers: {
             'Cache-Control': 'no-cache',

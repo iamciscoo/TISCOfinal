@@ -180,9 +180,8 @@ export const HomepageHeroCarousel = () => {
       {heroSlides.map((slide, index) => (
         <div
           key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentSlide ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
         >
           <Image
             src={slide.image}
@@ -211,66 +210,66 @@ export const HomepageHeroCarousel = () => {
           willChange: 'transform, opacity',
         }}
       >
-            {/* Slide Content */}
-            <div className="text-white space-y-2 sm:space-y-4 md:space-y-6 max-w-4xl px-4 sm:px-6">
-              <div className="space-y-1 sm:space-y-3">
-                <p className="text-blue-400 font-medium text-xs sm:text-base md:text-lg tracking-wide uppercase">
-                  {heroSlides[currentSlide].subtitle}
-                </p>
-                <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight font-chango">
-                  {heroSlides[currentSlide].title}
-                </h1>
-              </div>
-              
-              <p className="hidden sm:block text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 leading-relaxed max-w-2xl">
-                {heroSlides[currentSlide].description}
-              </p>
+        {/* Slide Content */}
+        <div className="text-white space-y-2 sm:space-y-4 md:space-y-6 max-w-4xl px-4 sm:px-6">
+          <div className="space-y-1 sm:space-y-3">
+            <p className="text-blue-400 font-medium text-xs sm:text-base md:text-lg tracking-wide uppercase">
+              {heroSlides[currentSlide].subtitle}
+            </p>
+            <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight font-chango">
+              {heroSlides[currentSlide].title}
+            </h1>
+          </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1 sm:pt-2">
-                <Button 
-                  className="text-sm sm:text-lg px-4 py-3 sm:px-8 sm:py-6 bg-blue-600 hover:bg-blue-700 font-semibold rounded-full"
-                  asChild
-                >
-                  <Link href={heroSlides[currentSlide].ctaLink}>
-                    {React.createElement(heroSlides[currentSlide].ctaIcon, { className: "h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" })}
-                    {heroSlides[currentSlide].cta}
-                  </Link>
-                </Button>
-                
-                {currentSlide === 0 && (
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="hidden sm:flex text-sm sm:text-lg px-4 py-3 sm:px-8 sm:py-6 text-white border-white bg-black/20 hover:bg-white hover:text-gray-900 backdrop-blur-sm rounded-full"
-                    asChild
-                  >
-                    <Link href="/about">
-                      Learn More
-                    </Link>
-                  </Button>
-                )}
-              </div>
+          <p className="hidden sm:block text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 leading-relaxed max-w-2xl">
+            {heroSlides[currentSlide].description}
+          </p>
 
-              {/* Brand Message for Main Slide - Hidden on mobile */}
-              {currentSlide === 0 && (
-                <div className="hidden lg:block pt-2 lg:pt-3 border-t border-white/20 mt-2">
-                  <div className="grid grid-cols-3 gap-4 text-left">
-                    <div>
-                      <div className="text-base lg:text-lg xl:text-xl font-bold text-white">No BS</div>
-                      <div className="text-xs lg:text-sm text-gray-300">Straight talk, honest pricing</div>
-                    </div>
-                    <div>
-                      <div className="text-base lg:text-lg xl:text-xl font-bold text-white">Fast</div>
-                      <div className="text-xs lg:text-sm text-gray-300">Quick delivery, no delays</div>
-                    </div>
-                    <div>
-                      <div className="text-base lg:text-lg xl:text-xl font-bold text-white">Simple</div>
-                      <div className="text-xs lg:text-sm text-gray-300">Easy shopping, no hassle</div>
-                    </div>
-                  </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1 sm:pt-2">
+            <Button
+              className="text-sm sm:text-lg px-4 py-3 sm:px-8 sm:py-6 bg-blue-600 hover:bg-blue-700 font-semibold rounded-full"
+              asChild
+            >
+              <Link href={heroSlides[currentSlide].ctaLink}>
+                {React.createElement(heroSlides[currentSlide].ctaIcon, { className: "h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" })}
+                {heroSlides[currentSlide].cta}
+              </Link>
+            </Button>
+
+            {currentSlide === 0 && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="hidden sm:flex text-sm sm:text-lg px-4 py-3 sm:px-8 sm:py-6 text-white border-white bg-black/20 hover:bg-white hover:text-gray-900 backdrop-blur-sm rounded-full"
+                asChild
+              >
+                <Link href="/about">
+                  Learn More
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {/* Brand Message for Main Slide - Hidden on mobile */}
+          {currentSlide === 0 && (
+            <div className="hidden lg:block pt-2 lg:pt-3 border-t border-white/20 mt-2">
+              <div className="grid grid-cols-3 gap-4 text-left">
+                <div>
+                  <div className="text-base lg:text-lg xl:text-xl font-bold text-white">No BS</div>
+                  <div className="text-xs lg:text-sm text-gray-300">Straight talk, honest pricing</div>
                 </div>
-              )}
+                <div>
+                  <div className="text-base lg:text-lg xl:text-xl font-bold text-white">Fast</div>
+                  <div className="text-xs lg:text-sm text-gray-300">Quick delivery, no delays</div>
+                </div>
+                <div>
+                  <div className="text-base lg:text-lg xl:text-xl font-bold text-white">Simple</div>
+                  <div className="text-xs lg:text-sm text-gray-300">Easy shopping, no hassle</div>
+                </div>
+              </div>
             </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation Arrows */}
@@ -281,7 +280,7 @@ export const HomepageHeroCarousel = () => {
       >
         <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
       </button>
-      
+
       <button
         onClick={nextSlide}
         className="absolute right-2 sm:right-4 lg:right-6 top-1/2 transform -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
@@ -297,11 +296,10 @@ export const HomepageHeroCarousel = () => {
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${
-                index === currentSlide 
-                  ? 'bg-white scale-110' 
+              className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${index === currentSlide
+                  ? 'bg-white scale-110'
                   : 'bg-white/50 hover:bg-white/75'
-              }`}
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
@@ -310,10 +308,10 @@ export const HomepageHeroCarousel = () => {
 
       {/* Progress Bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20">
-        <div 
+        <div
           className="h-full bg-blue-600 transition-all duration-300"
-          style={{ 
-            width: `${((currentSlide + 1) / heroSlides.length) * 100}%` 
+          style={{
+            width: `${((currentSlide + 1) / heroSlides.length) * 100}%`
           }}
         />
       </div>
