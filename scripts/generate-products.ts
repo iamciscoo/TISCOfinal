@@ -56,49 +56,63 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const slug = (n: string) => n.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '')
 
-async function fetchFromPexels(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
-  const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`, {
-    headers: { Authorization: PEXELS_KEY }
-  })
-  
-  // Check for rate limit errors
-  if (res.status === 429 || res.status === 403) {
-    console.log(`    ⚠️  Pexels API limit reached (Status: ${res.status})`)
-    return { urls: [], limitReached: true }
-  }
-  
-  if (!res.ok) {
-    console.log(`    ⚠️  Pexels API error: ${res.status}`)
-    return { urls: [], limitReached: false }
-  }
-  
-  const data = await res.json()
-  return { 
-    urls: data.photos?.map((p: any) => p.src.large) || [],
-    limitReached: false
+async function fetchFromPexels(query: string, count: number): Promise<{ urls: string[], limitReached: boolean, error?: string }> {
+  try {
+    const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`, {
+      headers: { Authorization: PEXELS_KEY }
+    })
+    
+    // Check for rate limit errors
+    if (res.status === 429 || res.status === 403) {
+      console.log(`    ⚠️  Pexels API limit reached (Status: ${res.status})`)
+      return { urls: [], limitReached: true }
+    }
+    
+    if (!res.ok) {
+      console.log(`    ⚠️  Pexels API error: ${res.status}`)
+      return { urls: [], limitReached: false, error: `HTTP ${res.status}` }
+    }
+    
+    const data = await res.json()
+    return { 
+      urls: data.photos?.map((p: any) => p.src.large) || [],
+      limitReached: false
+    }
+  } catch (error: any) {
+    // Network errors (timeout, connection refused, etc.)
+    const errorMsg = error.code || error.message || 'Network error'
+    console.log(`    ⚠️  Pexels network error: ${errorMsg}`)
+    return { urls: [], limitReached: false, error: errorMsg }
   }
 }
 
-async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
-  const res = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`, {
-    headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
-  })
-  
-  // Check for rate limit errors
-  if (res.status === 429 || res.status === 403) {
-    console.log(`    ⚠️  Unsplash API limit reached (Status: ${res.status})`)
-    return { urls: [], limitReached: true }
-  }
-  
-  if (!res.ok) {
-    console.log(`    ⚠️  Unsplash API error: ${res.status}`)
-    return { urls: [], limitReached: false }
-  }
-  
-  const data = await res.json()
-  return { 
-    urls: data.results?.map((p: any) => p.urls.regular) || [],
-    limitReached: false
+async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: string[], limitReached: boolean, error?: string }> {
+  try {
+    const res = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`, {
+      headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
+    })
+    
+    // Check for rate limit errors
+    if (res.status === 429 || res.status === 403) {
+      console.log(`    ⚠️  Unsplash API limit reached (Status: ${res.status})`)
+      return { urls: [], limitReached: true }
+    }
+    
+    if (!res.ok) {
+      console.log(`    ⚠️  Unsplash API error: ${res.status}`)
+      return { urls: [], limitReached: false, error: `HTTP ${res.status}` }
+    }
+    
+    const data = await res.json()
+    return { 
+      urls: data.results?.map((p: any) => p.urls.regular) || [],
+      limitReached: false
+    }
+  } catch (error: any) {
+    // Network errors (timeout, connection refused, etc.)
+    const errorMsg = error.code || error.message || 'Network error'
+    console.log(`    ⚠️  Unsplash network error: ${errorMsg}`)
+    return { urls: [], limitReached: false, error: errorMsg }
   }
 }
 
