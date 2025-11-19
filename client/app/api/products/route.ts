@@ -45,7 +45,7 @@ const supabase = createClient(
  * Note: URL query parameters are strings, so we use coercion to convert them.
  */
 const getProductsSchema = z.object({
-  limit: z.coerce.number().min(1).max(2000).optional().default(50),   // Maximum items per page (1-2000, default: 50)
+  limit: z.coerce.number().min(1).max(20000).optional().default(50),  // Maximum items per page (1-20000 for batch fetching, default: 50)
   offset: z.coerce.number().min(0).optional().default(0),             // Starting position for pagination (0+, default: 0)
   category: z.string().uuid().optional(),                              // Category UUID filter (optional)
   featured: z.coerce.boolean().optional()                              // Filter for featured products only (optional)
@@ -188,7 +188,7 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
  * and category information.
  * 
  * Query Parameters:
- * - limit (optional): Number of products to return (1-200, default: 50)
+ * - limit (optional): Number of products to return (1-20000 for batch fetching, default: 50)
  * - offset (optional): Starting position for pagination (default: 0)
  * - category (optional): Category UUID to filter by
  * - featured (optional): Boolean to show only featured products
