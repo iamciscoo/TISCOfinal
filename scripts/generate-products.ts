@@ -2,15 +2,19 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import * as readline from 'readline'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const PEXELS_KEY = 'dLDkey2ntrsXAwI81jNlqPKvSvf1bZFQMvnRSzqhqYX05mAcPpaynKYr'
-const UNSPLASH_ACCESS_KEY = 'LC-Trw1wuCjE941M3nUn179tTMKoZWynTNnFa2A1-K8'
+const UNSPLASH_ACCESS_KEY = 'LC-Trw1wuCjE941M3nUn179tTWKoZWynTNnFa2Al-K8'
 const PRODUCTS_PER_CAT = 3
 const IMGS_PER_PROD = 6
 const API_DELAY = 18500
+
+// User's preferred primary API (set during runtime)
+let PRIMARY_API: 'pexels' | 'unsplash' = 'pexels'
 
 // Generate unique run ID for this session
 const RUN_ID = Date.now()
@@ -49,8 +53,8 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 console.log('✅ Connected to Supabase:', SUPABASE_URL)
-console.log('✅ Using Pexels API (primary) + Unsplash API (fallback) for images')
-console.log('⏰ Estimated completion time: ~60 minutes\n')
+console.log('✅ Image APIs available: Pexels + Unsplash (you will choose primary)')
+console.log('⏰ Estimated completion time: ~60 minutes')
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
@@ -137,32 +141,66 @@ async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: 
 async function fetchImages(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
   await new Promise(r => setTimeout(r, API_DELAY))
   
-  // Try Pexels first
-  console.log(`    📸 Trying Pexels API...`)
-  const pexelsResult = await fetchFromPexels(query, count)
+  // Track all fetched URLs to avoid duplicates
+  const usedUrls = new Set<string>()
+  const allImages: string[] = []
   
-  if (pexelsResult.urls.length > 0) {
-    console.log(`    ✅ Got ${pexelsResult.urls.length} images from Pexels`)
-    return pexelsResult
+  // Determine primary and fallback APIs based on user preference
+  const primaryAPI = PRIMARY_API
+  const fallbackAPI = primaryAPI === 'pexels' ? 'unsplash' : 'pexels'
+  
+  // Try primary API first
+  console.log(`    📸 Trying ${primaryAPI.toUpperCase()} API (primary)...`)
+  const primaryResult = primaryAPI === 'pexels' 
+    ? await fetchFromPexels(query, count)
+    : await fetchFromUnsplash(query, count)
+  
+  if (primaryResult.urls.length > 0) {
+    // Add unique images from primary API
+    primaryResult.urls.forEach(url => {
+      if (!usedUrls.has(url)) {
+        usedUrls.add(url)
+        allImages.push(url)
+      }
+    })
+    console.log(`    ✅ Got ${allImages.length} unique images from ${primaryAPI.toUpperCase()}`)
   }
   
-  // If Pexels hit limit or failed, try Unsplash
-  if (pexelsResult.limitReached || pexelsResult.urls.length === 0) {
-    console.log(`    🔄 Falling back to Unsplash API...`)
+  // If we still need more images, try fallback API
+  const stillNeeded = count - allImages.length
+  if (stillNeeded > 0 && (primaryResult.limitReached || primaryResult.urls.length < count)) {
+    console.log(`    🔄 Need ${stillNeeded} more images, trying ${fallbackAPI.toUpperCase()} API...`)
     await new Promise(r => setTimeout(r, 2000)) // Small delay between APIs
     
-    const unsplashResult = await fetchFromUnsplash(query, count)
+    // Request extra images to account for potential duplicates
+    const fallbackResult = fallbackAPI === 'pexels'
+      ? await fetchFromPexels(query, Math.min(stillNeeded + 5, 15)) // Request a few extra
+      : await fetchFromUnsplash(query, Math.min(stillNeeded + 5, 15))
     
-    if (unsplashResult.urls.length > 0) {
-      console.log(`    ✅ Got ${unsplashResult.urls.length} images from Unsplash`)
-      return unsplashResult
+    if (fallbackResult.urls.length > 0) {
+      // Add unique images from fallback API (filter out duplicates)
+      let addedCount = 0
+      for (const url of fallbackResult.urls) {
+        if (!usedUrls.has(url) && allImages.length < count) {
+          usedUrls.add(url)
+          allImages.push(url)
+          addedCount++
+        }
+      }
+      console.log(`    ✅ Got ${addedCount} unique images from ${fallbackAPI.toUpperCase()} (${fallbackResult.urls.length - addedCount} duplicates filtered)`)
     }
     
     // If both APIs hit limits, stop the process
-    if (pexelsResult.limitReached && unsplashResult.limitReached) {
+    if (primaryResult.limitReached && fallbackResult.limitReached) {
       console.log(`    ❌ Both Pexels and Unsplash limits reached!`)
-      return { urls: [], limitReached: true }
+      return { urls: allImages, limitReached: true }
     }
+  }
+  
+  // If we got enough images, return them
+  if (allImages.length > 0) {
+    console.log(`    📊 Total unique images collected: ${allImages.length}/${count}`)
+    return { urls: allImages, limitReached: false }
   }
   
   // If we get here, use placeholder
@@ -394,7 +432,37 @@ const generators: Record<string, (i: number) => any> = {
   }
 }
 
+// Prompt user to select primary API
+async function promptForAPI(): Promise<'pexels' | 'unsplash'> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  })
+  
+  return new Promise((resolve) => {
+    console.log('\n🎨 Select your primary image API:')
+    console.log('  1️⃣  Pexels (default, fast)')
+    console.log('  2️⃣  Unsplash (alternative)\n')
+    
+    rl.question('Enter choice (1 or 2, press Enter for default): ', (answer) => {
+      rl.close()
+      const choice = answer.trim()
+      
+      if (choice === '2') {
+        console.log('✅ Using Unsplash as primary API (will fallback to Pexels if needed)\n')
+        resolve('unsplash')
+      } else {
+        console.log('✅ Using Pexels as primary API (will fallback to Unsplash if needed)\n')
+        resolve('pexels')
+      }
+    })
+  })
+}
+
 async function main() {
+  // Ask user which API to use first
+  PRIMARY_API = await promptForAPI()
+  
   console.log('🚀 Starting product generation...\n')
   
   // Check current product count before generation
