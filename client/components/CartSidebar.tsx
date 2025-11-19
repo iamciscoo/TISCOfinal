@@ -10,13 +10,13 @@ import { useCartStore } from '@/lib/store'
 import { PriceDisplay } from '@/components/PriceDisplay'
 
 export const CartSidebar = () => {
-  const { 
-    items, 
-    isOpen, 
+  const {
+    items,
+    isOpen,
     closeCart,
     openCart,
-    removeItem, 
-    updateQuantity, 
+    removeItem,
+    updateQuantity,
     clearCart
   } = useCartStore()
 
@@ -182,14 +182,14 @@ export const CartSidebar = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <Button asChild className="w-full h-12">
-                  <Link href="/checkout" onClick={closeCart}>
+                  <Link href="/checkout" onClick={() => setTimeout(closeCart, 100)}>
                     Proceed to Checkout
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>
-                
+
                 <Button variant="outline" asChild className="w-full">
-                  <Link href="/cart" onClick={closeCart}>
+                  <Link href="/cart" onClick={() => setTimeout(closeCart, 100)}>
                     View Full Cart
                   </Link>
                 </Button>
