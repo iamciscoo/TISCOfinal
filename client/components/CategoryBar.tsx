@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef, Fragment } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Category } from '@/lib/types'
@@ -178,114 +178,117 @@ export function CategoryBar({ categories, className, onMobileCategorySelect }: C
       {/* Desktop Row */}
       <div className="hidden md:block w-full border rounded-xl bg-white">
         <div className="flex justify-between items-center px-4 md:px-6 py-4">
-          {displayCategories.map((cat) => (
-            <div
-              key={String(cat.id)}
-              className="relative"
-              onMouseEnter={() => setActiveId(String(cat.id))}
-              onMouseLeave={() => setActiveId(null)}
-            >
-              <Link
-                href={`/products?category=${encodeURIComponent(String(cat.id))}`}
-                className="text-sm md:text-base text-gray-800 hover:text-blue-700 whitespace-nowrap"
+          {displayCategories.map((cat, index) => (
+            <Fragment key={String(cat.id)}>
+              {index > 0 && (
+                <div className="h-4 w-px bg-gray-300 mx-2 hidden lg:block" aria-hidden="true" />
+              )}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveId(String(cat.id))}
+                onMouseLeave={() => setActiveId(null)}
               >
-                {cat.name}
-              </Link>
-
-              {/* Desktop megamenu */}
-              {activeId === String(cat.id) && (
-                <div 
-                  className="hidden md:block absolute left-1/2 -translate-x-1/2 top-full z-50"
-                  onMouseEnter={() => setActiveId(String(cat.id))}
-                  onMouseLeave={() => setActiveId(null)}
+                <Link
+                  href={`/products?category=${encodeURIComponent(String(cat.id))}`}
+                  className="text-sm md:text-base text-gray-800 hover:text-blue-700 whitespace-nowrap"
                 >
-                  {/* Invisible bridge to prevent gap */}
-                  <div className="h-4 w-full" />
-                  <div className="w-[800px] rounded-2xl shadow-2xl bg-white border p-8">
-                    <div className="grid grid-cols-12 gap-6 items-stretch">
-                      {/* Links */}
-                      <div className="col-span-7 grid grid-cols-2 gap-6">
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-3">Explore</h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
+                  {cat.name}
+                </Link>
+
+                {/* Desktop megamenu */}
+                {activeId === String(cat.id) && (
+                  <div 
+                    className="hidden md:block absolute left-1/2 -translate-x-1/2 top-full z-50"
+                    onMouseEnter={() => setActiveId(String(cat.id))}
+                    onMouseLeave={() => setActiveId(null)}
+                  >
+                    {/* Invisible bridge to prevent gap */}
+                    <div className="h-4 w-full" />
+                    <div className="w-[800px] rounded-2xl shadow-2xl bg-white border p-8">
+                      <div className="grid grid-cols-12 gap-6 items-stretch">
+                        {/* Links */}
+                        <div className="col-span-7 grid grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Explore</h4>
+                            <ul className="space-y-2 text-sm">
+                              <li>
+                                <Link
+                                  href={`/products?category=${encodeURIComponent(String(cat.id))}`}
+                                  className="hover:text-blue-700"
+                                >
+                                  All {cat.name}
+                                </Link>
+                              </li>
+                              <li>
+                                <Link
+                                  href={`/search?category=${encodeURIComponent(String(cat.id))}`}
+                                  className="hover:text-blue-700"
+                                >
+                                  Search {cat.name}
+                                </Link>
+                              </li>
+                              <li>
+                                <Link
+                                  href={`/deals?category=${encodeURIComponent(String(cat.id))}`}
+                                  className="hover:text-blue-700"
+                                >
+                                  Deals in {cat.name}
+                                </Link>
+                              </li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Quick links</h4>
+                            <ul className="space-y-2 text-sm text-gray-700">
+                              <li>
+                                <Link href="/products" className="hover:text-blue-700">All products</Link>
+                              </li>
+                              <li>
+                                <Link href="/deals" className="hover:text-blue-700">All deals</Link>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        {/* Banner */}
+                        <div className="col-span-5">
+                          <div className="relative h-52 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100">
+                            {(() => {
+                              const img = pickImageFor(cat.name || '')
+                              if (!img) return null
+                              return (
+                                <Image
+                                  src={img}
+                                  alt={`${cat.name} banner`}
+                                  fill
+                                  className="object-cover object-center"
+                                  sizes="320px"
+                                  priority={true}
+                                  loading="eager"
+                                  unoptimized
+                                />
+                              )
+                            })()}
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-transparent to-transparent" />
+                            <div className="absolute left-5 top-5">
+                              <div className="text-xl font-bold text-gray-900 drop-shadow-sm">{cat.name}</div>
+                            </div>
+                            <div className="absolute left-5 bottom-5">
                               <Link
                                 href={`/products?category=${encodeURIComponent(String(cat.id))}`}
-                                className="hover:text-blue-700"
+                                className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-lg"
                               >
-                                All {cat.name}
+                                Shop now
                               </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href={`/search?category=${encodeURIComponent(String(cat.id))}`}
-                                className="hover:text-blue-700"
-                              >
-                                Search {cat.name}
-                              </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href={`/deals?category=${encodeURIComponent(String(cat.id))}`}
-                                className="hover:text-blue-700"
-                              >
-                                Deals in {cat.name}
-                              </Link>
-                            </li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-3">Quick links</h4>
-                          <ul className="space-y-2 text-sm text-gray-700">
-                            <li>
-                              <Link href="/products" className="hover:text-blue-700">All products</Link>
-                            </li>
-                            <li>
-                              <Link href="/deals" className="hover:text-blue-700">All deals</Link>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* Banner */}
-                      <div className="col-span-5">
-                        <div className="relative h-52 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100">
-                          {(() => {
-                            const img = pickImageFor(cat.name || '')
-                            if (!img) return null
-                            return (
-                              <Image
-                                src={img}
-                                alt={`${cat.name} banner`}
-                                fill
-                                className="object-cover object-center"
-                                sizes="320px"
-                                priority={true}
-                                loading="eager"
-                                unoptimized
-                              />
-                            )
-                          })()}
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-transparent to-transparent" />
-                          <div className="absolute left-5 top-5">
-                            <div className="text-xl font-bold text-gray-900 drop-shadow-sm">{cat.name}</div>
-                          </div>
-                          <div className="absolute left-5 bottom-5">
-                            <Link
-                              href={`/products?category=${encodeURIComponent(String(cat.id))}`}
-                              className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-lg"
-                            >
-                              Shop now
-                            </Link>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-            </div>
+                )}
+              </div>
+            </Fragment>
           ))}
         </div>
       </div>
