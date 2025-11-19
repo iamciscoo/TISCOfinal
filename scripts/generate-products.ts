@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const PEXELS_KEY = 'dLDkey2ntrsXAwI81jNlqPKvSvf1bZFQMvnRSzqhqYX05mAcPpaynKYr'
+const UNSPLASH_ACCESS_KEY = 'LC-Trw1wuCjE941M3nUn179tTMKoZWynTNnFa2A1-K8'
 const PRODUCTS_PER_CAT = 3
 const IMGS_PER_PROD = 6
 const API_DELAY = 18500
@@ -48,29 +49,27 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 console.log('✅ Connected to Supabase:', SUPABASE_URL)
-console.log('✅ Using Pexels API for images')
+console.log('✅ Using Pexels API (primary) + Unsplash API (fallback) for images')
 console.log('⏰ Estimated completion time: ~60 minutes\n')
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const slug = (n: string) => n.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '')
 
-async function fetchImages(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
-  await new Promise(r => setTimeout(r, API_DELAY))
+async function fetchFromPexels(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
   const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`, {
     headers: { Authorization: PEXELS_KEY }
   })
   
   // Check for rate limit errors
   if (res.status === 429 || res.status === 403) {
-    console.log(`\n⚠️  Pexels API limit reached (Status: ${res.status})`)
-    console.log(`   Monthly limit: ~200 requests`)
+    console.log(`    ⚠️  Pexels API limit reached (Status: ${res.status})`)
     return { urls: [], limitReached: true }
   }
   
   if (!res.ok) {
-    console.log(`\n⚠️  Pexels API error: ${res.status} - Using placeholder image`)
-    return { urls: ['https://via.placeholder.com/800'], limitReached: false }
+    console.log(`    ⚠️  Pexels API error: ${res.status}`)
+    return { urls: [], limitReached: false }
   }
   
   const data = await res.json()
@@ -78,6 +77,65 @@ async function fetchImages(query: string, count: number): Promise<{ urls: string
     urls: data.photos?.map((p: any) => p.src.large) || [],
     limitReached: false
   }
+}
+
+async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
+  const res = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`, {
+    headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
+  })
+  
+  // Check for rate limit errors
+  if (res.status === 429 || res.status === 403) {
+    console.log(`    ⚠️  Unsplash API limit reached (Status: ${res.status})`)
+    return { urls: [], limitReached: true }
+  }
+  
+  if (!res.ok) {
+    console.log(`    ⚠️  Unsplash API error: ${res.status}`)
+    return { urls: [], limitReached: false }
+  }
+  
+  const data = await res.json()
+  return { 
+    urls: data.results?.map((p: any) => p.urls.regular) || [],
+    limitReached: false
+  }
+}
+
+async function fetchImages(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
+  await new Promise(r => setTimeout(r, API_DELAY))
+  
+  // Try Pexels first
+  console.log(`    📸 Trying Pexels API...`)
+  const pexelsResult = await fetchFromPexels(query, count)
+  
+  if (pexelsResult.urls.length > 0) {
+    console.log(`    ✅ Got ${pexelsResult.urls.length} images from Pexels`)
+    return pexelsResult
+  }
+  
+  // If Pexels hit limit or failed, try Unsplash
+  if (pexelsResult.limitReached || pexelsResult.urls.length === 0) {
+    console.log(`    🔄 Falling back to Unsplash API...`)
+    await new Promise(r => setTimeout(r, 2000)) // Small delay between APIs
+    
+    const unsplashResult = await fetchFromUnsplash(query, count)
+    
+    if (unsplashResult.urls.length > 0) {
+      console.log(`    ✅ Got ${unsplashResult.urls.length} images from Unsplash`)
+      return unsplashResult
+    }
+    
+    // If both APIs hit limits, stop the process
+    if (pexelsResult.limitReached && unsplashResult.limitReached) {
+      console.log(`    ❌ Both Pexels and Unsplash limits reached!`)
+      return { urls: [], limitReached: true }
+    }
+  }
+  
+  // If we get here, use placeholder
+  console.log(`    ⚠️  No images from either API, using placeholder`)
+  return { urls: ['https://via.placeholder.com/800'], limitReached: false }
 }
 
 const generators: Record<string, (i: number) => any> = {
@@ -333,23 +391,29 @@ async function main() {
       console.log(`    📸 Fetching ${IMGS_PER_PROD} images...`)
       const imgResult = await fetchImages(prod.search, IMGS_PER_PROD)
       
-      // Check if API limit reached
+      // Check if both API limits reached
       if (imgResult.limitReached) {
-        console.log(`\n🛑 Stopping generation - API limit reached`)
-        console.log(`   Products created before limit: ${totalProducts}`)
-        console.log(`   Images added before limit: ${totalImages}`)
-        console.log(`\n💡 Tip: Wait 24 hours for Pexels API limit to reset`)
-        console.log(`   Or continue generation with placeholder images only`)
+        console.log(`\n🛑 STOPPING GENERATION - Both API Limits Reached!`)
+        console.log(`\n📊 Progress Summary:`)
+        console.log(`   ✅ Products created: ${totalProducts}`)
+        console.log(`   ✅ Images added: ${totalImages}`)
+        console.log(`\n⚠️  API Status:`)
+        console.log(`   ❌ Pexels API: Limit reached (~200/month)`)
+        console.log(`   ❌ Unsplash API: Limit reached (~50/hour)`)
+        console.log(`\n💡 Next Steps:`)
+        console.log(`   • Wait 1 hour for Unsplash hourly limit to reset`)
+        console.log(`   • Wait 24 hours for Pexels daily limit to reset`)
+        console.log(`   • Or upgrade to paid API plans for unlimited access`)
         
         // Exit the main function gracefully
         const { count: afterCount } = await supabase
           .from('products')
           .select('*', { count: 'exact', head: true })
         
-        console.log(`\n📊 Final Summary:`)
-        console.log(`   Products created: ${totalProducts}`)
-        console.log(`   Images added: ${totalImages}`)
-        console.log(`   Database products: ${afterCount || 0}`)
+        console.log(`\n📊 Final Database Summary:`)
+        console.log(`   Total products in DB: ${afterCount || 0}`)
+        console.log(`   Products added this run: ${totalProducts}`)
+        console.log(`\n✨ Generation stopped cleanly. No errors!`)
         return
       }
       
