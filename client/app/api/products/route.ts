@@ -21,6 +21,9 @@ import { withMiddleware, withValidation, withErrorHandler, createSuccessResponse
 
 // Run on Node.js runtime for access to secure environment variables
 export const runtime = 'nodejs'
+// Force dynamic rendering and disable caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 /**
  * Initialize Supabase client with service role for server-side operations
@@ -239,11 +242,11 @@ export const GET = withMiddleware(
   }
   const response = Response.json(responseWithPagination)
   
-  // Smart caching: 30 seconds fresh, serve stale for 60s while revalidating in background
-  // This provides instant responses while staying relatively up-to-date
-  response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
-  response.headers.set('CDN-Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
-  response.headers.set('Vary', 'Accept-Encoding')
+  // No caching - need real-time product counts and data
+  // This ensures fresh data after product additions/updates
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
   
   return response
 })
