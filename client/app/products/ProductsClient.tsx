@@ -385,7 +385,15 @@ function ProductsContent() {
   // Pagination: Mobile (3 cols × 8 rows = 24), Desktop (4 cols × 6 rows = 24)
   // Using 24 items to ensure complete rows on both mobile and desktop
   const itemsPerPage = viewMode === 'grid' ? 24 : 6
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
+  
+  // Determine if client-side filters are active (search, category, sort, popular toggle)
+  const hasActiveFilters = debouncedSearchTerm || selectedCategory !== 'all' || sortBy !== 'name' || showMostPopular
+  
+  // Calculate total pages based on:
+  // - Database total count when no filters are active (accurate server count)
+  // - Filtered products length when filters are active (client-side filtered count)
+  const baseCount = hasActiveFilters ? filteredProducts.length : (totalProductCount > 0 ? totalProductCount : filteredProducts.length)
+  const totalPages = Math.max(1, Math.ceil(baseCount / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 

@@ -63,6 +63,7 @@ interface Product {
   slug: string | null
   brands: string[] | null
   categories?: { name: string } | null
+  category_id?: string
   created_at?: string
   product_images?: Array<{
     id: string
@@ -287,7 +288,8 @@ const MySpacePage = () => {
     if (fetchedPages.current.has(targetPage)) return
     setLoadingMore(true)
     try {
-      const res = await fetch(`/api/user/personalized-products?limit=20&page=${targetPage}`)
+      // Increased limit to 40 to ensure we have enough items for Hero, Clusters, and Feed
+      const res = await fetch(`/api/user/personalized-products?limit=40&page=${targetPage}`)
       if (res.ok) {
         const data = await res.json()
         const newItems: Product[] = data.products || []
@@ -951,84 +953,7 @@ const MySpacePage = () => {
                       )
                     })()}
 
-                    {/* More For You (remaining) */}
-                    {(() => {
-                      const used = new Set<string>()
-                      
-                      // Mark featured items as used
-                      let featured = products.filter(p => p.is_featured || p.is_new || p.is_deal)
-                      if (featured.length === 0 && products.length > 0) {
-                        featured = [...products]
-                      }
-                      featured.sort(compareProducts)
-                      featured = featured.slice(0, 5)
-                      featured.forEach(p => used.add(p.id))
-                      
-                      // Mark For You items as used
-                      let forYouItems = products.filter(p => !used.has(p.id))
-                      forYouItems.sort(compareProducts)
-                      forYouItems = forYouItems.slice(0, 10)
-                      forYouItems.forEach(p => used.add(p.id))
-                      
-                      // Mark category cluster items as used
-                      const preferred = preferences.preferred_categories || []
-                      const baseList = products.filter(p => !used.has(p.id))
-                      const presentCats = Array.from(new Set(baseList.map(p => p.categories?.name).filter(Boolean) as string[]))
-                      const orderedCats = [...preferred, ...presentCats.filter(c => !preferred.includes(c))].slice(0, 4)
-                      orderedCats.forEach((catName) => {
-                        const items = baseList.filter(p => p.categories?.name === catName && !used.has(p.id)).slice(0, 6)
-                        items.forEach(p => used.add(p.id))
-                      })
-                      
-                      // Get remaining items - show diverse suggestions from the platform
-                      let remaining = products.filter(p => !used.has(p.id))
-                      
-                      // Sort by popularity and rating for diverse suggestions (not by preferences)
-                      remaining.sort((a, b) => {
-                        // Prioritize in-stock items
-                        const aInStock = (a.stock_quantity || 0) > 0 ? 1 : 0
-                        const bInStock = (b.stock_quantity || 0) > 0 ? 1 : 0
-                        if (aInStock !== bInStock) return bInStock - aInStock
-                        
-                        // Then by popularity
-                        if ((b.view_count || 0) !== (a.view_count || 0)) {
-                          return (b.view_count || 0) - (a.view_count || 0)
-                        }
-                        
-                        // Then by rating
-                        if ((b.rating || 0) !== (a.rating || 0)) {
-                          return (b.rating || 0) - (a.rating || 0)
-                        }
-                        
-                        // Finally by newest
-                        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-                      })
-                      
-                      // Show up to 20 diverse suggestions
-                      remaining = remaining.slice(0, 20)
-                      
-                      if (remaining.length === 0) return null
-                      return (
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xl font-semibold text-gray-900">Discover more</h2>
-                            <p className="text-sm text-gray-500">Popular products on TISCO</p>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                            {remaining.map((p) => (
-                              <ProductCard
-                                key={p.id}
-                                product={{ ...p, description: p.description || '' } as GlobalProduct}
-                                variant="grid"
-                                compact
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })()}
-
-                    {/* You Might Also Like - Discovery Section */}
+                    {/* Explore Feed (Infinite Scroll) */}
                     {(() => {
                       const used = new Set<string>()
                       const hasPreferences = preferences.preferred_categories.length > 0 || preferences.followed_brands.length > 0
@@ -1038,77 +963,100 @@ const MySpacePage = () => {
                         if (!hasPreferences) return false
                         const catName = p.categories?.name
                         const matchesCat = catName && preferences.preferred_categories.includes(catName)
-                        
-                        // brands is an array of strings, check if any brand matches
                         const matchesBrand = Array.isArray(p.brands) && p.brands.some((brand: string) => 
                           preferences.followed_brands.includes(brand)
                         )
-                        
                         return matchesCat || matchesBrand
                       }
                       
-                      // Mark all previously shown items as used
+                      // 1. Calculate Used by Hero
                       const preferredProducts = products.filter(matchesPreferences)
                       let preferred = preferredProducts.filter(p => p.is_featured || p.is_new || p.is_deal)
                       if (preferred.length === 0 && preferredProducts.length > 0) {
                         preferred = [...preferredProducts]
                       }
+                      let nonPreferred = products.filter(p => !matchesPreferences(p)).filter(p => p.is_featured || p.is_new || p.is_deal)
+                      if (nonPreferred.length === 0 && products.length > 0 && preferred.length === 0) {
+                        nonPreferred = products.filter(p => !matchesPreferences(p))
+                      }
                       preferred.sort(compareProducts)
-                      preferred.slice(0, 5).forEach(p => used.add(p.id))
+                      nonPreferred.sort(compareProducts)
+                      const featured = [...preferred, ...nonPreferred].slice(0, 5)
+                      featured.forEach(p => used.add(p.id))
                       
-                      const available = products.filter(p => !used.has(p.id))
-                      const preferredItems = available.filter(matchesPreferences)
-                      preferredItems.sort(compareProducts)
-                      preferredItems.slice(0, 10).forEach(p => used.add(p.id))
+                      // 2. Calculate Used by For You Row
+                      const availableForRow = products.filter(p => !used.has(p.id))
+                      const preferredItemsRow = availableForRow.filter(matchesPreferences)
+                      const nonPreferredItemsRow = availableForRow.filter(p => !matchesPreferences(p))
+                      preferredItemsRow.sort(compareProducts)
+                      nonPreferredItemsRow.sort(compareProducts)
+                      const forYouRow = [...preferredItemsRow, ...nonPreferredItemsRow].slice(0, 10)
+                      forYouRow.forEach(p => used.add(p.id))
                       
-                      const baseList = products.filter(p => !used.has(p.id))
+                      // 3. Calculate Used by Clusters
+                      const baseListClusters = products.filter(p => !used.has(p.id))
                       const preferredCats = preferences.preferred_categories || []
-                      const presentCats = Array.from(new Set(baseList.map(p => p.categories?.name).filter(Boolean) as string[]))
+                      const presentCats = Array.from(new Set(baseListClusters.map(p => p.categories?.name).filter(Boolean) as string[]))
                       const orderedCats = [...preferredCats, ...presentCats.filter(c => !preferredCats.includes(c))].slice(0, 4)
                       orderedCats.forEach((catName) => {
-                        const items = baseList.filter(p => p.categories?.name === catName && !used.has(p.id)).slice(0, 6)
+                        const items = baseListClusters.filter(p => p.categories?.name === catName && !used.has(p.id)).slice(0, 6)
                         items.forEach(p => used.add(p.id))
                       })
                       
-                      const remaining = products.filter(p => !used.has(p.id))
-                      remaining.forEach(p => used.add(p.id))
+                      // 4. Get Remaining for Feed (No sorting, respect backend order)
+                      const feedItems = products.filter(p => !used.has(p.id))
                       
-                      // Get discovery items - products from related categories or similar items
-                      const discovery = products.filter(p => !used.has(p.id))
-                      if (discovery.length === 0) return null
+                      // Always render the Explore Feed section if we have items OR if we are loading more
+                      // This ensures the user knows the feed exists
+                      if (feedItems.length === 0 && !hasMore && !loadingMore) return null
                       
                       return (
                         <div className="mt-8">
                           <div className="flex items-center justify-between mb-4">
                             <div>
-                              <h2 className="text-xl font-semibold text-gray-900">You might also like</h2>
-                              <p className="text-sm text-gray-500 mt-1">Explore more products based on trending items</p>
+                              <h2 className="text-xl font-semibold text-gray-900">Explore Feed</h2>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {hasPreferences 
+                                  ? 'Curated mix of your favorites and trending discoveries' 
+                                  : 'Discover popular products on TISCO'}
+                              </p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                            {discovery.slice(0, 15).map((p) => (
-                              <ProductCard
-                                key={p.id}
-                                product={{ ...p, description: p.description || '' } as GlobalProduct}
-                                variant="grid"
-                                compact
-                              />
-                            ))}
-                          </div>
+                          
+                          {feedItems.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                              {feedItems.map((p) => (
+                                <ProductCard
+                                  key={p.id}
+                                  product={{ ...p, description: p.description || '' } as GlobalProduct}
+                                  variant="grid"
+                                  compact
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            // Empty state but section is visible
+                            <div className="min-h-[100px]"></div>
+                          )}
                         </div>
                       )
                     })()}
 
                     {/* Infinite scroll sentinel */}
-                    <div ref={sentinelRef} />
+                    <div ref={sentinelRef} className="h-4" />
                     {loadingMore && (
                       <div className="flex items-center justify-center py-6" aria-live="polite">
                         <LoadingSpinner />
                         <span className="sr-only">Loading more...</span>
                       </div>
                     )}
-                    {!hasMore && (
-                      <div className="text-center text-gray-500 py-6">End of feed</div>
+                    {!hasMore && products.length > 0 && (
+                      <div className="text-center text-gray-500 py-6">
+                        <p>You&apos;ve reached the end of the feed</p>
+                        <Button variant="link" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                          Back to top
+                        </Button>
+                      </div>
                     )}
                   </>
                 )}

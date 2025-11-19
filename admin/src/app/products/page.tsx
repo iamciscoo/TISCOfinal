@@ -253,6 +253,8 @@ const ProductsPage = () => {
         data={data}
         entityName="Product"
         deleteApiBase="/api/products"
+        totalCount={totalCount}
+        displayedCount={data.length}
       />
 
       <ClearProductsModal

@@ -40,6 +40,8 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string
   entityName?: string
   deleteApiBase?: string // if provided, enables bulk delete using DELETE {base}/{id}
+  totalCount?: number // Total count from database (used when provided to show accurate totals)
+  displayedCount?: number // Number of items currently displayed after filtering
 }
 
 export function DataTable<TData, TValue>({
@@ -49,6 +51,8 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = 'Search...',
   entityName = 'Item',
   deleteApiBase,
+  totalCount,
+  displayedCount,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -251,7 +255,7 @@ export function DataTable<TData, TValue>({
               (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
               table.getFilteredRowModel().rows.length
             )}{' '}
-            of {table.getFilteredRowModel().rows.length} {entityName.toLowerCase()}s
+            of {totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length} {entityName.toLowerCase()}s
           </div>
         </div>
         <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">

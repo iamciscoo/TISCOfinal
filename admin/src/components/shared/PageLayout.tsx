@@ -9,6 +9,8 @@ interface PageLayoutProps<TData, TValue> {
   entityName?: string;
   addEntityButton?: ReactNode;
   deleteApiBase?: string;
+  totalCount?: number;
+  displayedCount?: number;
 }
 
 export function PageLayout<TData, TValue>({
@@ -18,6 +20,8 @@ export function PageLayout<TData, TValue>({
   entityName,
   addEntityButton,
   deleteApiBase,
+  totalCount,
+  displayedCount,
 }: PageLayoutProps<TData, TValue>) {
   return (
     <div className="p-3 sm:p-4 lg:p-6">
@@ -31,6 +35,8 @@ export function PageLayout<TData, TValue>({
           data={data} 
           entityName={entityName}
           deleteApiBase={deleteApiBase}
+          totalCount={totalCount}
+          displayedCount={displayedCount}
         />
       </div>
     </div>
