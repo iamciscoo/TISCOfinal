@@ -98,12 +98,30 @@ async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: 
       return { urls: [], limitReached: true }
     }
     
+    // Handle authentication errors
+    if (res.status === 401) {
+      console.log(`    ⚠️  Unsplash authentication failed (401)`)
+      console.log(`    💡 Tip: Check if UNSPLASH_ACCESS_KEY is valid`)
+      const errorBody = await res.text().catch(() => 'Unable to read error')
+      console.log(`    Error details: ${errorBody.substring(0, 100)}`)
+      return { urls: [], limitReached: false, error: 'Authentication failed' }
+    }
+    
     if (!res.ok) {
       console.log(`    ⚠️  Unsplash API error: ${res.status}`)
+      const errorBody = await res.text().catch(() => 'Unable to read error')
+      console.log(`    Error details: ${errorBody.substring(0, 100)}`)
       return { urls: [], limitReached: false, error: `HTTP ${res.status}` }
     }
     
     const data = await res.json()
+    
+    // Check if we got valid results
+    if (!data.results || data.results.length === 0) {
+      console.log(`    ⚠️  Unsplash returned no results for query: "${query}"`)
+      return { urls: [], limitReached: false, error: 'No results found' }
+    }
+    
     return { 
       urls: data.results?.map((p: any) => p.urls.regular) || [],
       limitReached: false
@@ -283,7 +301,7 @@ const generators: Record<string, (i: number) => any> = {
   'Entertainment': i => {
     const items = [
       { n: 'Board Game', b: ['Hasbro', 'Mattel', 'Ravensburger'], p: 45000, q: 'board game' },
-      { n: 'LEGO Set', b: ['LEGO'], p: 95000, q: 'lego' },
+      { n: 'Building Blocks Set', b: ['LEGO'], p: 95000, q: 'building blocks toy' },
       { n: 'Video Game', b: ['PlayStation', 'Xbox', 'Nintendo'], p: 120000, q: 'video game' },
       { n: 'Puzzle', b: ['Ravensburger', 'Buffalo Games'], p: 28000, q: 'puzzle' },
       { n: 'Action Figure', b: ['Hasbro', 'Mattel', 'Funko'], p: 55000, q: 'action figure' }
@@ -292,8 +310,14 @@ const generators: Record<string, (i: number) => any> = {
     const brand = x.b[Math.floor(Math.random() * x.b.length)]
     const themes = ['Adventure', 'Fantasy', 'Action', 'Strategy', 'Classic', 'Premium']
     const theme = themes[Math.floor(Math.random() * themes.length)]
+    
+    // Use brand name in product name only if not generic (like LEGO for Building Blocks)
+    const productName = x.n === 'Building Blocks Set' 
+      ? `${theme} ${x.n} ${randomVariant()}`  // Don't show "LEGO" in name to avoid trademark
+      : `${brand} ${theme} ${x.n} ${randomVariant()}`;
+    
     return { 
-      name: `${brand} ${theme} ${x.n} ${randomVariant()}`, 
+      name: productName, 
       desc: `${theme} ${x.n.toLowerCase()} from ${brand}. Hours of entertainment.`, 
       price: x.p + Math.floor(Math.random() * x.p * 0.3), 
       brands: [brand], 
