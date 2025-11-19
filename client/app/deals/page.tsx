@@ -75,6 +75,7 @@ function DealsContent() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement | null>(null)
   const prevSheetOpen = useRef(false)
+  const [totalDealCount, setTotalDealCount] = useState<number>(0) // Total from database
   
   const { addItem } = useCartStore()
   
@@ -127,7 +128,7 @@ function DealsContent() {
         setLoading(true)
         const timestamp = Date.now()
         const [dealsResponse, categoriesData] = await Promise.all([
-          fetch(`/api/deals?limit=500&_t=${timestamp}`, {
+          fetch(`/api/deals?limit=10000&_t=${timestamp}`, {
             cache: 'no-store',
             headers: {
               'Cache-Control': 'no-cache',
@@ -140,6 +141,13 @@ function DealsContent() {
           throw new Error('Failed to fetch deals')
         }
         const dealsData = await dealsResponse.json()
+        
+        // Update total count from server
+        if (dealsData.pagination?.total !== undefined) {
+          setTotalDealCount(dealsData.pagination.total)
+          console.log('[Deals] Database total count:', dealsData.pagination.total)
+        }
+        
         console.log('[Deals] Fetched deals:', dealsData.deals?.length || 0)
         console.log('[Deals] Pagination:', dealsData.pagination)
         console.log('[Deals] Fetched categories:', categoriesData?.length || 0)
@@ -287,10 +295,19 @@ function DealsContent() {
     setCurrentPage(1) // Reset to first page when filters change
   }, [deals, debouncedSearchTerm, selectedCategory, sortBy, showMostPopular, categories])
 
-  // Pagination: Mobile (3 cols × 6 rows = 18), Desktop (4 cols × 5 rows = 20)
-  // Using 18 items for mobile-first approach
-  const itemsPerPage = viewMode === 'grid' ? 18 : 6
-  const totalPages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage))
+  // Pagination: Mobile (3 cols × 8 rows = 24), Desktop (4 cols × 6 rows = 24)
+  // Using 24 items to ensure complete rows on both mobile and desktop - matches products page
+  const itemsPerPage = viewMode === 'grid' ? 24 : 6
+  
+  // Determine if filters that REDUCE the dataset are active
+  // Note: Sorting (sortBy, showMostPopular) doesn't change total count, only reorders
+  const hasDataReducingFilters = debouncedSearchTerm || selectedCategory !== 'all'
+  
+  // Calculate total pages based on:
+  // - Database total count when no data-reducing filters active (accurate server count)
+  // - Filtered deals length when search/category filters are active (client-side filtered count)
+  const baseCount = hasDataReducingFilters ? filteredDeals.length : (totalDealCount > 0 ? totalDealCount : filteredDeals.length)
+  const totalPages = Math.max(1, Math.ceil(baseCount / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)
 
@@ -460,7 +477,7 @@ function DealsContent() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">All Deals</h2>
               <p className="text-gray-600">
-                Showing {displayedDeals.length} of {filteredDeals.length} deals
+                Showing {displayedDeals.length} of {totalDealCount > 0 ? totalDealCount : filteredDeals.length} deals
               </p>
             </div>
             

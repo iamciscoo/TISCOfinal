@@ -37,14 +37,14 @@ const ProductsPage = () => {
     try {
       if (!isInitial) setIsRefreshing(true);
       
-      // Add timestamp to prevent browser caching
+      // Fetch ALL products - API handles batching internally for datasets > 1000
       const timestamp = Date.now();
-      const response = await fetch(`/api/products?limit=2000&_t=${timestamp}`, {
+      const response = await fetch(`/api/products?limit=10000&_t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
+          'Pragma': 'no-cache',
+        },
       });
       const result = await response.json();
       

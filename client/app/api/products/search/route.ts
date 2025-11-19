@@ -213,7 +213,19 @@ export async function GET(request: NextRequest) {
       console.log(`⚠️ No results: "${query}"`)
     }
     
-    return NextResponse.json(result)
+    // Return in standard format with pagination metadata
+    return NextResponse.json({
+      success: true,
+      data: result,
+      pagination: {
+        total: result.length,
+        count: result.length,
+        limit: result.length,
+        offset: 0,
+        hasMore: false
+      },
+      message: 'Search results retrieved successfully'
+    })
   } catch (error) {
     console.error('Search API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

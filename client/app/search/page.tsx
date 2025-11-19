@@ -51,6 +51,7 @@ function SearchResults() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement | null>(null)
   const prevSheetOpen = useRef(false)
+  const [totalProductCount, setTotalProductCount] = useState<number>(0) // Total from database
   
   const activeFiltersCount = (searchTerm !== query ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
 
@@ -157,7 +158,14 @@ function SearchResults() {
         }
         
         const data = await response.json()
-        let results = data || []
+        
+        // Update total count from server
+        if (data.pagination?.total !== undefined) {
+          setTotalProductCount(data.pagination.total)
+          console.log('[Search] Database total count:', data.pagination.total)
+        }
+        
+        let results = data.data || data || []
         
         // Enhanced client-side category search for initial query results
         // This includes category names AND descriptions for more comprehensive search
@@ -318,10 +326,20 @@ function SearchResults() {
     setCurrentPage(1)
   }, [products, searchTerm, selectedCategory, sortBy, showMostPopular, query])
 
-  // Pagination: Mobile (3 cols × 6 rows = 18), Desktop (4 cols × 5 rows = 20)
-  // Using 18 items for mobile-first approach
-  const itemsPerPage = viewMode === 'grid' ? 18 : 6
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
+  // Pagination: Mobile (3 cols × 8 rows = 24), Desktop (4 cols × 6 rows = 24)
+  // Using 24 items to ensure complete rows on both mobile and desktop - matches products page
+  const itemsPerPage = viewMode === 'grid' ? 24 : 6
+  
+  // Determine if filters that REDUCE the dataset are active
+  // Note: Sorting (sortBy, showMostPopular) doesn't change total count, only reorders
+  // For search page, category filter is the only data-reducing filter (search term is the base query)
+  const hasDataReducingFilters = selectedCategory !== 'all'
+  
+  // Calculate total pages based on:
+  // - Database total count when no data-reducing filters active (accurate server count)
+  // - Filtered products length when category filter is active (client-side filtered count)
+  const baseCount = hasDataReducingFilters ? filteredProducts.length : (totalProductCount > 0 ? totalProductCount : filteredProducts.length)
+  const totalPages = Math.max(1, Math.ceil(baseCount / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
@@ -362,8 +380,8 @@ function SearchResults() {
           </div>
           <p className="text-gray-600">
             {query 
-              ? `Found ${filteredProducts.length} ${filteredProducts.length === 1 ? 'result' : 'results'} for "${query}"`
-              : `Showing ${filteredProducts.length} products`
+              ? `Found ${totalProductCount > 0 ? totalProductCount : filteredProducts.length} ${(totalProductCount > 0 ? totalProductCount : filteredProducts.length) === 1 ? 'result' : 'results'} for "${query}"`
+              : `Showing ${totalProductCount > 0 ? totalProductCount : filteredProducts.length} products`
             }
           </p>
         </div>

@@ -13,10 +13,10 @@ export async function GET(request: Request) {
     const limitParam = url.searchParams.get('limit')
     const offsetParam = url.searchParams.get('offset')
     
-    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam)), 1000) : 100
+    const requestedLimit = limitParam ? Math.max(1, parseInt(limitParam)) : 100
     const offset = offsetParam ? Math.max(0, parseInt(offsetParam)) : 0
     
-    console.log('[Deals API] Fetching deals from database...', { limit, offset })
+    console.log('[Deals API] Fetching deals from database...', { requestedLimit, offset })
     
     // Get total count of deals
     const { count: totalDeals, error: countError } = await supabase
@@ -24,45 +24,108 @@ export async function GET(request: Request) {
       .select('*', { count: 'exact', head: true })
       .eq('is_deal', true)
       .eq('is_active', true)
-    
+
     if (countError) {
       console.error('[Deals API] Error counting deals:', countError)
-      return NextResponse.json({ error: countError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to count deals' }, { status: 500 })
+    }
+
+    const totalCount = totalDeals || 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let deals: Record<string, any>[] = []
+    
+    // Fetch ALL deals if requested limit >= total and total > 1000 (Supabase hard limit)
+    if (requestedLimit >= totalCount && totalCount > 1000) {
+      console.log(`[Deals API] Fetching ${totalCount} deals in batches...`)
+      const batchSize = 1000
+      
+      for (let batchOffset = 0; batchOffset < totalCount; batchOffset += batchSize) {
+        console.log(`[Deals API] Batch: offset=${batchOffset}, limit=${batchSize}`)
+        
+        const { data: batchDeals, error: batchError } = await supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            description,
+            price,
+            deal_price,
+            original_price,
+            image_url,
+            stock_quantity,
+            rating,
+            reviews_count,
+            view_count,
+            brands,
+            slug,
+            created_at,
+            categories:product_categories(category:categories(id, name)),
+            product_images(url, is_main, sort_order)
+          `)
+          .eq('is_deal', true)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .range(batchOffset, batchOffset + batchSize - 1)
+        
+        if (batchError) {
+          console.error(`[Deals API] Batch error at offset ${batchOffset}:`, batchError)
+          return NextResponse.json({ error: 'Failed to fetch deals batch' }, { status: 500 })
+        }
+        
+        if (batchDeals) deals.push(...batchDeals)
+      }
+      
+      console.log(`[Deals API] Fetched ${deals.length} total deals in batches`)
+    } else {
+      // Normal single fetch (limit <= 1000)
+      const limit = Math.min(requestedLimit, 1000)
+      const { data: fetchedDeals, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          description,
+          price,
+          deal_price,
+          original_price,
+          image_url,
+          stock_quantity,
+          rating,
+          reviews_count,
+          view_count,
+          brands,
+          slug,
+          created_at,
+          categories:product_categories(category:categories(id, name)),
+          product_images(url, is_main, sort_order)
+        `)
+        .eq('is_deal', true)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+      
+      deals = fetchedDeals || []
+      
+      if (error) {
+        console.error('[Deals API] Error fetching deals:', error)
+        return NextResponse.json({ error: 'Failed to fetch deals' }, { status: 500 })
+      }
     }
     
-    // Get paginated deals data
-    const { data: dealProducts, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        product_categories(
-          categories(id, name)
-        ),
-        product_images(url, is_main, sort_order)
-      `)
-      .eq('is_deal', true)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (error) {
-      console.error('[Deals API] Error fetching deals:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    console.log('[Deals API] Found', dealProducts?.length || 0, 'deal products')
-    if (dealProducts && dealProducts.length > 0) {
+    console.log('[Deals API] Found', deals?.length || 0, 'deal products')
+    if (deals && deals.length > 0) {
       console.log('[Deals API] Sample product:', {
-        id: dealProducts[0].id,
-        name: dealProducts[0].name,
-        is_deal: dealProducts[0].is_deal,
-        product_categories: dealProducts[0].product_categories,
-        category_id: dealProducts[0].category_id
+        id: deals[0].id,
+        name: deals[0].name,
+        is_deal: deals[0].is_deal,
+        product_categories: deals[0].product_categories,
+        category_id: deals[0].category_id
       })
     }
 
     // Transform the data to include discount percentage and proper image handling
-    const transformedDeals = dealProducts?.map(product => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const transformedDeals = deals?.map((product: Record<string, any>) => {
       const discountPercentage = product.original_price && product.deal_price 
         ? Math.round(((product.original_price - product.deal_price) / product.original_price) * 100)
         : 0
@@ -113,11 +176,11 @@ export async function GET(request: Request) {
       success: true,
       deals: transformedDeals,
       pagination: {
-        total: totalDeals || 0,
+        total: totalCount,
         count: transformedDeals.length,
-        limit,
+        limit: requestedLimit,
         offset,
-        hasMore: (offset + transformedDeals.length) < (totalDeals || 0)
+        hasMore: (offset + transformedDeals.length) < totalCount
       },
       timestamp: new Date().toISOString()
     }, { status: 200 })

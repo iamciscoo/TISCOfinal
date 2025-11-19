@@ -66,9 +66,11 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
    * Build query function with conditional slug field inclusion
    * 
    * @param withSlug - Whether to include slug field in categories selection
+   * @param offset - Pagination offset for batch fetching
+   * @param limit - Batch size limit
    * @returns Configured Supabase query builder
    */
-  const buildQuery = (withSlug: boolean) => {
+  const buildQuery = (withSlug: boolean, offset: number = 0, limit: number = 1000) => {
     // Define comprehensive SELECT clause including all product fields and relations
     const select = `
       id,
@@ -102,47 +104,75 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
       )
     `
 
-    // Initialize base query with product selection and pagination
-    let q = supabase
+    // Initialize query builder with select clause and active products filter
+    let query = supabase
       .from('products')                                                     // Target products table
       .select(select)                                                       // Apply comprehensive field selection
       .eq('is_active', true)                                               // **OPTIMIZATION: Only show active products (uses idx_products_active_stock_created)**
-      .limit(params.limit)                                                  // Limit results per page
-      .range(params.offset, params.offset + params.limit - 1)              // Apply pagination range
+      .range(offset, offset + limit - 1)                                   // Apply pagination range (Supabase max 1000 per query)
 
     // Apply category filter if specified
     if (params.category) {
-      q = q.eq('category_id', params.category)                             // Filter by category UUID (uses idx_products_category_id)
+      // Use a JOIN filter on product_categories (more efficient with indexes)
+      query = query.eq('product_categories.category_id', params.category)
     }
 
     // Apply featured products filter if specified
     if (params.featured) {
-      q = q.eq('is_featured', true)                                        // Show only featured products (uses idx_products_featured_order_nulls_created)
+      query = query.eq('is_featured', true)  // **OPTIMIZATION: Uses idx_products_featured_active**
     }
 
-    // **OPTIMIZATION: Apply ordering strategy based on filters to use appropriate indexes**
-    if (params.featured) {
-      // For featured products, use manual order first (idx_products_featured_order_nulls_created)
-      q = q
-        .order('featured_order', { ascending: true, nullsFirst: false })   // Manual order (1, 2, 3...), NULLs last
-        .order('created_at', { ascending: false })                         // Newest for products without manual order
-    } else {
-      // For general products, prioritize in-stock items (idx_products_active_stock_created)
-      q = q
-        .order('is_featured', { ascending: false })                        // Featured first
-        .order('created_at', { ascending: false })                         // Then newest
-    }
-
-    // **OPTIMIZATION: Order product images to show main image first (idx_product_images_product_main_fast)**
-    q = q
-      .order('is_main', { foreignTable: 'product_images', ascending: false })
-      .order('sort_order', { foreignTable: 'product_images', ascending: true })
-
-    return q // Return configured query builder
+    // **OPTIMIZATION: Order by multiple criteria for best UX**
+    // 1. Featured products first (admins curate these)
+    // 2. Then by creation date (newest first)
+    // This uses idx_products_active_featured_created composite index
+    return query
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false })
+      // Order product images by main image first, then by sort order
+      .order('is_main', { ascending: false, foreignTable: 'product_images' })
+      .order('sort_order', { ascending: true, foreignTable: 'product_images' })
   }
 
-  // Execute query with full schema including slug field
-  const { data, error } = await buildQuery(true)
+  // Fetch ALL products in batches if count > 1000 (Supabase hard limit)
+  // First get total count
+  let countQuery = supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+  
+  if (params.category) {
+    countQuery = countQuery.eq('product_categories.category_id', params.category)
+  }
+  if (params.featured) {
+    countQuery = countQuery.eq('is_featured', true)
+  }
+  
+  const { count: totalCount, error: countError } = await countQuery
+  if (countError) throw countError
+  
+  const total = totalCount || 0
+  
+  // If requesting all products (limit >= total), fetch in batches of 1000
+  if (params.limit >= total && total > 1000) {
+    console.log(`[Products API] Fetching ${total} products in batches...`)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allProducts: Record<string, any>[] = []
+    const batchSize = 1000
+    
+    for (let offset = 0; offset < total; offset += batchSize) {
+      console.log(`[Products API] Batch: offset=${offset}, limit=${batchSize}`)
+      const { data, error } = await buildQuery(true, offset, batchSize)
+      if (error) throw error
+      if (data) allProducts.push(...data)
+    }
+    
+    console.log(`[Products API] Fetched ${allProducts.length} total products in batches`)
+    return allProducts
+  }
+  
+  // Normal pagination - single fetch
+  const { data, error } = await buildQuery(true, params.offset, Math.min(params.limit, 1000))
 
   // Throw any errors for proper error handling middleware
   if (error) throw error
@@ -196,13 +226,16 @@ export const GET = withMiddleware(
     category: validatedData.category,
     featured: validatedData.featured
   })
-  // Build count query with same filters as data query
+  
+  // Fetch products (handles batching internally if needed)
+  const products = await getProductsQuery(validatedData)
+  
+  // Get total count separately for accurate pagination metadata
   let countQuery = supabase
     .from('products')
-    .select('*', { count: 'exact', head: true })  // Get count only, no data
-    .eq('is_active', true)                         // Same filter as main query
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
   
-  // Apply same filters to count query
   if (validatedData.category) {
     countQuery = countQuery.eq('category_id', validatedData.category)
   }
@@ -210,17 +243,7 @@ export const GET = withMiddleware(
     countQuery = countQuery.eq('is_featured', true)
   }
   
-  // Execute count and data queries in parallel for performance
-  const [{ count: total, error: countError }, products] = await Promise.all([
-    countQuery,
-    getProductsQuery(validatedData)
-  ])
-  
-  // Handle count query error
-  if (countError) {
-    console.error('[Products API] Count query failed:', countError)
-    throw countError
-  }
+  const { count: total } = await countQuery
   
   // Calculate pagination metadata
   const totalCount = total || 0

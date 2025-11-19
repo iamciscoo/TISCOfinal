@@ -76,27 +76,103 @@ export async function GET(req: Request) {
       .order('is_main', { ascending: false, foreignTable: 'product_images' })
       .order('sort_order', { ascending: true, foreignTable: 'product_images' });
 
-    query = query.limit(limit);
-
-    // Execute count and data queries in parallel
-    const [{ count: total, error: countError }, { data, error }] = await Promise.all([
-      countQuery,
-      query
-    ]);
+    // Execute count query first
+    const { count: total, error: countError } = await countQuery;
 
     if (countError) {
-      console.error('[Admin Products API] Count query failed:', countError);
-      return NextResponse.json({ error: countError.message }, { status: 500 });
+      console.error('[Admin Products] Count query error:', countError);
+      return NextResponse.json({ error: 'Failed to count products', details: countError.message }, { status: 500 });
     }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const totalCount = total || 0;
     
+    // Fetch ALL products if limit >= total and total > 1000 (Supabase hard limit)
+    let data: any[] = [];
+    
+    if (limit >= totalCount && totalCount > 1000) {
+      console.log(`[Admin Products] Fetching ${totalCount} products in batches...`);
+      const batchSize = 1000;
+      
+      for (let offset = 0; offset < totalCount; offset += batchSize) {
+        console.log(`[Admin Products] Batch: offset=${offset}, limit=${batchSize}`);
+        
+        let batchQuery = supabase
+          .from("products")
+          .select(`
+            id,
+            name,
+            description,
+            price,
+            image_url,
+            stock_quantity,
+            is_featured,
+            is_new,
+            is_deal,
+            is_active,
+            deal_price,
+            original_price,
+            rating,
+            reviews_count,
+            view_count,
+            brands,
+            created_at,
+            updated_at,
+            product_images(
+              id,
+              url,
+              is_main,
+              sort_order,
+              created_at
+            ),
+            product_categories(
+              category_id,
+              categories(
+                id,
+                name,
+                description
+              )
+            )
+          `)
+          .order("is_featured", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order('is_main', { ascending: false, foreignTable: 'product_images' })
+          .order('sort_order', { ascending: true, foreignTable: 'product_images' })
+          .range(offset, offset + batchSize - 1);
+        
+        if (q) {
+          const like = `%${q}%`;
+          batchQuery = batchQuery.ilike('name', like);
+        }
+        
+        const { data: batchData, error: batchError } = await batchQuery;
+        
+        if (batchError) {
+          console.error(`[Admin Products] Batch error at offset ${offset}:`, batchError);
+          return NextResponse.json({ error: 'Failed to fetch products batch', details: batchError.message }, { status: 500 });
+        }
+        
+        if (batchData) data.push(...batchData);
+      }
+      
+      console.log(`[Admin Products] Fetched ${data.length} total products in batches`);
+    } else {
+      // Normal single fetch (limit <= 1000)
+      query = query.limit(Math.min(limit, 1000));
+      const { data: fetchedData, error } = await query;
+      
+      if (error) {
+        console.error('[Admin Products] Data query error:', error);
+        return NextResponse.json({ error: 'Failed to fetch products', details: error.message }, { status: 500 });
+      }
+      
+      data = fetchedData || [];
+    }
     // No caching for admin dashboard - need real-time view counts
     const response = NextResponse.json({ 
       success: true,
       data,
       pagination: {
-        total: total || 0,
+        total: totalCount,
         count: data?.length || 0,
         limit,
         hasMore: (data?.length || 0) >= limit
