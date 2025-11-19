@@ -19,8 +19,6 @@ import {
   Search, 
   Grid3X3, 
   List, 
-  ChevronLeft,
-  ChevronRight,
   X,
   Filter
 } from 'lucide-react'
@@ -33,6 +31,7 @@ import { Product, Category } from '@/lib/types'
 import { LoadingSpinner } from '@/components/shared'
 import { debounce } from '@/lib/shared-utils'
 import { getCategories } from '@/lib/database'
+import { Pagination } from '@/components/Pagination'
 
 function SearchResults() {
   const searchParams = useSearchParams()
@@ -644,31 +643,11 @@ function SearchResults() {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col items-center gap-3 mt-12">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                    <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
-                  </div>
-                )}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
               </>
             )}
           </div>

@@ -21,9 +21,7 @@ import {
   Grid3X3, 
   List, 
   Percent, 
-  ShoppingCart, 
-  ChevronLeft,
-  ChevronRight
+  ShoppingCart
 } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { Navbar } from '@/components/Navbar'
@@ -36,6 +34,7 @@ import { Category } from '@/lib/types'
 
 import { LoadingSpinner, VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
+import { Pagination } from '@/components/Pagination'
 interface Deal {
   id: string
   name: string
@@ -660,41 +659,11 @@ function DealsContent() {
                       ))}
                     </div>
                     {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="flex flex-col items-center gap-3 mt-12">
-                        <div className="flex justify-center items-center gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            <ChevronLeft className="h-4 w-4 mr-1" />
-                            Previous
-                          </Button>
-                          <div className="flex gap-1">
-                            {[...Array(totalPages)].map((_, i) => (
-                              <Button
-                                key={i + 1}
-                                variant={currentPage === i + 1 ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setCurrentPage(i + 1)}
-                              >
-                                {i + 1}
-                              </Button>
-                            ))}
-                          </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                            <ChevronRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </div>
-                        <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
-                      </div>
-                    )}
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
                   </>
                 )}
               </>
