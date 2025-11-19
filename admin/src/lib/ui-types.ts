@@ -15,6 +15,7 @@ export type ProductColumn = {
   rating?: number;
   reviews_count?: number;
   view_count?: number;
+  created_at?: string;
   category?: {
     id: string | number;
     name: string;

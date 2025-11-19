@@ -183,6 +183,44 @@ export const columns: ColumnDef<Product>[] = [
     meta: { hideOnMobile: true },
   },
   {
+    accessorKey: "created_at",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Created
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const createdAt = row.original.created_at;
+      if (!createdAt) return <div className="text-xs text-muted-foreground">—</div>;
+      
+      const date = new Date(createdAt);
+      const formattedDate = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+      const formattedTime = date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit'
+      });
+      
+      return (
+        <div className="text-xs text-muted-foreground whitespace-nowrap">
+          <div>{formattedDate}</div>
+          <div className="text-[10px] text-gray-400">{formattedTime}</div>
+        </div>
+      );
+    },
+    enableHiding: true,
+    meta: { hideOnMobile: true },
+  },
+  {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {

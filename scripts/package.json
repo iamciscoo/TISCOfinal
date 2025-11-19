@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "generate": "tsx generate-products.ts"
+    "generate": "tsx generate-products.ts",
+    "cleanup": "tsx cleanup-recent.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0"

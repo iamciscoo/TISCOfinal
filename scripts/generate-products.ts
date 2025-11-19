@@ -568,6 +568,7 @@ async function main() {
           brands: prod.brands,
           tags: prod.tags,
           slug: productSlug,
+          image_url: imgUrls[0], // Set main image URL
           stock_quantity: Math.floor(Math.random() * 50) + 10,
           is_active: true,
           is_featured: Math.random() > 0.7,
