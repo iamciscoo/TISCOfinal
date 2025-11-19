@@ -127,7 +127,12 @@ async function fetchFromUnsplash(query: string, count: number): Promise<{ urls: 
     }
     
     return { 
-      urls: data.results?.map((p: any) => p.urls.regular) || [],
+      urls: data.results?.map((p: any) => {
+        // Use raw URL with custom parameters for better control and reliability
+        const rawUrl = p.urls.raw
+        // Add parameters for consistent sizing and format
+        return `${rawUrl}&w=1200&q=85&fm=jpg&fit=crop`
+      }) || [],
       limitReached: false
     }
   } catch (error: any) {
