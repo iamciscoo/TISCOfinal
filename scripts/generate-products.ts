@@ -327,6 +327,25 @@ async function main() {
       const isDeal = Math.random() > 0.7
       const dealDiscount = 0.15 + (Math.random() * 0.20) // 15-35% off
       
+      // Generate unique slug to avoid duplicates
+      let productSlug = slug(prod.name)
+      let slugSuffix = 1
+      
+      // Check if slug exists, if so, append number
+      while (true) {
+        const { data: existing } = await supabase
+          .from('products')
+          .select('id')
+          .eq('slug', productSlug)
+          .single()
+        
+        if (!existing) break
+        
+        // Slug exists, try with suffix
+        productSlug = `${slug(prod.name)}-${slugSuffix}`
+        slugSuffix++
+      }
+      
       const { data: newProd, error: prodErr } = await supabase
         .from('products')
         .insert({
@@ -336,7 +355,7 @@ async function main() {
           category_id: cat.id,
           brands: prod.brands,
           tags: prod.tags,
-          slug: slug(prod.name),
+          slug: productSlug,
           stock_quantity: Math.floor(Math.random() * 50) + 10,
           is_active: true,
           is_featured: Math.random() > 0.7,
