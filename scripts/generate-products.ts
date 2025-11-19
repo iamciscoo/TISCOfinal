@@ -55,14 +55,29 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const slug = (n: string) => n.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '')
 
-async function fetchImages(query: string, count: number) {
+async function fetchImages(query: string, count: number): Promise<{ urls: string[], limitReached: boolean }> {
   await new Promise(r => setTimeout(r, API_DELAY))
   const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`, {
     headers: { Authorization: PEXELS_KEY }
   })
-  if (!res.ok) throw new Error(`Pexels error: ${res.status}`)
+  
+  // Check for rate limit errors
+  if (res.status === 429 || res.status === 403) {
+    console.log(`\n⚠️  Pexels API limit reached (Status: ${res.status})`)
+    console.log(`   Monthly limit: ~200 requests`)
+    return { urls: [], limitReached: true }
+  }
+  
+  if (!res.ok) {
+    console.log(`\n⚠️  Pexels API error: ${res.status} - Using placeholder image`)
+    return { urls: ['https://via.placeholder.com/800'], limitReached: false }
+  }
+  
   const data = await res.json()
-  return data.photos?.map((p: any) => p.src.large) || []
+  return { 
+    urls: data.photos?.map((p: any) => p.src.large) || [],
+    limitReached: false
+  }
 }
 
 const generators: Record<string, (i: number) => any> = {
@@ -316,11 +331,33 @@ async function main() {
       
       // Fetch images
       console.log(`    📸 Fetching ${IMGS_PER_PROD} images...`)
-      const imgUrls = await fetchImages(prod.search, IMGS_PER_PROD)
+      const imgResult = await fetchImages(prod.search, IMGS_PER_PROD)
+      
+      // Check if API limit reached
+      if (imgResult.limitReached) {
+        console.log(`\n🛑 Stopping generation - API limit reached`)
+        console.log(`   Products created before limit: ${totalProducts}`)
+        console.log(`   Images added before limit: ${totalImages}`)
+        console.log(`\n💡 Tip: Wait 24 hours for Pexels API limit to reset`)
+        console.log(`   Or continue generation with placeholder images only`)
+        
+        // Exit the main function gracefully
+        const { count: afterCount } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+        
+        console.log(`\n📊 Final Summary:`)
+        console.log(`   Products created: ${totalProducts}`)
+        console.log(`   Images added: ${totalImages}`)
+        console.log(`   Database products: ${afterCount || 0}`)
+        return
+      }
+      
+      let imgUrls = imgResult.urls
       
       if (imgUrls.length === 0) {
         console.log(`    ⚠️  No images found, using placeholder`)
-        imgUrls.push('https://via.placeholder.com/800')
+        imgUrls = ['https://via.placeholder.com/800']
       }
       
       // Insert product with proper deal pricing logic
