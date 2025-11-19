@@ -27,6 +27,12 @@ remotePatterns.push({
   hostname: 'images.pexels.com',
 })
 
+// Allow Unsplash images for product photos
+remotePatterns.push({
+  protocol: 'https',
+  hostname: 'images.unsplash.com',
+})
+
 // Allow placeholder images (fallback for products without images)
 remotePatterns.push({
   protocol: 'https',
