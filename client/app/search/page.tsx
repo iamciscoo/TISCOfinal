@@ -389,6 +389,19 @@ function SearchResults() {
         {/* Mobile Filters + View Toggle */}
         <div className="flex items-center justify-between mb-8 lg:hidden">
           <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+            {/* Search Icon Button - Mobile Only */}
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Search products"
+                title="Search products"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            
+            {/* Filters Button - Mobile Only */}
             <SheetTrigger asChild>
               <Button
                 variant="outline"

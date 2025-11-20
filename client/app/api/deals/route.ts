@@ -118,8 +118,8 @@ export async function GET(request: Request) {
         id: deals[0].id,
         name: deals[0].name,
         is_deal: deals[0].is_deal,
-        product_categories: deals[0].product_categories,
-        category_id: deals[0].category_id
+        categories: deals[0].categories,
+        category_name: deals[0].categories?.[0]?.category?.name
       })
     }
 
@@ -134,8 +134,8 @@ export async function GET(request: Request) {
       const mainImage = product.product_images?.find((img: { is_main: boolean; url: string }) => img.is_main) || product.product_images?.[0]
       const imageUrl = mainImage?.url || product.image_url || '/circular.svg'
 
-      // Get category from product_categories relation
-      const categoryData = product.product_categories?.[0]?.categories
+      // Get category from categories relation (nested via product_categories)
+      const categoryData = product.categories?.[0]?.category
       
       return {
         id: product.id,

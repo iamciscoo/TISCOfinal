@@ -483,8 +483,22 @@ function DealsContent() {
             
             {/* Mobile Filters + View Toggle */}
             <div className="flex items-center gap-2 mt-4 lg:mt-0">
-              {/* Mobile Filters Sheet Trigger */}
+              {/* Mobile Search & Filters Sheet */}
               <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+                {/* Search Icon Button - Mobile Only */}
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="lg:hidden"
+                    aria-label="Search deals"
+                    title="Search deals"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                
+                {/* Filters Button - Mobile Only */}
                 <SheetTrigger asChild>
                   <Button
                     variant="outline"
