@@ -103,14 +103,11 @@ function ProductsContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch ALL products - API handles batching internally for datasets > 1000
-        const timestamp = Date.now()
-        const response = await fetch(`/api/products?limit=10000&_t=${timestamp}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
+        // Fetch ALL products with minimal fields - API handles batching internally for datasets > 1000
+        // minimal=true reduces payload size by 50-70% (no descriptions, fewer image fields)
+        const response = await fetch(`/api/products?limit=10000&minimal=true`, {
+          // Allow caching - API sets Cache-Control: s-maxage=60
+          next: { revalidate: 60 }
         })
         
         console.log('[Products] API response status:', response.status, response.statusText)

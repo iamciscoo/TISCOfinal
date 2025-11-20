@@ -13,14 +13,10 @@ export const FeaturedProducts = () => {
     let isMounted = true;
     (async () => {
       try {
-        // **PERFORMANCE FIX: Add cache-busting for real-time updates**
-        // Fetch directly from API with no-cache header to bypass browser cache
-        const timestamp = Date.now();
-        const response = await fetch(`/api/products/featured?limit=30&_t=${timestamp}`, {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
+        // Fetch featured products with minimal fields and caching for fast home page load
+        const response = await fetch(`/api/products/featured?limit=30&minimal=true`, {
+          // Allow 60-second cache for performance
+          next: { revalidate: 60 }
         });
         
         if (!response.ok) {

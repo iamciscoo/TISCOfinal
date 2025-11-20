@@ -26,13 +26,10 @@ export function NewArrivalsSection() {
     let mounted = true
       ; (async () => {
         try {
-          // Fetch a larger batch to show all new arrivals
-          const ts = Date.now()
-          const res = await fetch(`/api/products?limit=100&_t=${ts}`, {
-            headers: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-              Pragma: "no-cache",
-            },
+          // Fetch new arrivals with minimal fields and caching for fast home page load
+          const res = await fetch(`/api/products?limit=100&minimal=true`, {
+            // Allow 60-second cache for performance
+            next: { revalidate: 60 }
           })
           if (!res.ok) throw new Error("Failed to fetch products")
           const json = await res.json()

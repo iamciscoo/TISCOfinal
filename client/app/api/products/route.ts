@@ -48,7 +48,8 @@ const getProductsSchema = z.object({
   limit: z.coerce.number().min(1).max(20000).optional().default(50),  // Maximum items per page (1-20000 for batch fetching, default: 50)
   offset: z.coerce.number().min(0).optional().default(0),             // Starting position for pagination (0+, default: 0)
   category: z.string().uuid().optional(),                              // Category UUID filter (optional)
-  featured: z.coerce.boolean().optional()                              // Filter for featured products only (optional)
+  featured: z.coerce.boolean().optional(),                             // Filter for featured products only (optional)
+  minimal: z.coerce.boolean().optional().default(false)                // Return minimal fields for cards (default: false)
 }).strip()  // Strip unknown keys (like cache-busting _t parameter)
 
 /**
@@ -68,11 +69,38 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
    * @param withSlug - Whether to include slug field in categories selection
    * @param offset - Pagination offset for batch fetching
    * @param limit - Batch size limit
+   * @param minimal - Whether to select only minimal fields for cards
    * @returns Configured Supabase query builder
    */
-  const buildQuery = (withSlug: boolean, offset: number = 0, limit: number = 1000) => {
-    // Define comprehensive SELECT clause including all product fields and relations
-    const select = `
+  const buildQuery = (withSlug: boolean, offset: number = 0, limit: number = 1000, minimal: boolean = false) => {
+    // Select string optimized for performance
+    // If minimal is true, only fetch fields needed for ProductCard
+    const select = minimal ? `
+      id,
+      name,
+      price,
+      image_url,
+      stock_quantity,
+      is_featured,
+      is_new,
+      is_deal,
+      deal_price,
+      original_price,
+      rating,
+      reviews_count,
+      slug,
+      created_at,
+      product_images (
+        url,
+        is_main
+      ),
+      categories:product_categories (
+        category:categories (
+          id,
+          name
+        )
+      )
+    ` : `
       id,
       name,
       description,
@@ -155,14 +183,14 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
   
   // If requesting all products (limit >= total), fetch in batches of 1000
   if (params.limit >= total && total > 1000) {
-    console.log(`[Products API] Fetching ${total} products in batches...`)
+    console.log(`[Products API] Fetching ${total} products in batches (minimal=${params.minimal})...`)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allProducts: Record<string, any>[] = []
     const batchSize = 1000
     
     for (let offset = 0; offset < total; offset += batchSize) {
       console.log(`[Products API] Batch: offset=${offset}, limit=${batchSize}`)
-      const { data, error } = await buildQuery(true, offset, batchSize)
+      const { data, error } = await buildQuery(true, offset, batchSize, params.minimal)
       if (error) throw error
       if (data) allProducts.push(...data)
     }
@@ -172,7 +200,7 @@ async function getProductsQuery(params: z.infer<typeof getProductsSchema>) {
   }
   
   // Normal pagination - single fetch
-  const { data, error } = await buildQuery(true, params.offset, Math.min(params.limit, 1000))
+  const { data, error } = await buildQuery(true, params.offset, Math.min(params.limit, 1000), params.minimal)
 
   // Throw any errors for proper error handling middleware
   if (error) throw error
@@ -265,11 +293,17 @@ export const GET = withMiddleware(
   }
   const response = Response.json(responseWithPagination)
   
-  // No caching - need real-time product counts and data
-  // This ensures fresh data after product additions/updates
-  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
-  response.headers.set('Pragma', 'no-cache')
-  response.headers.set('Expires', '0')
+  // Intelligent caching: Cache minimal product lists for 60s (shop/deals pages)
+  // No cache for full product data (single product detail views need fresh data)
+  if (validatedData.minimal) {
+    // Cache minimal data for 60 seconds for fast shop page loads
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+  } else {
+    // No caching for full product data (admin, single views, etc.)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+  }
   
   return response
 })

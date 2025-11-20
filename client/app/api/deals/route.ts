@@ -172,7 +172,7 @@ export async function GET(request: Request) {
       })
     }
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true,
       deals: transformedDeals,
       pagination: {
@@ -184,6 +184,11 @@ export async function GET(request: Request) {
       },
       timestamp: new Date().toISOString()
     }, { status: 200 })
+    
+    // Cache deals for 60 seconds for faster load times
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    
+    return response
 
   } catch (error: unknown) {
     console.error('Deals fetch error:', error)

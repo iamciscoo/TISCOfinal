@@ -126,14 +126,10 @@ function DealsContent() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const timestamp = Date.now()
         const [dealsResponse, categoriesData] = await Promise.all([
-          fetch(`/api/deals?limit=10000&_t=${timestamp}`, {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
+          fetch(`/api/deals?limit=10000`, {
+            // Allow caching for 60 seconds
+            next: { revalidate: 60 }
           }),
           getCategories()
         ])
