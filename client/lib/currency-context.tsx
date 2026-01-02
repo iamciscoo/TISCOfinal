@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 interface Currency {
   code: string
@@ -121,7 +121,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     return price / exchangeRate
   }
 
-  const updateExchangeRate = async () => {
+  const updateExchangeRate = useCallback(async () => {
     setIsLoading(true)
     try {
       // Simulate API call
@@ -144,13 +144,13 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [selectedCurrency.code])
 
   // Auto-update exchange rate every 5 minutes
   useEffect(() => {
     const interval = setInterval(updateExchangeRate, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [updateExchangeRate])
 
   const value: CurrencyContextType = {
     selectedCurrency,
