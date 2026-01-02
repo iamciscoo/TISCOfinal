@@ -32,17 +32,35 @@ const currencies: Currency[] = [
     symbol: '$',
     flag: '🇺🇸',
     name: 'US Dollar'
+  },
+  {
+    code: 'EUR',
+    symbol: '€',
+    flag: '🇪🇺',
+    name: 'Euro'
+  },
+  {
+    code: 'CNY',
+    symbol: '¥',
+    flag: '🇨🇳',
+    name: 'Chinese Yuan'
   }
 ]
 
-// Mock exchange rate - in real app, this would come from an API
-const MOCK_EXCHANGE_RATE = 2500 // 1 USD = 2500 TZS (approximate)
+// Mock exchange rates - in real app, this would come from an API
+// Rates are TZS per 1 Unit of currency
+const MOCK_RATES: Record<string, number> = {
+  TZS: 1,
+  USD: 2500,
+  EUR: 2700,
+  CNY: 350
+}
 
 const CurrencyContext = createContext<CurrencyContextType | null>(null)
 
 export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies[0]) // Default to TZS
-  const [exchangeRate, setExchangeRate] = useState(MOCK_EXCHANGE_RATE)
+  const [exchangeRate, setExchangeRate] = useState(MOCK_RATES.TZS)
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string>("")
 
@@ -69,8 +87,8 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (typeof window !== 'undefined') {
       localStorage.setItem('tisco_selected_currency', selectedCurrency.code)
       // Dispatch custom event for components to listen to
-      window.dispatchEvent(new CustomEvent('currencyChanged', { 
-        detail: { currency: selectedCurrency } 
+      window.dispatchEvent(new CustomEvent('currencyChanged', {
+        detail: { currency: selectedCurrency }
       }))
     }
   }, [selectedCurrency])
@@ -79,12 +97,15 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     const currency = currencies.find(c => c.code === currencyCode)
     if (currency) {
       setSelectedCurrency(currency)
+      // Update exchange rate based on selection
+      // Note: In a real app we might fetch fresh rates here
+      setExchangeRate(MOCK_RATES[currencyCode] || 1)
     }
   }
 
   const formatPrice = (price: number): string => {
     const convertedPrice = convertPrice(price)
-    
+
     if (selectedCurrency.code === 'TZS') {
       return `${selectedCurrency.symbol} ${Math.round(convertedPrice).toLocaleString()}`
     } else {
@@ -94,10 +115,10 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const convertPrice = (price: number): number => {
     // Prices are stored in TZS in the database
-    if (selectedCurrency.code === 'USD') {
-      return price / exchangeRate // Convert TZS to USD
-    }
-    return price // Already in TZS
+    // rate is TZS per unit. So to go TZS -> Unit, we divide by rate.
+    // e.g. 2500 TZS / (2500 TZS/USD) = 1 USD
+    if (selectedCurrency.code === 'TZS') return price
+    return price / exchangeRate
   }
 
   const updateExchangeRate = async () => {
@@ -105,12 +126,18 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       // In real app, fetch from exchange rate API
-      const variation = (Math.random() - 0.5) * 100 // ±50 TZS variation
-      const newRate = MOCK_EXCHANGE_RATE + variation
-      
-      setExchangeRate(Math.round(newRate * 100) / 100)
+      // For now, just add some small random variation to the current mock rate
+      const baseRate = MOCK_RATES[selectedCurrency.code] || 1
+      if (selectedCurrency.code !== 'TZS') {
+        const variation = (Math.random() - 0.5) * (baseRate * 0.02) // ±1% variation
+        const newRate = baseRate + variation
+        setExchangeRate(Math.round(newRate * 100) / 100)
+      } else {
+        setExchangeRate(1)
+      }
+
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (error) {
       console.error('Failed to fetch exchange rate:', error)

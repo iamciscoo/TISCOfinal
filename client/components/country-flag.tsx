@@ -7,15 +7,17 @@
  * country-flag-icons package. Supports TZ (Tanzania) and US (United States).
  */
 
-import { TZ, US } from 'country-flag-icons/react/3x2'
+import { TZ, US, EU, CN } from 'country-flag-icons/react/3x2'
 
 // Define the country codes we support
-export type SupportedCountryCode = 'TZ' | 'US'
+export type SupportedCountryCode = 'TZ' | 'US' | 'EU' | 'CN'
 
 // Map currency codes to country codes
 const currencyToCountry: Record<string, SupportedCountryCode> = {
     TZS: 'TZ',
     USD: 'US',
+    EUR: 'EU',
+    CNY: 'CN',
 }
 
 interface CountryFlagProps {
@@ -40,6 +42,10 @@ export function CountryFlag({ code, title, className = '' }: CountryFlagProps) {
             return <TZ className={`inline-block ${className}`} title={title || 'Tanzania'} />
         case 'US':
             return <US className={`inline-block ${className}`} title={title || 'United States'} />
+        case 'EU':
+            return <EU className={`inline-block ${className}`} title={title || 'Europe'} />
+        case 'CN':
+            return <CN className={`inline-block ${className}`} title={title || 'China'} />
         default:
             // Fallback for unsupported codes - render a gray placeholder
             return (
@@ -64,6 +70,10 @@ export function useFlagComponent(code: string) {
             return TZ
         case 'US':
             return US
+        case 'EU':
+            return EU
+        case 'CN':
+            return CN
         default:
             return null
     }

@@ -21,8 +21,7 @@ export const CurrencyToggle = () => {
     lastUpdated
   } = useCurrency()
 
-  // Sample amount for display (2500 TZS)
-  const sampleAmount = 2500
+
 
   return (
     <DropdownMenu>
@@ -59,15 +58,33 @@ export const CurrencyToggle = () => {
           {/* Current Rate Display */}
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <CountryFlag code="TZS" className="w-5 h-4 rounded-sm" title="Tanzania" />
-                <span className="font-medium">TSh {sampleAmount.toLocaleString()}</span>
-              </div>
-              <span className="text-gray-400">=</span>
-              <div className="flex items-center gap-2">
-                <CountryFlag code="USD" className="w-5 h-4 rounded-sm" title="United States" />
-                <span className="font-medium">${(sampleAmount / exchangeRate).toFixed(2)}</span>
-              </div>
+              {selectedCurrency.code === 'TZS' ? (
+                // When TZS is selected, show USD rate as reference
+                <>
+                  <div className="flex items-center gap-2">
+                    <CountryFlag code="USD" className="w-5 h-4 rounded-sm" title="US Dollar" />
+                    <span className="font-medium text-sm">1 USD</span>
+                  </div>
+                  <span className="text-gray-400 mx-2">=</span>
+                  <div className="flex items-center gap-2">
+                    <CountryFlag code="TZS" className="w-5 h-4 rounded-sm" title="Tanzania" />
+                    <span className="font-medium text-sm">TSh 2,500</span>
+                  </div>
+                </>
+              ) : (
+                // For other currencies, show selected currency to TZS
+                <>
+                  <div className="flex items-center gap-2">
+                    <CountryFlag code={selectedCurrency.code} className="w-5 h-4 rounded-sm" title={selectedCurrency.name} />
+                    <span className="font-medium text-sm">1 {selectedCurrency.code}</span>
+                  </div>
+                  <span className="text-gray-400 mx-2">=</span>
+                  <div className="flex items-center gap-2">
+                    <CountryFlag code="TZS" className="w-5 h-4 rounded-sm" title="Tanzania" />
+                    <span className="font-medium text-sm">TSh {exchangeRate.toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </div>
             <p className="text-xs text-gray-500 text-center" suppressHydrationWarning>
               Last updated: {lastUpdated || '—'}

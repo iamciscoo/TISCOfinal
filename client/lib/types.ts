@@ -207,6 +207,8 @@ export interface Currency {
 export interface ExchangeRates {
   TZS: number
   USD: number
+  EUR: number
+  CNY: number
   timestamp: number
 }
 

@@ -22,6 +22,8 @@ export const CURRENCIES: Record<string, Currency> = {
 const MOCK_EXCHANGE_RATES: ExchangeRates = {
   TZS: 1,
   USD: 0.0004,
+  EUR: 0.00037,
+  CNY: 0.00286,
   timestamp: Date.now()
 }
 
@@ -66,7 +68,7 @@ export class CurrencyConverter {
     if (!currency) return `TSh ${amountInTZS.toLocaleString()}`
 
     const convertedAmount = this.convert(amountInTZS, targetCurrency)
-    
+
     // Format based on currency
     if (targetCurrency === 'USD') {
       return `${currency.symbol}${convertedAmount.toFixed(2)}`
