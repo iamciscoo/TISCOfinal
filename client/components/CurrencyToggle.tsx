@@ -1,8 +1,7 @@
 'use client'
 
-
 import { Button } from '@/components/ui/button'
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -10,15 +9,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown, RefreshCw } from 'lucide-react'
 import { useCurrency } from '@/lib/currency-context'
+import { CountryFlag } from '@/components/country-flag'
 
 export const CurrencyToggle = () => {
-  const { 
-    selectedCurrency, 
-    availableCurrencies, 
-    switchCurrency, 
+  const {
+    selectedCurrency,
+    availableCurrencies,
+    switchCurrency,
     exchangeRate,
     isLoading,
-    lastUpdated 
+    lastUpdated
   } = useCurrency()
 
   // Sample amount for display (2500 TZS)
@@ -28,20 +28,20 @@ export const CurrencyToggle = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-700 hover:text-blue-600 whitespace-nowrap">
-          <span className="text-lg" suppressHydrationWarning>{selectedCurrency.flag}</span>
+          <CountryFlag code={selectedCurrency.code} className="w-5 h-4 rounded-sm" title={selectedCurrency.name} />
           <span className="font-medium" suppressHydrationWarning>{selectedCurrency.code}</span>
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-80 p-4 z-[70]">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Currency</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               disabled={isLoading}
               className="text-xs"
             >
@@ -60,12 +60,12 @@ export const CurrencyToggle = () => {
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🇹🇿</span>
+                <CountryFlag code="TZS" className="w-5 h-4 rounded-sm" title="Tanzania" />
                 <span className="font-medium">TSh {sampleAmount.toLocaleString()}</span>
               </div>
               <span className="text-gray-400">=</span>
               <div className="flex items-center gap-2">
-                <span className="text-lg">🇺🇸</span>
+                <CountryFlag code="USD" className="w-5 h-4 rounded-sm" title="United States" />
                 <span className="font-medium">${(sampleAmount / exchangeRate).toFixed(2)}</span>
               </div>
             </div>
@@ -81,11 +81,10 @@ export const CurrencyToggle = () => {
               <DropdownMenuItem
                 key={currency.code}
                 onClick={() => switchCurrency(currency.code)}
-                className={`flex items-center gap-3 cursor-pointer ${
-                  currency.code === selectedCurrency.code ? 'bg-blue-50' : ''
-                }`}
+                className={`flex items-center gap-3 cursor-pointer ${currency.code === selectedCurrency.code ? 'bg-blue-50' : ''
+                  }`}
               >
-                <span className="text-lg">{currency.flag}</span>
+                <CountryFlag code={currency.code} className="w-5 h-4 rounded-sm" title={currency.name} />
                 <div className="flex-1">
                   <div className="font-medium">{currency.code}</div>
                   <div className="text-sm text-gray-500">{currency.name}</div>
@@ -99,7 +98,7 @@ export const CurrencyToggle = () => {
 
           {/* Rate Info */}
           <div className="text-xs text-gray-500 border-t pt-2">
-            Prices update automatically. Exchange rates are indicative.
+            Prices update automatically. Exchange rates are indicative. TZS is base currency for purchase.
           </div>
         </div>
       </DropdownMenuContent>
