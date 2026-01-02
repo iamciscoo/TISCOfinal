@@ -70,22 +70,14 @@ function ProductAssignmentDisplay({ productIds }: { productIds: string[] }) {
       }
 
       try {
-        // Step 1: Fetch all products from the database (up to 1000)
-        // We get all products, then filter on our end to find the ones we need
-        const response = await fetch('/api/admin/products?limit=1000', { cache: 'no-store' })
-        
+        // Fetch products by specific IDs - this is more efficient and accurate
+        const idsParam = productIds.join(',')
+        const response = await fetch(`/api/admin/products?ids=${encodeURIComponent(idsParam)}`, { cache: 'no-store' })
+
         if (response.ok) {
           const data = await response.json()
-          const allProducts = Array.isArray(data.products) ? data.products : []
-          
-          // Step 2: Filter to only show products that match our productIds
-          // Example: If productIds is ["123", "456"], only keep products with those IDs
-          const matchedProducts = allProducts.filter((p: { id: string }) => 
-            productIds.includes(p.id)
-          )
-          
-          // Save the matched products so we can display them
-          setProducts(matchedProducts)
+          const products = Array.isArray(data.products) ? data.products : []
+          setProducts(products)
         }
       } catch (error) {
         console.error('Failed to fetch product details:', error)
@@ -209,7 +201,7 @@ const NOTIFICATION_EVENTS = [
   'contact_message_received',   // Someone filled out the contact form
   'user_registered',            // New user signed up
   'admin_order_created',        // Notify admin about new orders
-  
+
   // Simplified category names (for better grouping)
   'orders',                     // All order-related notifications
   'payments',                   // All payment-related notifications
@@ -250,39 +242,39 @@ const ITEMS_PER_PAGE = 10
 export default function NotificationsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  
+
   // ---------------------------------------------------------------------------
   // STATE VARIABLES - These hold all the data that changes on this page
   // ---------------------------------------------------------------------------
-  
+
   // Active tab state
   const [activeTab, setActiveTab] = useState('notifications')
-  
+
   // Notifications data
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])  // List of all notifications
   const [stats, setStats] = useState<NotificationStats | null>(null)            // Summary stats (total, sent, failed, etc.)
   const [loading, setLoading] = useState(true)                                  // Are we loading data from server?
-  
+
   // Filter states - these control what notifications we show
   const [filter, setFilter] = useState<string>('all')              // Filter by status (all/sent/failed/pending)
   const [eventFilter, setEventFilter] = useState<string>('all')    // Filter by event type (order_created, etc.)
   const [priorityFilter, setPriorityFilter] = useState<string>('all')  // Filter by priority (low/medium/high)
-  
+
   // Loading states - track if we're doing something async
   const [isRefreshing, setIsRefreshing] = useState(false)      // Are we refreshing the data?
   const [isClearingAll, setIsClearingAll] = useState(false)    // Are we deleting all notifications?
   const [isSavingRecipient, setIsSavingRecipient] = useState(false)  // Are we saving a recipient?
-  
+
   // Pagination states - control which page we're on
   const [currentPage, setCurrentPage] = useState(1)    // Which page are we showing? (1, 2, 3, etc.)
   const [totalPages, setTotalPages] = useState(1)      // How many pages total?
-  
+
   // Bulk selection states - for selecting and deleting multiple items
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())  // Which notification IDs are checked?
   const [isDeleting, setIsDeleting] = useState(false)                      // Are we deleting selected items?
 
   // Admin Recipients states - for managing who gets notification alerts
-  type Recipient = { 
+  type Recipient = {
     id: string
     email: string
     name?: string
@@ -350,7 +342,7 @@ export default function NotificationsPage() {
   // ---------------------------------------------------------------------------
   // DATA FETCHING FUNCTIONS - Get data from the server
   // ---------------------------------------------------------------------------
-  
+
   /**
    * fetchNotifications
    * 
@@ -366,10 +358,10 @@ export default function NotificationsPage() {
       if (filter !== 'all') params.append('status', filter)              // Add status filter if not "all"
       if (eventFilter !== 'all') params.append('event', eventFilter)     // Add event filter if not "all"
       if (priorityFilter !== 'all') params.append('priority', priorityFilter)  // Add priority filter
-      
+
       // Add timestamp to prevent browser from using old cached data
       params.append('_t', Date.now().toString())
-      
+
       // Step 2: Fetch data from server
       const response = await fetch(`/api/admin/notifications?${params}`, {
         cache: 'no-store',  // Don't cache this request
@@ -378,17 +370,17 @@ export default function NotificationsPage() {
           'Pragma': 'no-cache'
         }
       })
-      
+
       // Step 3: Process the response
       if (response.ok) {
         const data = await response.json()
         const allNotifications = data.notifications
         setNotifications(allNotifications)  // Save notifications to state
-        
+
         // Calculate how many pages we need (e.g., 47 notifications / 10 per page = 5 pages)
         const total = Math.ceil(allNotifications.length / ITEMS_PER_PAGE)
         setTotalPages(total)
-        
+
         // If we're on page 5 but there are only 3 pages now, go back to page 1
         if (currentPage > total && total > 0) {
           setCurrentPage(1)
@@ -444,10 +436,10 @@ export default function NotificationsPage() {
    */
   const refreshData = async () => {
     setIsRefreshing(true)  // Show loading spinner
-    
+
     // Fetch all data at once (parallel, not one after another)
     await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients(), fetchPaymentDetails()])
-    
+
     setIsRefreshing(false)  // Hide loading spinner
   }
 
@@ -461,12 +453,12 @@ export default function NotificationsPage() {
     try {
       const response = await fetch('/api/admin/payment-details')
       const result = await response.json()
-      
+
       if (result.paymentDetails) {
         // Ensure all fields are strings, not null
         const details = result.paymentDetails
         const defaultInstructions = 'IMPORTANT PAYMENT INSTRUCTIONS:\n\n1. Include your ORDER NUMBER as the payment reference\n2. After payment, check your order status in "My Orders" section\n3. You will receive an email confirmation once payment is verified\n4. Payment verification typically takes 5-15 minutes\n5. Keep your payment receipt for your records\n\nFor any payment issues, contact our support team immediately.\n\nThank you for shopping with TISCO Market!'
-        
+
         setPaymentDetails({
           id: details.id || '',
           bank_name: details.bank_name || '',
@@ -542,7 +534,7 @@ export default function NotificationsPage() {
     if (!excludedFields.has('mpesa') && paymentDetails.mpesa_number) mobileMoneyLines.push(`   • M-Pesa: ${paymentDetails.mpesa_number}`)
     if (!excludedFields.has('tigo_pesa') && paymentDetails.tigo_pesa_number) mobileMoneyLines.push(`   • Tigo Pesa: ${paymentDetails.tigo_pesa_number}`)
     if (!excludedFields.has('airtel_money') && paymentDetails.airtel_money_number) mobileMoneyLines.push(`   • Airtel Money: ${paymentDetails.airtel_money_number}`)
-    
+
     if (mobileMoneyLines.length > 0) {
       sections.push('📱 MOBILE MONEY OPTIONS:\n' + mobileMoneyLines.join('\n'))
     }
@@ -568,7 +560,7 @@ export default function NotificationsPage() {
       ...prev,
       message: prev.message + detailsText
     }))
-    
+
     toast.success('Payment details inserted into message!')
   }
 
@@ -607,7 +599,7 @@ export default function NotificationsPage() {
 
       if (response.ok) {
         toast.success('Notification sent successfully')  // Show success popup
-        
+
         // Clear the form so it's ready for the next notification
         setManualNotification({
           event: 'admin_notification',
@@ -618,7 +610,7 @@ export default function NotificationsPage() {
           priority: 'medium',
           action_url: ''
         })
-        
+
         refreshData()  // Refresh the list to show the new notification
       } else {
         toast.error('Failed to send notification')  // Show error popup
@@ -646,10 +638,10 @@ export default function NotificationsPage() {
       currentPage * ITEMS_PER_PAGE         // End index (e.g., page 2 ends at index 20)
     )
     const visibleIds = visibleNotifications.map(n => n.id)
-    
+
     // Check if all visible items are already selected
     const allVisibleSelected = visibleIds.every(id => selectedIds.has(id))
-    
+
     if (allVisibleSelected && visibleIds.length > 0) {
       // If everything is selected, deselect all visible items
       const newSelected = new Set(selectedIds)
@@ -672,14 +664,14 @@ export default function NotificationsPage() {
    */
   const handleSelectNotification = (id: string) => {
     const newSelected = new Set(selectedIds)
-    
+
     // If already selected, remove it. Otherwise, add it.
     if (newSelected.has(id)) {
       newSelected.delete(id)  // Uncheck this notification
     } else {
       newSelected.add(id)     // Check this notification
     }
-    
+
     setSelectedIds(newSelected)
   }
 
@@ -705,12 +697,12 @@ export default function NotificationsPage() {
     if (!confirmed) return  // User clicked "Cancel"
 
     setIsDeleting(true)  // Show loading state on delete button
-    
+
     try {
       // Send delete request to server with all selected IDs
       const response = await fetch('/api/admin/notifications?bulk=true', {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
         },
@@ -723,12 +715,12 @@ export default function NotificationsPage() {
         toast.success(
           `Successfully deleted ${result.deletedCount} notification${result.deletedCount > 1 ? 's' : ''}`
         )
-        
+
         setSelectedIds(new Set())  // Clear all checkboxes
-        
+
         // Immediately remove deleted items from the UI (don't wait for server refresh)
         setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)))
-        
+
         // Then refresh from server to make sure we're in sync
         await refreshData()
       } else {
@@ -759,15 +751,15 @@ export default function NotificationsPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)  // Show loading spinner
-      
+
       // Fetch notifications, stats, recipients, and payment details all at once
       await Promise.all([fetchNotifications(), fetchStats(), fetchRecipients(), fetchPaymentDetails()])
-      
+
       setLoading(false)  // Hide loading spinner
     }
     loadData()
   }, [filter, eventFilter, priorityFilter])  // Re-run when these filters change
-  
+
   /**
    * Reset to Page 1 When Filters Change
    * 
@@ -788,11 +780,11 @@ export default function NotificationsPage() {
     const email = searchParams.get('email')
     const name = searchParams.get('name')
     const subject = searchParams.get('subject')
-    
+
     if (tab) {
       setActiveTab(tab)
     }
-    
+
     if (email || name || subject) {
       setManualNotification(prev => ({
         ...prev,
@@ -832,13 +824,13 @@ export default function NotificationsPage() {
             <RefreshCw className={`w-4 h-4 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button 
+          <Button
             onClick={async () => {
               const confirmed = confirm(
                 `⚠️ WARNING: This will permanently delete ALL ${notifications.length} notifications!\n\nThis action cannot be undone. Are you absolutely sure?`
               )
               if (!confirmed) return
-              
+
               setIsClearingAll(true)
               try {
                 const allIds = notifications.map(n => n.id)
@@ -847,7 +839,7 @@ export default function NotificationsPage() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ ids: allIds })
                 })
-                
+
                 if (response.ok) {
                   const result = await response.json()
                   toast.success(`Successfully cleared ${result.deletedCount} notifications`)
@@ -986,7 +978,7 @@ export default function NotificationsPage() {
                     Select All on Page <span className="text-muted-foreground">({Math.min(ITEMS_PER_PAGE, notifications.length - (currentPage - 1) * ITEMS_PER_PAGE)})</span>
                   </Label>
                 </div>
-                
+
                 {selectedIds.size > 0 && (
                   <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <Badge variant="secondary" className="text-xs font-semibold">
@@ -1040,141 +1032,141 @@ export default function NotificationsPage() {
                 {notifications
                   .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
                   .map((notification) => (
-                <Card key={notification.id} className="overflow-hidden">
-                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
-                    <div className="space-y-2 sm:space-y-3">
-                      {/* Top row: Checkbox + Icon + Title + Delete button */}
-                      <div className="flex items-start gap-2 sm:gap-3">
-                        {/* Checkbox to select this notification for bulk actions */}
-                        {/* Is this notification selected? - shrink-0 means don't make it smaller */}
-                        <Checkbox
-                          checked={selectedIds.has(notification.id)}
-                          onCheckedChange={() => handleSelectNotification(notification.id)}
-                          className="mt-1 shrink-0"
-                        />
-                        
-                        {/* Status icon + Email subject */}
-                        <div className="flex items-start gap-2 min-w-0 flex-1">
-                          {/* Status icon (green checkmark, red X, yellow clock, etc.) */}
-                          <div className="shrink-0 mt-0.5">{statusIcons[notification.status]}</div>
-                          
-                          {/* Email subject line (what the email was about) */}
-                          <CardTitle className="text-sm sm:text-lg leading-snug break-words">{notification.subject}</CardTitle>
+                    <Card key={notification.id} className="overflow-hidden">
+                      <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
+                        <div className="space-y-2 sm:space-y-3">
+                          {/* Top row: Checkbox + Icon + Title + Delete button */}
+                          <div className="flex items-start gap-2 sm:gap-3">
+                            {/* Checkbox to select this notification for bulk actions */}
+                            {/* Is this notification selected? - shrink-0 means don't make it smaller */}
+                            <Checkbox
+                              checked={selectedIds.has(notification.id)}
+                              onCheckedChange={() => handleSelectNotification(notification.id)}
+                              className="mt-1 shrink-0"
+                            />
+
+                            {/* Status icon + Email subject */}
+                            <div className="flex items-start gap-2 min-w-0 flex-1">
+                              {/* Status icon (green checkmark, red X, yellow clock, etc.) */}
+                              <div className="shrink-0 mt-0.5">{statusIcons[notification.status]}</div>
+
+                              {/* Email subject line (what the email was about) */}
+                              <CardTitle className="text-sm sm:text-lg leading-snug break-words">{notification.subject}</CardTitle>
+                            </div>
+                            {/* Delete button for this single notification - Red button (dangerous action) */}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                // Step 1: Ask user to confirm (prevent accidents)
+                                if (!confirm('Delete this notification record?')) return
+
+                                // Step 2: Send delete request to server
+                                const url = `/api/admin/notifications?id=${encodeURIComponent(notification.id)}`
+                                const res = await fetch(url, { method: 'DELETE' })
+
+                                // Step 3: Show success or error message
+                                if (res.ok) {
+                                  toast.success('Notification deleted')  // Green popup
+                                  refreshData()  // Reload the list
+                                } else {
+                                  toast.error('Failed to delete notification')  // Red popup
+                                }
+                              }}
+                              className="shrink-0 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                            >
+                              <X className="w-4 h-4" />
+                              <span className="hidden sm:inline sm:ml-1">Delete</span>
+                            </Button>
+                          </div>
+                          {/* Badges row: Shows priority, event type, category, module */}
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                            {/* Priority badge (low/medium/high/urgent) with color coding */}
+                            <Badge className={`${priorityColors[notification.priority]} text-xs`}>
+                              {notification.priority}
+                            </Badge>
+
+                            {/* Event type badge (what triggered this email - e.g., "order_created", "payment_failed") */}
+                            <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">
+                              {notification.event}
+                            </Badge>
+
+                            {/* Category badge (only show if it exists - "&&" means "if this exists, then show this") */}
+                            {/* Legacy field for categorization */}
+                            {notification.category && (
+                              <Badge variant="outline" className="text-xs truncate max-w-[100px] sm:max-w-none">
+                                {notification.category}
+                              </Badge>
+                            )}
+
+                            {/* Platform module badge (which part of system sent this - e.g., "orders", "payments") */}
+                            {notification.platform_module && (
+                              <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">
+                                {notification.platform_module}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        {/* Delete button for this single notification - Red button (dangerous action) */}
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={async () => {
-                            // Step 1: Ask user to confirm (prevent accidents)
-                            if (!confirm('Delete this notification record?')) return
-                            
-                            // Step 2: Send delete request to server
-                            const url = `/api/admin/notifications?id=${encodeURIComponent(notification.id)}`
-                            const res = await fetch(url, { method: 'DELETE' })
-                            
-                            // Step 3: Show success or error message
-                            if (res.ok) {
-                              toast.success('Notification deleted')  // Green popup
-                              refreshData()  // Reload the list
-                            } else {
-                              toast.error('Failed to delete notification')  // Red popup
-                            }
-                          }}
-                          className="shrink-0 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
-                        >
-                          <X className="w-4 h-4" />
-                          <span className="hidden sm:inline sm:ml-1">Delete</span>
-                        </Button>
-                      </div>
-                      {/* Badges row: Shows priority, event type, category, module */}
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {/* Priority badge (low/medium/high/urgent) with color coding */}
-                        <Badge className={`${priorityColors[notification.priority]} text-xs`}>
-                          {notification.priority}
-                        </Badge>
-                        
-                        {/* Event type badge (what triggered this email - e.g., "order_created", "payment_failed") */}
-                        <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">
-                          {notification.event}
-                        </Badge>
-                        
-                        {/* Category badge (only show if it exists - "&&" means "if this exists, then show this") */}
-                        {/* Legacy field for categorization */}
-                        {notification.category && (
-                          <Badge variant="outline" className="text-xs truncate max-w-[100px] sm:max-w-none">
-                            {notification.category}
-                          </Badge>
-                        )}
-                        
-                        {/* Platform module badge (which part of system sent this - e.g., "orders", "payments") */}
-                        {notification.platform_module && (
-                          <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">
-                            {notification.platform_module}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {/* Recipient information (who we sent this email to) */}
-                    <CardDescription className="mt-2 text-xs sm:text-sm break-all">
-                      <span className="font-medium">To:</span> {notification.recipient_name || notification.recipient_email} 
-                      {/* If we have their name, also show email in parentheses (desktop only) */}
-                      {notification.recipient_name && <span className="hidden sm:inline"> ({notification.recipient_email})</span>}
-                    </CardDescription>
-                  </CardHeader>
-                  {/* Card body - Additional notification details */}
-                  <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                    <div className="space-y-2">
-                      {/* Timestamps - When things happened */}
-                      <div className="flex flex-col gap-1.5 text-xs sm:text-sm text-muted-foreground">
-                        {/* Always show when notification was created */}
-                        <span className="truncate">Created: {formatToEAT(notification.created_at)}</span>
-                        
-                        {/* Only show "Sent" time if it was actually sent */}
-                        {notification.sent_at && (
-                          <span className="truncate">Sent: {formatToEAT(notification.sent_at)}</span>
-                        )}
-                        
-                        {/* Only show "Scheduled" time if it was scheduled */}
-                        {notification.scheduled_at && (
-                          <span className="truncate">Scheduled: {formatToEAT(notification.scheduled_at)}</span>
-                        )}
-                      </div>
-                      {/* Error message box (only shows if there was an error) */}
-                      {notification.error_message && (
-                        <div className="text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded break-words">
-                          <span className="font-semibold">Error:</span> {notification.error_message}
+                        {/* Recipient information (who we sent this email to) */}
+                        <CardDescription className="mt-2 text-xs sm:text-sm break-all">
+                          <span className="font-medium">To:</span> {notification.recipient_name || notification.recipient_email}
+                          {/* If we have their name, also show email in parentheses (desktop only) */}
+                          {notification.recipient_name && <span className="hidden sm:inline"> ({notification.recipient_email})</span>}
+                        </CardDescription>
+                      </CardHeader>
+                      {/* Card body - Additional notification details */}
+                      <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                        <div className="space-y-2">
+                          {/* Timestamps - When things happened */}
+                          <div className="flex flex-col gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                            {/* Always show when notification was created */}
+                            <span className="truncate">Created: {formatToEAT(notification.created_at)}</span>
+
+                            {/* Only show "Sent" time if it was actually sent */}
+                            {notification.sent_at && (
+                              <span className="truncate">Sent: {formatToEAT(notification.sent_at)}</span>
+                            )}
+
+                            {/* Only show "Scheduled" time if it was scheduled */}
+                            {notification.scheduled_at && (
+                              <span className="truncate">Scheduled: {formatToEAT(notification.scheduled_at)}</span>
+                            )}
+                          </div>
+                          {/* Error message box (only shows if there was an error) */}
+                          {notification.error_message && (
+                            <div className="text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded break-words">
+                              <span className="font-semibold">Error:</span> {notification.error_message}
+                            </div>
+                          )}
+
+                          {/* Delivery channels (how we sent it: email, SMS, etc. - Usually just "email") */}
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                            <span className="text-xs sm:text-sm truncate">
+                              Channels: {notification.channels.join(', ')}
+                            </span>
+                          </div>
+
+                          {/* Action button link (if this notification has a clickable action) */}
+                          {notification.action_url && (
+                            <div>
+                              {/* URL to go to when clicked - opens in new tab for security */}
+                              <a
+                                href={notification.action_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-xs sm:text-sm text-blue-600 hover:underline"
+                              >
+                                <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                Open action
+                              </a>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      
-                      {/* Delivery channels (how we sent it: email, SMS, etc. - Usually just "email") */}
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">
-                          Channels: {notification.channels.join(', ')}
-                        </span>
-                      </div>
-                      
-                      {/* Action button link (if this notification has a clickable action) */}
-                      {notification.action_url && (
-                        <div>
-                          {/* URL to go to when clicked - opens in new tab for security */}
-                          <a
-                            href={notification.action_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center text-xs sm:text-sm text-blue-600 hover:underline"
-                          >
-                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                            Open action
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
                   ))}
-                
+
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <Card className="overflow-hidden">
@@ -1257,251 +1249,251 @@ export default function NotificationsPage() {
                 </CardHeader>
                 <AccordionContent>
                   <CardContent className="space-y-6 pt-2">
-              {/* Bank Transfer Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    🏦 Bank Transfer Details
-                  </h3>
-                  <Button
-                    type="button"
-                    variant={excludedFields.has('bank') ? 'outline' : 'default'}
-                    size="sm"
-                    onClick={() => {
-                      const newExcluded = new Set(excludedFields)
-                      if (newExcluded.has('bank')) {
-                        newExcluded.delete('bank')
-                      } else {
-                        newExcluded.add('bank')
-                      }
-                      setExcludedFields(newExcluded)
-                    }}
-                    className={`h-8 px-4 rounded-full ${excludedFields.has('bank') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                  >
-                    {excludedFields.has('bank') ? '❌ Excluded' : 'Included'}
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bank_name">Bank Name</Label>
-                    <Input
-                      id="bank_name"
-                      value={paymentDetails.bank_name}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, bank_name: e.target.value }))}
-                      placeholder="e.g., CRDB Bank"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account_number">Bank Account Number</Label>
-                    <Input
-                      id="account_number"
-                      value={paymentDetails.account_number}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_number: e.target.value }))}
-                      placeholder="e.g., 0123456789"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account_name">Account Name</Label>
-                    <Input
-                      id="account_name"
-                      value={paymentDetails.account_name}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_name: e.target.value }))}
-                      placeholder="e.g., TISCO MARKET LTD"
-                    />
-                  </div>
-                </div>
-              </div>
+                    {/* Bank Transfer Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                          🏦 Bank Transfer Details
+                        </h3>
+                        <Button
+                          type="button"
+                          variant={excludedFields.has('bank') ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => {
+                            const newExcluded = new Set(excludedFields)
+                            if (newExcluded.has('bank')) {
+                              newExcluded.delete('bank')
+                            } else {
+                              newExcluded.add('bank')
+                            }
+                            setExcludedFields(newExcluded)
+                          }}
+                          className={`h-8 px-4 rounded-full ${excludedFields.has('bank') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {excludedFields.has('bank') ? '❌ Excluded' : 'Included'}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="bank_name">Bank Name</Label>
+                          <Input
+                            id="bank_name"
+                            value={paymentDetails.bank_name}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, bank_name: e.target.value }))}
+                            placeholder="e.g., CRDB Bank"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="account_number">Bank Account Number</Label>
+                          <Input
+                            id="account_number"
+                            value={paymentDetails.account_number}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_number: e.target.value }))}
+                            placeholder="e.g., 0123456789"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="account_name">Account Name</Label>
+                          <Input
+                            id="account_name"
+                            value={paymentDetails.account_name}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, account_name: e.target.value }))}
+                            placeholder="e.g., TISCO MARKET LTD"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Mobile Money Section */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 border-b pb-2">
-                  📱 Mobile Money Details
-                </h3>
-                
-                {/* M-Pesa */}
-                <div className="bg-green-50 p-4 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-green-900">M-Pesa</h4>
-                    <Button
-                      type="button"
-                      variant={excludedFields.has('mpesa') ? 'outline' : 'default'}
-                      size="sm"
-                      onClick={() => {
-                        const newExcluded = new Set(excludedFields)
-                        if (newExcluded.has('mpesa')) {
-                          newExcluded.delete('mpesa')
-                        } else {
-                          newExcluded.add('mpesa')
-                        }
-                        setExcludedFields(newExcluded)
-                      }}
-                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('mpesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                    >
-                      {excludedFields.has('mpesa') ? '❌ Excluded' : 'Included'}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mpesa_number">M-Pesa Number</Label>
-                    <Input
-                      id="mpesa_number"
-                      value={paymentDetails.mpesa_number}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, mpesa_number: e.target.value }))}
-                      placeholder="e.g., +255 7XX XXX XXX or 07XX XXX XXX"
-                    />
-                  </div>
-                </div>
+                    {/* Mobile Money Section */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 border-b pb-2">
+                        📱 Mobile Money Details
+                      </h3>
 
-                {/* Tigo Pesa */}
-                <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-blue-900">Tigo Pesa</h4>
-                    <Button
-                      type="button"
-                      variant={excludedFields.has('tigo_pesa') ? 'outline' : 'default'}
-                      size="sm"
-                      onClick={() => {
-                        const newExcluded = new Set(excludedFields)
-                        if (newExcluded.has('tigo_pesa')) {
-                          newExcluded.delete('tigo_pesa')
-                        } else {
-                          newExcluded.add('tigo_pesa')
-                        }
-                        setExcludedFields(newExcluded)
-                      }}
-                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('tigo_pesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                    >
-                      {excludedFields.has('tigo_pesa') ? '❌ Excluded' : 'Included'}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tigo_pesa_number">Tigo Pesa Number</Label>
-                    <Input
-                      id="tigo_pesa_number"
-                      value={paymentDetails.tigo_pesa_number}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, tigo_pesa_number: e.target.value }))}
-                      placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
-                    />
-                  </div>
-                </div>
+                      {/* M-Pesa */}
+                      <div className="bg-green-50 p-4 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-green-900">M-Pesa</h4>
+                          <Button
+                            type="button"
+                            variant={excludedFields.has('mpesa') ? 'outline' : 'default'}
+                            size="sm"
+                            onClick={() => {
+                              const newExcluded = new Set(excludedFields)
+                              if (newExcluded.has('mpesa')) {
+                                newExcluded.delete('mpesa')
+                              } else {
+                                newExcluded.add('mpesa')
+                              }
+                              setExcludedFields(newExcluded)
+                            }}
+                            className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('mpesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                          >
+                            {excludedFields.has('mpesa') ? '❌ Excluded' : 'Included'}
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="mpesa_number">M-Pesa Number</Label>
+                          <Input
+                            id="mpesa_number"
+                            value={paymentDetails.mpesa_number}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, mpesa_number: e.target.value }))}
+                            placeholder="e.g., +255 7XX XXX XXX or 07XX XXX XXX"
+                          />
+                        </div>
+                      </div>
 
-                {/* Airtel Money */}
-                <div className="bg-red-50 p-4 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-red-900">Airtel Money</h4>
-                    <Button
-                      type="button"
-                      variant={excludedFields.has('airtel_money') ? 'outline' : 'default'}
-                      size="sm"
-                      onClick={() => {
-                        const newExcluded = new Set(excludedFields)
-                        if (newExcluded.has('airtel_money')) {
-                          newExcluded.delete('airtel_money')
-                        } else {
-                          newExcluded.add('airtel_money')
-                        }
-                        setExcludedFields(newExcluded)
-                      }}
-                      className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('airtel_money') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                    >
-                      {excludedFields.has('airtel_money') ? '❌ Excluded' : 'Included'}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="airtel_money_number">Airtel Money Number</Label>
-                    <Input
-                      id="airtel_money_number"
-                      value={paymentDetails.airtel_money_number}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, airtel_money_number: e.target.value }))}
-                      placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
-                    />
-                  </div>
-                </div>
-              </div>
+                      {/* Tigo Pesa */}
+                      <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-blue-900">Tigo Pesa</h4>
+                          <Button
+                            type="button"
+                            variant={excludedFields.has('tigo_pesa') ? 'outline' : 'default'}
+                            size="sm"
+                            onClick={() => {
+                              const newExcluded = new Set(excludedFields)
+                              if (newExcluded.has('tigo_pesa')) {
+                                newExcluded.delete('tigo_pesa')
+                              } else {
+                                newExcluded.add('tigo_pesa')
+                              }
+                              setExcludedFields(newExcluded)
+                            }}
+                            className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('tigo_pesa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                          >
+                            {excludedFields.has('tigo_pesa') ? '❌ Excluded' : 'Included'}
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tigo_pesa_number">Tigo Pesa Number</Label>
+                          <Input
+                            id="tigo_pesa_number"
+                            value={paymentDetails.tigo_pesa_number}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, tigo_pesa_number: e.target.value }))}
+                            placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
+                          />
+                        </div>
+                      </div>
 
-              {/* LIPA Number */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    💳 LIPA Number
-                  </h3>
-                  <Button
-                    type="button"
-                    variant={excludedFields.has('lipa') ? 'outline' : 'default'}
-                    size="sm"
-                    onClick={() => {
-                      const newExcluded = new Set(excludedFields)
-                      if (newExcluded.has('lipa')) {
-                        newExcluded.delete('lipa')
-                      } else {
-                        newExcluded.add('lipa')
-                      }
-                      setExcludedFields(newExcluded)
-                    }}
-                    className={`h-8 px-4 rounded-full ${excludedFields.has('lipa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                  >
-                    {excludedFields.has('lipa') ? '❌ Excluded' : 'Included'}
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lipa_number">LIPA Number</Label>
-                  <Input
-                    id="lipa_number"
-                    value={paymentDetails.lipa_number}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, lipa_number: e.target.value }))}
-                    placeholder="e.g., 888xxx"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Optional: Business short code or LIPA number for Till/Paybill payments
-                  </p>
-                </div>
-              </div>
+                      {/* Airtel Money */}
+                      <div className="bg-red-50 p-4 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-red-900">Airtel Money</h4>
+                          <Button
+                            type="button"
+                            variant={excludedFields.has('airtel_money') ? 'outline' : 'default'}
+                            size="sm"
+                            onClick={() => {
+                              const newExcluded = new Set(excludedFields)
+                              if (newExcluded.has('airtel_money')) {
+                                newExcluded.delete('airtel_money')
+                              } else {
+                                newExcluded.add('airtel_money')
+                              }
+                              setExcludedFields(newExcluded)
+                            }}
+                            className={`h-7 px-3 text-xs rounded-full ${excludedFields.has('airtel_money') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                          >
+                            {excludedFields.has('airtel_money') ? '❌ Excluded' : 'Included'}
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="airtel_money_number">Airtel Money Number</Label>
+                          <Input
+                            id="airtel_money_number"
+                            value={paymentDetails.airtel_money_number}
+                            onChange={(e) => setPaymentDetails(prev => ({ ...prev, airtel_money_number: e.target.value }))}
+                            placeholder="e.g., +255 6XX XXX XXX or 06XX XXX XXX"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Additional Instructions */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    📝 Additional Instructions
-                  </h3>
-                  <Button
-                    type="button"
-                    variant={excludedFields.has('instructions') ? 'outline' : 'default'}
-                    size="sm"
-                    onClick={() => {
-                      const newExcluded = new Set(excludedFields)
-                      if (newExcluded.has('instructions')) {
-                        newExcluded.delete('instructions')
-                      } else {
-                        newExcluded.add('instructions')
-                      }
-                      setExcludedFields(newExcluded)
-                    }}
-                    className={`h-8 px-4 rounded-full ${excludedFields.has('instructions') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
-                  >
-                    {excludedFields.has('instructions') ? '❌ Excluded' : 'Included'}
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="payment_instructions">Additional Payment Instructions</Label>
-                  <Textarea
-                    id="payment_instructions"
-                    value={paymentDetails.payment_instructions}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, payment_instructions: e.target.value }))}
-                    placeholder="Professional payment instructions will guide customers on next steps..."
-                    rows={8}
-                  />
-                </div>
-              </div>
+                    {/* LIPA Number */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                          💳 LIPA Number
+                        </h3>
+                        <Button
+                          type="button"
+                          variant={excludedFields.has('lipa') ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => {
+                            const newExcluded = new Set(excludedFields)
+                            if (newExcluded.has('lipa')) {
+                              newExcluded.delete('lipa')
+                            } else {
+                              newExcluded.add('lipa')
+                            }
+                            setExcludedFields(newExcluded)
+                          }}
+                          className={`h-8 px-4 rounded-full ${excludedFields.has('lipa') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {excludedFields.has('lipa') ? '❌ Excluded' : 'Included'}
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lipa_number">LIPA Number</Label>
+                        <Input
+                          id="lipa_number"
+                          value={paymentDetails.lipa_number}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, lipa_number: e.target.value }))}
+                          placeholder="e.g., 888xxx"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Optional: Business short code or LIPA number for Till/Paybill payments
+                        </p>
+                      </div>
+                    </div>
 
-              {/* Save Button */}
-              <div className="flex justify-end pt-4 border-t">
-                <Button
-                  onClick={savePaymentDetails}
-                  disabled={isSavingPaymentDetails}
-                  size="lg"
-                >
-                  {isSavingPaymentDetails ? 'Saving...' : 'Save Payment Details'}
-                </Button>
-              </div>
+                    {/* Additional Instructions */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                          📝 Additional Instructions
+                        </h3>
+                        <Button
+                          type="button"
+                          variant={excludedFields.has('instructions') ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => {
+                            const newExcluded = new Set(excludedFields)
+                            if (newExcluded.has('instructions')) {
+                              newExcluded.delete('instructions')
+                            } else {
+                              newExcluded.add('instructions')
+                            }
+                            setExcludedFields(newExcluded)
+                          }}
+                          className={`h-8 px-4 rounded-full ${excludedFields.has('instructions') ? 'text-red-600 border-red-300' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {excludedFields.has('instructions') ? '❌ Excluded' : 'Included'}
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="payment_instructions">Additional Payment Instructions</Label>
+                        <Textarea
+                          id="payment_instructions"
+                          value={paymentDetails.payment_instructions}
+                          onChange={(e) => setPaymentDetails(prev => ({ ...prev, payment_instructions: e.target.value }))}
+                          placeholder="Professional payment instructions will guide customers on next steps..."
+                          rows={8}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="flex justify-end pt-4 border-t">
+                      <Button
+                        onClick={savePaymentDetails}
+                        disabled={isSavingPaymentDetails}
+                        size="lg"
+                      >
+                        {isSavingPaymentDetails ? 'Saving...' : 'Save Payment Details'}
+                      </Button>
+                    </div>
 
                     {/* Info Box */}
                     <div className="bg-blue-50 p-4 rounded-lg">
@@ -1601,7 +1593,7 @@ export default function NotificationsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select 
+                <Select
                   value={manualNotification.priority}
                   onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') =>
                     setManualNotification(prev => ({ ...prev, priority: value }))
@@ -1619,7 +1611,7 @@ export default function NotificationsPage() {
                 </Select>
               </div>
 
-              <Button 
+              <Button
                 onClick={sendManualNotification}
                 disabled={!manualNotification.recipient_email || !manualNotification.title || !manualNotification.message || isSendingNotification}
                 className="w-full"
@@ -1731,64 +1723,64 @@ export default function NotificationsPage() {
                       </p>
                     )}
                     <div className="space-y-2">
-                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-h-48 overflow-y-auto">
-                      <Button
-                        type="button"
-                        variant={selectedEvents.has('all') ? 'default' : 'outline'}
-                        size="sm"
-                        disabled={newRecipient.assigned_product_ids.length > 0}
-                        className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3"
-                        onClick={() => {
-                          if (newRecipient.assigned_product_ids.length > 0) return // Don't allow changes when product filter is active
-                          
-                          if (selectedEvents.has('all')) {
-                            // When deselecting "All Events", clear selection to allow individual category selection
-                            setSelectedEvents(new Set())
-                            setNewRecipient(prev => ({ ...prev, notification_categories: [] }))
-                          } else {
-                            // When selecting "All Events", clear other selections and set to 'all'
-                            setSelectedEvents(new Set(['all']))
-                            setNewRecipient(prev => ({ ...prev, notification_categories: ['all'] }))
-                          }
-                        }}
-                      >
-                        All Events
-                      </Button>
-                      {NOTIFICATION_EVENTS.map((category) => (
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-h-48 overflow-y-auto">
                         <Button
-                          key={category}
                           type="button"
-                          variant={selectedEvents.has(category) ? 'default' : 'outline'}
+                          variant={selectedEvents.has('all') ? 'default' : 'outline'}
                           size="sm"
-                          disabled={selectedEvents.has('all') || newRecipient.assigned_product_ids.length > 0}
-                          className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3 col-span-1"
+                          disabled={newRecipient.assigned_product_ids.length > 0}
+                          className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3"
                           onClick={() => {
-                            const newSelected = new Set(selectedEvents)
-                            newSelected.delete('all') // Remove 'all' when selecting specific events
-                            
-                            if (newSelected.has(category)) {
-                              newSelected.delete(category)
+                            if (newRecipient.assigned_product_ids.length > 0) return // Don't allow changes when product filter is active
+
+                            if (selectedEvents.has('all')) {
+                              // When deselecting "All Events", clear selection to allow individual category selection
+                              setSelectedEvents(new Set())
+                              setNewRecipient(prev => ({ ...prev, notification_categories: [] }))
                             } else {
-                              newSelected.add(category)
+                              // When selecting "All Events", clear other selections and set to 'all'
+                              setSelectedEvents(new Set(['all']))
+                              setNewRecipient(prev => ({ ...prev, notification_categories: ['all'] }))
                             }
-                            
-                            setSelectedEvents(newSelected)
-                            const categories = Array.from(newSelected)
-                            // Don't automatically fall back to 'all' - let user make empty selection
-                            setNewRecipient(prev => ({ ...prev, notification_categories: categories }))
                           }}
                         >
-                          {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          All Events
                         </Button>
-                      ))}
+                        {NOTIFICATION_EVENTS.map((category) => (
+                          <Button
+                            key={category}
+                            type="button"
+                            variant={selectedEvents.has(category) ? 'default' : 'outline'}
+                            size="sm"
+                            disabled={selectedEvents.has('all') || newRecipient.assigned_product_ids.length > 0}
+                            className="text-xs sm:text-sm min-h-[32px] px-2 sm:px-3 col-span-1"
+                            onClick={() => {
+                              const newSelected = new Set(selectedEvents)
+                              newSelected.delete('all') // Remove 'all' when selecting specific events
+
+                              if (newSelected.has(category)) {
+                                newSelected.delete(category)
+                              } else {
+                                newSelected.add(category)
+                              }
+
+                              setSelectedEvents(newSelected)
+                              const categories = Array.from(newSelected)
+                              // Don't automatically fall back to 'all' - let user make empty selection
+                              setNewRecipient(prev => ({ ...prev, notification_categories: categories }))
+                            }}
+                          >
+                            {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Selected: {selectedEvents.has('all') ? 'All Events' :
+                          Array.from(selectedEvents).map(c =>
+                            c.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                          ).join(', ') || 'None (will default to All Events)'}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Selected: {selectedEvents.has('all') ? 'All Events' : 
-                        Array.from(selectedEvents).map(c => 
-                          c.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-                        ).join(', ') || 'None (will default to All Events)'}
-                    </div>
-                  </div>
                   </div>
                 </div>
               </div>
@@ -1800,8 +1792,8 @@ export default function NotificationsPage() {
                     const res = await fetch('/api/admin/notifications/recipients', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        email: newRecipient.email, 
+                      body: JSON.stringify({
+                        email: newRecipient.email,
                         name: newRecipient.name,
                         department: newRecipient.department || undefined,
                         notification_categories: newRecipient.assigned_product_ids.length > 0 ? [] : (newRecipient.notification_categories.length > 0 ? newRecipient.notification_categories : ['all']),
@@ -1875,8 +1867,8 @@ export default function NotificationsPage() {
                               <div className="flex flex-wrap gap-1">
                                 {r.notification_categories.map((cat) => (
                                   <Badge key={cat} variant="secondary" className="text-xs whitespace-nowrap">
-                                    {cat === 'all' 
-                                      ? 'All Events' 
+                                    {cat === 'all'
+                                      ? 'All Events'
                                       : cat.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
                                     }
                                   </Badge>
