@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (tags && Array.isArray(tags)) {
       for (const tag of tags) {
         try {
-          revalidateTag(tag)
+          revalidateTag(tag, 'default')
           results.push({ type: 'server-tag', key: tag, status: 'success' })
           console.log(`✅ Server cache tag invalidated: ${tag}`)
         } catch (error) {
@@ -60,15 +60,15 @@ export async function POST(req: NextRequest) {
     try {
       if (tags?.includes('products') || tags?.includes('featured-products')) {
         console.log('🔄 Auto-invalidating client-side product caches')
-        
+
         // Clear all product-related client caches
         cache.delete('products:all')
         cache.delete('products:9')
         cache.delete('products:20')
-        cache.delete('featured:all') 
+        cache.delete('featured:all')
         cache.delete('featured:9')
         cache.delete('featured:6')
-        
+
         results.push({ type: 'client-cache', key: 'auto:products:*', status: 'success' })
         console.log('✅ Auto-invalidated client product caches')
       }
@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('💥 Cache invalidation API error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Internal server error during cache invalidation',
         timestamp: new Date().toISOString()
       },
@@ -119,7 +119,7 @@ export async function GET() {
     },
     availableTags: [
       'products - Main products listing',
-      'featured-products - Featured products listing', 
+      'featured-products - Featured products listing',
       'category:${id} - Category-specific products',
       'product:${id} - Individual product pages',
       'homepage - Homepage cached content',

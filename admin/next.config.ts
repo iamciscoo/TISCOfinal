@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import path from "path";
+
 
 const nextConfig: NextConfig = {
   images: {
@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@supabase/supabase-js'],
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production'
-    
+
     return [
       {
         source: '/(.*)',
@@ -63,7 +63,7 @@ const nextConfig: NextConfig = {
             value: 'nosniff',
           },
           {
-            key: 'X-Frame-Options', 
+            key: 'X-Frame-Options',
             value: 'DENY',
           },
           {
@@ -155,16 +155,7 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
-  },
-  webpack: (config) => {
-    // Ensure the '@' alias resolves to the src directory in all environments
-    config.resolve = config.resolve || {}
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "@": path.resolve(__dirname, "src"),
-    }
-    return config
-  },
+  }
 };
 
 export default nextConfig;

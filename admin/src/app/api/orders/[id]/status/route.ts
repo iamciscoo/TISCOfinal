@@ -14,7 +14,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => ({} as Partial<{ status: OrderStatus; reason?: string } >));
+    const body = await req.json().catch(() => ({} as Partial<{ status: OrderStatus; reason?: string }>));
     const status = body.status;
 
     const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -75,14 +75,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     const updates: Record<string, unknown> = deliveredViaRpc
       ? {
-          ...(combinedNotes ? { notes: combinedNotes } : {}),
-          updated_at: new Date().toISOString(),
-        }
+        ...(combinedNotes ? { notes: combinedNotes } : {}),
+        updated_at: new Date().toISOString(),
+      }
       : {
-          status,
-          ...(combinedNotes ? { notes: combinedNotes } : {}),
-          updated_at: new Date().toISOString(),
-        };
+        status,
+        ...(combinedNotes ? { notes: combinedNotes } : {}),
+        updated_at: new Date().toISOString(),
+      };
 
     const { data, error } = await supabase
       .from('orders')
@@ -94,15 +94,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     // Invalidate caches for orders across admin and client
     try {
-      revalidateTag('orders');
-      revalidateTag('admin:orders');
-      revalidateTag(`order:${id}`);
+      revalidateTag('orders', 'default');
+      revalidateTag('admin:orders', 'default');
+      revalidateTag(`order:${id}`, 'default');
       const orderData = data as Record<string, unknown> & { user_id?: string }
       if (orderData?.user_id) {
-        revalidateTag(`user-orders:${orderData.user_id}`);
+        revalidateTag(`user-orders:${orderData.user_id}`, 'default');
       }
       // Payments caches may depend on order status
-      revalidateTag('payments');
+      revalidateTag('payments', 'default');
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e);
     }

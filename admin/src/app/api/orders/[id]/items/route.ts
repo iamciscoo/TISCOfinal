@@ -45,9 +45,9 @@ export async function POST(
 
     // Invalidate order caches
     try {
-      revalidateTag('admin:orders')
-      revalidateTag('orders')
-      revalidateTag(`order:${orderId}`)
+      revalidateTag('admin:orders', 'default')
+      revalidateTag('orders', 'default')
+      revalidateTag(`order:${orderId}`, 'default')
     } catch (e) {
       console.warn('Revalidation warning:', e)
     }

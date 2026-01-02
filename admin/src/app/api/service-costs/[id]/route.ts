@@ -13,7 +13,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       return NextResponse.json({ error: "Missing 'id' parameter" }, { status: 400 });
     }
 
-      const { data: cost, error } = await supabase
+    const { data: cost, error } = await supabase
       .from("service_booking_costs")
       .select(`*, service_booking_cost_items(*)`)
       .eq("booking_id", id)
@@ -69,7 +69,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       ...cost,
       items: cost.service_booking_cost_items || []
     };
-    
+
     return NextResponse.json({ data: transformedCost }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
@@ -213,17 +213,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     // Revalidate booking-related caches to sync list and edit pages
     try {
-      revalidateTag('service-bookings');
-      revalidateTag('admin:service-bookings');
-      revalidateTag(`service-booking:${bookingId}`);
-    } catch {}
+      revalidateTag('service-bookings', 'default');
+      revalidateTag('admin:service-bookings', 'default');
+      revalidateTag(`service-booking:${bookingId}`, 'default');
+    } catch { }
 
     // Transform the data to match expected structure in PATCH response
     const transformedCost = {
       ...cost,
       items: cost.service_booking_cost_items || []
     };
-    
+
     return NextResponse.json({ data: transformedCost }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";

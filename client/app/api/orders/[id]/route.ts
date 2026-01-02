@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: Params) {
   const resolvedParams = await params
   try {
     const user = await getUser()
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -115,7 +115,7 @@ export async function PATCH(req: Request, { params }: Params) {
       .from('orders')
       .select('status, user_id')
       .eq('id', resolvedParams.id)
-    
+
     const existingOrder = existingOrderData?.[0]
 
     if (!existingOrder) {
@@ -146,9 +146,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
     // Revalidate caches for this order and user's orders list
     try {
-      revalidateTag('orders')
-      revalidateTag(`order:${resolvedParams.id}`)
-      revalidateTag(`user-orders:${user.id}`)
+      revalidateTag('orders', 'default')
+      revalidateTag(`order:${resolvedParams.id}`, 'default')
+      revalidateTag(`user-orders:${user.id}`, 'default')
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e)
     }

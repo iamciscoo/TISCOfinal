@@ -96,7 +96,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         const errObj = firstAttempt.error as { code?: string; message?: string }
         code = errObj?.code
         message = errObj?.message ?? ''
-      } catch {}
+      } catch { }
       const missingPaidAt = code === '42703' || /paid_at.*does not exist/i.test(message)
       const paymentStatusConstraint = code === '23514' || /payment_status.*check/i.test(message) || /violates.*check constraint/i.test(message)
       const paymentStatusEnumInvalid = code === '22P02' || /invalid input value for enum/i.test(message)
@@ -117,7 +117,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             const errObj2 = retry.error as { code?: string; message?: string }
             code2 = errObj2?.code
             message2 = errObj2?.message ?? ''
-          } catch {}
+          } catch { }
           const missingPaymentStatus2 = code2 === '42703' || /payment_status.*does not exist/i.test(message2)
           const paymentStatusConstraint2 = code2 === '23514' || /payment_status.*check/i.test(message2) || /violates.*check constraint/i.test(message2)
           const paymentStatusEnumInvalid2 = code2 === '22P02' || /invalid input value for enum/i.test(message2)
@@ -138,13 +138,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             data = final.data
             // Return success but include a warning about schema
             try {
-              revalidateTag('admin:orders');
-              revalidateTag('orders');
-              revalidateTag(`order:${id}`);
+              revalidateTag('admin:orders', 'default');
+              revalidateTag('orders', 'default');
+              revalidateTag(`order:${id}`, 'default');
               const orderData = data as Record<string, unknown> & { user_id?: string }
-              if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`);
-              revalidateTag('payments');
-            } catch {}
+              if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`, 'default');
+              revalidateTag('payments', 'default');
+            } catch { }
             return NextResponse.json({ data, warning: "orders.payment_status issue (missing/constraint/enum). Only order status was updated. Please run the migration 2025-08-27_orders_payment_status_unify.sql to add/align 'payment_status' and 'paid_at'." }, { status: 200 })
           }
           return NextResponse.json({ error: retry.error.message }, { status: 500 })
@@ -178,13 +178,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     // Revalidate caches so client account reflects admin updates immediately
     try {
-      revalidateTag('admin:orders');
-      revalidateTag('orders');
-      revalidateTag(`order:${id}`);
+      revalidateTag('admin:orders', 'default');
+      revalidateTag('orders', 'default');
+      revalidateTag(`order:${id}`, 'default');
       const orderData = data as Record<string, unknown> & { user_id?: string }
-      if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`);
+      if (orderData?.user_id) revalidateTag(`user-orders:${orderData.user_id}`, 'default');
       // Payments caches
-      revalidateTag('payments');
+      revalidateTag('payments', 'default');
     } catch (e) {
       console.warn('Admin revalidation warning:', e);
     }
@@ -208,11 +208,11 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       .from("order_items")
       .delete()
       .eq("order_id", id);
-    
+
     if (itemsError) {
       console.error('Failed to delete order_items:', itemsError);
-      return NextResponse.json({ 
-        error: `Failed to delete order items: ${itemsError.message}` 
+      return NextResponse.json({
+        error: `Failed to delete order items: ${itemsError.message}`
       }, { status: 500 });
     }
 
@@ -221,7 +221,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       .from("payment_sessions")
       .delete()
       .eq("order_id", id);
-    
+
     if (sessionsError) {
       console.error('Failed to delete payment_sessions:', sessionsError);
       // Continue even if this fails - might not exist
@@ -232,7 +232,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       .from("payment_transactions")
       .delete()
       .eq("order_id", id);
-    
+
     if (transactionsError) {
       console.error('Failed to delete payment_transactions:', transactionsError);
       // Continue even if this fails - might not exist
@@ -253,9 +253,9 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
     // Revalidate broad tags after deletion (order-specific and list caches)
     try {
-      revalidateTag('admin:orders');
-      revalidateTag('orders');
-      revalidateTag(`order:${id}`);
+      revalidateTag('admin:orders', 'default');
+      revalidateTag('orders', 'default');
+      revalidateTag(`order:${id}`, 'default');
     } catch (e) {
       console.warn('Admin revalidation warning:', e);
     }

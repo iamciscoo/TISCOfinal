@@ -65,8 +65,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       return addCorsHeaders(NextResponse.json({ error: 'Customer not found' }, { status: 404 }))
     }
 
-    const customerName = userData.first_name && userData.last_name 
-      ? `${userData.first_name} ${userData.last_name}` 
+    const customerName = userData.first_name && userData.last_name
+      ? `${userData.first_name} ${userData.last_name}`
       : 'Customer'
 
     // Update order payment status
@@ -121,15 +121,15 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // Invalidate caches
     try {
-      revalidateTag('orders')
-      revalidateTag('admin:orders')
-      revalidateTag(`order:${id}`)
-      revalidateTag(`user-orders:${orderData.user_id}`)
+      revalidateTag('orders', 'default')
+      revalidateTag('admin:orders', 'default')
+      revalidateTag(`order:${id}`, 'default')
+      revalidateTag(`user-orders:${orderData.user_id}`, 'default')
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e)
     }
 
-    return addCorsHeaders(NextResponse.json({ 
+    return addCorsHeaders(NextResponse.json({
       order: updatedOrder,
       message: 'Order marked as paid and notifications sent'
     }, { status: 200 }))

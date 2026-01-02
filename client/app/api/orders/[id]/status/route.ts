@@ -19,7 +19,7 @@ type CurrentOrderRow = {
 }
 
 export async function PATCH(
-  req: NextRequest, 
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
@@ -71,8 +71,8 @@ export async function PATCH(
     }
 
     if (!allowedTransitions[currentStatus]?.includes(status)) {
-      return NextResponse.json({ 
-        error: `Cannot change status from ${currentStatus} to ${status}` 
+      return NextResponse.json({
+        error: `Cannot change status from ${currentStatus} to ${status}`
       }, { status: 400 })
     }
 
@@ -140,17 +140,17 @@ export async function PATCH(
 
     // Invalidate caches across client and admin
     try {
-      revalidateTag('orders')
-      revalidateTag('admin:orders')
-      revalidateTag(`order:${id}`)
-      revalidateTag(`user-orders:${user.id}`)
+      revalidateTag('orders', 'default')
+      revalidateTag('admin:orders', 'default')
+      revalidateTag(`order:${id}`, 'default')
+      revalidateTag(`user-orders:${user.id}`, 'default')
     } catch (e) {
       console.warn('Revalidation error (non-fatal):', e)
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       order,
-      message: `Order status updated to ${status}` 
+      message: `Order status updated to ${status}`
     }, { status: 200 })
 
   } catch (error: unknown) {

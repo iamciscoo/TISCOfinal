@@ -53,7 +53,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }>));
 
     const updates: Record<string, unknown> = {};
-    
+
     // Handle scheduled_date conversion to preferred_date/preferred_time
     if ('scheduled_date' in body && body.scheduled_date) {
       const scheduledDate = new Date(body.scheduled_date);
@@ -62,7 +62,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         updates.preferred_time = scheduledDate.toTimeString().split(' ')[0]; // HH:MM:SS
       }
     }
-    
+
     // Handle direct preferred_date/preferred_time updates
     if ('preferred_date' in body) updates.preferred_date = body.preferred_date;
     if ('preferred_time' in body) updates.preferred_time = body.preferred_time;
@@ -100,13 +100,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
     // Revalidate caches for service bookings
     try {
-      revalidateTag('service-bookings');
-      revalidateTag('admin:service-bookings');
-      revalidateTag(`service-booking:${id}`);
+      revalidateTag('service-bookings', 'default');
+      revalidateTag('admin:service-bookings', 'default');
+      revalidateTag(`service-booking:${id}`, 'default');
       if ((data as any)?.user_id) {
-        revalidateTag(`user-service-bookings:${(data as any).user_id}`);
+        revalidateTag(`user-service-bookings:${(data as any).user_id}`, 'default');
       }
-    } catch {}
+    } catch { }
     return NextResponse.json({ data }, { status: 200 });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';
@@ -145,10 +145,10 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     try {
-      revalidateTag('service-bookings');
-      revalidateTag('admin:service-bookings');
-      revalidateTag(`service-booking:${id}`);
-    } catch {}
+      revalidateTag('service-bookings', 'default');
+      revalidateTag('admin:service-bookings', 'default');
+      revalidateTag(`service-booking:${id}`, 'default');
+    } catch { }
     return new Response(null, { status: 204 });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unexpected error';

@@ -11,7 +11,7 @@ export async function GET() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message)
-    
+
     // No caching for real-time admin dashboard
     const response = NextResponse.json({ data }, { status: 200 });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -27,18 +27,18 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { 
-      user_id, 
-      customer_name, 
-      customer_email, 
+    const {
+      user_id,
+      customer_name,
+      customer_email,
       customer_phone,
-      status, 
-      payment_method, 
-      payment_status, 
-      shipping_address, 
-      notes, 
-      currency, 
-      total_amount 
+      status,
+      payment_method,
+      payment_status,
+      shipping_address,
+      notes,
+      currency,
+      total_amount
     } = body ?? {};
 
     // For guest orders, we need at least customer_name and shipping_address
@@ -75,10 +75,10 @@ export async function POST(req: Request) {
 
     // Invalidate admin order caches and relevant entity tags
     try {
-      revalidateTag('admin:orders')
-      revalidateTag('orders')
-      if (data?.id) revalidateTag(`order:${data.id}`)
-      if (user_id) revalidateTag(`user-orders:${user_id}`)
+      revalidateTag('admin:orders', 'default')
+      revalidateTag('orders', 'default')
+      if (data?.id) revalidateTag(`order:${data.id}`, 'default')
+      if (user_id) revalidateTag(`user-orders:${user_id}`, 'default')
     } catch (e) {
       console.warn('Admin revalidation warning:', e)
     }

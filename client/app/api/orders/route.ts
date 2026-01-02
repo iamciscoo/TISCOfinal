@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       currency = 'TZS',          // Currency code (default: Tanzanian Shilling)
       notes                       // Optional order notes or special instructions
     } = body
-    
+
     /**
      * Extract optional structured delivery fields from checkout form
      * These fields are used for user profile synchronization and address management
@@ -149,18 +149,18 @@ export async function POST(req: Request) {
     const first_name_input: string | undefined = typeof body?.first_name === 'string' ? body.first_name.trim() : undefined
     const last_name_input: string | undefined = typeof body?.last_name === 'string' ? body.last_name.trim() : undefined
     const country_input: string | undefined = typeof body?.country === 'string' ? body.country.trim() : undefined
-    
+
     // Use address_line_1 or fall back to place field for address composition
     const address_line_1_value = address_line_1_input || place_input
 
-    logger.debug('Order request body', { 
-      itemCount: items?.length, 
-      payment_method, 
-      currency, 
+    logger.debug('Order request body', {
+      itemCount: items?.length,
+      payment_method,
+      currency,
       hasShippingAddress: !!shipping_address,
-      user_id: user.id 
+      user_id: user.id
     })
-    
+
     // Validate that order contains at least one item
     if (!items || !Array.isArray(items) || items.length === 0) {
       logger.warn('Order creation failed: No items provided', { userId: user.id })
@@ -224,30 +224,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: productsErr.message }, { status: 500 })
     }
 
-    type ProductRow = { 
-      id: string; 
-      name: string; 
-      price: number; 
+    type ProductRow = {
+      id: string;
+      name: string;
+      price: number;
       stock_quantity: number | null;
       is_deal?: boolean | null;
       deal_price?: number | null;
       original_price?: number | null;
     }
     const productsDataTyped = (productsData || []) as ProductRow[]
-    const productMap = new Map<string, { 
-      id: string; 
-      name: string; 
-      price: number; 
+    const productMap = new Map<string, {
+      id: string;
+      name: string;
+      price: number;
       stock_quantity?: number | null;
       is_deal?: boolean | null;
       deal_price?: number | null;
     }>()
     for (const p of productsDataTyped) {
       // Use deal_price if product is a deal, otherwise use regular price
-      const actualPrice = (p.is_deal && typeof p.deal_price === 'number') 
-        ? p.deal_price 
+      const actualPrice = (p.is_deal && typeof p.deal_price === 'number')
+        ? p.deal_price
         : Number(p.price) || 0
-      
+
       productMap.set(p.id, {
         id: p.id,
         name: p.name,
@@ -279,7 +279,7 @@ export async function POST(req: Request) {
     // Get user profile from our database for proper user data
     const userProfile = await getUserProfile(user.id)
     const emailValue = userProfile?.email || user.email || email_input
-    
+
     logger.debug('User sync data', {
       user_id: user.id,
       email: emailValue,
@@ -290,7 +290,7 @@ export async function POST(req: Request) {
       city: city_input ?? null,
       country: country_input ?? null,
     })
-    
+
     if (emailValue) {
       const { error: userUpsertError } = await supabase
         .from('users')
@@ -307,7 +307,7 @@ export async function POST(req: Request) {
           city: city_input ?? null,
           country: country_input ?? null,
         }, { onConflict: 'id' })
-      
+
       if (userUpsertError) {
         logger.error('User upsert failed', userUpsertError, { userId: user.id })
       } else {
@@ -379,7 +379,7 @@ export async function POST(req: Request) {
       payment_method,
       items_count: validatedItems.length
     })
-    
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -399,7 +399,7 @@ export async function POST(req: Request) {
       logger.error('Order creation failed', orderError, { userId: user.id })
       return NextResponse.json({ error: orderError.message }, { status: 500 })
     }
-    
+
     logger.info('Order created successfully', { orderId: order.id, userId: user.id })
 
     // Create order items with server-verified prices
@@ -421,7 +421,7 @@ export async function POST(req: Request) {
       await supabase.from('orders').delete().eq('id', order.id)
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
-    
+
     logger.info('Order items created successfully', { orderId: order.id, count: orderItems.length })
 
     // Reduce stock quantities for ordered products
@@ -432,21 +432,21 @@ export async function POST(req: Request) {
         p_product_id: item.product_id,
         p_quantity: item.quantity
       })
-      
+
       if (stockError) {
-        logger.error('Stock reduction failed - rolling back order', stockError, { 
-          orderId: order.id, 
+        logger.error('Stock reduction failed - rolling back order', stockError, {
+          orderId: order.id,
           productId: item.product_id,
-          quantity: item.quantity 
+          quantity: item.quantity
         })
-        
+
         // Rollback: Delete order items and order
         await supabase.from('order_items').delete().eq('order_id', order.id)
         await supabase.from('orders').delete().eq('id', order.id)
-        
-        return NextResponse.json({ 
+
+        return NextResponse.json({
           error: 'Failed to reserve stock. Please try again or contact support if the issue persists.',
-          details: stockError.message 
+          details: stockError.message
         }, { status: 409 })
       }
     }
@@ -464,9 +464,9 @@ export async function POST(req: Request) {
 
     // Invalidate caches for this user's orders and this order
     try {
-      revalidateTag('orders')
-      revalidateTag(`user-orders:${user.id}`)
-      revalidateTag(`order:${order.id}`)
+      revalidateTag('orders', 'default')
+      revalidateTag(`user-orders:${user.id}`, 'default')
+      revalidateTag(`order:${order.id}`, 'default')
     } catch (e) {
       logger.warn('Cache revalidation error (non-fatal)', { orderId: order.id, error: String(e) })
     }
@@ -585,7 +585,7 @@ export async function GET(req: Request) {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-      
+
       logger.debug('Orders query result', { count: data?.length || 0, hasError: !!error })
       if (error) {
         logger.error('Orders fetch failed', error, { userId: user.id })
