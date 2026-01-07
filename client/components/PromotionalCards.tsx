@@ -1,5 +1,5 @@
 'use client'
- 
+
 // Sleek, compact promotional cards inspired by the provided mock.
 // Desktop: 3-column grid. Mobile: horizontal snap slider.
 import Image from 'next/image'
@@ -57,14 +57,14 @@ const promotionalCards: PromoCard[] = [
 
 export const PromotionalCards = () => {
   return (
-    <section className="py-3 sm:py-10 bg-white relative overflow-hidden mb-3">
+    <section className="py-2 sm:py-4 md:py-6 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop/Tablet Grid */}
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {promotionalCards.map((card, index) => (
-            <Link 
-              key={card.id} 
-              href={card.ctaLink} 
+            <Link
+              key={card.id}
+              href={card.ctaLink}
               className="group block"
             >
               <div

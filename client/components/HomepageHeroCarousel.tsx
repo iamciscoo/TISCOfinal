@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, ShoppingBag, Sparkles, Tag, ArrowRight, Heart, Pause, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingBag, Zap, Tag, ArrowRight, Heart, Pause, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface HeroSlide {
@@ -36,7 +36,7 @@ const heroSlides: HeroSlide[] = [
     image: '/homehero2.jpg',
     cta: 'See What\'s New',
     ctaLink: '/products?category=new',
-    ctaIcon: Sparkles
+    ctaIcon: Zap
   },
   {
     id: 'promotions',
@@ -297,8 +297,8 @@ export const HomepageHeroCarousel = () => {
               key={index}
               onClick={() => goToSlide(index)}
               className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${index === currentSlide
-                  ? 'bg-white scale-110'
-                  : 'bg-white/50 hover:bg-white/75'
+                ? 'bg-white scale-110'
+                : 'bg-white/50 hover:bg-white/75'
                 }`}
               aria-label={`Go to slide ${index + 1}`}
             />

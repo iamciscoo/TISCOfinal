@@ -131,13 +131,13 @@ export default function Home() {
 
         {/* Content Sections Container - Vertical spacing between sections */}
         {/* Reduced vertical spacing for tighter layout */}
-        <div className="w-full space-y-4 sm:space-y-6 md:space-y-10">
+        <div className="w-full space-y-4 sm:space-y-4 md:space-y-6">
+
+          {/* New Arrivals - First after hero */}
+          <NewArrivalsSection />
 
           {/* Promotional Cards - Special deals and category highlights */}
           <PromotionalCards />
-
-          {/* New Arrivals - between promos and rare finds */}
-          <NewArrivalsSection />
 
           {/* Rare Finds Section - Unique/hard-to-find products */}
           <RareFinds />

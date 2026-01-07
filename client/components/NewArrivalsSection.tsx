@@ -75,7 +75,7 @@ export function NewArrivalsSection() {
   const ctaHref = useMemo(() => "/products?category=new&query=New", [])
 
   return (
-    <section aria-labelledby="new-arrivals-heading" className="py-2 sm:py-12 bg-white w-full overflow-hidden">
+    <section aria-labelledby="new-arrivals-heading" className="py-2 sm:py-4 md:py-6 bg-white w-full overflow-hidden">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top banner with image and CTA */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center mb-6 sm:mb-8">
