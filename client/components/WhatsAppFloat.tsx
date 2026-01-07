@@ -14,21 +14,21 @@ export const WhatsAppFloat: React.FC = () => {
       <div className="fixed z-50 transition-all duration-300 bottom-6 left-6 md:bottom-[88px] md:left-auto md:right-6 flex flex-col items-center">
         <div className="relative group/space">
           {/* Pulse effect */}
-          <div className="absolute inset-0 rounded-full bg-[#4070E0] animate-ping opacity-20 group-hover/space:opacity-40 transition-opacity" />
-          <div className="absolute inset-0 rounded-full bg-[#4070E0] animate-pulse opacity-10 group-hover/space:opacity-25 transition-opacity" />
+          <div className="absolute inset-0 rounded-full bg-gray-900 animate-ping opacity-20 group-hover/space:opacity-40 transition-opacity" />
+          <div className="absolute inset-0 rounded-full bg-gray-900 animate-pulse opacity-10 group-hover/space:opacity-25 transition-opacity" />
 
           {/* Tooltip */}
           {showSpaceTooltip && (
-            <div className="absolute bottom-12 left-0 md:left-auto md:right-0 mb-2 px-3 py-2 bg-[#4070E0] text-white text-xs font-bold rounded-xl shadow-xl shadow-[#4070E0]/30 whitespace-nowrap animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300">
+            <div className="absolute bottom-12 left-0 md:left-auto md:right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl shadow-xl shadow-gray-900/30 whitespace-nowrap animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300">
               Visit Your Space
               {/* Arrow - aligned left on mobile, right on desktop */}
-              <div className="absolute top-full left-4 md:left-auto md:right-4 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#4070E0]"></div>
+              <div className="absolute top-full left-4 md:left-auto md:right-4 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
             </div>
           )}
 
           <Link
             href="/account/my-space"
-            className="flex items-center justify-center w-11 h-11 bg-[#4070E0] text-white rounded-full shadow-lg hover:shadow-[#4070E0]/40 transition-all duration-300 hover:scale-110 active:scale-95 relative overflow-hidden ring-2 ring-white/20"
+            className="flex items-center justify-center w-11 h-11 bg-gray-900 text-white rounded-full shadow-lg hover:shadow-gray-900/40 transition-all duration-300 hover:scale-110 active:scale-95 relative overflow-hidden ring-2 ring-white/20"
             onMouseEnter={() => setShowSpaceTooltip(true)}
             onMouseLeave={() => setShowSpaceTooltip(false)}
             aria-label="Visit My Space"

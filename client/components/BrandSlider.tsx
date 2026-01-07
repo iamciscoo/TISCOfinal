@@ -18,9 +18,6 @@ export const BrandSlider = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
         <div className="text-center mb-8 sm:mb-10">
-          <p className="text-sm font-semibold text-green-600 tracking-wider uppercase mb-3">
-            Trusted Brands
-          </p>
           <div className="inline-block">
             <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
               Access Products from
@@ -34,17 +31,17 @@ export const BrandSlider = () => {
             We partner with the world&apos;s leading technology brands to bring you authentic, quality products
           </p>
         </div>
-        
+
         <div className="brand-slider relative overflow-hidden">
           <div className="h-[60px]">
             <div className="track flex items-center gap-8 md:gap-12 h-full will-change-transform">
               {logos.map((logo, idx) => {
                 const isMicrosoftOrAMD = logo.alt === 'Microsoft' || logo.alt === 'AMD'
-                const logoWidth = isMicrosoftOrAMD 
-                  ? 'w-[210px] sm:w-[220px]' 
+                const logoWidth = isMicrosoftOrAMD
+                  ? 'w-[210px] sm:w-[220px]'
                   : 'w-[160px] sm:w-[180px]'
                 const logoHeight = isMicrosoftOrAMD ? 'h-[135px]' : 'h-full'
-                
+
                 return (
                   <div
                     key={`${logo.alt}-${idx}`}

@@ -24,11 +24,10 @@
  * WHAT'S ON THIS PAGE?
  * 1. Hero Carousel - Big sliding banners at the top
  * 2. Promotional Cards - Special deals and categories
- * 3. Rare Finds Section - Unique/hard-to-find products
- * 4. Featured Products - Best selling items
- * 5. Brand Slider - Logo carousel of brands we sell
- * 6. Services Promo - PC building, repairs, office setup
- * 7. Services Preview - Detailed service offerings
+ * 3. New Arrivals - Latest products
+ * 4. Rare Finds Section - Unique/hard-to-find products
+ * 5. Featured Products - Best selling items
+ * 6. Brand Slider - Logo carousel of brands we sell
  * 
  * CONNECTED FILES:
  * - layout.tsx (wraps this page with navigation and providers)
@@ -94,17 +93,9 @@ const FeaturedProducts = dynamic(() => import("@/components/FeaturedProducts").t
 // Brand Slider - Carousel showing logos of brands we sell
 import { BrandSlider } from "@/components/BrandSlider"
 
-// Services Promo Grid - Showcase our service offerings
-// Shows while loading: Gray pulsing box (h-96 = height of 24rem)
-const ServicesPromoGrid = dynamic(() => import("@/components/ServicesPromoGrid").then(mod => ({ default: mod.ServicesPromoGrid })), {
-  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
-})
+// NOTE: ServicesPromoGrid and ServicesPreview have been archived
+// They are preserved in components/archived/ if needed in the future
 
-// Services Preview - Detailed view of services (repairs, PC building, etc.)
-// Shows while loading: Gray pulsing box (h-96 = height of 24rem)
-const ServicesPreview = dynamic(() => import("@/components/ServicesPreview").then(mod => ({ default: mod.ServicesPreview })), {
-  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
-})
 
 /**
  * HOME PAGE COMPONENT
@@ -153,14 +144,6 @@ export default function Home() {
 
           {/* Featured Products - Grid of popular items */}
           <FeaturedProducts />
-
-          {/* Services Promo Grid - Centered with padding */}
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <ServicesPromoGrid />
-          </div>
-
-          {/* Services Preview - Detailed service info */}
-          <ServicesPreview />
 
           {/* Brand Slider - Logos of brands we sell (moved to bottom for trust signal) */}
           <BrandSlider />

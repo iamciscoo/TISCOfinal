@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { ToastAction } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Eye, EyeOff, Check, X } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Check, X, Mail } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
 
 interface AuthModalProps {
@@ -28,6 +28,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showEmailForm, setShowEmailForm] = useState(false)
 
   const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth()
   const { toast } = useToast()
@@ -55,6 +56,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     setFirstName('')
     setLastName('')
     setShowPassword(false)
+    setShowEmailForm(false)
     setError('')
   }
 
@@ -74,9 +76,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     setError('')
     try {
       const { error } = await signInWithGoogle()
-      
+
       if (error) throw error
-      
+
       toast({
         title: "Success",
         description: "Signing in with Google..."
@@ -84,7 +86,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       onClose()
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to sign in with Google"
-      
+
       // Show user-friendly toast for Google sign-in errors
       toast({
         title: "Google sign-in issue",
@@ -92,7 +94,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         variant: "default",
         duration: 6000,
       })
-      
+
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -103,7 +105,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
     e.preventDefault()
     setLoading(true)
     setError('')
-    
+
     // CRITICAL: Force this log to appear - timestamp to verify code is loading
     console.log('🔐🔐🔐 SIGN-IN ATTEMPT STARTED - Build timestamp:', new Date().toISOString())
     console.log('MODE:', mode, 'EMAIL:', email, 'HAS PASSWORD:', !!password)
@@ -112,20 +114,20 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       if (mode === 'signin') {
         console.log('📧 Attempting sign-in with email:', email)
         const { data, error } = await signIn(email, password)
-        
-        console.log('📬 Sign-in response:', { 
-          hasData: !!data, 
-          hasUser: !!data?.user, 
+
+        console.log('📬 Sign-in response:', {
+          hasData: !!data,
+          hasUser: !!data?.user,
           hasSession: !!data?.session,
           hasError: !!error,
-          errorMessage: error?.message 
+          errorMessage: error?.message
         })
-        
+
         // Check for authentication errors first
         if (error) {
           console.error('❌❌❌ SIGN-IN ERROR DETECTED:', error)
           setLoading(false) // Stop loading immediately
-          
+
           // Show user-friendly toast notification with helpful action for new users
           toast({
             title: "Oops! Check your credentials",
@@ -133,7 +135,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
             variant: "default", // Use white background instead of red
             duration: 8000, // Show longer for mobile users to read and act
             action: (
-              <ToastAction 
+              <ToastAction
                 altText="Create account for new users"
                 onClick={() => {
                   console.log('🔄 Sign Up action clicked - closing current modal and opening signup')
@@ -141,12 +143,12 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                   setError('')
                   setLoading(false)
                   onClose()
-                  
+
                   // Small delay to ensure modal closes, then reopen in signup mode
                   setTimeout(() => {
                     console.log('🔄 Reopening modal in signup mode')
                     // Create a new AuthModal instance by triggering a click on a hidden signup button
-                    const signupEvent = new CustomEvent('openSignupModal', { 
+                    const signupEvent = new CustomEvent('openSignupModal', {
                       detail: { email: email } // Pass email to prefill
                     })
                     window.dispatchEvent(signupEvent)
@@ -157,20 +159,20 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               </ToastAction>
             ),
           })
-          
+
           // Also set inline error for modal display
           setError(error.message || 'Invalid email or password. Please check your credentials and try again.')
           console.log('🔒 Error shown via toast and inline - modal should stay open')
           return
         }
-        
+
         // Verify we have valid session data before considering it successful
         if (!data.user || !data.session) {
           console.error('❌ Invalid session data - missing user or session')
           setLoading(false) // Stop loading immediately
           throw new Error('Invalid email or password. Please check your credentials and try again.')
         }
-        
+
         // Only close and show success if sign in was actually successful
         console.log('✅ Sign-in successful! Closing modal...')
         toast({
@@ -195,22 +197,22 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         if (password !== confirmPassword) {
           throw new Error("Passwords don't match")
         }
-        
+
         const { error } = await signUp(email, password, {
           first_name: firstName,
           last_name: lastName
         })
         if (error) throw error
-        
+
         toast({
-          title: "Success", 
+          title: "Success",
           description: "Welcome to TISCO Market! You are now signed in."
         })
         onClose()
       } else if (mode === 'reset') {
         const { error } = await resetPassword(email)
         if (error) throw error
-        
+
         toast({
           title: "Success",
           description: "Password reset email sent! Check your inbox."
@@ -247,8 +249,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   }
 
   return (
-    <Dialog 
-      open={isOpen} 
+    <Dialog
+      open={isOpen}
       onOpenChange={(open) => {
         console.log('🚪 Dialog onOpenChange triggered:', { open, isOpen, loading, error: !!error })
         // Use our handleModalClose which checks for errors
@@ -279,7 +281,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               <FcGoogle className="h-5 w-5 mr-2" />
               Continue with Google
             </Button>
-            
+
             {/* Show Google authentication errors */}
             {error && error.includes('Google') && (
               <div className="text-sm text-red-600 flex items-center gap-2">
@@ -288,20 +290,40 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               </div>
             )}
 
+            {/* OR Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with email
+                <span className="bg-white px-3 text-gray-500 font-medium">
+                  Or
                 </span>
               </div>
             </div>
+
+            {/* Continue with Email Button - Collapsible */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEmailForm(!showEmailForm)}
+              disabled={loading}
+              className="w-full h-11 rounded-full text-base font-medium border-gray-300 hover:bg-gray-50"
+            >
+              <Mail className="h-5 w-5 mr-2 text-gray-600" />
+              Continue with Email
+            </Button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Email Form - Collapsible for signin/signup, always visible for reset */}
+        <form
+          onSubmit={handleSubmit}
+          className={`space-y-4 transition-all duration-300 ease-in-out overflow-hidden ${mode === 'reset' || showEmailForm
+            ? 'max-h-[1000px] opacity-100'
+            : 'max-h-0 opacity-0 pointer-events-none'
+            }`}
+        >
 
           {mode === 'signup' && (
             <div className="grid grid-cols-2 gap-4">
@@ -462,32 +484,55 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
             {getSubmitText()}
           </Button>
 
+          {/* Forgot password - inside form for signin */}
+          {mode === 'signin' && (
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => setMode('reset')}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                Forgot your password?
+              </Button>
+            </div>
+          )}
 
-          <div className="text-center space-y-2">
+          {/* Reset mode - Back to sign in */}
+          {mode === 'reset' && (
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => setMode('signin')}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                Back to sign in
+              </Button>
+            </div>
+          )}
+        </form>
+
+        {/* Account toggle links - Always visible outside form */}
+        {(mode === 'signin' || mode === 'signup') && (
+          <div className="text-center pt-2">
             {mode === 'signin' && (
-              <>
+              <div>
+                <span className="text-sm text-muted-foreground">
+                  Don&apos;t have an account?{' '}
+                </span>
                 <Button
                   type="button"
                   variant="link"
-                  onClick={() => setMode('reset')}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  onClick={() => {
+                    setMode('signup')
+                    setShowEmailForm(false)
+                  }}
+                  className="text-sm p-0 text-blue-600 hover:text-blue-700"
                 >
-                  Forgot your password?
+                  Sign up
                 </Button>
-                <div>
-                  <span className="text-sm text-muted-foreground">
-                    Don&apos;t have an account?{' '}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="link"
-                    onClick={() => setMode('signup')}
-                    className="text-sm p-0 text-blue-600 hover:text-blue-700"
-                  >
-                    Sign up
-                  </Button>
-                </div>
-              </>
+              </div>
             )}
 
             {mode === 'signup' && (
@@ -498,26 +543,18 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                 <Button
                   type="button"
                   variant="link"
-                  onClick={() => setMode('signin')}
+                  onClick={() => {
+                    setMode('signin')
+                    setShowEmailForm(false)
+                  }}
                   className="text-sm p-0 text-blue-600 hover:text-blue-700"
                 >
                   Sign in
                 </Button>
               </div>
             )}
-
-            {mode === 'reset' && (
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => setMode('signin')}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                Back to sign in
-              </Button>
-            )}
           </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   )

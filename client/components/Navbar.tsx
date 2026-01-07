@@ -22,6 +22,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 const MAX_SUGGESTIONS = 8
 
 /**
+ * Product suggestion type for search dropdown
+ */
+interface ProductSuggestion {
+  id: string | number
+  name: string
+  price: number
+  image_url?: string
+  product_images?: Array<{ url?: string; is_main?: boolean }>
+}
+
+/**
  * Navigation bar component with search, authentication, and cart functionality
  * Features:
  * - Responsive design with mobile menu
@@ -34,11 +45,11 @@ export const Navbar = () => {
   // UI state
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
+  const [searchSuggestions, setSearchSuggestions] = useState<ProductSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
-  
+
   // External hooks
   const { user, loading } = useAuth()
   const isLoaded = !loading
@@ -47,13 +58,13 @@ export const Navbar = () => {
   const pathname = usePathname()
   const openCart = useCartStore((s) => s.openCart)
   const cartCount = useCartStore((s) => s.items.reduce((t, i) => t + i.quantity, 0))
-  
+
   // Refs
   const searchRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const touchStartY = useRef<number>(0)
   const touchCurrentY = useRef<number>(0)
-  
+
   // cartCount derived via selector above; remains reactive to store changes
 
   // Debounced search suggestion handler backed by API
@@ -61,7 +72,7 @@ export const Navbar = () => {
     () => debounce(async (query: string) => {
       // Normalize query: trim and remove extra spaces
       const normalizedQuery = query.trim().replace(/\s+/g, ' ')
-      
+
       if (normalizedQuery.length === 0) {
         setShowSuggestions(false)
         setSearchSuggestions([])
@@ -76,11 +87,21 @@ export const Navbar = () => {
           setSearchSuggestions([])
           return
         }
-        const data = await resp.json()
-        const names = (Array.isArray(data) ? data : []).map((p: { name?: string }) => p?.name).filter(Boolean) as string[]
-        const unique = Array.from(new Set(names)).slice(0, MAX_SUGGESTIONS)
-        setSearchSuggestions(unique)
-        setShowSuggestions(unique.length > 0)
+        const result = await resp.json()
+        // Handle both { data: [...] } format and direct array format
+        const products = Array.isArray(result) ? result : (result.data || [])
+        const suggestions: ProductSuggestion[] = products
+          .filter((p: ProductSuggestion) => p?.name)
+          .slice(0, MAX_SUGGESTIONS)
+          .map((p: ProductSuggestion) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            image_url: p.image_url,
+            product_images: p.product_images
+          }))
+        setSearchSuggestions(suggestions)
+        setShowSuggestions(suggestions.length > 0)
       } catch {
         setShowSuggestions(false)
         setSearchSuggestions([])
@@ -101,7 +122,7 @@ export const Navbar = () => {
         setShowSuggestions(false)
       }
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
@@ -198,16 +219,16 @@ export const Navbar = () => {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden'
-      
+
       let hasMoved = false
-      
+
       // Add global touch handlers for swipe up anywhere on page
       const handleGlobalTouchStart = (e: TouchEvent) => {
         touchStartY.current = e.touches[0].clientY
         touchCurrentY.current = e.touches[0].clientY
         hasMoved = false
       }
-      
+
       const handleGlobalTouchMove = (e: TouchEvent) => {
         touchCurrentY.current = e.touches[0].clientY
         const distance = Math.abs(touchStartY.current - touchCurrentY.current)
@@ -216,7 +237,7 @@ export const Navbar = () => {
           hasMoved = true
         }
       }
-      
+
       const handleGlobalTouchEnd = () => {
         const swipeDistance = touchStartY.current - touchCurrentY.current
         // Only close on swipe up if there was actual movement (not a tap)
@@ -228,11 +249,11 @@ export const Navbar = () => {
         touchCurrentY.current = 0
         hasMoved = false
       }
-      
+
       document.addEventListener('touchstart', handleGlobalTouchStart, { passive: true })
       document.addEventListener('touchmove', handleGlobalTouchMove, { passive: true })
       document.addEventListener('touchend', handleGlobalTouchEnd)
-      
+
       return () => {
         document.body.style.overflow = ''
         document.removeEventListener('touchstart', handleGlobalTouchStart)
@@ -296,21 +317,51 @@ export const Navbar = () => {
                 suppressHydrationWarning
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              
+
               {/* Search Suggestions Dropdown */}
               {showSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mt-2 z-[9999] animate-in fade-in-0 zoom-in-95 max-h-[380px] overflow-y-auto">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={`suggestion-${index}`}
-                      className="w-full px-4 py-3 text-left hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 text-sm transition-all duration-150 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 group"
-                      onClick={() => handleSearch(suggestion)}
-                      type="button"
-                    >
-                      <Search className="h-4 w-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0 transition-colors" />
-                      <span className="truncate text-gray-900 group-hover:text-blue-700 font-medium">{suggestion}</span>
-                    </button>
-                  ))}
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mt-2 z-[9999] animate-in fade-in-0 zoom-in-95 max-h-[420px] overflow-y-auto">
+                  {searchSuggestions.map((product) => {
+                    // Get the best image: main product_image first, then image_url, then placeholder
+                    const mainImage = product.product_images?.find(img => img.is_main)?.url
+                      || product.product_images?.[0]?.url
+                      || product.image_url
+                      || '/placeholder.svg'
+
+                    return (
+                      <button
+                        key={`suggestion-${product.id}`}
+                        className="w-full px-3 py-2.5 text-left hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 transition-all duration-150 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 group"
+                        onClick={() => {
+                          router.push(`/product?id=${product.id}`)
+                          setShowSuggestions(false)
+                          setSearchQuery('')
+                        }}
+                        type="button"
+                      >
+                        {/* Product Image */}
+                        <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                          <img
+                            src={mainImage}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/placeholder.svg'
+                            }}
+                          />
+                        </div>
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 group-hover:text-blue-700 truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-xs font-semibold text-blue-600">
+                            TZS {product.price?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
                   {searchQuery && (
                     <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
                       <button
@@ -318,7 +369,7 @@ export const Navbar = () => {
                         onClick={() => handleSearch(searchQuery)}
                         type="button"
                       >
-                        Search for &quot;{searchQuery}&quot;
+                        See all results for &quot;{searchQuery}&quot;
                       </button>
                     </div>
                   )}
@@ -357,15 +408,15 @@ export const Navbar = () => {
             <div className="hidden lg:block">
               <CurrencyToggle />
             </div>
-            
+
             {/* Authentication Section */}
             {!isLoaded ? (
               // Prevent layout shift during authentication initialization
               <div className="hidden sm:block h-9 w-24" aria-hidden="true" />
             ) : isSignedIn ? (
               <div className="flex items-center gap-1 md:gap-2">
-                <Link 
-                  href="/account" 
+                <Link
+                  href="/account"
                   className="hidden lg:inline text-gray-700 hover:text-blue-600 active:text-blue-700 active:scale-95 font-medium transition-all duration-150 text-sm lg:text-base"
                 >
                   Account
@@ -375,18 +426,18 @@ export const Navbar = () => {
                 </span>
               </div>
             ) : (
-              <SignInButton 
-                variant="ghost" 
-                size="sm" 
+              <SignInButton
+                variant="ghost"
+                size="sm"
                 className="hidden sm:flex transition-colors px-2 md:px-3"
               />
             )}
 
             {/* Shopping Cart */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="relative transition-all duration-150 hover:bg-gray-100 active:bg-gray-200 active:scale-95" 
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative transition-all duration-150 hover:bg-gray-100 active:bg-gray-200 active:scale-95"
               onClick={openCart}
               aria-label={`Shopping cart ${mounted && cartCount > 0 ? `with ${cartCount} items` : ''}`}
             >
@@ -405,9 +456,9 @@ export const Navbar = () => {
                   <UserButton afterSignOutUrl="/" />
                 </span>
               ) : (
-                <SignInButton 
-                  variant="ghost" 
-                  size="sm" 
+                <SignInButton
+                  variant="ghost"
+                  size="sm"
                   className="inline-flex sm:hidden"
                 >
                   <User className="h-5 w-5" />
@@ -437,8 +488,8 @@ export const Navbar = () => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ 
-                duration: 0.3, 
+              transition={{
+                duration: 0.3,
                 ease: [0.4, 0.0, 0.2, 1] // Smooth easing
               }}
               className="md:hidden border-t border-gray-200 overflow-hidden"
@@ -446,7 +497,7 @@ export const Navbar = () => {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <motion.nav 
+              <motion.nav
                 className="px-2 pt-2 pb-3 space-y-1"
                 role="navigation"
                 initial={{ y: -20 }}
@@ -454,77 +505,77 @@ export const Navbar = () => {
                 exit={{ y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-              {/* Mobile Currency Toggle */}
-              <div className="px-3 py-2 mb-2">
-                <CurrencyToggle />
-              </div>
+                {/* Mobile Currency Toggle */}
+                <div className="px-3 py-2 mb-2">
+                  <CurrencyToggle />
+                </div>
 
-              {/* Mobile Navigation Links */}
-              <Link
-                href="/products"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
-                onClick={closeMenu}
-              >
-                Shop
-              </Link>
-              <Link
-                href="/services"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
-                onClick={closeMenu}
-              >
-                Services
-              </Link>
-              <Link
-                href="/about"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
-                onClick={closeMenu}
-              >
-                About
-              </Link>
-              <Link
-                href="/contact"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
-                onClick={closeMenu}
-              >
-                Contact
-              </Link>
-
-              {/* Mobile Account Link */}
-              {isLoaded && isSignedIn && (
+                {/* Mobile Navigation Links */}
                 <Link
-                  href="/account"
+                  href="/products"
                   className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
                   onClick={closeMenu}
                 >
-                  Account
+                  Shop
                 </Link>
-              )}
-
-              {/* Mobile Sign In */}
-              {isLoaded && !isSignedIn && (
-                <SignInButton 
-                  className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
-                  variant="ghost"
+                <Link
+                  href="/services"
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
+                  onClick={closeMenu}
                 >
-                  <User className="h-4 w-4 inline mr-2" />
-                  Sign In
-                </SignInButton>
-              )}
+                  Services
+                </Link>
+                <Link
+                  href="/about"
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
+                  onClick={closeMenu}
+                >
+                  About
+                </Link>
+                <Link
+                  href="/contact"
+                  className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
+                  onClick={closeMenu}
+                >
+                  Contact
+                </Link>
+
+                {/* Mobile Account Link */}
+                {isLoaded && isSignedIn && (
+                  <Link
+                    href="/account"
+                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
+                    onClick={closeMenu}
+                  >
+                    Account
+                  </Link>
+                )}
+
+                {/* Mobile Sign In */}
+                {isLoaded && !isSignedIn && (
+                  <SignInButton
+                    className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 active:text-blue-700 active:bg-blue-100 font-medium transition-all duration-150 rounded-md hover:bg-gray-50"
+                    variant="ghost"
+                  >
+                    <User className="h-4 w-4 inline mr-2" />
+                    Sign In
+                  </SignInButton>
+                )}
               </motion.nav>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-      
+
       {/* Loading Progress Bar */}
       {isNavigating && (
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 overflow-hidden">
-          <div 
+          <div
             className="h-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm"
             style={{
               width: '100%',
               animation: 'progressBar 2000ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards'
-            }} 
+            }}
           />
         </div>
       )}
