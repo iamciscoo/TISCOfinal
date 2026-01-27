@@ -33,73 +33,85 @@ export async function DELETE(req: Request) {
     const totalProducts = productIds.length;
 
     // Step 2: Delete related data in correct order (respecting foreign key constraints)
-    
-    // 2a. Delete product_categories junction table entries
-    const { error: categoriesError } = await supabase
-      .from("product_categories")
-      .delete()
-      .in("product_id", productIds);
 
-    if (categoriesError) {
-      console.error("Error deleting product_categories:", categoriesError);
-      return NextResponse.json(
-        { error: "Failed to delete product categories", details: categoriesError.message },
-        { status: 500 }
-      );
+    // Process in batches to avoid URL length limits with large IN() filters
+    const BATCH_SIZE = 200;
+    const chunks: any[][] = [];
+    for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+      chunks.push(productIds.slice(i, i + BATCH_SIZE));
     }
 
-    // 2b. Delete product_images
-    const { error: imagesError } = await supabase
-      .from("product_images")
-      .delete()
-      .in("product_id", productIds);
-
-    if (imagesError) {
-      console.error("Error deleting product_images:", imagesError);
-      return NextResponse.json(
-        { error: "Failed to delete product images", details: imagesError.message },
-        { status: 500 }
-      );
+    // 2a. Delete product_categories junction table entries (batched)
+    for (const ids of chunks) {
+      const { error } = await supabase
+        .from("product_categories")
+        .delete()
+        .in("product_id", ids);
+      if (error) {
+        console.error("Error deleting product_categories batch:", error);
+        return NextResponse.json(
+          { error: "Failed to delete product categories", details: error.message },
+          { status: 500 }
+        );
+      }
     }
 
-    // 2c. Handle order_items - Set product_id to NULL instead of deleting
-    // This preserves order history while removing the product reference
-    const { error: orderItemsError } = await supabase
-      .from("order_items")
-      .update({ product_id: null })
-      .in("product_id", productIds);
-
-    if (orderItemsError) {
-      console.error("Error updating order_items:", orderItemsError);
-      return NextResponse.json(
-        { error: "Failed to update order items", details: orderItemsError.message },
-        { status: 500 }
-      );
+    // 2b. Delete product_images (batched)
+    for (const ids of chunks) {
+      const { error } = await supabase
+        .from("product_images")
+        .delete()
+        .in("product_id", ids);
+      if (error) {
+        console.error("Error deleting product_images batch:", error);
+        return NextResponse.json(
+          { error: "Failed to delete product images", details: error.message },
+          { status: 500 }
+        );
+      }
     }
 
-    // 2d. Delete reviews
-    const { error: reviewsError } = await supabase
-      .from("reviews")
-      .delete()
-      .in("product_id", productIds);
-
-    if (reviewsError) {
-      console.error("Error deleting reviews:", reviewsError);
-      // Continue anyway - reviews table might not exist or be empty
+    // 2c. Handle order_items - Set product_id to NULL instead of deleting (batched)
+    for (const ids of chunks) {
+      const { error } = await supabase
+        .from("order_items")
+        .update({ product_id: null })
+        .in("product_id", ids);
+      if (error) {
+        console.error("Error updating order_items batch:", error);
+        return NextResponse.json(
+          { error: "Failed to update order items", details: error.message },
+          { status: 500 }
+        );
+      }
     }
 
-    // Step 3: Delete all products
-    const { error: deleteError } = await supabase
-      .from("products")
-      .delete()
-      .in("id", productIds);
+    // 2d. Delete reviews (batched; tolerate absence)
+    for (const ids of chunks) {
+      const { error } = await supabase
+        .from("reviews")
+        .delete()
+        .in("product_id", ids);
+      if (error) {
+        console.error("Error deleting reviews batch:", error);
+        // Continue anyway - reviews table might not exist or be empty
+        break;
+      }
+    }
 
-    if (deleteError) {
-      console.error("Error deleting products:", deleteError);
-      return NextResponse.json(
-        { error: "Failed to delete products", details: deleteError.message },
-        { status: 500 }
-      );
+    // Step 3: Delete all products (batched)
+    for (const ids of chunks) {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", ids);
+      if (error) {
+        console.error("Error deleting products batch:", error);
+        return NextResponse.json(
+          { error: "Failed to delete products", details: error.message },
+          { status: 500 }
+        );
+      }
     }
 
     console.log(`✅ Successfully deleted ${totalProducts} products and related data`);
