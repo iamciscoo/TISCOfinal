@@ -60,12 +60,18 @@ export const MobileBottomNav = () => {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[55] bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[55] bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] transform-gpu"
+        style={{ 
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          WebkitTransform: 'translate3d(0,0,0)' // Fix iOS Safari 'detach' flutter
+        }}
         role="navigation"
         aria-label="Mobile navigation"
       >
-        <div className="flex items-end justify-around px-2">
+        {/* Anti-detachment underlay: Covers any gaps created by mobile browser rubber-banding/scroll-bouncing */}
+        <div className="absolute top-full left-0 right-0 h-[150px] bg-white -z-10" aria-hidden="true" />
+
+        <div className="flex items-end justify-around px-2 relative z-10 bg-white">
           {NAV_ITEMS.map(({ href, label, icon: Icon, isCenter }) => {
             const active = isActive(href)
 
