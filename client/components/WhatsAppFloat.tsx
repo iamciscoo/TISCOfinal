@@ -10,8 +10,8 @@ export const WhatsAppFloat: React.FC = () => {
 
   return (
     <>
-      {/* My Space Button - Left on Mobile, Right (Stacked) on Desktop */}
-      <div className="fixed z-50 transition-all duration-300 bottom-6 left-6 md:bottom-[88px] md:left-auto md:right-6 flex flex-col items-center">
+      {/* My Space Button - Hidden on mobile (now in bottom nav), shown on desktop */}
+      <div className="fixed z-50 transition-all duration-300 hidden md:flex md:bottom-[88px] md:right-6 flex-col items-center">
         <div className="relative group/space">
           {/* Pulse effect */}
           <div className="absolute inset-0 rounded-full bg-gray-900 animate-ping opacity-20 group-hover/space:opacity-40 transition-opacity" />
@@ -41,8 +41,8 @@ export const WhatsAppFloat: React.FC = () => {
         </div>
       </div>
 
-      {/* WhatsApp Button - Always Bottom Right */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center">
+      {/* WhatsApp Button - Above bottom nav on mobile, bottom-right on desktop */}
+      <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex flex-col items-center">
         <div className="relative">
           {/* Tooltip */}
           {showWhatsAppTooltip && (

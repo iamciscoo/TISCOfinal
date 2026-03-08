@@ -57,6 +57,7 @@ import AuthSync from '@/components/AuthSync'
 import CartRealtime from '@/components/CartRealtime'
 // Floating WhatsApp button (bottom-right corner on all pages)
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
+import { MobileBottomNav } from '@/components/MobileBottomNav'
 // Global auth modal manager (handles login/signup popups)
 import { GlobalAuthModalManager } from '@/components/auth/GlobalAuthModalManager'
 // Session tracker (tracks user sessions with device and browser info)
@@ -342,7 +343,7 @@ export default async function RootLayout({
       {/* Body element with font variables and styling */}
       {/* antialiased = smooth fonts, overflow-x-hidden = prevent horizontal scroll */}
       {/* ${geistSans.variable} and ${geistMono.variable} = inject CSS font variables */}
-      <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
         
         {/* ========== AUTHENTICATION PROVIDER ========== */}
         {/* Wraps entire app with authentication context */}
@@ -380,6 +381,11 @@ export default async function RootLayout({
             {/* Floating WhatsApp button (bottom-right corner) */}
             {/* Appears on all pages, customers can click to chat */}
             <WhatsAppFloat />
+            
+            {/* ========== MOBILE BOTTOM NAVIGATION ========== */}
+            {/* Fixed bottom nav bar for mobile devices */}
+            {/* Shows Home, Shop, My Space (center FAB), Services, Account */}
+            <MobileBottomNav />
             
             {/* ========== GLOBAL AUTH MODAL MANAGER ========== */}
             {/* Manages login/signup modals that can be triggered from anywhere */}

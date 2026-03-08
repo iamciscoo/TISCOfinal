@@ -294,17 +294,12 @@
     /* Force full width to prevent horizontal scrolling issues */
     width: 100%;
     max-width: 100vw;  /* vw = viewport width (screen width) */
-    overflow-x: hidden; /* Hide any content that overflows horizontally */
   }
   
   /* Body element - the main container for all visible content */
   body {
     /* @apply our theme colors: bg-background = background color, text-foreground = text color */
     @apply bg-background text-foreground;
-    
-    /* Prevent "bounce" effect when scrolling past top/bottom on mobile */
-    /* Improves UX by making the page feel more "app-like" */
-    overscroll-behavior: contain;
     
     /* Optimize font rendering for better readability */
     /* antialiased = smoother font edges */
@@ -470,6 +465,16 @@ body:has(nav[class*="fixed"]) .main-content {
   body:has(nav[class*="fixed"]) main,
   body:has(nav[class*="fixed"]) .main-content {
     padding-top: 4rem;
+  }
+}
+
+/* ========== MOBILE BOTTOM NAVIGATION COMPENSATION ========== */
+
+/* Add bottom padding on mobile to prevent content hiding behind the fixed bottom nav */
+/* The bottom nav is ~64px tall, plus safe area for notched phones */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 4.5rem; /* ~72px to clear bottom nav + safe area */
   }
 }
 

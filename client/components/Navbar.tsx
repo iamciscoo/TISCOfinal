@@ -293,14 +293,7 @@ export const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Centered Shop link */}
-          <Link
-            href="/products"
-            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-900 font-medium hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all duration-150"
-            aria-label="Shop Products"
-          >
-            Shop
-          </Link>
+          {/* Mobile center area intentionally left empty - navigation moved to bottom nav */}
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-xs lg:max-w-md xl:max-w-lg mx-3 lg:mx-6 xl:mx-8">

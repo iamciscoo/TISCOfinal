@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { LoadingSpinner } from '@/components/shared'
 import { AuthModal } from './AuthModal'
@@ -12,6 +13,12 @@ interface AuthGuardProps {
   requireAuth?: boolean
 }
 
+/**
+ * Routes where closing the auth modal redirects to homepage
+ * instead of showing a "must sign in" toast.
+ */
+const REDIRECT_ON_CLOSE_ROUTES = ['/checkout', '/cart']
+
 export function AuthGuard({ 
   children, 
   fallback = <LoadingSpinner />,
@@ -21,6 +28,8 @@ export function AuthGuard({
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [hasShownToast, setHasShownToast] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     // If not loading and no user, show auth modal
@@ -52,6 +61,10 @@ export function AuthGuard({
 
   // If no user, show the content but with auth modal overlay
   if (!user && requireAuth) {
+    const shouldRedirectOnClose = REDIRECT_ON_CLOSE_ROUTES.some(
+      route => pathname.startsWith(route)
+    )
+
     return (
       <>
         {/* Blur the background content */}
@@ -63,14 +76,19 @@ export function AuthGuard({
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => {
-            // Don't allow closing without authentication for protected routes
-            // User must sign in or navigate away
-            toast({
-              title: "Authentication required",
-              description: "You must sign in to access this page.",
-              variant: "default",
-              duration: 4000,
-            })
+            if (shouldRedirectOnClose) {
+              // Redirect to homepage when closing auth modal on checkout/cart
+              setShowAuthModal(false)
+              router.push('/')
+            } else {
+              // For other protected routes, show toast and keep modal open
+              toast({
+                title: "Authentication required",
+                description: "You must sign in to access this page.",
+                variant: "default",
+                duration: 4000,
+              })
+            }
           }}
           defaultMode="signin"
         />
