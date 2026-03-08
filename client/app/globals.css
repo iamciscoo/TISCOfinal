@@ -474,7 +474,7 @@ body:has(nav[class*="fixed"]) .main-content {
 /* The bottom nav is ~64px tall, plus safe area for notched phones */
 @media (max-width: 768px) {
   body {
-    padding-bottom: 4.5rem; /* ~72px to clear bottom nav + safe area */
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

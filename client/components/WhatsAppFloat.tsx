@@ -42,7 +42,10 @@ export const WhatsAppFloat: React.FC = () => {
       </div>
 
       {/* WhatsApp Button - Above bottom nav on mobile, bottom-right on desktop */}
-      <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex flex-col items-center">
+      <div
+        className="fixed right-4 md:bottom-6 md:right-6 z-50 flex flex-col items-center"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="relative">
           {/* Tooltip */}
           {showWhatsAppTooltip && (

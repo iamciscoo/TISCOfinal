@@ -60,11 +60,12 @@ export const MobileBottomNav = () => {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[55] bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[55] bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         role="navigation"
         aria-label="Mobile navigation"
       >
-        <div className="flex items-end justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-end justify-around px-2">
           {NAV_ITEMS.map(({ href, label, icon: Icon, isCenter }) => {
             const active = isActive(href)
 
