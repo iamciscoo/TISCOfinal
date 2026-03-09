@@ -135,7 +135,7 @@ export const MobileBottomNav = () => {
                   className={`text-[11px] mt-0.5 font-medium transition-colors duration-200 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
                     }`}
                 >
-                  {label}
+                  {label === 'Account' && !user && !loading ? 'Sign In' : label}
                 </span>
               </Link>
             )

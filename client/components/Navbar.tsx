@@ -398,7 +398,7 @@ export const Navbar = () => {
           {/* Right Side Icons */}
           <div className="flex items-center space-x-1 md:space-x-2 lg:space-x-3">
             {/* Currency Converter */}
-            <div className="hidden lg:block">
+            <div className="block">
               <CurrencyToggle />
             </div>
 
@@ -443,20 +443,10 @@ export const Navbar = () => {
             </Button>
 
             {/* Mobile Auth Icon (between cart and menu) */}
-            {isLoaded && (
-              isSignedIn ? (
-                <span className="inline-flex sm:hidden">
-                  <UserButton afterSignOutUrl="/" />
-                </span>
-              ) : (
-                <SignInButton
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex sm:hidden"
-                >
-                  <User className="h-5 w-5" />
-                </SignInButton>
-              )
+            {isLoaded && isSignedIn && (
+              <span className="inline-flex sm:hidden">
+                <UserButton afterSignOutUrl="/" />
+              </span>
             )}
 
             {/* Mobile Menu Toggle */}
@@ -498,10 +488,7 @@ export const Navbar = () => {
                 exit={{ y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                {/* Mobile Currency Toggle */}
-                <div className="px-3 py-2 mb-2">
-                  <CurrencyToggle />
-                </div>
+
 
                 {/* Mobile Navigation Links */}
                 <Link
