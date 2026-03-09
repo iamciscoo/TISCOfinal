@@ -75,7 +75,7 @@ export const MobileBottomNav = () => {
         {/* Anti-detachment underlay: Covers any gaps created by mobile browser rubber-banding/scroll-bouncing */}
         <div className="absolute top-full left-0 right-0 h-[150px] bg-white -z-10" aria-hidden="true" />
 
-        <div className="flex items-end justify-around px-2 relative z-10 bg-white">
+        <div className="grid grid-cols-5 items-end relative z-10 bg-white pb-1 pt-0.5 px-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon, isCenter }) => {
             const active = isActive(href)
 
@@ -86,7 +86,7 @@ export const MobileBottomNav = () => {
                   key={href}
                   href={href}
                   onClick={(e) => handleNavClick(e, href)}
-                  className="flex flex-col items-center -mt-5 group"
+                  className="flex flex-col items-center justify-end -mt-5 group w-full"
                   aria-label={label}
                   aria-current={active ? 'page' : undefined}
                 >
@@ -120,7 +120,7 @@ export const MobileBottomNav = () => {
                 href={href}
                 onClick={(e) => handleNavClick(e, href)}
                 className={`
-                  flex flex-col items-center py-2 px-3 min-w-[56px]
+                  flex flex-col items-center justify-end py-1.5 min-w-0 w-full
                   transition-all duration-200 group
                   active:scale-95
                 `}
