@@ -306,6 +306,7 @@ function DealsContent() {
   const totalPages = Math.max(1, Math.ceil(baseCount / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
   const displayedDeals = filteredDeals.slice(startIndex, startIndex + itemsPerPage)
+  const activeFiltersCount = (searchTerm ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (showMostPopular ? 1 : 0)
 
   const handleAddToCart = (deal: Deal) => {
     addItem({
@@ -504,7 +505,11 @@ function DealsContent() {
                     title="Open filters"
                   >
                     <Filter className="h-4 w-4 mr-2" />
-                    Filters
+                    Filters{activeFiltersCount > 0 ? (
+                      <span className="ml-1 rounded-full bg-blue-600 text-white text-[10px] px-1.5 py-0.5">
+                        {activeFiltersCount}
+                      </span>
+                    ) : null}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right">
@@ -516,6 +521,18 @@ function DealsContent() {
                   </div>
                 </SheetContent>
               </Sheet>
+              {activeFiltersCount > 0 ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="lg:hidden border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={handleClearFilters}
+                  aria-label="Clear filters"
+                  title="Clear filters"
+                >
+                  Clear
+                </Button>
+              ) : null}
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"

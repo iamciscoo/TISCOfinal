@@ -630,6 +630,18 @@ function ProductsContent() {
                 </div>
               </SheetContent>
             </Sheet>
+            {activeFiltersCount > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={handleClearFilters}
+                aria-label="Clear filters"
+                title="Clear filters"
+              >
+                Clear
+              </Button>
+            ) : null}
             <Button
               variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="sm"
