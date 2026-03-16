@@ -32,9 +32,11 @@ import Image from 'next/image'
 import { getCategories } from '@/lib/database'
 import { Category } from '@/lib/types'
 
+import { BackToTopButton } from '@/components/BackToTopButton'
 import { LoadingSpinner, VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
 import { Pagination } from '@/components/Pagination'
+import { scrollElementIntoViewWithOffset, scrollToTop } from '@/lib/scroll-utils'
 interface Deal {
   id: string
   name: string
@@ -76,19 +78,11 @@ function DealsContent() {
   const gridRef = useRef<HTMLDivElement | null>(null)
   const prevSheetOpen = useRef(false)
   const [totalDealCount, setTotalDealCount] = useState<number>(0) // Total from database
+  const scrollToGridPosition = useCallback((offset: number) => {
+    scrollElementIntoViewWithOffset(gridRef.current, offset)
+  }, [])
   
   const { addItem } = useCartStore()
-  
-  // Scroll to top ONLY on page 1, otherwise scroll to deals grid
-  useEffect(() => {
-    if (currentPage === 1) {
-      // Page 1 - scroll to absolute top
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      // Other pages - scroll to deals grid (account for navbar + hero)
-      window.scrollTo({ top: 320, behavior: 'smooth' })
-    }
-  }, [currentPage])
   
   // Debounce search term to prevent input focus loss
   useEffect(() => {
@@ -112,14 +106,11 @@ function DealsContent() {
     if (prevSheetOpen.current && !isFilterSheetOpen) {
       const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
       if (isMobile) {
-        const anchor = gridRef.current
-        const offset = 380 // Show filters button, video card, and start of deals grid
-        const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
-        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+        scrollToGridPosition(380)
       }
     }
     prevSheetOpen.current = isFilterSheetOpen
-  }, [isFilterSheetOpen])
+  }, [isFilterSheetOpen, scrollToGridPosition])
   
   // Fetch deals and categories from API
   useEffect(() => {
@@ -344,6 +335,25 @@ function DealsContent() {
     setSortBy('discount')
     setShowMostPopular(false)
     setIsFilterSheetOpen(false)
+  }, [])
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page)
+
+    window.requestAnimationFrame(() => {
+      const isMobile = window.matchMedia('(max-width: 1024px)').matches
+
+      if (isMobile) {
+        scrollToGridPosition(96)
+        return
+      }
+
+      scrollToTop('smooth')
+    })
+  }, [scrollToGridPosition])
+
+  const handleProductNavigation = useCallback(() => {
+    scrollToTop('auto')
   }, [])
 
   // Memoize FiltersPanel JSX to prevent re-creation on every render (which causes input focus loss)
@@ -606,7 +616,7 @@ function DealsContent() {
                         <Card key={deal.id} className="group hover:shadow-lg transition-shadow h-full">
                           <CardContent className={viewMode === 'grid' ? 'p-1.5 sm:p-2 flex h-full flex-col' : 'p-4 flex gap-4'}>
                             {/* Product Image */}
-                            <Link href={`/products/${deal.id}`} className={viewMode === 'grid' 
+                            <Link href={`/products/${deal.id}`} onClick={handleProductNavigation} className={viewMode === 'grid' 
                               ? 'aspect-square bg-gray-100 rounded-md mb-1 sm:mb-2 overflow-hidden relative block' 
                               : 'w-24 h-24 bg-gray-100 rounded-md flex-shrink-0 relative block'
                             }>
@@ -633,7 +643,7 @@ function DealsContent() {
                                 }`}>
                                   {deal.category}
                                 </div>
-                                <Link href={`/products/${deal.id}`}>
+                                <Link href={`/products/${deal.id}`} onClick={handleProductNavigation}>
                                   <h3 className={`font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-tight ${
                                     viewMode === 'grid' ? 'text-[11px] sm:text-sm line-clamp-1 sm:line-clamp-2' : 'text-base line-clamp-2'
                                   }`}>
@@ -706,7 +716,7 @@ function DealsContent() {
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
-                      onPageChange={setCurrentPage}
+                      onPageChange={handlePageChange}
                     />
                   </>
                 )}
@@ -717,6 +727,7 @@ function DealsContent() {
       </div>
 
       <Footer />
+      <BackToTopButton />
       <CartSidebar />
     </div>
   )

@@ -358,7 +358,7 @@ export default async function RootLayout({
             {/* Scrollable content container - prevents bottom nav detachment on mobile */}
             {/* On mobile: absolute container handles scrolling while body stays fixed */}
             {/* On desktop (md:): reverts to normal static layout */}
-            <div className="absolute md:static inset-0 w-full h-full md:h-auto md:min-h-screen overflow-y-auto md:overflow-visible overflow-x-hidden overscroll-y-auto md:overscroll-auto pb-[72px] md:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div data-app-scroll-container="true" className="absolute md:static inset-0 w-full h-full md:h-auto md:min-h-screen overflow-y-auto md:overflow-visible overflow-x-hidden overscroll-y-auto md:overscroll-auto pb-[72px] md:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {children}
             </div>
 
