@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { LoadingSpinner } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 
@@ -26,9 +27,11 @@ export function ProductImagePreview({
   onNavigate,
 }: ProductImagePreviewProps) {
   const [imageError, setImageError] = useState(false)
+  const [imageLoading, setImageLoading] = useState(true)
 
   useEffect(() => {
     setImageError(false)
+    setImageLoading(true)
   }, [imageSrc, open])
 
   return (
@@ -87,14 +90,23 @@ export function ProductImagePreview({
           </Button>
 
           <div className="relative mx-auto aspect-square max-h-[80vh] w-full overflow-hidden rounded-xl">
+            {imageLoading ? (
+              <div className="absolute inset-0 z-[2] flex items-center justify-center bg-black/35 backdrop-blur-sm">
+                <LoadingSpinner size="lg" className="text-white" aria-label="Loading preview image" />
+              </div>
+            ) : null}
             <Image
               src={imageError ? '/circular.svg' : (imageSrc || '/circular.svg')}
               alt={alt}
               fill
-              className="object-contain"
+              className={`object-contain transition-opacity duration-200 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
               sizes="100vw"
               priority
-              onError={() => setImageError(true)}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false)
+                setImageError(true)
+              }}
               unoptimized={imageError}
             />
           </div>
