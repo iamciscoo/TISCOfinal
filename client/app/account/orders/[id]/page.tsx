@@ -49,31 +49,31 @@ type Order = {
 export async function generateStaticParams() {
   try {
     const { createClient } = await import('@supabase/supabase-js')
-    
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE) {
       console.warn('Missing environment variables for orders generateStaticParams, skipping static generation')
       return []
     }
-    
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE
     )
-    
+
     // Fetch recent order IDs to generate static routes
     const { data: orders, error } = await supabase
       .from('orders')
       .select('id')
       .order('created_at', { ascending: false })
       .limit(100) // Reasonable limit for build time
-    
+
     if (error) {
       console.error('Database error in orders generateStaticParams:', error)
       return []
     }
-    
+
     console.log(`Generated static params for ${orders?.length || 0} orders`)
-    
+
     // Return array of params for each order
     return (orders || []).map((order: { id: string }) => ({
       id: order.id,
@@ -91,7 +91,7 @@ export const revalidate = 0 // Always fetch fresh data for order details
 
 async function getOrder(orderId: string, userId: string): Promise<Order | null> {
   console.log(`[Order Details] Fetching order ${orderId} for user ${userId}`)
-  
+
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -115,17 +115,17 @@ async function getOrder(orderId: string, userId: string): Promise<Order | null> 
     .order('is_main', { ascending: false, foreignTable: 'order_items.products.product_images' })
     .order('sort_order', { ascending: true, foreignTable: 'order_items.products.product_images' })
     .single()
-  
+
   if (error) {
     console.error(`[Order Details] Error fetching order ${orderId}:`, error)
     return null
   }
-  
+
   if (!data) {
     console.warn(`[Order Details] No order found with id ${orderId} for user ${userId}`)
     return null
   }
-  
+
   console.log(`[Order Details] Successfully fetched order ${orderId}`)
   return data as Order
 }
@@ -164,13 +164,13 @@ function statusColor(status: string) {
 export default async function OrderDetailsPage({ params }: PageProps) {
   const { id } = await params
   const user = await getUser()
-  
+
   if (!user) {
     notFound()
   }
 
   const order = await getOrder(id, user.id)
-  
+
   if (!order) {
     notFound()
   }
@@ -190,23 +190,25 @@ export default async function OrderDetailsPage({ params }: PageProps) {
           <span className="text-gray-900 truncate">Order #{id.slice(0, 8)}</span>
         </nav>
 
-        {/* Actions Card - Displayed at top on mobile */}
+        {/* Actions Card */}
         <Card className="mb-4 sm:mb-6">
           <CardHeader>
             <CardTitle>Actions</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row gap-3">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center gap-3">
             <DownloadReceiptButton order={order} />
-            <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150" variant="outline">
-              <Link href="/account/orders">Back to Orders</Link>
-            </Button>
-            <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150">
-              <Link href="/products">Continue Shopping</Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:ml-auto">
+              <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150" variant="outline">
+                <Link href="/account/orders">Back to Orders</Link>
+              </Button>
+              <Button asChild className="w-full sm:w-auto active:scale-95 transition-all duration-150">
+                <Link href="/products">Continue Shopping</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Order Details */}
           <Card>
             <CardHeader>
@@ -225,15 +227,15 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                 <div className="truncate"><span className="font-medium">Order ID:</span> <span className="text-xs">{order.id}</span></div>
                 <div><span className="font-medium">Placed on:</span> {formatToEAT(order.created_at)}</div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">Payment:</span> 
-                  <Badge 
+                  <span className="font-medium">Payment:</span>
+                  <Badge
                     variant="secondary"
                     className={
-                      order.payment_status === 'paid' 
-                        ? 'bg-green-100 text-green-800 border-0' 
+                      order.payment_status === 'paid'
+                        ? 'bg-green-100 text-green-800 border-0'
                         : order.payment_status === 'failed'
-                        ? 'bg-red-100 text-red-800 border-0'
-                        : 'bg-yellow-100 text-yellow-800 border-0'
+                          ? 'bg-red-100 text-red-800 border-0'
+                          : 'bg-yellow-100 text-yellow-800 border-0'
                     }
                   >
                     {order.payment_status || 'pending'}

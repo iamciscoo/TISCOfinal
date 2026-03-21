@@ -77,11 +77,11 @@ export function DownloadReceiptButton({ order }: DownloadReceiptButtonProps) {
   }
 
   return (
-    <Button 
-      onClick={handleDownload} 
+    <Button
+      onClick={handleDownload}
       disabled={isDownloading}
       variant="outline"
-      className="w-full"
+      className="w-full sm:w-auto"
     >
       <Download className="mr-2 h-4 w-4" />
       {isDownloading ? 'Generating...' : 'Download Receipt'}

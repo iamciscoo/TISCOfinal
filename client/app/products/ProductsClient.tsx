@@ -25,12 +25,14 @@ import { Footer } from '@/components/Footer'
 import { CartSidebar } from '@/components/CartSidebar'
 import { Product, Category } from '@/lib/types'
 import { ProductCard } from '@/components/shared/ProductCard'
+import { BackToTopButton } from '@/components/BackToTopButton'
 import { CategoryBar } from '@/components/CategoryBar'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { ProductsErrorFallback } from '@/components/ErrorFallbacks'
 import { VideoCard } from '@/components/shared'
 import ShopHero from '@/components/ShopHero'
 import { Pagination } from '@/components/Pagination'
+import { scrollElementIntoViewWithOffset } from '@/lib/scroll-utils'
 
 // Helper: create URL-friendly slug from a string
 const slugify = (s: string = '') =>
@@ -60,17 +62,9 @@ function ProductsContent() {
   const gridRef = useRef<HTMLDivElement | null>(null)
   const prevSheetOpen = useRef(false)
   const [totalProductCount, setTotalProductCount] = useState<number>(0) // Total from database
-
-  // Scroll to top ONLY on page 1, otherwise scroll to products grid
-  useEffect(() => {
-    if (currentPage === 1) {
-      // Page 1 - scroll to absolute top
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      // Other pages - scroll to products grid (account for navbar + hero)
-      window.scrollTo({ top: 320, behavior: 'smooth' })
-    }
-  }, [currentPage])
+  const scrollToGridPosition = useCallback((offset: number) => {
+    scrollElementIntoViewWithOffset(gridRef.current, offset)
+  }, [])
 
   // When mobile filter sheet closes (after user selects/sets filters), scroll to show Filters + Video + Products
   useEffect(() => {
@@ -78,26 +72,20 @@ function ProductsContent() {
       // Only auto-scroll on mobile/tablet to avoid jarring desktop jumps
       const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
       if (isMobile) {
-        const anchor = gridRef.current
-        const offset = 380 // Show filters button, video card, and start of products grid
-        const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
-        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+        scrollToGridPosition(380)
       }
     }
     prevSheetOpen.current = isFilterSheetOpen
-  }, [isFilterSheetOpen])
+  }, [isFilterSheetOpen, scrollToGridPosition])
 
   // Callback for mobile category selection - scroll to products view
   const handleMobileCategorySelect = useCallback(() => {
     // Only auto-scroll on mobile/tablet
     const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
     if (isMobile) {
-      const anchor = gridRef.current
-      const offset = 380 // Show filters button, video card, and start of products grid
-      const top = anchor ? (anchor.getBoundingClientRect().top + window.scrollY - offset) : 180
-      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      scrollToGridPosition(380)
     }
-  }, [])
+  }, [scrollToGridPosition])
 
   // Fetch data
   useEffect(() => {
@@ -428,6 +416,21 @@ function ProductsContent() {
     setIsFilterSheetOpen(false)
   }, [])
 
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page)
+
+    window.requestAnimationFrame(() => {
+      const isMobile = window.matchMedia('(max-width: 1024px)').matches
+
+      if (isMobile) {
+        scrollToGridPosition(96)
+        return
+      }
+
+      window.scrollTo({ top: page === 1 ? 0 : 320, behavior: 'smooth' })
+    })
+  }, [scrollToGridPosition])
+
   const FiltersPanel = useMemo(() => (
     <>
       {/* Search */}
@@ -630,6 +633,18 @@ function ProductsContent() {
                 </div>
               </SheetContent>
             </Sheet>
+            {activeFiltersCount > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={handleClearFilters}
+                aria-label="Clear filters"
+                title="Clear filters"
+              >
+                Clear
+              </Button>
+            ) : null}
             <Button
               variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="sm"
@@ -712,7 +727,7 @@ function ProductsContent() {
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+                    onPageChange={handlePageChange}
                   />
                 </>
               )}
@@ -723,6 +738,7 @@ function ProductsContent() {
       </div>
 
       <Footer />
+      <BackToTopButton />
       <CartSidebar />
     </div>
   )

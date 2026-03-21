@@ -28,6 +28,8 @@ import { LoadingSpinner } from '@/components/shared'
 import { preserveLineBreaks } from '@/lib/text-utils'
 import { ShareModal } from '@/components/ShareModal'
 import { ProductViewTracker } from '@/components/ProductViewTracker'
+import { ProductImagePreview } from '@/components/ProductImagePreview'
+import { scrollToTop } from '@/lib/scroll-utils'
 
 interface ProductDetailProps {
   product: Product
@@ -54,6 +56,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
   const [actualReviews, setActualReviews] = useState<{rating: number}[]>([])
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [thumbnailErrors, setThumbnailErrors] = useState<Set<number>>(new Set())
@@ -91,6 +94,20 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
       : 0
     return { reviewCount, rating }
   }, [actualReviews])
+
+  useEffect(() => {
+    setSelectedImageIndex(0)
+    setIsImagePreviewOpen(false)
+    setImageLoading(false)
+    setImageError(false)
+    setThumbnailErrors(new Set())
+
+    const frame = window.requestAnimationFrame(() => {
+      scrollToTop('auto')
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [product.id])
 
   // Load related products with smart matching: category > brand > random
   useEffect(() => {
@@ -217,6 +234,10 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
       return Math.min(productImages.length - 1, prev + 1)
     })
   }, [productImages.length])
+
+  const handlePreviewOpen = useCallback(() => {
+    setIsImagePreviewOpen(true)
+  }, [])
 
   const handleAddToCart = useCallback(async () => {
     setIsAddingToCart(true)
@@ -374,6 +395,13 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
               }}
               unoptimized={imageError} // Skip optimization for fallback image
             />
+            <button
+              type="button"
+              className="absolute inset-0 z-10 cursor-zoom-in"
+              onClick={handlePreviewOpen}
+              aria-label="Preview product image"
+              data-testid="product-image-preview-trigger"
+            />
             
             
             {/* Image Navigation */}
@@ -382,7 +410,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 p-0"
+                  className="absolute left-4 top-1/2 z-20 transform -translate-y-1/2 w-8 h-8 p-0"
                   onClick={() => handleImageNavigation('prev')}
                   disabled={selectedImageIndex === 0}
                   aria-label="Previous image"
@@ -392,7 +420,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 p-0"
+                  className="absolute right-4 top-1/2 z-20 transform -translate-y-1/2 w-8 h-8 p-0"
                   onClick={() => handleImageNavigation('next')}
                   disabled={selectedImageIndex === productImages.length - 1}
                   aria-label="Next image"
@@ -405,7 +433,7 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
             
             {/* Image counter */}
             {productImages.length > 1 && (
-              <div className="absolute bottom-4 right-4 bg-black/80 text-white px-2.5 py-1 rounded text-sm font-medium">
+              <div className="absolute right-4 bottom-4 z-20 bg-black/80 px-2.5 py-1 rounded text-sm font-medium text-white">
                 {selectedImageIndex + 1} / {productImages.length}
               </div>
             )}
@@ -774,6 +802,15 @@ const ProductDetailComponent = ({ product }: ProductDetailProps) => {
         onClose={() => setIsShareModalOpen(false)}
         productName={product.name}
         productId={String(product.id)}
+      />
+      <ProductImagePreview
+        open={isImagePreviewOpen}
+        onOpenChange={setIsImagePreviewOpen}
+        imageSrc={productImages[selectedImageIndex] || '/circular.svg'}
+        alt={`${product.name} - Preview ${selectedImageIndex + 1}`}
+        currentIndex={selectedImageIndex}
+        totalImages={productImages.length}
+        onNavigate={handleImageNavigation}
       />
     </div>
     </>

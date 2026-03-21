@@ -14,6 +14,7 @@ import { Product } from '@/lib/types'
 import { getImageUrl, getCategoryName, isInStock, getDealPricing } from '@/lib/shared-utils'
 import { useCartStore } from '@/lib/store'
 import { getProductUrl } from '@/lib/url-utils'
+import { scrollToTop } from '@/lib/scroll-utils'
 
 interface ProductCardProps {
   product: Product
@@ -52,6 +53,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   const categoryName = getCategoryName(product)
   const inStock = isInStock(product)
   const { isDeal, currentPrice, originalPrice } = getDealPricing(product)
+  const handleNavigateToProduct = useCallback(() => {
+    scrollToTop('auto')
+  }, [])
 
   // Memoized add to cart handler to prevent unnecessary re-renders
   const handleAddToCart = useCallback(async () => {
@@ -83,7 +87,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           <div className="flex items-stretch">
             {/* Product Image */}
             <div className="relative w-32 h-32 sm:w-48 sm:h-48 flex-shrink-0">
-              <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} className="relative block w-full h-full">
+              <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} className="relative block w-full h-full" onClick={handleNavigateToProduct}>
                 <Image
                   src={imageError ? '/circular.svg' : imageUrl}
                   alt={`${product.name} product image`}
@@ -120,7 +124,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Product Name */}
-              <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`}>
+              <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} onClick={handleNavigateToProduct}>
                 <h3 className="text-xl font-semibold mb-2 hover:text-blue-600 transition-colors line-clamp-2">
                   {product.name}
                 </h3>
@@ -184,7 +188,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
     <Card className={cn("group hover:shadow-xl transition-all duration-300 overflow-hidden h-full", className)}>
       <CardContent className={cn(compact ? "p-1.5 sm:p-2" : "p-3", "flex h-full flex-col")}>
         {/* Product Image Container */}
-        <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} className={cn(
+        <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} onClick={handleNavigateToProduct} className={cn(
           "aspect-square bg-gray-100 rounded-md overflow-hidden relative block",
           compact ? "mb-1 sm:mb-2" : "mb-3"
         )}>
@@ -229,7 +233,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           </Badge>
 
           {/* Product Name */}
-          <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`}>
+          <Link href={getProductUrl(product.name, String(product.id))} aria-label={`View ${product.name} details`} onClick={handleNavigateToProduct}>
             <h3 className={cn(
               "font-semibold mb-0 hover:text-blue-600 transition-colors leading-tight",
               compact ? "text-[11px] sm:text-sm md:text-base line-clamp-1 sm:line-clamp-2" : "text-base line-clamp-2"

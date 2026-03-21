@@ -45,6 +45,10 @@ export const MobileBottomNav = () => {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
+    // Exact match for /account to prevent it lighting up when on /account/my-space
+    if (href === '/account') {
+      return pathname === '/account' || (pathname.startsWith('/account/') && !pathname.startsWith('/account/my-space'))
+    }
     return pathname.startsWith(href)
   }
 
@@ -61,7 +65,7 @@ export const MobileBottomNav = () => {
     <>
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-[55] bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] transform-gpu"
-        style={{ 
+        style={{
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           WebkitTransform: 'translate3d(0,0,0)' // Fix iOS Safari 'detach' flutter
         }}
@@ -71,7 +75,7 @@ export const MobileBottomNav = () => {
         {/* Anti-detachment underlay: Covers any gaps created by mobile browser rubber-banding/scroll-bouncing */}
         <div className="absolute top-full left-0 right-0 h-[150px] bg-white -z-10" aria-hidden="true" />
 
-        <div className="flex items-end justify-around px-2 relative z-10 bg-white">
+        <div className="grid grid-cols-5 items-end relative z-10 bg-white pb-1 pt-0.5 px-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon, isCenter }) => {
             const active = isActive(href)
 
@@ -82,27 +86,26 @@ export const MobileBottomNav = () => {
                   key={href}
                   href={href}
                   onClick={(e) => handleNavClick(e, href)}
-                  className="flex flex-col items-center -mt-5 group"
+                  className="flex flex-col items-center justify-end -mt-5 group w-full"
                   aria-label={label}
                   aria-current={active ? 'page' : undefined}
                 >
                   {/* Elevated circle */}
                   <span
                     className={`
-                      flex items-center justify-center w-14 h-14 rounded-full shadow-lg
+                      flex items-center justify-center w-14 h-14 rounded-full shadow-[0_-2px_6px_rgba(0,0,0,0.1),0_4px_12px_rgba(0,0,0,0.15)] ring-4 ring-white
                       transition-all duration-200
                       ${active
-                        ? 'bg-blue-600 shadow-blue-300/50 scale-105'
-                        : 'bg-gray-900 shadow-gray-400/30 group-active:scale-95'
+                        ? 'bg-blue-600 shadow-blue-300/50 scale-105 ring-blue-50/50'
+                        : 'bg-gray-900 group-active:scale-95'
                       }
                     `}
                   >
                     <Icon className="w-7 h-7 text-white" />
                   </span>
                   <span
-                    className={`text-[10px] mt-1 font-semibold transition-colors duration-200 ${
-                      active ? 'text-blue-600' : 'text-gray-500'
-                    }`}
+                    className={`text-[11px] mt-1 font-semibold transition-colors duration-200 ${active ? 'text-blue-600' : 'text-gray-500'
+                      }`}
                   >
                     {label}
                   </span>
@@ -117,7 +120,7 @@ export const MobileBottomNav = () => {
                 href={href}
                 onClick={(e) => handleNavClick(e, href)}
                 className={`
-                  flex flex-col items-center py-2 px-3 min-w-[56px]
+                  flex flex-col items-center justify-end py-1.5 min-w-0 w-full
                   transition-all duration-200 group
                   active:scale-95
                 `}
@@ -125,16 +128,14 @@ export const MobileBottomNav = () => {
                 aria-current={active ? 'page' : undefined}
               >
                 <Icon
-                  className={`w-6 h-6 transition-colors duration-200 ${
-                    active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
-                  }`}
+                  className={`w-6 h-6 transition-colors duration-200 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
+                    }`}
                 />
                 <span
-                  className={`text-[10px] mt-0.5 font-medium transition-colors duration-200 ${
-                    active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
-                  }`}
+                  className={`text-[11px] mt-0.5 font-medium transition-colors duration-200 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'
+                    }`}
                 >
-                  {label}
+                  {label === 'Account' && !user && !loading ? 'Sign In' : label}
                 </span>
               </Link>
             )

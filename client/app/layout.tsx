@@ -110,43 +110,43 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   // Base URL - used as reference for all relative URLs in metadata
   metadataBase: new URL('https://tiscomarket.store'),
-  
+
   // Page title - shown in browser tab and Google search results
   // Format: "Brand Name - What We Do | Location"
   title: "TISCOマーケット - Online Shop | Tanzania's Online Marketplace",
-  
+
   // Meta description - shown in Google search results under title
   // 150-160 characters optimal (this is what makes people click!)
   description: "TISCO Market - Tanzania's leading online marketplace for quality electronics, gadgets, rare finds, and professional tech services. Electronics, Anime Merch, Sports, Home & Garden, Clothing, Books. Custom PC building, office setup, device repair. Shop with confidence across East Africa.",
-  
+
   // Keywords - helps Google understand what our site is about
   // Includes: brand names, products, services, locations, long-tail keywords
   keywords: [
     // Brand name variations
     "TISCO", "tisco market", "TISCOマーケット", "tiscomarket", "tisco online shop",
-    
+
     // Location-based keywords (critical for local SEO)
-    "Tanzania online shop", "East Africa marketplace", "electronics Tanzania", 
+    "Tanzania online shop", "East Africa marketplace", "electronics Tanzania",
     "online shopping Tanzania", "Dar es Salaam electronics", "Kenya online store",
     "Uganda electronics", "East Africa shopping", "mobile phones Tanzania",
-    
+
     // Product keywords
-    "laptops Tanzania", "gaming Tanzania", "online store Tanzania", 
+    "laptops Tanzania", "gaming Tanzania", "online store Tanzania",
     "e-commerce Tanzania", "shopping Tanzania", "buy online Tanzania",
-    
+
     // Rare finds niche keywords
-    "rare finds Tanzania", "antiques Tanzania", "anime merchandise Tanzania", 
+    "rare finds Tanzania", "antiques Tanzania", "anime merchandise Tanzania",
     "niche products Tanzania", "collectibles Dar es Salaam", "figurines Tanzania",
     "manga Tanzania", "vintage items Tanzania", "unique products Tanzania",
     "hard to find items Tanzania", "specialty electronics Tanzania", "rare tech Tanzania",
-    
+
     // Service keywords (PC building, repairs, etc.)
     "PC building services Tanzania", "computer repair Dar es Salaam", "office setup Tanzania",
     "tech services Tanzania", "device repair Tanzania", "game installation Tanzania",
     "certified technicians Tanzania", "workspace setup Dar es Salaam", "ergonomic office design",
     "professional tech services Tanzania", "system optimization Tanzania"
   ],
-  
+
   // Author and publisher information (brand signals for Google)
   authors: [{ name: "TISCO Market" }],
   creator: "TISCO Market",
@@ -155,7 +155,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,   // Allow Google to index our pages (show in search results)
     follow: true,  // Allow Google to follow our links to other pages
-    
+
     // Special instructions for Google's crawler (Googlebot)
     googleBot: {
       index: true,   // Allow indexing
@@ -165,22 +165,22 @@ export const metadata: Metadata = {
       'max-snippet': -1,               // Show full text snippets (no limit)
     },
   },
-  
+
   // OpenGraph metadata - what appears when shared on Facebook, LinkedIn, WhatsApp
   // This creates the preview card with image, title, and description
   openGraph: {
     type: 'website',  // Type of content (website vs article, product, etc.)
-    
+
     // Support for Swahili language (Tanzania and Kenya)
     alternateLocale: ['sw_TZ', 'sw_KE'],
-    
+
     url: 'https://tiscomarket.store',  // Canonical URL
     siteName: 'TISCOマーケット - Online Shop',  // Site name shown in preview
-    
+
     // Title and description for social media preview card
     title: 'TISCOマーケット - Tanzania\'s Online Marketplace',
     description: 'Shop quality electronics and products across Tanzania and East Africa. Fast delivery, secure payments, authentic products.',
-    
+
     // Images shown in social media preview cards
     images: [
       {
@@ -199,7 +199,7 @@ export const metadata: Metadata = {
       },
     ],
   },
-  
+
   // Twitter Card metadata - special preview for Twitter/X
   // Creates a "large image card" when shared on Twitter
   twitter: {
@@ -218,11 +218,11 @@ export const metadata: Metadata = {
       'sw-TZ': 'https://tiscomarket.store/sw',   // Swahili version (future)
     },
   },
-  
+
   // Site classification - helps search engines categorize us
   category: 'E-commerce',              // Primary category
   classification: 'Online Marketplace', // More specific classification
-  
+
   // Geographic and business metadata (local SEO signals)
   other: {
     // Geographic coordinates for local search
@@ -230,7 +230,7 @@ export const metadata: Metadata = {
     'geo.placename': 'Tanzania',                      // Location name
     'geo.position': '-6.792354;39.208328',           // Latitude;Longitude (Dar es Salaam)
     'ICBM': '-6.792354, 39.208328',                  // Alternative geo format
-    
+
     // Business location data (for local business SEO)
     'business:contact_data:street_address': 'Dar es Salaam, Tanzania',
     'business:contact_data:locality': 'Dar es Salaam',  // City
@@ -278,14 +278,14 @@ export default async function RootLayout({
     // HTML root element with language and scroll settings
     // lang="en" = English language (helps screen readers and search engines)
     // suppressHydrationWarning = prevents React warnings during server→client transition
-    <html lang="en" style={{scrollBehavior: 'smooth'}} data-scroll-behavior="smooth" suppressHydrationWarning>
-      
+    <html lang="en" style={{ scrollBehavior: 'smooth' }} data-scroll-behavior="smooth" suppressHydrationWarning>
+
       {/* ========== HEAD SECTION - Invisible Metadata ========== */}
       {/* Everything in <head> doesn't show on page but is crucial for SEO and functionality */}
       <head>
         {/* Google Analytics - Tracks user behavior and business metrics */}
         <GoogleAnalytics />
-        
+
         {/* SEO Structured Data for rich search results */}
         <OrganizationSchema />
         <WebsiteSchema />
@@ -331,77 +331,45 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "Organization","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],"url": "https://tiscomarket.store","logo": {"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630,"caption": "TISCO Market Logo - Tanzania's Online Marketplace"},"image": [{"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630},{"@type": "ImageObject","url": "https://tiscomarket.store/favicon-512x512.png","width": 512,"height": 512},{"@type": "ImageObject","url": "https://tiscomarket.store/favicon.svg","width": 512,"height": 512}],"description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.","address": {"@type": "PostalAddress","addressLocality": "Dar es Salaam","addressRegion": "Dar es Salaam Region","addressCountry": "TZ"},"contactPoint": {"@type": "ContactPoint","telephone": "+255748624684","contactType": "customer service","email": "support@tiscomarket.store"},"geo": {"@type": "GeoCoordinates","latitude": -6.792354,"longitude": 39.208328},"areaServed": ["Tanzania", "Kenya", "Uganda", "East Africa"],"sameAs": ["https://twitter.com/tiscomarket","https://facebook.com/tiscomarket","https://instagram.com/tiscomarket"]})}} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "WebSite","name": "TISCOマーケット - Online Shop","alternateName": "TISCO Market","url": "https://tiscomarket.store","logo": "https://tiscomarket.store/logo-email.png","image": "https://tiscomarket.store/logo-email.png","potentialAction": {"@type": "SearchAction","target": {"@type": "EntryPoint","urlTemplate": "https://tiscomarket.store/products?query={search_term_string}"},"query-input": "required name=search_term_string"}})}} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "Brand","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "tiscomarket"],"url": "https://tiscomarket.store","logo": {"@type": "ImageObject","url": "https://tiscomarket.store/logo-email.png","width": 1200,"height": 630,"caption": "TISCO Market Logo - Tanzania's Premier Online Marketplace"},"description": "TISCO Market brand - Tanzania's leading online marketplace for electronics, rare finds, and professional tech services","slogan": "No Bullshit. No Excuses. No Fluff. Just What You Need.","aggregateRating": {"@type": "AggregateRating","ratingValue": "4.8","reviewCount": "150"}})}} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context": "https://schema.org","@type": "ElectronicsStore","name": "TISCO Market","alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"],"description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.","url": "https://tiscomarket.store","telephone": "+255748624684","email": "support@tiscomarket.com","address": {"@type": "PostalAddress","addressLocality": "Dar es Salaam","addressRegion": "Dar es Salaam Region","addressCountry": "TZ"},"geo": {"@type": "GeoCoordinates","latitude": -6.792354,"longitude": 39.208328},"openingHours": "Mo-Su 00:00-23:59","areaServed": ["Tanzania", "Kenya", "Uganda"],"priceRange": "$$","paymentAccepted": ["Mobile Money", "Credit Card", "Bank Transfer"],"currenciesAccepted": "TZS"})}} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", "name": "TISCO Market", "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"], "url": "https://tiscomarket.store", "logo": { "@type": "ImageObject", "url": "https://tiscomarket.store/logo-email.png", "width": 1200, "height": 630, "caption": "TISCO Market Logo - Tanzania's Online Marketplace" }, "image": [{ "@type": "ImageObject", "url": "https://tiscomarket.store/logo-email.png", "width": 1200, "height": 630 }, { "@type": "ImageObject", "url": "https://tiscomarket.store/favicon-512x512.png", "width": 512, "height": 512 }, { "@type": "ImageObject", "url": "https://tiscomarket.store/favicon.svg", "width": 512, "height": 512 }], "description": "Tanzania's premier online marketplace for quality electronics, gadgets, and products across East Africa.", "address": { "@type": "PostalAddress", "addressLocality": "Dar es Salaam", "addressRegion": "Dar es Salaam Region", "addressCountry": "TZ" }, "contactPoint": { "@type": "ContactPoint", "telephone": "+255748624684", "contactType": "customer service", "email": "support@tiscomarket.store" }, "geo": { "@type": "GeoCoordinates", "latitude": -6.792354, "longitude": 39.208328 }, "areaServed": ["Tanzania", "Kenya", "Uganda", "East Africa"], "sameAs": ["https://twitter.com/tiscomarket", "https://facebook.com/tiscomarket", "https://instagram.com/tiscomarket"] }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebSite", "name": "TISCOマーケット - Online Shop", "alternateName": "TISCO Market", "url": "https://tiscomarket.store", "logo": "https://tiscomarket.store/logo-email.png", "image": "https://tiscomarket.store/logo-email.png", "potentialAction": { "@type": "SearchAction", "target": { "@type": "EntryPoint", "urlTemplate": "https://tiscomarket.store/products?query={search_term_string}" }, "query-input": "required name=search_term_string" } }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Brand", "name": "TISCO Market", "alternateName": ["TISCOマーケット", "TISCO", "tiscomarket"], "url": "https://tiscomarket.store", "logo": { "@type": "ImageObject", "url": "https://tiscomarket.store/logo-email.png", "width": 1200, "height": 630, "caption": "TISCO Market Logo - Tanzania's Premier Online Marketplace" }, "description": "TISCO Market brand - Tanzania's leading online marketplace for electronics, rare finds, and professional tech services", "slogan": "No Bullshit. No Excuses. No Fluff. Just What You Need.", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "reviewCount": "150" } }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "ElectronicsStore", "name": "TISCO Market", "alternateName": ["TISCOマーケット", "TISCO", "Tisco Market", "tiscomarket"], "description": "Tanzania's leading online marketplace for electronics, gadgets, and quality products with fast delivery across East Africa.", "url": "https://tiscomarket.store", "telephone": "+255748624684", "email": "support@tiscomarket.com", "address": { "@type": "PostalAddress", "addressLocality": "Dar es Salaam", "addressRegion": "Dar es Salaam Region", "addressCountry": "TZ" }, "geo": { "@type": "GeoCoordinates", "latitude": -6.792354, "longitude": 39.208328 }, "openingHours": "Mo-Su 00:00-23:59", "areaServed": ["Tanzania", "Kenya", "Uganda"], "priceRange": "$$", "paymentAccepted": ["Mobile Money", "Credit Card", "Bank Transfer"], "currenciesAccepted": "TZS" }) }} />
       </head>
-      
+
       {/* ========== BODY SECTION - Visible Content ========== */}
       {/* Everything users actually see and interact with */}
-      
+
       {/* Body element with font variables and styling */}
       {/* antialiased = smooth fonts, overflow-x-hidden = prevent horizontal scroll */}
       {/* ${geistSans.variable} and ${geistMono.variable} = inject CSS font variables */}
-      <body className={`antialiased overflow-x-hidden ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-        
+      <body className={`antialiased ${geistSans.variable} ${geistMono.variable} fixed md:static inset-0 w-full h-[100dvh] md:h-auto md:min-h-screen overflow-hidden md:overflow-visible overscroll-none md:overscroll-auto`} suppressHydrationWarning>
+
         {/* ========== AUTHENTICATION PROVIDER ========== */}
         {/* Wraps entire app with authentication context */}
         {/* Makes user login state available to ALL components */}
         {/* Components can access: user, signIn(), signOut(), etc. */}
         <AuthProvider>
-          
-          {/* ========== CURRENCY PROVIDER ========== */}
-          {/* Manages TZS/USD currency selection across site */}
-          {/* Components can access: currency, setCurrency(), formatPrice(), etc. */}
           <CurrencyProvider>
-            
-            {/* ========== AUTH SYNC COMPONENT ========== */}
-            {/* Invisible component that syncs auth state across browser tabs */}
-            {/* If user logs out in one tab, all tabs automatically log out */}
             <AuthSync />
-            
-            {/* ========== CART REALTIME COMPONENT ========== */}
-            {/* Invisible component that syncs cart across tabs */}
-            {/* If user adds item in one tab, other tabs see it instantly */}
             <CartRealtime />
-            
-            {/* ========== SESSION TRACKER COMPONENT ========== */}
-            {/* Tracks user sessions with device, browser, and OS information */}
-            {/* Updates analytics for customer metrics in admin dashboard */}
             <SessionTracker />
-            
-            {/* ========== PAGE CONTENT ========== */}
-            {/* This is where the actual page content renders */}
-            {/* Could be homepage, products page, checkout, etc. */}
-            {/* Changes as user navigates, but everything above stays constant */}
-            {children}
-            
-            {/* ========== WHATSAPP FLOAT BUTTON ========== */}
-            {/* Floating WhatsApp button (bottom-right corner) */}
-            {/* Appears on all pages, customers can click to chat */}
+
+            {/* Scrollable content container - prevents bottom nav detachment on mobile */}
+            {/* On mobile: absolute container handles scrolling while body stays fixed */}
+            {/* On desktop (md:): reverts to normal static layout */}
+            <div data-app-scroll-container="true" className="absolute md:static inset-0 w-full h-full md:h-auto md:min-h-screen overflow-y-auto md:overflow-visible overflow-x-hidden overscroll-y-auto md:overscroll-auto pb-[72px] md:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {children}
+            </div>
+
             <WhatsAppFloat />
-            
-            {/* ========== MOBILE BOTTOM NAVIGATION ========== */}
-            {/* Fixed bottom nav bar for mobile devices */}
-            {/* Shows Home, Shop, My Space (center FAB), Services, Account */}
             <MobileBottomNav />
-            
-            {/* ========== GLOBAL AUTH MODAL MANAGER ========== */}
-            {/* Manages login/signup modals that can be triggered from anywhere */}
-            {/* Handles popups for sign-in, sign-up, password reset */}
             <GlobalAuthModalManager />
-            
           </CurrencyProvider>
-          
-          {/* ========== TOAST NOTIFICATIONS ========== */}
-          {/* Toast notification system (popup messages) */}
-          {/* Shows success messages ("Item added to cart"), errors, etc. */}
-          {/* Must be outside CurrencyProvider to work everywhere */}
+
           <Toaster />
-          
         </AuthProvider>
-        
+
       </body>
     </html>
   );
