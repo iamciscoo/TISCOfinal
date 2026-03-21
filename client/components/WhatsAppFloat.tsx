@@ -11,7 +11,7 @@ export const WhatsAppFloat: React.FC = () => {
   return (
     <>
       {/* My Space Button - Hidden on mobile (now in bottom nav), shown on desktop */}
-      <div className="fixed z-50 transition-all duration-300 hidden md:flex md:bottom-[88px] md:right-6 flex-col items-center">
+      <div className="fixed z-50 transition-all duration-300 hidden md:flex md:bottom-6 md:left-6 flex-col items-center">
         <div className="relative group/space">
           {/* Pulse effect */}
           <div className="absolute inset-0 rounded-full bg-gray-900 animate-ping opacity-20 group-hover/space:opacity-40 transition-opacity" />
@@ -19,10 +19,10 @@ export const WhatsAppFloat: React.FC = () => {
 
           {/* Tooltip */}
           {showSpaceTooltip && (
-            <div className="absolute bottom-12 left-0 md:left-auto md:right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl shadow-xl shadow-gray-900/30 whitespace-nowrap animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300">
+            <div className="absolute bottom-12 left-0 md:right-auto mb-2 px-3 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl shadow-xl shadow-gray-900/30 whitespace-nowrap animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300">
               Visit Your Space
               {/* Arrow - aligned left on mobile, right on desktop */}
-              <div className="absolute top-full left-4 md:left-auto md:right-4 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
+              <div className="absolute top-full left-4 md:right-auto w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
             </div>
           )}
 
@@ -43,8 +43,7 @@ export const WhatsAppFloat: React.FC = () => {
 
       {/* WhatsApp Button - Above bottom nav on mobile, bottom-right on desktop */}
       <div
-        className="fixed right-4 md:bottom-6 md:right-6 z-[60] flex flex-col items-center"
-        style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-6 md:right-6 z-[60] flex flex-col items-center"
       >
         <div className="relative">
           {/* Tooltip */}
