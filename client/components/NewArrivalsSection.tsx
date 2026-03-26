@@ -63,7 +63,7 @@ export function NewArrivalsSection() {
 
   const hasProducts = products.length > 0
   const showArrows = !loading && products.length > 7
-  const desktopCols = Math.min(Math.max(products.length, 1), 7)
+  const desktopCols = 7 // Fixed to 7 so 1-2 items don't stretch across the entire screen
 
   const handleScroll = (dir: "left" | "right") => {
     const el = scrollerRef.current

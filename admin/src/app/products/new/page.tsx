@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { BrandAutocomplete } from "@/components/BrandAutocomplete";
 import React, { useState, useEffect } from "react";
+import { compressImages } from "@/lib/image-compressor";
 import type { Category } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
@@ -463,26 +464,34 @@ const AddProductPage = () => {
                             multiple 
                             disabled={loading}
                             className="hidden"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const files = e.target.files;
                               if (files && files.length > 0) {
                                 const validFiles = Array.from(files).filter(file => {
                                   const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
-                                  const isValidSize = file.size <= 5 * 1024 * 1024;
+                                  const isValidSize = file.size <= 10 * 1024 * 1024;
                                   return isValidType && isValidSize;
                                 });
                                 
                                 if (validFiles.length !== files.length) {
                                   toast({
                                     title: "Warning",
-                                    description: `${files.length - validFiles.length} file(s) skipped (invalid type or >5MB)`,
+                                    description: `${files.length - validFiles.length} file(s) skipped (invalid type or >10MB)`,
                                     variant: "destructive"
                                   });
                                 }
                                 
                                 if (validFiles.length > 0) {
-                                  // Create previews
-                                  const previews = validFiles.map(file => ({
+                                  // Compress images before preview
+                                  toast({
+                                    title: "Optimizing",
+                                    description: `Optimizing ${validFiles.length} image(s)...`
+                                  });
+
+                                  const compressedFiles = await compressImages(validFiles);
+
+                                  // Create previews from compressed files
+                                  const previews = compressedFiles.map(file => ({
                                     file,
                                     url: URL.createObjectURL(file),
                                     id: `${Date.now()}-${Math.random()}`
@@ -490,12 +499,18 @@ const AddProductPage = () => {
                                   setImagePreview(previews);
                                   
                                   const dt = new DataTransfer();
-                                  validFiles.forEach(file => dt.items.add(file));
+                                  compressedFiles.forEach(file => dt.items.add(file));
                                   field.onChange(dt.files);
+
+                                  const originalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+                                  const compressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
+                                  const savedMB = ((originalSize - compressedSize) / 1024 / 1024).toFixed(1);
                                   
                                   toast({
-                                    title: "Images selected",
-                                    description: `${validFiles.length} image(s) ready to upload`
+                                    title: "Images ready",
+                                    description: compressedSize < originalSize
+                                      ? `${compressedFiles.length} image(s) optimized (saved ${savedMB}MB)`
+                                      : `${compressedFiles.length} image(s) ready to upload`
                                   });
                                 } else {
                                   field.onChange(null);

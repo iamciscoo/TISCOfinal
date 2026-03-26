@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { compressImages } from '@/lib/image-compressor'
 
 interface Service {
   id: string
@@ -46,8 +47,13 @@ export default function EditServicePage() {
   const uploadImage = async (file: File) => {
     try {
       setIsUploading(true)
+      
+      // Compress the image before uploading
+      toast({ title: 'Optimizing', description: 'Optimizing image for fast loading...' })
+      const [compressedFile] = await compressImages([file])
+      
       const form = new FormData()
-      form.append('file', file)
+      form.append('file', compressedFile)
       const res = await fetch('/api/uploads/service-image', {
         method: 'POST',
         body: form,

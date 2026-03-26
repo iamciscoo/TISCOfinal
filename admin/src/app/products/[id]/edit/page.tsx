@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { BrandAutocomplete } from "@/components/BrandAutocomplete";
 import React, { useState, useEffect } from "react";
+import { compressImages } from "@/lib/image-compressor";
 import type { Category, Product, ProductImage } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useParams } from 'next/navigation';
@@ -99,8 +100,32 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     } catch {}
   };
 
-  const handleUploadImages = (files: FileList | null) => {
+  const handleUploadImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+
+    // Filter valid files first
+    const validFiles = Array.from(files).filter(file => {
+      const isValidType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
+      const isValidSize = file.size <= 10 * 1024 * 1024;
+      return isValidType && isValidSize;
+    });
+
+    if (validFiles.length === 0) {
+      toast({
+        title: 'Warning',
+        description: 'No valid images selected (must be JPEG/PNG/WebP/GIF, max 10MB)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Compress images before storing
+    toast({
+      title: 'Optimizing',
+      description: `Optimizing ${validFiles.length} image(s)...`,
+    });
+
+    const compressedFiles = await compressImages(validFiles);
     
     // Store files with preview URLs and display order
     const maxOrder = Math.max(
@@ -109,17 +134,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       0
     );
     
-    const newPending = Array.from(files).map((file, idx) => ({
+    const newPending = compressedFiles.map((file, idx) => ({
       file,
       preview: URL.createObjectURL(file),
       id: `pending-${Date.now()}-${Math.random()}`,
       displayOrder: maxOrder + idx + 1
     }));
     setPendingFiles(prev => [...prev, ...newPending]);
+
+    const originalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+    const compressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
+    const savedMB = ((originalSize - compressedSize) / 1024 / 1024).toFixed(1);
     
     toast({ 
-      title: 'Images selected', 
-      description: `${newPending.length} image(s) will be uploaded when you click Update Product` 
+      title: 'Images ready', 
+      description: compressedSize < originalSize
+        ? `${compressedFiles.length} image(s) optimized (saved ${savedMB}MB) — will upload on save`
+        : `${compressedFiles.length} image(s) will be uploaded when you click Update Product`
     });
   };
 
@@ -482,7 +513,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 )}
               </div>
               <p className="text-xs text-gray-600">
-                <span className="font-medium">Supported:</span> JPEG, PNG, WebP, GIF • <span className="font-medium">Max size:</span> 5MB per image
+                <span className="font-medium">Supported:</span> JPEG, PNG, WebP, GIF • <span className="font-medium">Max size:</span> 10MB per image (auto-optimized)
               </p>
 
               {pendingFiles.length > 0 && (
