@@ -94,6 +94,7 @@ export const PromotionalCards = () => {
                       className="object-cover"
                       priority={index === 0}
                       loading={index === 0 ? 'eager' : 'lazy'}
+                      unoptimized
                     />
                   </div>
                 </div>
@@ -130,6 +131,7 @@ export const PromotionalCards = () => {
                         sizes="120px"
                         className="object-cover"
                         loading="lazy"
+                        unoptimized
                       />
                     </div>
                   </div>

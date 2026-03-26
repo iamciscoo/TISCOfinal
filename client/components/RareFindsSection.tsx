@@ -75,6 +75,7 @@ export function RareFindsSection() {
                       className={`object-contain ${PADDING_MOBILE} rounded-full`}
                       loading="lazy"
                       sizes="(max-width: 768px) 112px, 160px"
+                      unoptimized
                     />
                   </div>
                   <div className="mt-2 text-center text-sm font-medium text-gray-900">
@@ -102,6 +103,7 @@ export function RareFindsSection() {
                     className={`object-contain ${PADDING_DESKTOP} rounded-full`}
                     loading="lazy"
                     sizes="160px"
+                    unoptimized
                   />
                 </div>
                 <div className="mt-3 text-sm font-semibold text-gray-900">

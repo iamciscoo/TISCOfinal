@@ -19,7 +19,7 @@ export const AuthPageShell = ({ title, subtitle, children, showHeader = true, sh
         <div className="border-b border-gray-200 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <Image src="/circular.svg" alt="TISCO Market Logo" width={36} height={36} className="w-9 h-9" />
+              <Image src="/circular.svg" alt="TISCO Market Logo" width={36} height={36} className="w-9 h-9" unoptimized />
               <span className="text-lg sm:text-xl font-bold text-gray-900 font-chango">TISCOマーケット</span>
             </Link>
             <div className="text-sm text-gray-500 hidden sm:block">Secure authentication</div>
@@ -65,6 +65,7 @@ export const AuthPageShell = ({ title, subtitle, children, showHeader = true, sh
                   height={900}
                   className="h-[520px] xl:h-[560px] w-full object-cover"
                   priority
+                  unoptimized
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 text-white">

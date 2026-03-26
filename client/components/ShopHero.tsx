@@ -82,6 +82,7 @@ export default function ShopHero({
           alt="Officespace background"
           fill
           priority
+          unoptimized
           className="object-cover object-center pointer-events-none select-none parallax-element"
           style={{
             transform:

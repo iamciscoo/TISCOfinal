@@ -44,13 +44,12 @@ const nextConfig: NextConfig = {
     remotePatterns,
     unoptimized: false,
     formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    deviceSizes: [640, 1080, 1920],
+    imageSizes: [64, 128, 256, 384],
     minimumCacheTTL: 31536000, // Cache images for 1 year
     dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    // Configure image quality values (required for Next.js 16+)
-    qualities: [60, 75, 85, 90, 100],
+    qualities: [75],
     // Increase timeout for large images from Supabase storage
     loader: 'default',
     loaderFile: undefined,

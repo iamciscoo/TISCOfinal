@@ -161,6 +161,7 @@ export const ServicesHeroCarousel = () => {
               willChange: 'transform',
             }}
             priority={index === 0}
+            unoptimized
             onError={(e) => {
               console.error(`Failed to load image: ${slide.image}`)
               // Fallback to a local placeholder image to prevent blank hero

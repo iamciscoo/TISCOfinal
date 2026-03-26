@@ -1253,6 +1253,7 @@ export default function CheckoutPage() {
                           height={200}
                           className="w-full h-24 sm:h-32 object-contain bg-white"
                           priority
+                          unoptimized
                         />
                       </div>
                       <div>
@@ -1606,6 +1607,7 @@ export default function CheckoutPage() {
                     fill
                     sizes="(min-width: 1024px) 320px, 100vw"
                     className="object-cover"
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" aria-hidden="true" />
                   <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">

@@ -26,6 +26,7 @@ export const Footer = () => {
                 width={32}
                 height={32}
                 className="w-8 h-8"
+                unoptimized
               />
               <span className="text-lg sm:text-xl font-bold font-chango">
                 TISCOマーケット

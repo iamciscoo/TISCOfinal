@@ -286,6 +286,7 @@ export const Navbar = () => {
                 height={40}
                 className="w-10 h-10"
                 priority
+                unoptimized
               />
               <span className="hidden sm:inline text-xl font-bold text-gray-900 font-chango">
                 TISCOマーケット

@@ -172,6 +172,7 @@ export const HomepageHeroCarousel = () => {
             width={16}
             height={16}
             className="h-4 w-4 sm:h-4.5 sm:w-4.5 object-contain"
+            unoptimized
           />
           <span className="text-sm sm:text-sm font-medium">Join the family.</span>
         </Link>
@@ -195,6 +196,7 @@ export const HomepageHeroCarousel = () => {
             }}
             priority={index === 0}
             loading={index <= 1 ? 'eager' : 'lazy'}
+            unoptimized
           />
           {/* Dark overlay for better text readability */}
           <div className="absolute inset-0 bg-black/50" />

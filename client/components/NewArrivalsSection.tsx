@@ -87,6 +87,7 @@ export function NewArrivalsSection() {
               height={720}
               className="w-full h-48 sm:h-56 md:h-64 object-cover"
               priority={false}
+              unoptimized
             />
           </div>
           <div className="md:col-span-7">

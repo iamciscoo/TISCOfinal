@@ -54,6 +54,7 @@ export const BrandSlider = () => {
                       sizes="(max-width: 640px) 180px, 200px"
                       className="object-contain opacity-80 grayscale-[30%] hover:opacity-100 hover:grayscale-0 transition-all duration-300"
                       priority={false}
+                      unoptimized
                     />
                   </div>
                 )

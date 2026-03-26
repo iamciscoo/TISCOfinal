@@ -107,6 +107,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  unoptimized
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 
@@ -159,6 +160,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
                 style={{ objectFit: 'cover' }}
+                unoptimized
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
               
@@ -204,6 +206,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
+              unoptimized
             />
             {/* Shadow overlay only at bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
@@ -244,6 +247,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
+              unoptimized
             />
             {/* Shadow overlay only at bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
@@ -287,6 +291,7 @@ export function ServicesPromoGrid({ showHeader = true }: ServicesPromoGridProps)
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  unoptimized
                 />
                 {/* Shadow overlay only at bottom - smaller for compact cards */}
                 <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />

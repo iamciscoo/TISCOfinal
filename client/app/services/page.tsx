@@ -317,6 +317,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 sizes="100vw"
                 className="object-contain object-center"
                 priority
+                unoptimized
               />
               <div className="absolute inset-0 bg-black/20" />
               <div className="absolute inset-0 flex flex-col md:flex-row items-center md:items-center justify-between gap-3 md:gap-4 px-4 py-4 sm:px-6 md:px-10">
